@@ -1,0 +1,4 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+cn.bctools.feign.config.SwaggerProperties,\
+cn.bctools.feign.config.SwaggerAutoConfiguration,\
+cn.bctools.feign.config.SwaggerOpenApiConfiguration

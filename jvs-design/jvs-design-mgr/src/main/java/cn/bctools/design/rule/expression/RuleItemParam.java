@@ -1,0 +1,922 @@
+package cn.bctools.design.rule.expression;
+
+import cn.bctools.common.utils.BeanCopyUtil;
+import cn.bctools.common.utils.JvsJsonPath;
+import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.SpringContextUtil;
+import cn.bctools.common.utils.function.Get;
+import cn.bctools.design.crud.service.CrudPageService;
+import cn.bctools.design.crud.service.FormService;
+import cn.bctools.design.data.entity.DynamicDataPo;
+import cn.bctools.design.data.fields.IDataFieldHandler;
+import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
+import cn.bctools.design.data.fields.enums.DataFieldType;
+import cn.bctools.design.data.service.DataFieldService;
+import cn.bctools.design.rule.entity.BodyInDto;
+import cn.bctools.design.rule.entity.ParameterMap;
+import cn.bctools.design.rule.entity.RuleDesignPo;
+import cn.bctools.design.rule.entity.RuleType;
+import cn.bctools.design.rule.service.RuleDesignService;
+import cn.bctools.function.entity.dto.ExpressionExtendDto;
+import cn.bctools.function.entity.vo.ElementVo;
+import cn.bctools.function.enums.JvsParamType;
+import cn.bctools.function.handler.IJvsParam;
+import cn.bctools.function.handler.JvsExpression;
+import cn.bctools.rule.common.RuleElementVo;
+import cn.bctools.rule.config.SystemInit;
+import cn.bctools.rule.constant.RuleConstant;
+import cn.bctools.rule.dto.RuleFunctionDto;
+import cn.bctools.rule.dto.RuleFunctionDtoParameter;
+import cn.bctools.rule.entity.enums.ClassType;
+import cn.bctools.rule.entity.enums.InputType;
+import cn.bctools.rule.entity.enums.NodeType;
+import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.bctools.rule.utils.RuleDesignUtils;
+import cn.bctools.rule.utils.RuleElementUtils;
+import cn.bctools.rule.utils.RuleSystemThreadLocal;
+import cn.bctools.rule.utils.dto.RuleExecDto;
+import cn.bctools.rule.utils.html.*;
+
+import cn.hutool.core.collection.ListUtil;
+import com.alibaba.cloud.commons.lang.StringUtils;
+import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.fastjson2.JSONPath;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
+import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+/**
+ * The type Rule item param.
+ *
+ * @author guojing
+ */
+@Slf4j
+@Service
+@AllArgsConstructor
+@JvsExpression(groupName = "自动化", prefix = "RULE", useCase = "RULE")
+public class RuleItemParam implements IJvsParam<ElementVo> {
+
+    private static final String START = "start";
+    private static final String globalvariable = "globalvariable";
+    private static final String ERGODIC = ".ergodic.";
+    private static final String ergodic = "ergodic";
+
+    /**
+     * The Rule service.
+     */
+    RuleDesignService ruleService;
+    /**
+     * The Form service.
+     */
+    FormService formService;
+    /**
+     * The Field service.
+     */
+    DataFieldService fieldService;
+    /**
+     * The Page service.
+     */
+    CrudPageService pageService;
+    /**
+     * The Handler map.
+     */
+    Map<String, IDataFieldHandler> handlerMap;
+    /**
+     * 间隔符号
+     */
+    public static final String PREFIX = "©";
+    /**
+     * The Show prefix.
+     */
+    static final String SHOW_PREFIX = ".";
+
+    @Override
+    public List<ElementVo> getAllElements() {
+        String designId = this.getDesignId();
+        if (StringUtils.isBlank(designId)) {
+            return Collections.emptyList();
+        }
+        // 根据表单设计获取数据模型id
+        RuleDesignPo thisDesign = ruleService.getById(designId);
+        if (ObjectNull.isNull(thisDesign)) {
+            return Collections.emptyList();
+        }
+        //获取请求入参规则
+        List<ElementVo> collect = getParameterPos(thisDesign);
+        if (ObjectNull.isNull(thisDesign.getDesignDrawingJson())) {
+            return collect;
+        }
+        HtmlGraph graph = JSONObject.parseObject(thisDesign.getDesignDrawingJson(), HtmlGraph.class);
+        if (ObjectNull.isNull(graph, graph.getNodeList())) {
+            return collect;
+        }
+        List<NodeHtml> nodeList = new ArrayList<>();
+        Map<String, String> map = graph.getNodeList().stream().filter(e -> ObjectNull.isNotNull(e.getData())).filter(e -> e.getData().getFunctionName().equals(RuleConstant.ERGODIC)).collect(Collectors.toMap(NodeHtml::getId, NodeHtml::getName));
+        String extendJson = getExtendJson();
+        ExpressionExtendDto dto = new ExpressionExtendDto();
+        if (ObjectNull.isNotNull(extendJson)) {
+            dto = JSONObject.parseObject(extendJson, ExpressionExtendDto.class);
+            //如果点击的是线,则使用线找到下一个点为触发点
+            if (ObjectNull.isNull(dto.getGraphId())) {
+                //兼容两种方式
+                dto.setGraphId(dto.getNodeId());
+            }
+            //点和线的连线关系,如果找到了对应的线,则直接返回
+            for (HtmlEdge htmlEdge : graph.getLineList()) {
+                //设置为下一个节点为触发节点
+                if (htmlEdge.getId().equals(dto.getGraphId())) {
+                    dto.setNodeId(htmlEdge.getTo());
+                }
+            }
+            //点线,需要依次寻找
+            if (ObjectNull.isNull(dto.getNodeId())) {
+                Map<String, HtmlGraph> ergodicCanvas = graph.getErgodicCanvas();
+                for (String s : ergodicCanvas.keySet()) {
+                    if (ergodicCanvas.containsKey(s) && ObjectNull.isNotNull(ergodicCanvas.get(s).getLineList())) {
+                        for (HtmlEdge htmlEdge : ergodicCanvas.get(s).getLineList()) {
+                            //设置为下一个节点为触发节点
+                            if (htmlEdge.getId().equals(dto.getGraphId())) {
+                                dto.setNodeId(htmlEdge.getTo());
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (ObjectNull.isNotNull(dto.getCanvasId())) {
+                //todo 判断是否是主画布， 如果不是主画布,需要将入参变量，变更为画布变量参数
+                String canvasId = dto.getCanvasId();
+                String pa = "globalvariable" + PREFIX + "main" + PREFIX;
+                collect.forEach(e -> {
+                    changeChildren(e.getChildren(), pa);
+                    e.setId(pa + e.getId());
+                });
+                canvasHandler(collect, graph, nodeList, map, dto, dto.getCanvasId());
+            } else {
+                //只有主画布, 找未连线的点  和上级节点
+                //获取点的线
+                //未传递画布和节点
+                if (ObjectNull.isNotNull(getExtendJson())) {
+                    //获取未连线的节点
+                    findNodeParent(dto.getNodeId(), graph, nodeList, null, new HashMap<>(1));
+                }
+            }
+        }
+
+        //解析不同画布的下级
+        convertElement(nodeList, collect, dto);
+        collect.forEach(e -> {
+            if (ObjectNull.isNull(e.getName())) {
+                e.setName(e.getInfo());
+            }
+        });
+        return collect;
+    }
+
+    /**
+     * 递归下级将前缀添加上
+     *
+     * @param e
+     * @param pa
+     */
+    private void changeChildren(List<ElementVo> e, String pa) {
+        if (ObjectNull.isNotNull(e)) {
+            e.forEach(s -> {
+                s.setId(pa + s.getId());
+                changeChildren(s.getChildren(), pa);
+            });
+        }
+    }
+
+    /**
+     * 根据画布获取相关信息
+     *
+     * @param collect      公式信息
+     * @param graph        总的画布信息
+     * @param nodeList     需要有公式值的信息
+     * @param map          前端请求参数
+     * @param dto          对象信息 触发点，出发画布
+     * @param thisCanvasId 递归寻找的当前画布信息
+     */
+    private void canvasHandler(List<ElementVo> collect, HtmlGraph graph, List<NodeHtml> nodeList, Map<String, String> map, ExpressionExtendDto dto, String thisCanvasId) {
+        //根据当前节点,寻找上级.递归画布,找树形节点
+        String canvasId = dto.getCanvasId();
+        //todo 判断是否是画布,如果是画布,只取上级节点for的循环体, 确定参数类型
+        //画布
+        if (graph.getErgodicCanvas().containsKey(canvasId) && ObjectNull.isNotNull(graph.getErgodicCanvas().get(canvasId).getNodeList())) {
+            //找到这个画布的开始节点
+            String startId = findGraphStart(graph.getErgodicCanvas().get(canvasId));
+            //找到循环容器 所在画布和所在画布的node
+            Optional<NodeHtml> first = getTaskNodeHtml(graph, startId);
+            if (first.isPresent()) {
+                NodeHtml forNode = first.get();
+                //获取其结构定义并返回
+                HtmlParameters htmlParameters = forNode.getData().getParameters().stream().filter(e -> e.getInputType().equals(InputType.listMap)).findFirst().get();
+                List<RuleElementVo> customStructureBody = forNode.getData().getCustomStructureBody();
+                List<ElementVo> elementVos = new ArrayList<>();
+                if (ObjectNull.isNotNull(customStructureBody)) {
+                    customStructureBody.stream().map(vo -> {
+                        ElementVo elementVo = new ElementVo();
+                        elementVo.setType(forNode.getName());
+                        elementVo.setId(forNode.getId() + PREFIX + "ergodic" + PREFIX + vo.getName());
+                        elementVo.setName(htmlParameters.getInfo() + SHOW_PREFIX + vo.getInfo());
+                        elementVo.setShortName(vo.getName());
+                        elementVo.setInfo(htmlParameters.getInfo() + SHOW_PREFIX + vo.getInfo());
+                        elementVo.setJvsParamType(vo.getJvsParamType());
+                        return elementVo;
+                    }).forEach(elementVos::add);
+                }
+                {
+                    ElementVo elementVo = new ElementVo();
+                    elementVo.setType(forNode.getName());
+                    elementVo.setId(forNode.getId() + PREFIX + "ergodic" + PREFIX + "ergodic");
+                    elementVo.setName(htmlParameters.getInfo() + SHOW_PREFIX + "索引");
+                    elementVo.setShortName("索引");
+                    elementVo.setInfo(htmlParameters.getInfo() + SHOW_PREFIX + "索引");
+                    elementVo.setJvsParamType(JvsParamType.number);
+                    elementVos.add(elementVo);
+                }
+
+                {
+                    ElementVo elementVo = new ElementVo();
+                    elementVo.setType(forNode.getName());
+                    elementVo.setId(forNode.getId() + PREFIX + "ergodic" + PREFIX + "this");
+                    elementVo.setName(htmlParameters.getInfo() + SHOW_PREFIX + "循环变量");
+                    elementVo.setShortName("循环变量");
+                    elementVo.setInfo(htmlParameters.getInfo() + SHOW_PREFIX + "循环变量");
+                    elementVo.setJvsParamType(JvsParamType.object);
+                    elementVos.add(elementVo);
+                }
+
+                collect.addAll(elementVos);
+                //根据上级画布找节点  显示变量为全局变量
+                findNodeParent(dto.getNodeId(), graph, nodeList, dto.getCanvasId(), map);
+            } else {
+                Optional<NodeHtml> optionalNodeHtml = graph.getErgodicCanvas().values().stream().flatMap(e -> e.getNodeList().stream()).filter(e -> e.getType().equals(NodeType.task)).filter(e -> startId.startsWith(e.getId())).findFirst();
+                if (optionalNodeHtml.isPresent()) {
+                    NodeHtml forNode = optionalNodeHtml.get();
+                    HtmlParameters htmlParameters = forNode.getData().getParameters().stream().filter(e -> e.getInputType().equals(InputType.listMap)).findFirst().get();
+                    List<RuleElementVo> customStructureBody = forNode.getData().getCustomStructureBody();
+                    if (ObjectNull.isNotNull(customStructureBody)) {
+                        //todo  这里不能直接使用第二层，需要确定这一层与上层的关系
+                        List<ElementVo> elementVos = customStructureBody.stream().map(vo -> {
+                            ElementVo elementVo = new ElementVo();
+                            elementVo.setType(forNode.getName());
+                            elementVo.setId(forNode.getId() + PREFIX + "ergodic" + PREFIX + vo.getName());
+                            elementVo.setName(htmlParameters.getInfo() + SHOW_PREFIX + vo.getInfo());
+                            elementVo.setShortName(vo.getName());
+                            elementVo.setInfo(htmlParameters.getInfo() + SHOW_PREFIX + vo.getInfo());
+                            elementVo.setJvsParamType(vo.getJvsParamType());
+                            return elementVo;
+                        }).collect(Collectors.toList());
+                        {
+                            ElementVo elementVo = new ElementVo();
+                            elementVo.setType(forNode.getName());
+                            elementVo.setId(forNode.getId() + PREFIX + "ergodic" + PREFIX + "ergodic");
+                            elementVo.setName(htmlParameters.getInfo() + SHOW_PREFIX + "索引");
+                            elementVo.setShortName("索引");
+                            elementVo.setInfo(htmlParameters.getInfo() + SHOW_PREFIX + "索引");
+                            elementVo.setJvsParamType(JvsParamType.number);
+                            elementVos.add(elementVo);
+                        }
+                        {
+                            ElementVo elementVo = new ElementVo();
+                            elementVo.setType(forNode.getName());
+                            elementVo.setId(forNode.getId() + PREFIX + "ergodic" + PREFIX + "this");
+                            elementVo.setName(htmlParameters.getInfo() + SHOW_PREFIX + "循环变量");
+                            elementVo.setShortName("循环变量");
+                            elementVo.setInfo(htmlParameters.getInfo() + SHOW_PREFIX + "循环变量");
+                            elementVo.setJvsParamType(JvsParamType.object);
+                            elementVos.add(elementVo);
+                        }
+                        collect.addAll(elementVos);
+                        //根据画布找上级节点
+                        findNodeParent(dto.getNodeId(), graph, nodeList, dto.getCanvasId(), map);
+                        //根据节点找上级画布信息
+                    }
+                }
+            }
+        } else if (nodeList.isEmpty()) {
+            return;
+        } else {
+            //如果只有一层的时候， 直接这样处理
+            graph.getErgodicCanvas().values().stream().filter(e -> ObjectNull.isNotNull(e.getNodeList())).flatMap(e -> e.getNodeList().stream().filter(s -> ObjectNull.isNotNull(s.getData())).filter(s -> s.getData().getFunctionName().equals(RuleConstant.ERGODIC))).forEach(e -> map.put(e.getId(), e.getName()));
+            findNodeParent(dto.getNodeId(), graph, nodeList, canvasId, map);
+        }
+
+    }
+
+    /**
+     * 根据画布获取这个节点在哪一个画布中，并获取画布相关信息
+     *
+     * @param graph   画布
+     * @param startId 开始节点
+     * @return
+     */
+    private Optional<NodeHtml> getTaskNodeHtml(HtmlGraph graph, String startId) {
+        //判断是否在主画布中
+        Optional<NodeHtml> first = graph.getNodeList().stream().filter(e -> startId.startsWith(e.getId())).findFirst();
+        if (first.isPresent()) {
+            return first;
+        }
+        //表示在子画布中
+        Map<String, HtmlGraph> ergodicCanvas = graph.getErgodicCanvas();
+        for (String canvasId : ergodicCanvas.keySet()) {
+            List<NodeHtml> nodeList = ergodicCanvas.get(canvasId).getNodeList();
+            if (ObjectNull.isNotNull(nodeList)) {
+                Optional<NodeHtml> nodeHtml = nodeList.stream()
+                        //必须是执行节点
+                        .filter(s -> s.getType().equals(NodeType.task)).filter(s -> startId.startsWith(s.getId())).findFirst();
+                if (nodeHtml.isPresent()) {
+                    return nodeHtml;
+                }
+            }
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * 将节点转换为公式数据
+     *
+     * @param nodeList 节点信息
+     * @param collect  公式数据
+     * @param dto
+     */
+    private void convertElement(List<NodeHtml> nodeList, List<ElementVo> collect, ExpressionExtendDto dto) {
+        List<ElementVo> collect2 = nodeList.stream()
+                //只能是节点才能获取
+                .filter(e -> e.getType().equals(NodeType.task))
+                //排除当前节点id
+                .filter(e -> {
+                    if (ObjectNull.isNull(e.getErgodicCanvas())) {
+                        //设置为空画布
+                        e.setErgodicCanvas("");
+                    }
+                    if (ObjectNull.isNull(getExtendJson())) {
+                        return true;
+                    }
+                    return !dto.getNodeId().contains(e.getId());
+                })
+                //不能是未识别的类型
+                .peek(e -> {
+                    ClassType returnType = ClassType.未识别;
+                    try {
+                        //兼容扩展组件的公式使用
+                        returnType = SystemInit.getFunctionsBase(e.getData().getFunctionName()).getReturnType();
+                    } catch (Exception ignored) {
+                    }
+                    e.getData().setReturnType(returnType);
+                }).map(e -> {
+
+                    ElementVo elementVo = new ElementVo().setId(e.getId()).setShortName(e.getName())
+                            //画布加节点
+                            .setType(ObjectNull.isNotNull(e.getErgodicCanvas()) ? e.getErgodicCanvas() : "节点").setInfo(e.getData().getName() + "<br/> 字段信息:<br/>" + e.getData().getParameters().stream().map(v -> "" + "" + v.getKey() + "\n" + "类型:" + v.getInputType() + "\n" + "默认值:" + v.getDefaultvalue() + "\n" + (v.isNecessity() ? "是" : "否")).collect(Collectors.joining("<br/>"))).setJvsParamType(JvsParamType.desc(e.getData().getReturnType().name())).setName(e.getName());
+                    if (ObjectNull.isNotNull(dto.getCanvasId()) && !dto.getCanvasId().equals(e.getCanvasId())) {
+                        elementVo.setId("rule:globalvariable" + PREFIX + e.getCanvasId() + PREFIX + elementVo.getId());
+                    }
+                    //如果节点没有参数 会直接过滤掉没有参数的节点
+                    if (e.getData().getParameters().isEmpty()) {
+                        return elementVo;
+                    }
+                    //判断是否存在预定义结构
+                    Map<String, BaseCustomFunctionInterface> beansOfType = SpringContextUtil.getApplicationContext().getBeansOfType(BaseCustomFunctionInterface.class);
+                    List<RuleElementVo> elementVos = e.getData().getCustomStructureBody();
+                    if (ObjectNull.isNull(elementVos)) {
+                        elementVos = predefinedStructure(e, beansOfType);
+                    }
+                    if (ObjectNull.isNotNull(elementVos)) {
+                        List<ElementVo> list = elementVos.stream().map(vo -> {
+                            ElementVo vo1 = new ElementVo()
+                                    .setType(elementVo.getType())
+                                    .setId(elementVo.getId() + PREFIX + vo.getName())
+                                    .setName(e.getName() + SHOW_PREFIX + (vo.getName().equals(vo.getInfo()) ? vo.getName() : vo.getInfo()))
+                                    .setInfo(e.getName() + SHOW_PREFIX + vo.getInfo() + " (" + vo.getName() + ")")
+                                    //显示简称如果是和描述一样, 使用名称,否则使用描述
+                                    .setShortName(vo.getName().equals(vo.getInfo()) ? vo.getName() : vo.getInfo() + " (" + vo.getName() + ")")
+                                    .setParam(true)
+                                    .setJvsParamType(vo.getJvsParamType());
+                            nextElementVo(vo, vo1);
+                            return vo1;
+                        }).collect(Collectors.toList());
+                        elementVo.setChildren(list);
+                    }
+                    return elementVo;
+                }).collect(Collectors.toList());
+        collect.addAll(collect2);
+    }
+
+    private List<RuleElementVo> predefinedStructure(NodeHtml e, Map<String, BaseCustomFunctionInterface> beansOfType) {
+        RuleFunctionDto functionsBase = SystemInit.getFunctionsBase(e.getData().getFunctionName());
+        Map<String, Object> body = e.getData().getBody();
+        Object o = null;
+        try {
+            o = BeanCopyUtil.copy(Class.forName(functionsBase.getParameterClass()), body);
+        } catch (Exception classNotFoundException) {
+            return null;
+        }
+        if (ObjectNull.isNull(o)) {
+            return null;
+        }
+        List<RuleElementVo> list = beansOfType.get(e.getData().getFunctionName()).structureType(o);
+        if (ObjectNull.isNull(list)) {
+            //如果为空，直接使用上级节点的结构
+            list = e.getData().getCustomStructureBody();
+        }
+        return list;
+
+    }
+
+    /**
+     * 递归寻找  组装节点信息，将节点信息返回数组组装后返回给上层处理，用于公式值展示
+     *
+     * @param nodeId    当前节点
+     * @param graph     画布信息，每一次递归时传递的值不一样
+     * @param nodeList  当前选择的画布的节点
+     * @param canvasId  当前选择的画布信息
+     * @param stringMap
+     */
+    private void findNodeParent(String nodeId, HtmlGraph graph, List<NodeHtml> nodeList, String canvasId, Map<String, String> stringMap) {
+        HtmlGraph graphCanvas = graph;
+        //获取画布的图
+        if (ObjectNull.isNotNull(canvasId)) {
+            //主画布
+            graphCanvas = graph.getErgodicCanvas().get(canvasId);
+        }
+        if (ObjectNull.isNull(graphCanvas)) {
+            return;
+        }
+        //寻找上级节点
+        findNodeParent(nodeId, graphCanvas, nodeList);
+        //找未连线的节点
+        List<NodeHtml> noEdge = getNoEdge(graphCanvas);
+
+        //如果不是主画布,需要根据找到上级画布
+        if (ObjectNull.isNotNull(graph.getErgodicCanvas())) {
+            //如果画布中存在此画布，就找到开始节点，然后根据开始节点找到具体的画布信息
+            if (graph.getErgodicCanvas().containsKey(canvasId)) {
+                String id = findGraphStart(graphCanvas);
+                String startId = id.replace(NodeType.start.getName(), "");
+                if (graph.getErgodicCanvas().containsKey(startId)) {
+                    //添加画布名称 //根据节点画布ID,寻找所有的节点遍历获取名称
+                    if (stringMap.containsKey(startId)) {
+                        noEdge.forEach(e -> e.setErgodicCanvas(stringMap.get(startId)));
+                    }
+                } else {
+                    noEdge.forEach(e -> e.setErgodicCanvas(""));
+                }
+                //寻找上级画布进行递归
+                findCanvas(startId, graph, nodeList, stringMap);
+            } else {
+                noEdge.forEach(e -> e.setErgodicCanvas(""));
+            }
+            nodeList.addAll(noEdge);
+        }
+    }
+
+    private String findGraphStart(HtmlGraph graphCanvas) {
+        return graphCanvas.getNodeList().stream().filter(e -> e.getType().equals(NodeType.start)).findFirst().get().getId();
+    }
+
+    /**
+     * 根据节点id找上级节点的数据
+     *
+     * @param nodeId
+     * @param graph
+     * @param nodeList
+     */
+    private void findNodeParent(String nodeId, HtmlGraph graph, List<NodeHtml> nodeList) {
+        graph.getLineList().forEach(e -> {
+            if (e.getTo().equals(nodeId)) {
+                graph.getNodeList().forEach(s -> {
+                    if (s.getId().equals(e.getFrom())) {
+                        //加入上级节点
+                        nodeList.add(s);
+                        findNodeParent(s.getId(), graph, nodeList);
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 寻找上级画布信息
+     *
+     * @param id        开始节点ID
+     * @param graph     整体画布
+     * @param nodeList  找到的上级节点
+     * @param stringMap
+     */
+    private void findCanvas(String id, HtmlGraph graph, List<NodeHtml> nodeList, Map<String, String> stringMap) {
+        //找主画布
+        Optional<NodeHtml> first = graph.getNodeList().stream().filter(e -> id.startsWith(e.getId())).findFirst();
+        //判断主画布是否存在
+        if (first.isPresent()) {
+            //后面不在递归
+            //根据这个节点,递归寻找上级节点
+            NodeHtml nodeHtml = first.get();
+            //根据这个节点找上级
+            findNodeParent(nodeHtml.getId(), graph, nodeList);
+        } else {
+            //TODO 获取设计结构的执行逻辑
+            //找其它画布
+            Map<String, HtmlGraph> ergodicCanvas = graph.getErgodicCanvas();
+            for (String canvas : ergodicCanvas.keySet()) {
+                HtmlGraph htmlGraph = ergodicCanvas.get(canvas);
+                if (ObjectNull.isNotNull(htmlGraph.getNodeList())) {
+                    Optional<NodeHtml> canvasNodeFor = htmlGraph.getNodeList().stream().filter(e -> e.getId().equals(id)).findFirst();
+                    if (canvasNodeFor.isPresent()) {
+                        //如果存在 ,则使用此画布进行处理     ,递归下一级画布
+                        //根据节点ID查询画布ID值
+                        String canvasNodeId = htmlGraph.getNodeList().stream().filter(e -> e.getType().equals(NodeType.start)).findFirst().get().getId();
+                        if (ergodicCanvas.containsKey(canvasNodeId)) {
+                            findNodeParent(canvasNodeFor.get().getId(), graph, nodeList, canvasNodeId, stringMap);
+                        } else {
+                            //指定画布信息
+                            findNodeParent(canvasNodeFor.get().getId(), graph, nodeList, canvasNodeFor.get().getCanvasId(), stringMap);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 获取没有连线的节点
+     *
+     * @param graph
+     * @return
+     */
+    private List<NodeHtml> getNoEdge(HtmlGraph graph) {
+        List<String> ids = new ArrayList<>();
+        graph.getLineList().forEach(e -> {
+            ids.add(e.getFrom());
+            ids.add(e.getTo());
+        });
+        return graph.getNodeList().stream().filter(e -> !ids.contains(e.getId())).collect(Collectors.toList());
+    }
+
+    /**
+     * 获取节点变量
+     *
+     * @param graph
+     * @param collect
+     * @return
+     */
+    private List<NodeHtml> getNodes(HtmlGraph graph, List<ElementVo> collect) {
+        List<NodeHtml> nodeList = new ArrayList<>();
+        //只能是节点才能获取
+        List<ElementVo> collect2 = graph.getNodeList().stream()
+                //只能是节点才能获取
+                .filter(e -> e.getType().equals(NodeType.task))
+                //排除当前节点id
+//                .filter(e -> !getExtendJson().getNodeId().contains(e.getId()))
+                .peek(e -> nodeList.add(e)).filter(e -> !e.getData().getParameters().isEmpty())
+                //不能是未识别的类型
+                .peek(e -> {
+                    ClassType returnType = ClassType.未识别;
+                    try {
+                        //兼容扩展组件的公式使用
+                        returnType = SystemInit.getFunctionsBase(e.getData().getFunctionName()).getReturnType();
+                    } catch (Exception ignored) {
+                    }
+                    e.getData().setReturnType(returnType);
+                }).map(e -> new ElementVo().setId(e.getId()).setType("节点").setShortName(e.getData().getName()).setInfo(e.getData().getName() + "<br/> 字段信息:<br/>" + e.getData().getParameters().stream().map(v -> "" + "" + v.getKey() + "\n" + "类型:" + v.getInputType() + "\n" + "默认值:" + v.getDefaultvalue() + "\n" + (v.isNecessity() ? "是" : "否")).collect(Collectors.joining("<br/>"))).setJvsParamType(JvsParamType.desc(e.getData().getReturnType().name())).setName(e.getName())).collect(Collectors.toList());
+        collect.addAll(collect2);
+        return nodeList;
+    }
+
+    /**
+     * 根据逻辑引擎设计获取请求入参变量,根据类型处理,如果是设计类,获取模型字段,如果是参数类,解析入参字段
+     *
+     * @return 整体变量
+     */
+    private List<ElementVo> getParameterPos(RuleDesignPo designPo) {
+        List<ElementVo> collect = new ArrayList<>();
+        ElementVo e1 = new ElementVo().setName("请求入参").setId("start").setShortName("请求入参").setParam(true).setJvsParamType(JvsParamType.object).setType("请求入参").setInfo("请求入参");
+        collect.add(e1);
+        //通过组件类型进行解析参数
+        String componentDesignId = designPo.getComponentDesignId();
+        if (ObjectNull.isNotNull(componentDesignId, designPo.getComponentType())) {
+            String dataModelId = null;
+            switch (designPo.getComponentType()) {
+                case form:
+                    //如果是表单,可能存在列表打开表单,直接回显多选数据,和父级数据
+                    dataModelId = formService.get(componentDesignId).getDataModelId();
+                    collect.add(new ElementVo().setId(e1.getId() + PREFIX + "ids").setName(e1.getId() + SHOW_PREFIX + "多选数据").setInfo(e1.getId() + SHOW_PREFIX + "多选数据ids,列表顶部按钮打开表单或直接触发的逻辑").setType("列表入参").setShortName(
+                            "多选数据").setJvsParamType(JvsParamType.array));
+                    break;
+                case page:
+                    dataModelId = pageService.get(componentDesignId).getDataModelId();
+                    collect.add(new ElementVo().setId(e1.getId() + PREFIX + "ids").setName(e1.getId() + SHOW_PREFIX + "多选数据").setInfo(e1.getId() + SHOW_PREFIX + "多选数据ids,列表顶部按钮打开表单或直接触发的逻辑").setType("列表入参").setShortName(
+                            "多选数据").setJvsParamType(JvsParamType.array));
+                    break;
+                case data:
+                    //获取模型所有字段
+                    dataModelId = componentDesignId;
+                    componentDesignId = null;
+                    break;
+                case pageToPage:
+                    //使用列表的模型
+                    dataModelId = pageService.get(componentDesignId).getDataModelId();
+                    //列表跳列表 ,需要获取弹出的列表页的多选操作
+                    //todo 提交多选名称,进行选择说明
+                    collect.add(new ElementVo().setId(e1.getId() + PREFIX + "ids").setName(e1.getId() + SHOW_PREFIX + "列表入参").setInfo(e1.getId() + SHOW_PREFIX + "列表入参ids").setType("列表入参").setShortName("行级数据").setJvsParamType(JvsParamType.array));
+                default:
+            }
+
+            List<ElementVo> list = getDesignVo(designPo.getJvsAppId(), null, dataModelId, e1).stream().peek(e -> e.setType("请求入参")).collect(Collectors.toList());
+            e1.setChildren(list);
+        } else {
+            List<RuleElementVo> ruleElementVos = new ArrayList<>();
+            // 逻辑API设计的获取入参方式与其它的不一样
+            if (RuleType.External_API_logic.equals(designPo.getReqType()) && ObjectNull.isNotNull(designPo.getParameterIn())) {
+                List<RuleElementVo> ruleApiParam = getRuleApiParam(designPo.getParameterIn().getBodyList());
+                if (ObjectNull.isNotNull(ruleApiParam)) {
+                    ruleElementVos.addAll(ruleApiParam);
+                }
+                getRuleApiParam(designPo.getParameterIn().getHeaderList(), ruleElementVos);
+                getRuleApiParam(designPo.getParameterIn().getQueryList(), ruleElementVos);
+            } else {
+                if (ObjectNull.isNotNull(designPo.getParameterPos())) {
+                    //自定义结构解析，根据入参快速处理定义参数值
+                    ruleElementVos = RuleElementUtils.get(designPo.getParameterPos());
+                }
+            }
+            if (ObjectNull.isNotNull(ruleElementVos)) {
+                List<ElementVo> listList = ruleElementVos.stream().map(vo -> {
+                    ElementVo elementVo = new ElementVo().setType("请求入参").setId(e1.getId() + PREFIX + vo.getName()).setName("请求入参" + SHOW_PREFIX + vo.getInfo()).setParam(true).setShortName(vo.getName()).setInfo("请求入参" + SHOW_PREFIX + vo.getInfo()).setJvsParamType(vo.getJvsParamType());
+                    nextElementVo(vo, elementVo);
+                    return elementVo;
+                }).collect(Collectors.toList());
+                e1.setChildren(listList);
+            }
+        }
+        return collect;
+    }
+
+    /**
+     * 添加请求头和参数的参数解析
+     *
+     * @param list           参数
+     * @param ruleElementVos 公式
+     */
+    private void getRuleApiParam(List<ParameterMap> list, List<RuleElementVo> ruleElementVos) {
+        if (ObjectNull.isNotNull(list)) {
+            list.stream().map(e -> new RuleElementVo().setName(e.getKey()).setInfo(e.getExplain()).setJvsParamType(JvsParamType.text).setJvsParamTypeName(JvsParamType.text.getDesc())).forEach(ruleElementVos::add);
+        }
+    }
+
+    private List<RuleElementVo> getRuleApiParam(List<BodyInDto> bodyList) {
+        if (ObjectNull.isNull(bodyList)) {
+            return null;
+        }
+        return bodyList.stream()
+                .map(body -> {
+                    JvsParamType jvsParamType = getParamType(body.getInputType());
+                    RuleElementVo ruleElementVo = new RuleElementVo();
+
+
+                    if (JvsParamType.array.getValue().equals(body.getInputType())) {
+                        if (ObjectNull.isNotNull(body.getChildren())) {
+                            //解析下级
+                            BodyInDto childBody = body.getChildren().get(0);
+                            List<BodyInDto> childBodyList = childBody.getChildren();
+                            //如果下级是对象才解析如果不是不解析
+                            if ("object".equals(childBody.getInputType())) {
+                                ruleElementVo.setChildren(getRuleApiParam(childBodyList));
+                            }
+                        }
+                    }
+                    if (JvsParamType.object.getValue().equals(body.getInputType())) {
+                        //解析下级
+                        ruleElementVo.setChildren(getRuleApiParam(body.getChildren()));
+                    }
+                    ruleElementVo.setName(body.getKey()).setInfo(body.getKey()).setJvsParamType(jvsParamType).setJvsParamTypeName(jvsParamType.getDesc());
+                    return ruleElementVo;
+                })
+                .collect(Collectors.toList());
+    }
+
+    private JvsParamType getParamType(String inputType) {
+        switch (inputType) {
+            case "integer":
+            case "number":
+                return JvsParamType.number;
+            case "boolean":
+                return JvsParamType.bool;
+            case "array":
+                return JvsParamType.array;
+            case "object":
+                return JvsParamType.object;
+            case "string":
+                return JvsParamType.text;
+            default:
+                return JvsParamType.any;
+        }
+    }
+
+    private void nextElementVo(RuleElementVo vo, ElementVo parElementVo) {
+        if (ObjectNull.isNotNull(vo.getChildren())) {
+            List<ElementVo> list = vo.getChildren().stream().map(child -> {
+                ElementVo elementVo = new ElementVo().setType(parElementVo.getType()).setId(parElementVo.getId() + SHOW_PREFIX + child.getName()).setName(parElementVo.getName() + SHOW_PREFIX + child.getInfo()).setShortName(child.getName()).setInfo(parElementVo.getInfo() + SHOW_PREFIX + child.getInfo()).setJvsParamType(child.getJvsParamType());
+                nextElementVo(child, elementVo);
+                return elementVo;
+            }).collect(Collectors.toList());
+            parElementVo.setChildren(list);
+        }
+    }
+
+    private Map<String, List<ElementVo>> getNodeVos(List<NodeHtml> nodeList, List<ElementVo> collect) {
+        //根据节点，进行分组返回处理
+        Map<String, BaseCustomFunctionInterface> beansOfType = SpringContextUtil.getApplicationContext().getBeansOfType(BaseCustomFunctionInterface.class);
+        Map<String, List<ElementVo>> nodeMap = new HashMap(1);
+
+        nodeList.stream().filter(e -> e.getType().equals(NodeType.task)).forEach(e -> {
+            //判断是否有自定义结构,如果有自定义结构，使用自定义结构进行处理
+            BaseCustomFunctionInterface baseCustomFunctionInterface = beansOfType.get(e.getData().getFunctionName());
+            RuleFunctionDto functionsBase = SystemInit.getFunctionsBase(e.getData().getFunctionName());
+            Map<String, Object> body = e.getData().getBody();
+            if (ObjectNull.isNotNull(body)) {
+                for (RuleFunctionDtoParameter parameter : functionsBase.getParameters()) {
+                    if (RuleDesignUtils.inputTypeTransformInterfaceMap.containsKey(parameter.getInputType())) {
+                        //特殊类型转换
+                        RuleDesignUtils.inputTypeTransformInterfaceMap.get(parameter.getInputType()).transform(parameter.getKey(), body, body.get(parameter.getKey()), new HashMap<>(1), "RULE");
+                    }
+                }
+            }
+
+            Object o = null;
+            try {
+                o = BeanCopyUtil.copy(Class.forName(functionsBase.getParameterClass()), body);
+            } catch (Exception classNotFoundException) {
+                return;
+            }
+            if (ObjectNull.isNull(o)) {
+                return;
+            }
+            List<RuleElementVo> list = baseCustomFunctionInterface.structureType(o);
+            if (ObjectNull.isNull(list)) {
+                //如果为空，直接使用上级节点的结构
+                list = e.getData().getCustomStructureBody();
+            }
+            if (ObjectNull.isNotNull(list)) {
+                List<ElementVo> elementVos = list.stream().map(vo -> {
+                    ElementVo elementVo = new ElementVo();
+                    elementVo.setType(e.getName());
+                    elementVo.setId(e.getId() + PREFIX + vo.getName());
+                    elementVo.setName(e.getId() + SHOW_PREFIX + vo.getInfo());
+                    elementVo.setInfo(e.getId() + SHOW_PREFIX + vo.getInfo());
+                    elementVo.setShortName(vo.getName());
+                    elementVo.setJvsParamType(vo.getJvsParamType());
+                    return elementVo;
+                }).collect(Collectors.toList());
+                nodeMap.put(e.getId(), elementVos);
+                collect.addAll(elementVos);
+            }
+
+        });
+        return nodeMap;
+    }
+
+    @Override
+    public Object get(String paramName, Map<String, Object> data) {
+
+        //根据租户ID调用自己的服务
+        //获取同级的上下文的节点ID进行执行
+        paramName = paramName.replaceAll(PREFIX, SHOW_PREFIX);
+
+        //执行那个节点
+        if (data.containsKey(paramName)) {
+            return data.get(paramName);
+        }
+        //支持入参直接选择，参数优先获取值
+        if (JSONPath.contains(data, paramName)) {
+            return JvsJsonPath.read((data), paramName);
+        }
+        RuleExecDto rule = RuleSystemThreadLocal.getRule();
+        //是节点属性值
+        if (ObjectNull.isNull(rule)) {
+            return null;
+        }
+        //获取请求参数
+        Map<String, Object> reqVariableMap = rule.getExecuteDto().getReqVariableMap();
+        if (START.equals(paramName)) {
+            //如果当前为子画布，需要获取主画布的对象信息
+            return reqVariableMap;
+        }
+        //有可能包含两层引用
+        if (paramName.startsWith(START)) {
+            return JvsJsonPath.read(reqVariableMap, paramName.replaceAll(START + "\\.", ""));
+        }
+        Map<String, ResultDto> nodeResult = rule.getExecuteDto().getNodeResult();
+        if (paramName.contains(globalvariable)) {
+            //表示当前是子循环里面，需要获取全局变量里面的值
+            String[] split = paramName.split("\\.");
+            //获取当前画布信息
+            if (split.length == 3) {
+                return RuleSystemThreadLocal.getGlobalVariable(split[1], split[2]);
+            } else if (split.length == 4) {
+                return JvsJsonPath.read(RuleSystemThreadLocal.getGlobalVariable(split[1], split[2]), split[3]);
+            } else if (split.length > 4) {
+                List<String> sub = ListUtil.sub(ListUtil.toList(split), 3, split.length);
+                String collect = sub.stream().collect(Collectors.joining(StringPool.DOT));
+                return JvsJsonPath.read(RuleSystemThreadLocal.getGlobalVariable(split[1], split[2]), collect);
+            }
+            return null;
+        } else if (paramName.contains(ERGODIC)) {
+            //支持获取循环行号
+            if (paramName.contains(ergodic + SHOW_PREFIX + ergodic)) {
+                return RuleSystemThreadLocal.getErgodic();
+            }
+            if (paramName.contains(ergodic + SHOW_PREFIX + "this")) {
+                return nodeResult.get(paramName.split("\\.")[0]).getValue();
+            }
+            String s = paramName.split("\\.")[0];
+            String key = paramName.split("\\.")[2];
+            //todo 根据不同画布获取不同的数据值
+            Map<String, Object> value = (Map<String, Object>) nodeResult.get(s).getValue();
+            return value.getOrDefault(key, "");
+        } else if (paramName.contains(SHOW_PREFIX)) {
+            //根据下划线处理节点进行分隔
+            //判断节点是否有值,如果有值，直接获取,
+            String[] s = paramName.split("\\.");
+            if (nodeResult.containsKey(s[0])) {
+                //直接返回节点
+                Object o = nodeResult.get(s[0]).getValue();
+                if (o instanceof Collection) {
+                    //TODO 数组未做处理
+                    return o;
+                } else {
+                    return JvsJsonPath.read(o, paramName.replaceAll(s[0].trim() + "\\.", ""));
+                }
+            } else {
+                Object nodeData = RuleDesignUtils.execNodeId(s[0]);
+                if(ObjectNull.isNotNull(nodeData)){
+                    //判断是不是节点，如果是节点，则直接获取节点的数据值
+                    String substring = paramName.substring(paramName.indexOf(SHOW_PREFIX) + 1);
+                    //避免是对象或字符串需要再转一次
+                    return JvsJsonPath.read(JSONObject.toJSONString(nodeData),substring);
+                }
+                //处理循环
+                //执行后返回结果,根据节点返回具体的值
+                return data.get(s[1]);
+            }
+        } else {
+            //如果节点已经执行后，则直接返回节点的值
+            if (nodeResult.containsKey(paramName)) {
+                return nodeResult.get(paramName).getValue();
+            }
+            //判断是否是node节点公式,如果没有，直接执行，如果有.获取属性的结果值，通过jsonPath进行赋予
+            return RuleDesignUtils.execNodeId(paramName);
+        }
+    }
+
+
+    private List<ElementVo> getDesignVo(String appId, String designId, String dataModelId, ElementVo e1) {
+
+        // 根据数据模型获取字段
+        List<FieldBasicsHtml> fields = fieldService.getFields(appId, dataModelId, designId, true, true).stream().filter(e -> ObjectNull.isNotNull(e.getType()) && ObjectNull.isNotNull(e.getFieldName())).collect(Collectors.toList());
+
+        List<ElementVo> list = new ArrayList<>();
+        for (FieldBasicsHtml field : fields) {
+            //先添加当前这个字段
+            ElementVo e = fieldDto2ElementVo(field, e1);
+            list.add(e);
+            //判断所有的容器组件，进行下级组件内容解析
+            IDataFieldHandler iDataFieldHandler = handlerMap.get(field.getType().getDesc());
+            if (ObjectNull.isNotNull(field.getDesignJson(), iDataFieldHandler)) {
+                FieldBasicsHtml publicHtml = iDataFieldHandler.toHtml(field);
+                //通过解析下级组件,匹配公式
+                iDataFieldHandler.next(list, publicHtml, handlerMap, e);
+            }
+        }
+        FieldBasicsHtml basicsHtml = new FieldBasicsHtml();
+        basicsHtml.setFieldKey(Get.name(DynamicDataPo::getId)).setFieldName("数据id").setType(DataFieldType.input);
+        list.add(0, fieldDto2ElementVo(basicsHtml, e1));
+        //避免嵌套后没有前缀强制添加一个前缀
+        list.forEach(e -> {
+            if (!e.getId().startsWith(e1.getId() + PREFIX)) {
+                e.setId(e1.getId() + PREFIX + e.getId());
+            }
+        });
+        return list.stream().distinct().collect(Collectors.toList());
+
+    }
+
+    /**
+     * 字段对象转表达式参数对象
+     *
+     * @param fieldDto 字段对象
+     * @param e1
+     * @return 表达式参数对象
+     */
+    private ElementVo fieldDto2ElementVo(FieldBasicsHtml fieldDto, ElementVo e1) {
+        ElementVo elementVo = new ElementVo().setId(e1.getId() + PREFIX + fieldDto.getFieldKey()).setName(e1.getName() + SHOW_PREFIX + fieldDto.getFieldName()).setType(e1.getType()).setInfo(e1.getId() + SHOW_PREFIX + fieldDto.getFieldKey() + "  " + fieldDto.getFieldName() + "\n" + fieldDto.getType().getDesc()).setShortName(fieldDto.getFieldName()).setJvsParamType(JvsParamType.getByClass(fieldDto.getType().getAClass()));
+        return elementVo;
+    }
+
+}

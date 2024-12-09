@@ -1,0 +1,25 @@
+### stater 说明
+
+- [jvs-starter-common](..%2Fjvs-starter-common)   基础包
+- [jvs-starter-database](..%2Fjvs-starter-database)   数据源
+- [jvs-starter-dingding](..%2Fjvs-starter-dingding)    钉钉工具包
+- [jvs-starter-dynamic](..%2Fjvs-starter-dynamic)    多数据源
+- [jvs-starter-dynamic-proxy](..%2Fjvs-starter-dynamic-proxy)  数据源代理
+- [jvs-starter-email](..%2Fjvs-starter-email)    邮件工具包
+- [jvs-starter-feign](..%2Fjvs-starter-feign)    feign扫描，默认 cn.bctools.***.api
+- [jvs-starter-function](..%2Fjvs-starter-function)    公式的基础包
+- [jvs-starter-gray](..%2Fjvs-starter-gray)     版本路由
+- [jvs-starter-index](..%2Fjvs-starter-index)   首页的基础包 包含 controller
+- [jvs-starter-job](..%2Fjvs-starter-job)    对接 xxl-job-admin
+- [jvs-starter-knife4j](..%2Fjvs-starter-knife4j)  在线文档
+- [jvs-starter-log](..%2Fjvs-starter-log)   aop 注解日志
+- [jvs-starter-mongodb](..%2Fjvs-starter-mongodb)    mongo工具包
+- [jvs-starter-oauth2](..%2Fjvs-starter-oauth2)    服务中获取用户信息
+- [jvs-starter-oss](..%2Fjvs-starter-oss)  包含 controller
+- [jvs-starter-rabbit](..%2Fjvs-starter-rabbit)   rabbit
+- [jvs-starter-redis](..%2Fjvs-starter-redis)    redis 工具包
+- [jvs-starter-seata](..%2Fjvs-starter-seata)   seata 工具包
+- [jvs-starter-sms](..%2Fjvs-starter-sms)   短信工具包
+- [jvs-starter-web](..%2Fjvs-starter-web)   undertow 服务器
+- [jvs-starter-word](..%2Fjvs-starter-word)   word工具包
+- [jvs-starter-wps](..%2Fjvs-starter-wps)   未启用

@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>cn.bctools</groupId>
+        <artifactId>jvs</artifactId>
+        <version>2.2</version>
+    </parent>
+
+    <groupId>cn.bctools</groupId>
+    <artifactId>jvs-design</artifactId>
+    <version>2.2</version>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>jvs-design-api</module>
+        <module>jvs-function-annotation</module>
+        <module>jvs-design-common</module>
+        <module>jvs-design-mgr</module>
+        <module>jvs-function</module>
+        <module>jvs-function-common</module>
+        <module>jvs-function-run</module>
+        <module>jvs-function-demo</module>
+    </modules>
+
+</project>

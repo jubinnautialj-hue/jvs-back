@@ -1,0 +1,6 @@
+      _  __   __   ___
+   _ | | \ \ / /  / __|                      Jvs  ${spring.application.name}  ${version}
+  | || |  \ V /   \__ \                      ${swagger.title}
+  _\__/   _\_/_   |___/                      说明: ${swagger.description}
+_|"""""|_| """"|_|"""""|                     Pid: ${pid}
+"`-0-0-'"`-0-0-'"`-0-0-'                     port: ${server.port}

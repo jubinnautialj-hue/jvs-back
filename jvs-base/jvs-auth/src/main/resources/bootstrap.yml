@@ -1,0 +1,36 @@
+server:
+  port: 3000
+version: @project.version@
+spring:
+  application:
+    name: @project.artifactId@
+  main.allow-bean-definition-overriding: true
+  cloud:
+    nacos:
+      discovery:
+        server-addr: http://jvs-nacos:8848
+        group: jvs
+        namespace: ${spring.cloud.nacos.discovery.group}
+      config:
+        server-addr: ${spring.cloud.nacos.discovery.server-addr}
+        group: ${spring.cloud.nacos.discovery.group}
+        namespace: ${spring.cloud.nacos.discovery.namespace}
+    inetutils:
+      #选择使用此网段进行处理
+      preferred-networks: 10.*
+  config:
+    import:
+      - optional:nacos:application.yml
+      - optional:nacos:${spring.application.name}.yml
+swagger:
+  title: "统一授权中心"
+  description: "手机登录、帐号注册,token刷新，用户数据权限获取，功能权限验证，对其进行统一处理"
+
+# 微信小程序 ,默认配置一个,用于启动成功,这里如果没有则可能会报错
+wx:
+  miniapp:
+    appid: 1
+    secret: 1
+    config-storage:
+      type: redistemplate
+    msg-data-format: json

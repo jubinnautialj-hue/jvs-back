@@ -1,0 +1,3 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+cn.bctools.common.utils.SpringContextUtil,\
+cn.bctools.common.utils.jvs.JvsSystemConfig

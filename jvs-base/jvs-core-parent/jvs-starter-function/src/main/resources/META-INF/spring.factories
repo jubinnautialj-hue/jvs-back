@@ -1,0 +1,6 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+cn.bctools.function.config.FunctionAutoConfiguration,\
+cn.bctools.function.handler.ExpressionHandler,\
+cn.bctools.function.service.impl.FunctionBusinessServiceImpl,\
+cn.bctools.function.service.impl.SysFunctionServiceImpl,\
+cn.bctools.function.DesignIdFilter

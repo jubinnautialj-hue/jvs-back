@@ -1,0 +1,36 @@
+server:
+  port: ${random.int[50001,50099]}
+version: @project.version@
+spring:
+  application:
+    name: @project.artifactId@
+  main:
+    allow-bean-definition-overriding: true
+    allow-circular-references: true
+  cloud:
+    nacos:
+      discovery:
+        server-addr: http://10.0.0.200:8848
+        group: jvs
+        namespace: jvs
+      config:
+        password: nacos
+        username: nacos
+        server-addr: http://10.0.0.200:8848
+        group: jvs
+        namespace: jvs
+    inetutils:
+      #选择使用此网段进行处理
+      preferred-networks: 10.*
+  config:
+    import:
+      #公共配置
+      - optional:nacos:application.yml
+      #公共配置项目配置
+      - optional:nacos:${spring.application.name}.yml
+      #父级配置
+      - optional:nacos:${project.parent.artifactId}.yml
+
+swagger:
+  title: "逻辑引擎集成示例模块"
+  description: "用于集成逻辑引擎的示例服务，扩展逻辑引擎节点,调用配置好的逻辑引擎"

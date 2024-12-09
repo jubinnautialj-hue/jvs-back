@@ -1,0 +1,24 @@
+server:
+  port: 10000
+version: @project.version@
+spring:
+  application:
+    name: @project.artifactId@
+  main.allow-bean-definition-overriding: true
+  cloud:
+    nacos:
+      discovery:
+        server-addr: http://jvs-nacos:8848
+        group: jvs
+        namespace: ${spring.cloud.nacos.discovery.group}
+      config:
+        server-addr: ${spring.cloud.nacos.discovery.server-addr}
+        group: ${spring.cloud.nacos.discovery.group}
+        namespace: ${spring.cloud.nacos.discovery.namespace}
+    inetutils:
+      #选择使用此网段进行处理
+      preferred-networks: 10.*
+  config:
+    import:
+      - optional:nacos:application.yml
+      - optional:nacos:${spring.application.name}.yml

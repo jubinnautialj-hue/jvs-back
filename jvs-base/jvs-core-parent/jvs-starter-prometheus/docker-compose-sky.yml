@@ -1,0 +1,35 @@
+version: '3'
+services:
+  skywalking-oap:
+    image: apache/skywalking-oap-server:8.8.1
+    container_name: skywalking-oap
+    restart: always
+    ports:
+      - 11800:11800
+      - 12800:12800
+    environment:
+      SW_STORAGE: elasticsearch7  # 指定ES版本
+      SW_STORAGE_ES_CLUSTER_NODES: elasticsearch:9200
+      TZ: Asia/Shanghai
+      #暂时不挂载
+      #    volumes:
+      # - ./oap/conf/alarm-settings.yml:/skywalking/config/alarm-settings.yml
+  skywalking-ui:
+    image: apache/skywalking-ui:8.8.1
+    container_name: skywalking-ui
+    depends_on:
+      - skywalking-oap
+    links:
+      - skywalking-oap
+    restart: always
+    ports:
+      - 18080:8080
+    environment:
+      SW_OAP_ADDRESS: http://skywalking-oap:12800
+      TZ: Asia/Shanghai
+#桥接网络
+networks:
+  proxy:
+    ipam:
+      config:
+        - subnet: 10.0.0.1/24

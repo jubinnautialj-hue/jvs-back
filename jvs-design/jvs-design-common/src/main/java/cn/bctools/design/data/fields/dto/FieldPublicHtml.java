@@ -1,0 +1,69 @@
+package cn.bctools.design.data.fields.dto;
+
+import cn.bctools.design.data.fields.dto.form.item.FilterHtml;
+import cn.bctools.design.data.fields.enums.DataFieldType;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
+
+import java.util.List;
+
+/**
+ * 数据字段基本信息
+ *
+ * @Author: GuoZi
+ */
+@Slf4j
+@Data
+@EqualsAndHashCode(callSuper = true)
+@Accessors(chain = true)
+public class FieldPublicHtml extends FieldJsonHtml{
+
+    @ApiModelProperty("字段唯一id")
+    private String id;
+
+    @ApiModelProperty("字段名称")
+    private String fieldKey;
+
+    @ApiModelProperty("显示名称")
+    private String fieldName;
+
+    @ApiModelProperty("显示名称")
+    private String label;
+
+    @ApiModelProperty(value = "显示来源字段id")
+    private String sourceFieldId;
+
+    @ApiModelProperty(value = "弹框,是否跳过数据权限")
+    private Boolean nopermission;
+    @ApiModelProperty(value = "默认值")
+    private Object defaultValue;
+
+    @ApiModelProperty("字段类型")
+    private DataFieldType fieldType;
+
+    public DataFieldType getFieldType() {
+        return getType();
+    }
+
+    @ApiModelProperty("是否是容器组件,如果是解析容器组件里面的字段,主要用于公式处理")
+    private Boolean next = false;
+
+    @ApiModelProperty("数据联动条件")
+    private List<QueryConditionDto> dataLinkageList;
+    @ApiModelProperty(value = "数据筛选", notes = "兼容2.1.6以前的配置")
+    private List<FilterHtml> dataFilterList;
+    @ApiModelProperty(value = "数据筛选", notes = "与/或")
+    private List<List<FilterHtml>> dataFilterGroupList;
+
+    @ApiModelProperty("数据联动模型id")
+    private String dataLinkageModelId;
+
+    @ApiModelProperty("数据联动显示的字段值")
+    private String linkageFieldKey;
+
+    @ApiModelProperty(value = "允许为空", notes = "默认都可以为空")
+    private Boolean emptyEnable = true;
+}
