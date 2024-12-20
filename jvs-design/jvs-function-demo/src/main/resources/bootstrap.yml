@@ -10,15 +10,15 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: http://10.0.0.200:8848
-        group: jvs
-        namespace: jvs
+        server-addr: http://jvs-nacos:8848
+        group: ${spring.cloud.nacos.discovery.group}
+        namespace: ${spring.cloud.nacos.discovery.namespace}
       config:
         password: nacos
         username: nacos
-        server-addr: http://10.0.0.200:8848
-        group: jvs
-        namespace: jvs
+        server-addr: http://jvs-nacos:8848
+        group: ${spring.cloud.nacos.discovery.group}
+        namespace: ${spring.cloud.nacos.discovery.namespace}
     inetutils:
       #选择使用此网段进行处理
       preferred-networks: 10.*
