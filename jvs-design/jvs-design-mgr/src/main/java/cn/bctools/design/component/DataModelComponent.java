@@ -1,5 +1,6 @@
 package cn.bctools.design.component;
 
+import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.design.data.component.DataModelHandler;
@@ -13,10 +14,15 @@ import cn.bctools.design.data.fields.impl.basic.DatePickerFieldHandler;
 import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
+import cn.bctools.design.identification.entity.Identification;
+import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.project.entity.JvsApp;
+import cn.bctools.design.project.entity.JvsAppVersion;
+import cn.bctools.design.project.entity.enums.AppVersionStatusEnum;
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.design.project.service.JvsAppService;
+import cn.bctools.design.project.service.JvsAppVersionService;
 import cn.bctools.design.use.api.DataModelApi;
 import cn.bctools.design.use.api.dto.DataFiledDto;
 import cn.bctools.design.use.api.dto.DataModelDto;
@@ -30,6 +36,8 @@ import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
@@ -58,11 +66,15 @@ import static cn.hutool.core.date.DatePattern.NORM_DATE_PATTERN;
 @Api(tags = "[Feign]数据模型")
 public class DataModelComponent implements DataModelApi {
     @Autowired
+    JvsAppVersionService appVersionService;
+    @Autowired
     DataModelService dataModelService;
     @Autowired
     DataFieldService dataFieldService;
     @Autowired
     JvsAppService appService;
+    @Autowired
+    IdentificationService identificationService;
     @Autowired
     DataModelHandler dataModelHandler;
     @Autowired
@@ -177,6 +189,7 @@ public class DataModelComponent implements DataModelApi {
         return R.ok(collect);
     }
 
+    @Override
     public R<List<DataFiledDto>> fieldMap(String appId, String dataModelId, String mode) {
         log.info("获取数据应用的信息,{},{},{}", appId, dataModelId, mode);
         ModeUtils.setSwitchModel(new SwitchModeDto().setMode(AppVersionTypeEnum.getMsgType(mode)));
@@ -232,15 +245,16 @@ public class DataModelComponent implements DataModelApi {
     }
 
     @Override
-    public R<List<DataFiledDto>> dataFieldMap(String tableCode, String mode) {
-        ModeUtils.setSwitchModel(new SwitchModeDto().setMode(AppVersionTypeEnum.getMsgType(mode)));
-        // 根据表标识和模式获取模型id和应用id
-        DataModelPo dataModel = dataModelService.getOne(Wrappers.<DataModelPo>lambdaQuery().eq(DataModelPo::getTableCode, tableCode).eq(DataModelPo::getBelongMode, AppVersionTypeEnum.getMsgType(mode)));
-        if (ObjectNull.isNull(dataModel)) {
-            return R.ok(Collections.emptyList());
+    public R<List<DataFiledDto>> dataFieldMap(String tableCode, String appCode, String mode) {
+        JvsApp app = getJvsApp(appCode, mode);
+        Identification identification = identificationService.getOne(new LambdaQueryWrapper<Identification>()
+                        .eq(Identification::getJvsAppId,app.getId())
+                .eq(Identification::getIdentifier, tableCode));
+        if (ObjectNull.isNull(identification)) {
+            return R.ok();
         }
-
-        List<DataFiledDto> collect = dataFieldService.getAllField(dataModel.getAppId(), dataModel.getId()).stream()
+        ModeUtils.setSwitchModel(new SwitchModeDto().setMode(AppVersionTypeEnum.getMsgType(mode)));
+        List<DataFiledDto> collect = dataFieldService.getAllField(identification.getJvsAppId(), identification.getDesignId()).stream()
                 .filter(e -> !DesignType.data.equals(e.getDesignType()))
                 .map(e -> {
                     DataFiledDto dataFiledDto =
@@ -301,16 +315,40 @@ public class DataModelComponent implements DataModelApi {
     }
 
     @Override
-    public R<List<DataModelDto>> dataModelList(String appId, String mode) {
-        ModeUtils.setSwitchModel(new SwitchModeDto().setMode(AppVersionTypeEnum.getMsgType(mode)));
-        JvsApp byId = appService.getById(appId);
-        List<DataModelDto> collect = dataModelService.list(Wrappers.query(new DataModelPo().setAppId(appId)))
-                .stream()
+    public R<List<DataModelDto>> dataModelList(String appCode, String mode) {
+        JvsApp app = getJvsApp(appCode, mode);
+        List<DataModelDto> collect = dataModelService.list(Wrappers.query(new DataModelPo().setAppId(app.getId())))
+                .parallelStream()
                 //数据必须要大于 0
                 .filter(e -> dataModelHandler.estimatedCount(ObjectNull.isNull(e.getCollectionName()) ? e.getId() : e.getCollectionName()) > 0)
-                .map(e -> new DataModelDto().setTableCode(e.getTableCode()).setAppId(e.getAppId()).setAppName(byId.getName()).setTableName(ObjectNull.isNull(e.getCollectionName()) ? e.getId() : e.getCollectionName()).setTableNameDesc(e.getName()))
+                .map(e -> {
+                    Identification one = identificationService.getOne(Wrappers.query(new Identification().setDesignId(e.getId())));
+                    if (ObjectNull.isNotNull(one)) {
+                        return new DataModelDto().setTableCode(e.getTableCode()).setTableCode(one.getIdentifier()).setAppName(app.getName()).setTableName(ObjectNull.isNull(e.getCollectionName()) ? e.getId() :
+                                e.getCollectionName()).setTableNameDesc(e.getName());
+                    } else {
+                        return null;
+                    }
+                }).filter(Objects::nonNull)
                 .collect(Collectors.toList());
         return R.ok(collect);
+    }
+
+    private JvsApp getJvsApp(String appCode, String mode) {
+        AppVersionTypeEnum msgType = AppVersionTypeEnum.getMsgType(mode);
+        ModeUtils.setSwitchModel(new SwitchModeDto().setMode(msgType));
+        //根据应用标识查询应用id ,
+        Set<String> appIds = identificationService.list(new LambdaQueryWrapper<Identification>().eq(Identification::getIdentifier, appCode)).stream().map(Identification::getJvsAppId).collect(Collectors.toSet());
+        //根据这个模式下查询当前启用的应用
+        JvsAppVersion appVersion = appVersionService.getOne(new LambdaQueryWrapper<JvsAppVersion>()
+                .select(JvsAppVersion::getJvsAppId, JvsAppVersion::getAppVersion)
+                .eq(JvsAppVersion::getVersionType, msgType)
+                .in(JvsAppVersion::getJvsAppId, appIds)
+                .ne(JvsAppVersion::getVersionStatus, AppVersionStatusEnum.HISTORY));
+        if(ObjectNull.isNull(appVersion)){
+            throw new BusinessException("应用不存在");
+        }
+        return appService.getById(appVersion.getJvsAppId());
     }
 
     private Criteria buildQuery(DataModelSearchDto searchDto) {

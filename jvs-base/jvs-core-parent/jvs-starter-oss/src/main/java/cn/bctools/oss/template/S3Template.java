@@ -176,6 +176,7 @@ public class S3Template implements OssTemplate {
      */
     @Override
     public String createMultipartUpload(String bucketName, String filename) {
+        makeBucket(bucketName);
         InitiateMultipartUploadRequest request = new InitiateMultipartUploadRequest(bucketName, filename);
         return s3.initiateMultipartUpload(request).getUploadId();
     }

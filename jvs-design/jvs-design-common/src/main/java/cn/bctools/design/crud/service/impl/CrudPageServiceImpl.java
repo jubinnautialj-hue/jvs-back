@@ -363,6 +363,8 @@ public class CrudPageServiceImpl extends ServiceImpl<CrudPageMapper, CrudPage> i
                 formService.removeByIds(form);
                 //根据form删除表单的字段
                 dataFieldService.remove(new LambdaQueryWrapper<DataFieldPo>().in(DataFieldPo::getDesignId, form).eq(DataFieldPo::getJvsAppId, appId));
+                // 删除菜单中的表单
+                appMenuHandler.removeMenuByDesignIds(form);
             }
         }
         this.removeById(designId);

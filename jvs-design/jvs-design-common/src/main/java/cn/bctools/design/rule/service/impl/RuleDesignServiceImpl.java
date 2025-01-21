@@ -6,6 +6,8 @@ import cn.bctools.design.rule.mapper.RuleDesignDao;
 import cn.bctools.design.rule.service.RuleDescribeService;
 import cn.bctools.design.rule.service.RuleDesignService;
 import cn.bctools.design.sqlInjector.MapperMethodHandler;
+import cn.bctools.oss.template.OssTemplate;
+import cn.bctools.redis.utils.RedisUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -27,6 +29,8 @@ public class RuleDesignServiceImpl extends ServiceImpl<RuleDesignDao, RuleDesign
 
     RuleDescribeService deleteRuleDescribe;
     MapperMethodHandler mapperMethodHandler;
+    RedisUtils redisUtils;
+    OssTemplate ossTemplate;
 
     @Override
     public RuleDesignPo getEnableDesign(String secret) {
@@ -52,4 +56,5 @@ public class RuleDesignServiceImpl extends ServiceImpl<RuleDesignDao, RuleDesign
         remove(Wrappers.query(new RuleDesignPo().setJvsAppId(appId).setId(designId)));
         deleteRuleDescribe.deleteRuleDescribe(designId, appId);
     }
+
 }

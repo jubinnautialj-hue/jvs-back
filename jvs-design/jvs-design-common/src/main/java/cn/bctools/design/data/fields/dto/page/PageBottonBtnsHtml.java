@@ -17,5 +17,7 @@ public class PageBottonBtnsHtml {
     String rule;
     @ApiModelProperty("标识")
     String permissionFlag;
+    @ApiModelProperty("是否关闭窗口")
+    Boolean closable;
 
 }

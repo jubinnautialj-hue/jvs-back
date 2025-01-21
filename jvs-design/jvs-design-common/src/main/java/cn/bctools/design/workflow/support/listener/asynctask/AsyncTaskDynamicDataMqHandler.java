@@ -3,7 +3,8 @@ package cn.bctools.design.workflow.support.listener.asynctask;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.design.workflow.entity.FlowTask;
 import cn.bctools.design.workflow.entity.enums.FlowTaskEventTypeEnum;
-import cn.bctools.design.workflow.service.*;
+import cn.bctools.design.workflow.service.FlowDynamicDataService;
+import cn.bctools.design.workflow.service.FlowTaskEventCompensateService;
 import cn.bctools.rabbit.config.MyRabbitConfig;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
@@ -14,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.util.List;

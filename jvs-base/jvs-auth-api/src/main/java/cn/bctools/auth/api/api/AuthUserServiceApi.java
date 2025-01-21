@@ -1,9 +1,6 @@
 package cn.bctools.auth.api.api;
 
-import cn.bctools.auth.api.dto.BaseFindDto;
-import cn.bctools.auth.api.dto.BaseFindReturnDto;
-import cn.bctools.auth.api.dto.SearchUserDto;
-import cn.bctools.auth.api.dto.UserGroupDto;
+import cn.bctools.auth.api.dto.*;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.R;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -225,5 +222,15 @@ public interface AuthUserServiceApi {
      */
     @PostMapping(value = "/user/get/basic/field")
     R<List<UserDto>> getBasicInfoById(@RequestBody List<String> userIds, @RequestParam("field") List<String> field);
+
+
+    /**
+     * 新增用户对象或修改用户
+     *
+     * @param dto 用户对象
+     * @return
+     */
+    @PostMapping(value = "/user/saveOrUpdate")
+    R<String> saveOrUpdate(@RequestBody SaveUserDto dto);
 
 }

@@ -157,6 +157,7 @@ public class CrudPageController {
     @Transactional(rollbackFor = Exception.class)
     public R<List<CrudPage>> page(@PathVariable String appId) {
         List<CrudPage> pageList = crudPageService.list(Wrappers.<CrudPage>lambdaQuery()
+                .select(CrudPage::getId,CrudPage::getDataModelId,CrudPage::getName,CrudPage::getJvsAppId)
                 .isNotNull(CrudPage::getName)
                 .eq(StringUtils.isNotBlank(appId), CrudPage::getJvsAppId, appId)
                 .orderByAsc(CrudPage::getCreateTime));

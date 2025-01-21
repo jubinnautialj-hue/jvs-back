@@ -200,7 +200,7 @@ public class TenantController {
         //帐号不存在则直接创建一个管理员的帐号为这个
         UserTenant userTenant = new UserTenant().setRealName("租户管理员");
         if (ObjectNull.isNull(one)) {
-            one.setPassword(passwordEncoder.encode(tenantPo.getDefaultPassword()));
+            entity.setPassword(passwordEncoder.encode(tenantPo.getDefaultPassword()));
             userService.saveUser(entity, userTenant);
             //删除租户级用户
             userTenantService.removeById(userTenant.getId());

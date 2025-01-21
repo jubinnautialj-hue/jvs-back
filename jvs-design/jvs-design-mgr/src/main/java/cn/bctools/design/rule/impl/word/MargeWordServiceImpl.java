@@ -28,7 +28,7 @@ import java.util.Map;
         group = RuleGroup.工具插件,
         test = true,
         returnType = ClassType.文件,
-        testShowEnum = TestShowEnum.TEXT,
+        testShowEnum = TestShowEnum.JSON,
         order = 8,
 //        iconUrl = "rule-Messages",
         explain = "多个文档进行合并处理，组合成一个文档"

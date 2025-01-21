@@ -12,6 +12,7 @@ import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.crud.utils.DesignUtils;
 import cn.bctools.design.data.fields.DataFieldHandler;
 import cn.bctools.design.data.fields.IDataFieldHandler;
+import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
 import cn.bctools.design.data.fields.dto.form.FormDesignHtml;
 import cn.bctools.design.data.fields.dto.form.FormSettingHtml;
 import cn.bctools.design.data.fields.dto.page.ButtonDesignHtml;
@@ -168,8 +169,18 @@ public class AppUseController {
                 if (ObjectNull.isNull(e.getEnabledQueryTypes())) {
                     e.setEnabledQueryTypes(new ArrayList<>());
                 }
-                e.getEnabledQueryTypes().remove(DataQueryType.isNull);
-                e.getEnabledQueryTypes().add(DataQueryType.isNull);
+                IDataFieldHandler handler = handlerMap.get(e.getComponentType().getDesc());
+                FieldBasicsHtml html = handler.toHtml(e.getDesignJson());
+                if (ObjectNull.isNotNull(html)) {
+                    List enabledQueryTypes = handler.getEnabledQueryTypes(html);
+                    e.setEnabledQueryTypes(enabledQueryTypes);
+                    List<DataQueryType> collect = e.getEnabledQueryTypes().stream().distinct().collect(Collectors.toList());
+                    e.setEnabledQueryTypes(collect);
+                    e.getEnabledQueryTypes().remove(DataQueryType.isNull);
+                    e.getEnabledQueryTypes().add(DataQueryType.isNull);
+                } else {
+
+                }
             });
             // 解析显示设置-关联模型，获取关联显示字段填充到列表页设计
             dataFieldDynamicService.parseModelDisplayFillFields(design.getDataPage().getAutoTableFields());

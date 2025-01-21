@@ -167,13 +167,13 @@ public class RuleController {
     @GetMapping("/page/list")
     public R<Page<RuleDesignPo>> list(Page<RuleDesignPo> page, RuleDesignPo ruleDesignPo, @PathVariable String appId) {
         String name = ruleDesignPo.getName();
-        boolean notNull = ObjectUtil.isNotNull(ruleDesignPo.getReqType());
+        boolean notNull = ObjectUtil.isNull(ruleDesignPo.getReqType());
         List<RuleType> list = new ArrayList<>();
         if (notNull) {
             list.add(RuleType.Source_code_development_docking_logic);
-            if (RuleType.Source_code_development_docking_logic.equals(ruleDesignPo.getReqType())) {
-                list.add(RuleType.Low_code_logic);
-            }
+            list.add(RuleType.Low_code_logic);
+        } else {
+            list.add(ruleDesignPo.getReqType());
         }
         page = designService.page(page, Wrappers.<RuleDesignPo>lambdaQuery()
                 .select(
@@ -190,7 +190,7 @@ public class RuleController {
                         RuleDesignPo::getEnable
                 )
                 .eq(RuleDesignPo::getJvsAppId, appId)
-                .in(notNull, RuleDesignPo::getReqType, list)
+                .in(ObjectNull.isNotNull(list), RuleDesignPo::getReqType, list)
                 .like(ObjectUtil.isNotNull(name), RuleDesignPo::getName, name)
                 .orderByDesc(RuleDesignPo::getCreateTime));
         return R.ok(page);
@@ -354,13 +354,9 @@ public class RuleController {
             return R.failed("没有找到集成设计");
         }
         //判断类型，根据类型获取应用标识信息,并同时返回
-        Identification one = identificationService.getOne(new LambdaQueryWrapper<Identification>().eq(Identification::getDesignId, designPo.getId()).eq(Identification::getJvsAppId, appId));
+        Identification one = identificationService.getOne(new LambdaQueryWrapper<Identification>().eq(Identification::getDesignId, designPo.getAppIdentifier()).eq(Identification::getJvsAppId, appId));
         if (ObjectNull.isNotNull(one)) {
             designPo.setAppIdentifier(one.getIdentifier());
-        } else {
-            Identification entity = new Identification().setJvsAppId(appId).setDesignId(designPo.getId()).setDesignType(DesignType.app).setIdentifier(IdGenerator.getIdStr(36));
-            identificationService.save(entity);
-            designPo.setAppIdentifier(entity.getIdentifier());
         }
         JvsApp app = jvsAppService.getById(appId);
         //根据类型判断是否是 api类型，并拼凑 api的 url的地址

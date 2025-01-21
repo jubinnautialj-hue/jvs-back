@@ -112,11 +112,6 @@ public class JustAuthController {
      */
     @GetMapping
     public R<List<String>> index() {
-        List<OauthOther> one = oauthOtherService.list(Wrappers.query(new OauthOther().setEnableDefault(true)));
-        if (ObjectNull.isNotNull(one)) {
-            //只返回某一个三方的授权登录,只取一条数据
-            return R.ok(one.stream().limit(1).map(OauthOther::getType).collect(Collectors.toList()));
-        }
         List<OAuthTypeEnum> loginTypes = new ArrayList<>();
         // 密码登录
         loginTypes.add(OAuthTypeEnum.password);
@@ -215,6 +210,10 @@ public class JustAuthController {
             response.sendRedirect(url);
         } else {
             String redirectUri = (String) redisUtils.get(SysConstant.redisKey("just", state));
+            if (ObjectNull.isNull(redirectUri)) {
+                //默认值
+                redirectUri = "http://" + jvsSystemConfig.getDomain() + ":" + jvsSystemConfig.getService().get(0).getPort() + "/";
+            }
             if (redirectUri.indexOf("?") > 0) {
                 response.sendRedirect(redirectUri + "&code=" + code);
             } else {
@@ -233,7 +232,7 @@ public class JustAuthController {
     @GetMapping("/types")
     R<List> types() {
         List<OauthOther> list = oauthOtherService.list(new LambdaQueryWrapper<OauthOther>()
-                .select(OauthOther::getType,OauthOther::getIconUrl, OauthOther::getUserInfo, OauthOther::getAccessToken, OauthOther::getAuthorize)
+                .select(OauthOther::getType, OauthOther::getIconUrl, OauthOther::getUserInfo, OauthOther::getAccessToken, OauthOther::getAuthorize)
                 .isNotNull(OauthOther::getType));
         return R.ok(list);
     }

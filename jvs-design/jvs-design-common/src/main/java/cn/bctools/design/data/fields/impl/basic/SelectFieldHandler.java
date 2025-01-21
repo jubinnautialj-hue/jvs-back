@@ -46,6 +46,9 @@ public class SelectFieldHandler extends IMultipleTypeHandler implements IDataFie
 
     @Override
     public void filterOrDataLinkage(String appId, Map<String, ? extends FieldBasicsHtml> fieldMap, String key, MultipleHtml e, Map<String, Object> map, Integer index, String... parentPath) {
+        if (ObjectNull.isNull(e.getDataModelId())) {
+            return;
+        }
         if (ObjectNull.isNotNull(e.getDataFilterList()) || ObjectNull.isNotNull(e.getDataFilterGroupList())) {
             List<List<FilterHtml>> dataFilterGroupList = CollectionUtils.isNotEmpty(e.getDataFilterGroupList()) ? e.getDataFilterGroupList() : Collections.singletonList(e.getDataFilterList());
             //如果查询条件与触发级件相关,则执行,如果不相关则退出关联,处理下拉关联问题

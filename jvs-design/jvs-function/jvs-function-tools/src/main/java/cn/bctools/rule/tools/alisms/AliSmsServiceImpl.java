@@ -40,7 +40,7 @@ import java.util.stream.Collectors;
         returnType = ClassType.数组,
         testShowEnum = TestShowEnum.TEXT,
         order = 14,
-//        iconUrl = "rule-dysmsduanxinfuwu",
+        statsMsg ="请在【系统设置】完善【短信配置】后，并在【短信消息模板】中同步短信模板",
         explain = "阿里短信服务，用淘宝账号打通三大运营商通信能力。<br/>注意：短信签名和模板是必须的，而且要通过审核后方可使用，不允许随意发送短信。详细查看【后台管理】-【短信配置】"
 )
 @AllArgsConstructor

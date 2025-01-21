@@ -112,6 +112,11 @@ public @interface Rule {
      */
     TestShowEnum testShowEnum() default TestShowEnum.JSON;
 
+    /**
+     * 展示排序
+     *
+     * @return
+     */
     int order() default 2147483647;
 
 }

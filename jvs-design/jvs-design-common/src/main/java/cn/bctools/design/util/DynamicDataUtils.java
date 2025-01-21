@@ -195,6 +195,8 @@ public class DynamicDataUtils {
                 } else {
                     queryValue = DataConditionType.get(queryValue);
                 }
+            } else {
+                queryValue = DataConditionType.get(queryValue);
             }
 
             Criteria criteria = Criteria.where(fieldId);
@@ -253,8 +255,8 @@ public class DynamicDataUtils {
                     }
                     break;
                 case in:
-                    if (queryValue instanceof List) {
-                        criteria.in((List) queryValue);
+                    if (queryValue instanceof Collection) {
+                        criteria.in((Collection) queryValue);
                     } else {
                         if (JSONUtil.isTypeJSONObject(queryValue.toString())) {
                             if (JSONUtil.isTypeJSONArray(queryValue.toString())) {
@@ -595,6 +597,8 @@ public class DynamicDataUtils {
                 return Criteria.where(Get.name(DynamicDataPo::getDeptId)).in(childDeptIds);
             case form_item:
                 return buildCriteria(conditionList);
+            case task_pending_approval:
+                return Criteria.where("jvsFlowTask.flowTaskPersons").regex(".*?" + user.getId() + ".*");
             default:
                 break;
         }

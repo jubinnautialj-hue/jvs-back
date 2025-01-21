@@ -16,6 +16,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.regex.Pattern;
 
@@ -41,6 +42,7 @@ public class RegisterLoginHandler implements LoginHandler<RegisterDto> {
     static final Pattern WORD_PATTERN = Pattern.compile("^[A-Za-z]+$");
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public User handle(String code, String appId, RegisterDto registerDto) {
         //校验是否成功
         smsComponent.check(registerDto.getPhone(), registerDto.getCode(), () -> new BusinessException("验证失败"));

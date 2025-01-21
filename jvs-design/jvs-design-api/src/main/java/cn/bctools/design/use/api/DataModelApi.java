@@ -99,23 +99,23 @@ public interface DataModelApi {
      * 根据数据模型标识查询字段信息
      * 此接口 bi使用较多
      *
-     * @param tableCode   数据模型标识
-     * @param mode        模式信息
+     * @param tableCode 数据模型标识
+     * @param mode      模式信息
      * @return 返回字段的详细信息
      */
     @ApiOperation("根据数据模型标识查询字段信息")
     @GetMapping(PREFIX + "/field/list")
-    R<List<DataFiledDto>> dataFieldMap(@RequestParam(value = "tableCode") String tableCode, @RequestParam(value = "mode") String mode);
+    R<List<DataFiledDto>> dataFieldMap(@RequestParam(value = "tableCode") String tableCode, @RequestParam(value = "appCode") String appCode, @RequestParam(value = "mode") String mode);
 
     /**
      * 根据数据模型查询字段详细信息结构
      *
-     * @param appId 数据模型信息
-     * @param mode  the mode
+     * @param appCode 应用标识
+     * @param mode    the mode
      * @return 返回字段详细信息 r
      */
     @ApiOperation("获取数据模型集")
     @GetMapping(PREFIX + "/datamodel/list")
-    R<List<DataModelDto>> dataModelList(@RequestParam(value = "appId") String appId, @RequestParam(value = "mode") String mode);
+    R<List<DataModelDto>> dataModelList(@RequestParam(value = "appCode") String appCode, @RequestParam(value = "mode") String mode);
 
 }

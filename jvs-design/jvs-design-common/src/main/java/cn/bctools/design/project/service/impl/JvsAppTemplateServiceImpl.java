@@ -361,8 +361,9 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
     @Override
     public void uploadTemplateCreateApp(JvsAppTemplate jvsAppTemplate, String fileName) {
         // 初始化任务进度
+        jvsAppTemplate.setId(IdGenerator.get32UUID());
         String lockey = getLockKey(jvsAppTemplate.getId());
-        JvsAppTemplateTaskProgress templateTaskProgress = templateTaskProgressHandler.initTask(lockey, "导入模板(" + fileName + ")创建应用", null);
+        JvsAppTemplateTaskProgress templateTaskProgress = templateTaskProgressHandler.initTask(lockey, "导入模板(" + fileName + ")创建应用", jvsAppTemplate.getId());
         String taskProgressId = templateTaskProgress.getId();
         // 导入模板
         templateTaskProgressHandler.addProgress(taskProgressId, AppTemplateTaskProgressDetailEnum.PACK, AppTemplateTaskProgressEnum.PROCESSING, null, "导入模板");
@@ -536,13 +537,12 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
     private void createOrIterationApp(JvsAppTemplateTaskProgress templateTaskProgress, boolean type, JvsAppVersion sourceAppVersion, AppVersionTypeEnum targetVersionType, JvsAppTemplate template) {
         String taskProgressId = templateTaskProgress.getId();
         LocalDateTime now = LocalDateTime.now();
-
+        // 初始化模板任务日志
+        templateTaskProgressHandler.initCreateOrIterationProgress(taskProgressId);
         // 解密模板内容
         AtomicReference<JvsApp> appRef = new AtomicReference<>(null);
         AtomicReference<String> dataRef = new AtomicReference<>(null);
         templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.DECRYPT_DATA, () -> {
-            // 初始化模板任务日志
-            templateTaskProgressHandler.initCreateOrIterationProgress(taskProgressId);
             // 开始创建应用或迭代应用
             JvsApp jvsApp = JSONObject.parseObject(template.getData(), JvsApp.class);
             appRef.set(jvsApp);
@@ -576,8 +576,7 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
                 iterationJvsApp(template, jvsApp, targetVersion);
             }
             targetVersionRef.set(targetVersion);
-
-            templateTaskProgressHandler.updateAppId(taskProgressId, affiliationAppId);
+            templateTaskProgressHandler.updateAppId(taskProgressId, affiliationAppId, sourceAppVersion.getAffiliationApp());
         });
 
         // 解析模板数据

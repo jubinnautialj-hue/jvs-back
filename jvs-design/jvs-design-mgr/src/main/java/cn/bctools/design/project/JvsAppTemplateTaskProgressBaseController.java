@@ -8,6 +8,7 @@ import cn.bctools.design.project.dto.AppTemplateTaskProgressResDto;
 import cn.bctools.design.project.entity.JvsAppTemplateTaskProgress;
 import cn.bctools.design.project.entity.JvsAppTemplateTaskProgressDetail;
 import cn.bctools.design.project.entity.enums.AppTemplateTaskProgressEnum;
+import cn.bctools.design.project.handler.AppTemplateTaskProgressHandler;
 import cn.bctools.design.project.service.JvsAppTemplateTaskProgressDetailService;
 import cn.bctools.design.project.service.JvsAppTemplateTaskProgressService;
 import cn.bctools.log.annotation.Log;
@@ -36,17 +37,23 @@ public class JvsAppTemplateTaskProgressBaseController {
 
     private final JvsAppTemplateTaskProgressService templateTaskProgressService;
     private final JvsAppTemplateTaskProgressDetailService templateTaskProgressDetailService;
+    private final AppTemplateTaskProgressHandler progressHandler;
 
     @Log
     @ApiOperation("查询自己发起的最近的迭代任务进度")
     @GetMapping()
     public R<List<AppTemplateTaskProgressResDto>> progress(AppTemplateTaskProgressEnum progress) {
         UserDto userDto = UserCurrentUtils.getCurrentUser();
-        List<JvsAppTemplateTaskProgress> templateTaskProgresses = templateTaskProgressService.list(Wrappers.<JvsAppTemplateTaskProgress>lambdaQuery()
-                .eq(JvsAppTemplateTaskProgress::getCreateById, userDto.getId())
-                .eq(JvsAppTemplateTaskProgress::getProgress, progress)
-                .orderByDesc(JvsAppTemplateTaskProgress::getCreateTime)
-                .last("limit 10"));
+        List<JvsAppTemplateTaskProgress> templateTaskProgresses = null;
+        if (AppTemplateTaskProgressEnum.PROCESSING.equals(progress)) {
+            templateTaskProgresses = progressHandler.getUserProcessingProgress(userDto.getId());
+        } else {
+            templateTaskProgresses = templateTaskProgressService.list(Wrappers.<JvsAppTemplateTaskProgress>lambdaQuery()
+                    .eq(JvsAppTemplateTaskProgress::getCreateById, userDto.getId())
+                    .eq(JvsAppTemplateTaskProgress::getProgress, progress)
+                    .orderByDesc(JvsAppTemplateTaskProgress::getCreateTime)
+                    .last("limit 10"));
+        }
         if (ObjectNull.isNull(templateTaskProgresses)) {
             return R.ok();
         }
@@ -59,10 +66,14 @@ public class JvsAppTemplateTaskProgressBaseController {
     @ApiOperation("查询进度详情")
     @GetMapping("/{taskId}/detail")
     public R<List<JvsAppTemplateTaskProgressDetail>> progressDetail(@PathVariable String taskId) {
-        return R.ok(templateTaskProgressDetailService
-                .list(Wrappers.<JvsAppTemplateTaskProgressDetail>lambdaQuery()
-                        .eq(JvsAppTemplateTaskProgressDetail::getTaskId, taskId)
-                        .orderByAsc(Arrays.asList(JvsAppTemplateTaskProgressDetail::getCreateTime, JvsAppTemplateTaskProgressDetail::getSerialNumber))));
+        List<JvsAppTemplateTaskProgressDetail> details = progressHandler.getProcessingProgressDetail(taskId);
+        if (ObjectNull.isNull(details)) {
+            details = templateTaskProgressDetailService
+                    .list(Wrappers.<JvsAppTemplateTaskProgressDetail>lambdaQuery()
+                            .eq(JvsAppTemplateTaskProgressDetail::getTaskId, taskId)
+                            .orderByAsc(Arrays.asList(JvsAppTemplateTaskProgressDetail::getCreateTime, JvsAppTemplateTaskProgressDetail::getSerialNumber)));
+        }
+        return R.ok(details);
     }
 
 

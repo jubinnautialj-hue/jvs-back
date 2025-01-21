@@ -2,6 +2,7 @@ package cn.bctools.design.rule.controller;
 
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.PinyinUtils;
 import cn.bctools.common.utils.R;
 import cn.bctools.design.constant.OssConstantType;
 import cn.bctools.design.rule.dto.FunctionGroupDto;
@@ -88,6 +89,14 @@ public class FunctionController {
         return R.ok(o);
     }
 
+    @Log(back = false)
+    @ApiOperation("搜索获取所有方法")
+    @PostMapping("/list/search")
+    public R<List<RuleFunctionDto>> search(@RequestBody Map<String, Object> parameters, @PathVariable String appId) {
+        List<RuleFunctionDto> collect = getList(parameters, appId).getData().stream().flatMap(e -> e.getList().stream()).collect(Collectors.toList());
+        return R.ok(collect);
+    }
+
     /**
      * 获取所有的自定义方法, 并进行分组
      *
@@ -98,12 +107,13 @@ public class FunctionController {
     @PostMapping("/list")
     public R<List<FunctionGroupDto>> getList(@RequestBody Map<String, Object> parameters, @PathVariable String appId) {
         Collection o = (Collection) parameters.getOrDefault("group", new HashSet<>());
+        String name = (String) parameters.getOrDefault("name", "");
         if (ObjectNull.isNull(o)) {
             o.add(RuleGroup.常用插件.name());
         }
         //根据参数获取的值
         RuleSystemThreadLocal.setParameterSelectedOption(parameters);
-        Map<String, RuleFunctionDto> functionsMap = SystemInit.getFunctionsMap(o);
+        Map<String, RuleFunctionDto> functionsMap = SystemInit.getFunctionsMap(o, name);
         //添加不同的分组数据
         Set<String> groups = new LinkedHashSet<>();
         for (RuleGroup value : RuleGroup.values()) {
@@ -112,20 +122,28 @@ public class FunctionController {
         Map<String, List<RuleFunctionDto>> collect = functionsMap.values()
                 .stream()
                 .filter(e -> {
-                    if (ObjectNull.isNotNull(o)) {
-                        return o.contains(e.getGroup());
+                    if (ObjectNull.isNotNull(name)) {
+                        return e.getFunctionName().toLowerCase().contains(name.toLowerCase()) || PinyinUtils.getCameCasePinYin(e.getFunctionName()).toLowerCase().contains(name.toLowerCase());
+                    } else {
+                        if (ObjectNull.isNotNull(o)) {
+                            return o.contains(e.getGroup());
+                        }
+                        return true;
                     }
-                    return true;
                 })
                 .sorted(Comparator.comparingInt(RuleFunctionDto::getOrder).reversed())
                 .collect(Collectors.groupingBy(RuleFunctionDto::getGroup));
         List<FunctionGroupDto> list = new ArrayList<>();
-        List<RuleExternalPo> list1 = ruleExternalService.list(new LambdaQueryWrapper<RuleExternalPo>()
-                //如果指定了加载数据，则只查询这些类型的
-                .in(ObjectNull.isNotNull(o), RuleExternalPo::getRuleGroup, o));
-        list1.forEach(e -> {
-            groups.add(e.getRuleGroup());
-        });
+        List<RuleExternalPo> list1 = null;
+        if (ObjectNull.isNotNull(name) || ObjectNull.isNotNull(o)) {
+            list1 = ruleExternalService.list(new LambdaQueryWrapper<RuleExternalPo>()
+                    //如果指定了加载数据，则只查询这些类型的
+                    .like(ObjectNull.isNotNull(name), RuleExternalPo::getName, name)
+                    .in(ObjectNull.isNotNull(o), RuleExternalPo::getRuleGroup, o));
+            list1.forEach(e -> {
+                groups.add(e.getRuleGroup());
+            });
+        }
         Map<String, List<RuleFunctionDto>> ruleExternal = new HashMap<>(1);
         if (ObjectNull.isNotNull(list1)) {
             ruleExternal = list1

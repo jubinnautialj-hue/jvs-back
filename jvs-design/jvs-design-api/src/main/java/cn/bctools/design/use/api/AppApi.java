@@ -24,50 +24,24 @@ public interface AppApi {
      * The constant PREFIX.
      */
     String PREFIX = "/api/jvsdesign/menu";
-    /**
-     * 菜单类型: 应用
-     */
-    String TYPE_JVS_APP = "jvsapp";
-    /**
-     * key: 设计类型
-     */
-    String KEY_DESIGN_TYPE = "design";
-    /**
-     * key: 是否为应用管理员
-     */
-    String KEY_IS_APP_ADMIN = "designRole";
-
-//    /**
-//     * 获取所有菜单数据(树形结构)
-//     *
-//     * @param isAdmin 是否为管理员
-//     * @param admin
-//     * @return 菜单数据
-//     */
-//    @ApiOperation("获取所有")
-//    @GetMapping(PREFIX)
-//    R<List> getMenuTree(@RequestParam(value = "isAdmin") Boolean isAdmin, @RequestParam("mobile") boolean mobile);
-
-    /**
-     * 菜单查询
-     *
-     * @param isAdmin 是否为管理员
-     * @param name    查询条件-菜单名称(模糊搜索)
-     * @param mobile
-     * @return 搜索结果
-     */
-//    @ApiOperation("获取应用APP菜单-模糊搜索")
-//    @GetMapping(PREFIX + "/search")
-//    R<List> getMenu(@RequestParam(value = "isAdmin") Boolean isAdmin, @RequestParam(required = false, value = "name") String name, @RequestParam(required = false, value = "mobile") boolean mobile);
 
     /**
      * 根据模式查询 获取应用
      *
-     * @param msg the msg
+     * @param mode 模式信息，  开发模式，测试模式，正式模式
      * @return 返回模型信息 r
      */
     @GetMapping(PREFIX + "/base/app")
-    R<List<DataModelDto>> apps(@RequestParam("mode") String msg);
+    R<List<DataModelDto>> apps(@RequestParam("mode") String mode);
+
+    /**
+     * 检查这个应用是否存在
+     * @param mode
+     * @param appCode
+     * @return
+     */
+    @GetMapping(PREFIX + "/base/mode/app")
+    R<DataModelDto> apps(@RequestParam("mode") String mode, @RequestParam("appCode") String appCode);
 
     /**
      * 获取模式

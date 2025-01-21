@@ -14,7 +14,7 @@ import java.util.Map;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Accessors(chain = true)
-public class FieldJsonHtml extends FieldHtml {
+public abstract class FieldJsonHtml extends FieldHtml {
     /**
      * 具体结构如下:
      * <p>
@@ -22,4 +22,6 @@ public class FieldJsonHtml extends FieldHtml {
      */
     @ApiModelProperty("设计数据(Json格式)")
     private Map<String, Object> designJson;
+
+    public abstract String getDataModelId();
 }

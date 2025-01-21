@@ -49,6 +49,8 @@ public class ParameterMap implements Serializable {
      */
     @ApiModelProperty("默认值")
     Object defaultValue;
+    @ApiModelProperty("接口的测试值")
+    private Object testValue;
     /**
      * The Encryption express.
      */

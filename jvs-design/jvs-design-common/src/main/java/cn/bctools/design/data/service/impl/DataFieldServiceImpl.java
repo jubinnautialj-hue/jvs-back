@@ -398,6 +398,7 @@ public class DataFieldServiceImpl extends ServiceImpl<DataFieldMapper, DataField
             if (ObjectNull.isNotNull(fieldPo.getDataLinkageList())) {
                 List<QueryConditionDto> dataLinkageList = JSONUtil.toList(fieldPo.getDataLinkageList().toJSONString(), QueryConditionDto.class);
                 fieldDto.setDataLinkageList(dataLinkageList);
+                fieldDto.setDataLinkageEnable(fieldPo.getDataLinkageEnable());
                 fieldDto.setDataLinkageModelId(fieldPo.getDataLinkageModelId());
                 fieldDto.setLinkageFieldKey(fieldPo.getLinkageFieldKey());
             }
@@ -436,6 +437,7 @@ public class DataFieldServiceImpl extends ServiceImpl<DataFieldMapper, DataField
             comparableArr.add(DataQueryType.ge);
             comparableArr.add(DataQueryType.lt);
             comparableArr.add(DataQueryType.le);
+            comparableArr.add(DataQueryType.between);
             //审批人员信息也是保存在jvsFlowTask字段下面
             fields.add(new DataFieldPo().setFieldKey("jvsFlowTaskState").setFieldName("工作流状态").setFieldType(DataFieldType.input).setEnabledQueryTypes(eqArr));
             fields.add(new DataFieldPo().setFieldKey("jvsFlowTaskProgress").setFieldName("工作流进度").setFieldType(DataFieldType.input).setEnabledQueryTypes(eqArr));

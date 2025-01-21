@@ -40,6 +40,7 @@ public class DataModelIndexFieldOrLink {
                 //搜索应用名，只返回对应的数据
                 return dicData;
             case "aggregationField":
+            case "fields":
             case "groupField":
                 //获取这个设计的字段
                 //获取标识是哪一个应用 id

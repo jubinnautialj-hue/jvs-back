@@ -4,13 +4,18 @@ import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
  * @author zhuxiaokang
  * 任务移交记录
  */
 @Data
 @ApiModel("任务移交记录")
-public class TransferDto {
+public class TransferDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
     @ApiModelProperty(value = "被代理用户id")
     private String userId;
     @ApiModelProperty(value = "被代理用户名")

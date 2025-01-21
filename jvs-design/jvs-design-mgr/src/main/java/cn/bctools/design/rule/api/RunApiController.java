@@ -102,7 +102,6 @@ public class RunApiController {
     OssTemplate ossTemplate;
 
     private final static String RULE_KEY_FORMAT = "rule:run:key:%s";
-    private static final String http = "http";
 
     /**
      * Identification r.
@@ -297,7 +296,7 @@ public class RunApiController {
     }
 
     @NotNull
-    private R<Object> runApiRule(String appId, String ruleKey, Map<String, Object> variableMap, RuleDesignPo po, HttpServletRequest request, HttpServletResponse response) {
+    public R<Object> runApiRule(String appId, String ruleKey, Map<String, Object> variableMap, RuleDesignPo po, HttpServletRequest request, HttpServletResponse response) {
         //设置id值
         TenantContextHolder.setTenantId(po.getTenantId());
         //直接返回
@@ -354,7 +353,7 @@ public class RunApiController {
             //返回执行日志对象
             return R.ok(logPo.getId());
         } else {
-            getRuleReturn(response, po, logPo, data, ruleExecDto);
+            ruleStartUtils.getRuleReturn(response, po, logPo, data, ruleExecDto);
             boolean notNull = ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getException());
             if (ruleExecDto.getExecuteDto().getEndResult().getFunctionName().equals("提示消息")) {
                 if (notNull) {
@@ -371,57 +370,6 @@ public class RunApiController {
             }
             return R.ok(data.getEndResult().getValue());
         }
-    }
-
-    private R getRuleReturn(HttpServletResponse response, RuleDesignPo po, RunLogPo logPo, RuleExecuteDto data, RuleExecDto ruleExecDto) {
-        ruleStartUtils.start(po, logPo, ruleExecDto);
-        //如果最后的返回为流式返回结果,则直接导出文件结果
-        if (ObjectNull.isNotNull(data.getEndResult()) && ClassType.文件.equals(data.getEndResult().getClassType())) {
-            //处理流式输出
-            RuleFile value = (RuleFile) data.getEndResult().getValue();
-            //判断最后输出节点的类型, 看是否是文件输出类型,如果是就以文件形式的Post结果输出如果是异步
-            if (value.getOutputType().equals(OutputType.download)) {
-                response.setHeader("output_format", URLUtil.encode(value.getOriginalName()));
-            }
-            //兼容预览和下载格式
-            response.setHeader("output_type", value.getOutputType().toString());
-            if (!value.getUrl().startsWith(http)) {
-                value.setUrl(ossTemplate.fileLink(value.getFileName(), value.getBucketName()));
-            }
-            return R.ok(value);
-        }
-        //返回执行日志对象
-        //获取同步返回结果
-        R r = R.ok().setMsg("");
-        //如果最后一个节点为消息节点
-        if (ruleExecDto.getExecuteDto().getStats() && ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getMessageResult())) {
-            //成功的返回消息
-            r = R.ok(ruleExecDto.getExecuteDto().getMessageResult()).setMsg(ruleExecDto.getExecuteDto().getSyncMessageTips());
-        } else if (!ruleExecDto.getExecuteDto().getStats()) {
-            //写入消息状态,末认所有都是返回成功状态
-            response.setHeader("output_status", ruleExecDto.getExecuteDto().getStats().toString());
-            ResultDto endResult = ruleExecDto.getExecuteDto().getEndResult();
-            if (endResult.getValue() instanceof MessageTipsDto) {
-                MessageTipsDto value = (MessageTipsDto) endResult.getValue();
-                response.setHeader("message_close", String.valueOf(value.getOff()));
-                r = R.ok().setMsg(ruleExecDto.getExecuteDto().getSyncMessageTips()).setData(value.getData());
-            } else {
-                r = R.ok().setMsg(ruleExecDto.getExecuteDto().getErrorMessage());
-            }
-        } else if (ruleExecDto.getExecuteDto().getStats() && ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getErrorMessage())) {
-            response.setHeader("output_status", String.valueOf(false));
-            r = R.ok().setMsg(ruleExecDto.getExecuteDto().getErrorMessage());
-        } else if (ObjectNull.isNotNull(data.getEndResult())) {
-            Object value = data.getEndResult().getValue();
-            if (value instanceof MessageTipsDto) {
-                response.setHeader("output_status", ((MessageTipsDto) value).getOnOff().toString());
-                response.setHeader("message_close", ((MessageTipsDto) value).getOff().toString());
-                r.setData(((MessageTipsDto) value).getData()).setMsg(((MessageTipsDto) value).getMessage());
-            } else {
-                r.setData(data.getEndResult().getValue());
-            }
-        }
-        return r;
     }
 
     /**

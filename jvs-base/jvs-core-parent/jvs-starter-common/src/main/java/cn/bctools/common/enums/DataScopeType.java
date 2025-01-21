@@ -50,6 +50,10 @@ public enum DataScopeType {
     /**
      * 表单字段
      */
-    form_item;
-
+    form_item,
+    /**
+     * 待我审批
+     */
+    task_pending_approval,
+    ;
 }

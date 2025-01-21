@@ -14,4 +14,5 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 public class ComponentCrudRender extends OptionsBase {
+    Object data;
 }

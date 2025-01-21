@@ -6,6 +6,8 @@ import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.SpringContextUtil;
+import cn.hutool.core.io.IoUtil;
+import com.alibaba.fastjson2.JSONObject;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -21,9 +23,13 @@ import org.apache.poi.ss.formula.functions.T;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.http.*;
+import org.springframework.http.client.ClientHttpRequestExecution;
+import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -31,6 +37,11 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.net.ssl.SSLContext;
 import javax.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Function;
@@ -56,6 +67,15 @@ public class HttpRequestUtils {
 
     static {
         REST_TEMPLATE = new RestTemplate(generateHttpsRequestFactory());
+        ArrayList<ClientHttpRequestInterceptor> interceptors = new ArrayList<>();
+        interceptors.add((request, body, execution) -> {
+            log.info("Request: " + request.getMethod() + ":" + request.getURI() + " " + "\nHeaders: " + JSONObject.toJSONString(request.getHeaders()) + " " + request.getURI() +
+                    "\nBody: " + new String(body));
+            return execution.execute(request, body);
+        });
+
+        REST_TEMPLATE.setInterceptors(interceptors);
+
         DISCOVERY_CLIENT = SpringContextUtil.getBean(DiscoveryClient.class);
     }
 
@@ -233,7 +253,7 @@ public class HttpRequestUtils {
     }
 
     public static <T> T execute(String originalUrl, Map<String, Object> params, Class<T> tClass, boolean asynchronous, HttpMethod method, HttpHeaders httpHeaders, Boolean systemHeaders,
-                                 Function<HttpClientErrorException.Unauthorized, BusinessException> function) {
+                                Function<HttpClientErrorException.Unauthorized, BusinessException> function) {
         final String url = handleUrl(originalUrl);
         // 构建请求体
         HttpHeaders headers = systemHeaders ? enhanceHttpHeader() : new HttpHeaders();

@@ -53,6 +53,9 @@ public class DataModelDeleteServiceImpl implements BaseCustomFunctionInterface<D
     @Override
     @SneakyThrows
     public Object execute(DataModelDeleteDto dataModelDto, Map<String, Object> params) {
+        if (ObjectNull.isNull(dataModelDto.getBody()) && ObjectNull.isNull(dataModelDto.getIds())) {
+            throw new BusinessException("没有条件不支持删除");
+        }
         DynamicDataUtils.freePermit();
         List<String> ids = new ArrayList<>();
         String appId = dataModelService.getById(dataModelDto.getDataModelId()).getAppId();

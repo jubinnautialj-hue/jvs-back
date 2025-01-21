@@ -19,7 +19,7 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Accessors(chain = true)
-public class FieldPublicHtml extends FieldJsonHtml{
+public class FieldPublicHtml extends FieldJsonHtml {
 
     @ApiModelProperty("字段唯一id")
     private String id;
@@ -50,13 +50,19 @@ public class FieldPublicHtml extends FieldJsonHtml{
 
     @ApiModelProperty("是否是容器组件,如果是解析容器组件里面的字段,主要用于公式处理")
     private Boolean next = false;
-
+    @ApiModelProperty("开启数据联动条件")
+    private Boolean dataLinkageEnable;
     @ApiModelProperty("数据联动条件")
     private List<QueryConditionDto> dataLinkageList;
+
     @ApiModelProperty(value = "数据筛选", notes = "兼容2.1.6以前的配置")
     private List<FilterHtml> dataFilterList;
     @ApiModelProperty(value = "数据筛选", notes = "与/或")
     private List<List<FilterHtml>> dataFilterGroupList;
+    @ApiModelProperty(value = "模型关联的id")
+    private String dataModelId;
+    @ApiModelProperty(value = "是否开启了关联模型筛选")
+    private Boolean dataFilterEnable = false;
 
     @ApiModelProperty("数据联动模型id")
     private String dataLinkageModelId;
@@ -66,4 +72,15 @@ public class FieldPublicHtml extends FieldJsonHtml{
 
     @ApiModelProperty(value = "允许为空", notes = "默认都可以为空")
     private Boolean emptyEnable = true;
+
+    @Override
+    public String getDataModelId() {
+        //只有打开了配置后才能获取模型 id,否则获取为空
+        if (dataFilterEnable) {
+            return dataModelId;
+        } else {
+            return null;
+        }
+    }
+
 }

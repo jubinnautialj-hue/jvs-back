@@ -137,7 +137,7 @@ public class IdentificationServiceImpl extends ServiceImpl<IdentificationMapper,
     public List<Identification> getIdentificationModel(String... identifiers) {
         // 根据标识查询标识设计
         List<Identification> identifications = this.list(Wrappers.<Identification>lambdaQuery()
-                .in(ObjectNull.isNotNull(Arrays.stream(identifiers).collect(Collectors.toList())), Identification::getIdentifier, identifiers));
+                .in(ObjectNull.isNotNull(Arrays.stream(identifiers).filter(ObjectNull::isNotNull).collect(Collectors.toList())), Identification::getIdentifier, identifiers));
         if (ObjectNull.isNull(identifications)) {
             return identifications;
         }

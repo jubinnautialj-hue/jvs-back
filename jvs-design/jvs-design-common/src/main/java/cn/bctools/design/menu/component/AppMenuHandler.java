@@ -151,6 +151,18 @@ public class AppMenuHandler {
         appMenuService.save(appMenu);
     }
 
+    /**
+     * 根据设计id删除菜单
+     *
+     * @param designIds 设计id集合
+     */
+    public void removeMenuByDesignIds(List<String> designIds) {
+        if (ObjectNull.isNull(designIds)) {
+            return;
+        }
+        appMenuService.remove(Wrappers.<AppMenu>lambdaQuery().in(AppMenu::getDesignId, designIds));
+    }
+
 
     /**
      * 生成序号

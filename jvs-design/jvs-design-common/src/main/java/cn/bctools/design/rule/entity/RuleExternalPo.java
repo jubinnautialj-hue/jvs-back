@@ -62,7 +62,7 @@ public class RuleExternalPo implements Serializable {
     @ApiModelProperty("自定义解析处理类")
     private String handler;
     @ApiModelProperty("类型")
-    private String type;
+    private String type = "http";
     @ApiModelProperty("缓存的key")
     private String cacheKey;
     @ApiModelProperty("缓存的时间分钟")
@@ -92,6 +92,9 @@ public class RuleExternalPo implements Serializable {
     private List<ParameterMap> responseList;
     @ApiModelProperty("响应示例")
     private String response;
+    @TableField(exist = false)
+    @ApiModelProperty("响应示例")
+    private String body;
 
     public List<RuleFunctionDtoParameter> getFieldLists() {
         if (ObjectNull.isNull(fieldList)) {
@@ -119,6 +122,7 @@ public class RuleExternalPo implements Serializable {
                             new RuleFunctionDtoParameter()
                                     .setInfo(e.getLabel())
                                     .setKey(e.getKey())
+                                    .setTestValue(e.getTestValue())
                                     .setParamType(ParameterType.PATH)
                                     .setExplain(e.getExplain())
                                     .setSupportFunction(true)
@@ -133,6 +137,7 @@ public class RuleExternalPo implements Serializable {
                             .setInfo(e.getLabel())
                             .setKey(e.getKey())
                             .setExplain(e.getExplain())
+                            .setTestValue(e.getTestValue())
                             .setParamType(ParameterType.HEADER)
                             .setSupportFunction(true)
                             .setInputType(InputType.input)
@@ -147,6 +152,7 @@ public class RuleExternalPo implements Serializable {
                             .setKey(e.getKey())
                             .setExplain(e.getExplain())
                             .setSupportFunction(true)
+                            .setTestValue(e.getTestValue())
                             .setParamType(ParameterType.QUERY)
                             .setInputType(InputType.input)
                             .setCache(Optional.ofNullable(e.getCache()).orElse(Boolean.FALSE))
@@ -154,7 +160,6 @@ public class RuleExternalPo implements Serializable {
                     )
                     .forEach(collect::add);
         }
-
         return collect;
     }
 }

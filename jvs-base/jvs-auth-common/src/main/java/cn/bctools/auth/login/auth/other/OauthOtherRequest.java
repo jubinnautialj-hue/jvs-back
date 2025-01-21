@@ -108,7 +108,12 @@ public class OauthOtherRequest extends AuthDefaultRequest {
     @Override
     protected AuthToken getAccessToken(AuthCallback authCallback) {
         HttpUtil.setHttp(new HutoolImpl());
-        String response = doPostAuthorizationCode(authCallback.getCode());
+        String response = null;
+        try {
+            response = doPostAuthorizationCode(authCallback.getCode());
+        } catch (Exception e) {
+            response = doGetAuthorizationCode(authCallback.getCode());
+        }
         log.info("获取的 token 信息为,{}", response);
         JSONObject object = JSONObject.parseObject(response);
         checkResponse(object);

@@ -36,6 +36,10 @@ public class SysApplyConfig extends SysConfigBase<SysApplyConfig> implements Ser
      * 系统名称,这个租户,这个应用的系统名称
      */
     private String systemName = "Jvs 一站式技术供应商 [和JVS一起IT构建，私有化、低风险、高性价、渐进式的数字化转型]";
+    /**
+     * 是否关闭登录页，需要在配置了三方授权时才判断此逻辑,true 为关闭 false 为打开,默认为 关闭
+     */
+    private Boolean skipLogin = true;
 
     public String getIcon() {
         return ObjectNull.isNull(icon) ? "/jvs-ui-public/img/icon.png" : icon;

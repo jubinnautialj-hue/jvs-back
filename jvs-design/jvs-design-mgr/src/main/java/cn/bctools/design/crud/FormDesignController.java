@@ -47,6 +47,7 @@ import com.alibaba.fastjson2.JSONArray;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.annotations.Api;
@@ -60,6 +61,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
 import java.util.function.Predicate;
@@ -122,11 +124,7 @@ public class FormDesignController {
     public R<List<FormSelectItemDto>> list(@ApiParam("名称(模糊搜索)") @RequestParam(name = "name", required = false) String name, @PathVariable String appId) {
         name = StrUtil.trimToEmpty(name);
         // 直接设计的表单
-        List<FormPo> formPoList = formService.list(Wrappers.<FormPo>lambdaQuery()
-                .select(FormPo::getId, FormPo::getName, FormPo::getDataModelId, FormPo::getJvsAppId)
-                .eq(FormPo::getJvsAppId, appId)
-                .like(StrUtil.isNotBlank(name), FormPo::getName, name)
-                .orderByDesc(FormPo::getCreateTime));
+        List<FormPo> formPoList = formService.list(Wrappers.<FormPo>lambdaQuery().select(FormPo::getId, FormPo::getName, FormPo::getDataModelId, FormPo::getJvsAppId).eq(FormPo::getJvsAppId, appId).like(StrUtil.isNotBlank(name), FormPo::getName, name).orderByDesc(FormPo::getCreateTime));
         List<FormSelectItemDto> itemList = BeanCopyUtil.copys(formPoList, FormSelectItemDto.class);
         // 列表页中的表单
         List<FormSelectItemDto> pageFormList = pageService.getAllForm(name, appId);
@@ -148,6 +146,28 @@ public class FormDesignController {
         return R.ok(formPo);
     }
 
+    @Log
+    @ApiOperation(value = "拷贝组件", notes = "同时复制组件上面使用的公式值")
+    @PostMapping("/copy/component/{designId}")
+    public R copy(@RequestBody String json, @PathVariable String appId, @PathVariable String designId) {
+        Map<String, FunctionBusinessPo> map = functionBusinessService.list(Wrappers.query(new FunctionBusinessPo().setDesignId(designId).setJvsAppId(appId))).stream().collect(Collectors.toMap(FunctionBusinessPo::getId, Function.identity()));
+        if (ObjectNull.isNotNull(map)) {
+            List<FunctionBusinessPo> list = new ArrayList<>();
+            for (String oldId : map.keySet()) {
+                if (json.contains(oldId)) {
+                    FunctionBusinessPo functionBusinessPo = map.get(oldId).setId(IdWorker.getIdStr());
+                    functionBusinessPo.setCreateTime(LocalDateTime.now());
+                    functionBusinessPo.setUpdateTime(LocalDateTime.now());
+                    list.add(functionBusinessPo);
+                    //产生新的对象数据
+                    json = json.replaceAll(oldId, functionBusinessPo.getId());
+                }
+            }
+            functionBusinessService.saveBatch(list);
+        }
+        return R.ok(JSON.parseObject(json));
+    }
+
     @Log(callBackClass = JvsLogServiceImpl.class)
     @ApiOperation("新增")
     @PostMapping
@@ -167,7 +187,7 @@ public class FormDesignController {
             // 检查是否有数据类型发生改化，如果有类型发生变化会给出提示，并无法再继续保存
             FormDesignHtml form = JSON.parseObject(design.getViewJson(), FormDesignHtml.class);
             if (Objects.isNull(form)) {
-                //如果所有都是输入旷
+                //如果所有都是输入框
                 return R.ok();
             }
             List<FormDataHtml> formData = form.getFormdata();
@@ -197,18 +217,9 @@ public class FormDesignController {
                     }
                 }
             });
-            Map<String, DataFieldPo> fields = fieldPos
-                    .stream()
-                    .filter(e -> !e.getFieldType().equals(DataFieldType.input))
-                    .collect(Collectors.toMap(DataFieldPo::getFieldKey, Function.identity()));
+            Map<String, DataFieldPo> fields = fieldPos.stream().filter(e -> !e.getFieldType().equals(DataFieldType.input)).collect(Collectors.toMap(DataFieldPo::getFieldKey, Function.identity()));
 
-            Map<String, List<DataFieldPo>> allFieldGroup = dataFieldService.list(Wrappers.query(new DataFieldPo()
-                                    .setDesignType(DesignType.form)
-                                    .setModelId(design.getDataModelId()))
-                            .lambda().select(DataFieldPo::getFieldKey, DataFieldPo::getDesignJson, DataFieldPo::getDesignId, DataFieldPo::getFieldType))
-                    .stream()
-                    .filter(e -> ObjectNull.isNotNull(e.getFieldType()))
-                    .collect(Collectors.groupingBy(DataFieldPo::getFieldKey));
+            Map<String, List<DataFieldPo>> allFieldGroup = dataFieldService.list(Wrappers.query(new DataFieldPo().setDesignType(DesignType.form).setModelId(design.getDataModelId())).lambda().select(DataFieldPo::getFieldKey, DataFieldPo::getDesignJson, DataFieldPo::getDesignId, DataFieldPo::getFieldType)).stream().filter(e -> ObjectNull.isNotNull(e.getFieldType())).collect(Collectors.groupingBy(DataFieldPo::getFieldKey));
             //如果库里面没有其它类型
             if (ObjectNull.isNull(allFieldGroup)) {
                 return R.ok();
@@ -216,53 +227,49 @@ public class FormDesignController {
             //根据类型排序
 
             //查询出数据库中所有的类型，校验能不能和前端修改的类型进行处理，如果确定
-            List<FieldPublicHtml> updateField = allFieldGroup.keySet()
-                    .stream()
-                    .peek(e -> {
-                        //添加现有的数据设计
-                        List<DataFieldPo> dataFieldPos = allFieldGroup.get(e);
-                        if (fields.containsKey(e)) {
-                            dataFieldPos.add(BeanCopyUtil.copy(fields.get(e), DataFieldPo.class));
-                        }
-                    })
-                    .filter(fields::containsKey)
-                    .map(e -> {
-                        //获取 库里面的类型
-                        List<DataFieldPo> dataFieldPos = allFieldGroup.get(e);
-                        //获取前端要修改的类型
-                        DataFieldPo dataFieldDto = fields.get(e);
-                        DataFieldType dataFieldType = dataFieldDto.getFieldType();
-                        for (DataFieldPo dataFieldPo : dataFieldPos) {
-                            if (dataFieldPo.getFieldType().equals(dataFieldType)) {
-                                //判断属性是否一致。如果不一致，不允许变更
-                                IDataFieldHandler handler = iDataFieldHandler.get(dataFieldType.getDesc());
-                                if (ObjectNull.isNotNull(handler)) {
-                                    FieldBasicsHtml html = handler.toHtml(dataFieldPo.getDesignJson());
-                                    FieldBasicsHtml dbHtml = handler.toHtml(dataFieldDto.getDesignJson());
-                                    try {
-                                        handler.checkFieldTypeAttributeChanged(html, dbHtml);
-                                    } catch (Exception ex) {
-                                        FormPo one = formService.getOne(new LambdaQueryWrapper<FormPo>().eq(FormPo::getId, dataFieldPo.getDesignId()).select(FormPo::getName, FormPo::getId));
-                                        FieldPublicHtml fieldBasicsHtml = new FieldPublicHtml();
-                                        fieldBasicsHtml.setFieldName(dataFieldDto.getFieldName() + "组件变更在[" + one.getName() + "]设计[" + ex.getMessage() + "]").setFieldKey(dataFieldDto.getFieldKey()).setType(dataFieldDto.getFieldType());
-                                        return fieldBasicsHtml;
-                                    }
-                                }
-                                continue;
-                            }
-                            if (!dataFieldPo.getFieldType().getTransformationList().contains(dataFieldType)) {
-                                //TODO 有索引可能导致无法删除字段
-                                FieldPublicHtml fieldBasicsHtml = new FieldPublicHtml();
+            List<FieldPublicHtml> updateField = allFieldGroup.keySet().stream().peek(e -> {
+                //添加现有的数据设计
+                List<DataFieldPo> dataFieldPos = allFieldGroup.get(e);
+                if (fields.containsKey(e)) {
+                    dataFieldPos.add(BeanCopyUtil.copy(fields.get(e), DataFieldPo.class));
+                }
+            }).filter(fields::containsKey).map(e -> {
+                //获取 库里面的类型
+                List<DataFieldPo> dataFieldPos = allFieldGroup.get(e);
+                //获取前端要修改的类型
+                DataFieldPo dataFieldDto = fields.get(e);
+                DataFieldType dataFieldType = dataFieldDto.getFieldType();
+                for (DataFieldPo dataFieldPo : dataFieldPos) {
+                    if (dataFieldPo.getFieldType().equals(dataFieldType)) {
+                        //判断属性是否一致。如果不一致，不允许变更
+                        IDataFieldHandler handler = iDataFieldHandler.get(dataFieldType.getDesc());
+                        if (ObjectNull.isNotNull(handler)) {
+                            FieldBasicsHtml html = handler.toHtml(dataFieldPo.getDesignJson());
+                            FieldBasicsHtml dbHtml = handler.toHtml(dataFieldDto.getDesignJson());
+                            try {
+                                handler.checkFieldTypeAttributeChanged(html, dbHtml);
+                            } catch (Exception ex) {
                                 FormPo one = formService.getOne(new LambdaQueryWrapper<FormPo>().eq(FormPo::getId, dataFieldPo.getDesignId()).select(FormPo::getName, FormPo::getId));
-                                fieldBasicsHtml.setFieldName(dataFieldDto.getFieldName() + "组件变更在[" + one.getName() + "]设计[" + dataFieldPo.getFieldType().getDesc() + "]改变为[" + dataFieldDto.getFieldType().getDesc() +
-                                        "]").setFieldKey(dataFieldDto.getFieldKey()).setType(dataFieldDto.getFieldType());
+                                FieldPublicHtml fieldBasicsHtml = new FieldPublicHtml();
+                                fieldBasicsHtml.setFieldName(dataFieldDto.getFieldName() + "组件变更在[" + one.getName() + "]设计[" + ex.getMessage() + "]").setFieldKey(dataFieldDto.getFieldKey()).setType(dataFieldDto.getFieldType());
                                 return fieldBasicsHtml;
                             }
                         }
-                        return null;
-                    })
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
+                        continue;
+                    }
+                    if (!dataFieldPo.getFieldType().getTransformationList().contains(dataFieldType)) {
+                        //TODO 有索引可能导致无法删除字段
+                        FormPo one = formService.getOne(new LambdaQueryWrapper<FormPo>().eq(FormPo::getId, dataFieldPo.getDesignId()).select(FormPo::getName, FormPo::getId));
+                        if (ObjectNull.isNull(one)) {
+                            return null;
+                        }
+                        FieldPublicHtml fieldBasicsHtml = new FieldPublicHtml();
+                        fieldBasicsHtml.setFieldName(dataFieldDto.getFieldName() + "组件变更在[" + one.getName() + "]设计[" + dataFieldPo.getFieldType().getDesc() + "]改变为[" + dataFieldDto.getFieldType().getDesc() + "]").setFieldKey(dataFieldDto.getFieldKey()).setType(dataFieldDto.getFieldType());
+                        return fieldBasicsHtml;
+                    }
+                }
+                return null;
+            }).filter(Objects::nonNull).collect(Collectors.toList());
             //将变化的字段直接返回给前端，前端将变更后再次进行提交保存
             if (ObjectNull.isNotNull(updateField)) {
                 return R.ok(updateField);
@@ -281,13 +288,9 @@ public class FormDesignController {
         Map<String, String> fieldPathMap = formPo.getFieldPathMap();
 
         List<FieldHtml> structure = new ArrayList<>();
-        List<FunctionBusinessPo> functionBusinessPos = functionBusinessService.list(new LambdaQueryWrapper<FunctionBusinessPo>()
-                        .select(FunctionBusinessPo::getBusinessId, FunctionBusinessPo::getRelatedIds)
-                        .eq(FunctionBusinessPo::getDesignId, id))
-                .stream()
+        List<FunctionBusinessPo> functionBusinessPos = functionBusinessService.list(new LambdaQueryWrapper<FunctionBusinessPo>().select(FunctionBusinessPo::getBusinessId, FunctionBusinessPo::getRelatedIds).eq(FunctionBusinessPo::getDesignId, id)).stream()
                 //过滤为空的数据
-                .filter(s -> !s.getRelatedIds().isEmpty())
-                .collect(Collectors.toList());
+                .filter(s -> !s.getRelatedIds().isEmpty()).collect(Collectors.toList());
         //获取设计路径和公式路径的转换规则
 
         //如果没有值 ，直接返回
@@ -313,19 +316,13 @@ public class FormDesignController {
                     FieldBasicsHtml html = iDataFieldHandler.get(e.getType().getDesc()).toHtml(designJson);
 //                    //判断是否有数据筛选
                     //直接的不取全路径
-                    List<String> collect = html.getDataFilterGroupList()
-                            .stream()
-                            .flatMap(Collection::stream)
-                            .filter(a -> TypeHtml.prop.equals(a.getType()))
-                            .map(FilterHtml::getValue)
-                            .map(a -> {
-                                if (a instanceof Collection) {
-                                    return ((Collection<?>) a).stream().map(Object::toString).collect(Collectors.joining(StrUtil.DOT));
-                                } else {
-                                    return a.toString();
-                                }
-                            })
-                            .collect(Collectors.toList());
+                    List<String> collect = html.getDataFilterGroupList().stream().flatMap(Collection::stream).filter(a -> TypeHtml.prop.equals(a.getType())).map(FilterHtml::getValue).map(a -> {
+                        if (a instanceof Collection) {
+                            return ((Collection<?>) a).stream().map(Object::toString).collect(Collectors.joining(StrUtil.DOT));
+                        } else {
+                            return a.toString();
+                        }
+                    }).collect(Collectors.toList());
                     //获取自己这个路径
                     String path = e.getPath();
                     //递归根据公式找父级，并排除自己避免死循环
@@ -421,12 +418,7 @@ public class FormDesignController {
 
         // 修改模型名称
         dataModelService.updateName(dataModelId, name);
-        AppMenu appMenu = new AppMenu()
-                .setName(design.getName())
-                .setDesignType(DesignType.form)
-                .setJvsAppId(appId)
-                .setDataModelId(dataModelId)
-                .setDesignId(design.getId());
+        AppMenu appMenu = new AppMenu().setName(design.getName()).setDesignType(DesignType.form).setJvsAppId(appId).setDataModelId(dataModelId).setDesignId(design.getId());
         appMenuService.update(appMenu);
         if (ObjectNull.isNotNull(viewJson)) {
             FormDesignHtml formDesignHtml = JSON.parseObject(viewJson, FormDesignHtml.class);
@@ -434,8 +426,11 @@ public class FormDesignController {
                 //如果所有都是输入旷
                 return R.ok();
             }
-            //判断是否有表单引用 ，需要替换
-            getLinkFormHtml(formDesignHtml, id, viewJson);
+            //判断是否有表单引用 ，需要替换公式的值
+            viewJson = getLinkFormHtml(formDesignHtml, id, viewJson);
+            //这里需要二次转换,将新的 id处理过去
+            formDesignHtml = JSON.parseObject(viewJson, FormDesignHtml.class);
+            design.setViewJson(viewJson);
             List<FormDataHtml> formData = formDesignHtml.getFormdata();
             if (ObjectUtils.isEmpty(formData)) {
                 return R.ok();
@@ -443,11 +438,7 @@ public class FormDesignController {
             FormDataHtml formDataHtml = formData.get(0);
             //获取所有的按钮
             List<ButtonDesignHtml> btnSetting = formDataHtml.getFormsetting().getBtnSetting();
-            appMenu.setPermissionJson(JSONArray.parseArray(JSON.toJSONString(btnSetting)))
-                    .setRole(JSONArray.parseArray(JSON.toJSONString(designDto.getRole())))
-                    .setRoleType(designDto.getRoleType())
-                    .setPermission(DesignPermissionUtil.parseDesign(DesignType.form, design.getViewJson()))
-                    .setIcon(StringUtils.defaultString(designDto.getIcon(), ""));
+            appMenu.setPermissionJson(JSONArray.parseArray(JSON.toJSONString(btnSetting))).setRole(JSONArray.parseArray(JSON.toJSONString(designDto.getRole()))).setRoleType(designDto.getRoleType()).setPermission(DesignPermissionUtil.parseDesign(DesignType.form, design.getViewJson())).setIcon(StringUtils.defaultString(designDto.getIcon(), ""));
             appMenuService.update(appMenu);
 
             List<Map<String, Object>> forms = formDataHtml.getForms();
@@ -468,18 +459,7 @@ public class FormDesignController {
             //删除多余的数据
             jvsCrudAssociationService.remove(Wrappers.query(new CrudAssociationPo().setDataModelId(design.getDataModelId()).setJvsAppId(design.getJvsAppId()).setDesignId(design.getId())));
             //处理规则
-            List<CrudAssociationPo> collect = btnSetting
-                    .stream()
-                    .filter(e -> e.getEnable() && ObjectNull.isNotNull(e.getAssociation()))
-                    .map(e -> new CrudAssociationPo()
-                            .setDataModelId(design.getDataModelId())
-                            .setDesignId(design.getId())
-                            .setJvsAppId(design.getJvsAppId())
-                            .setName(e.getName())
-                            .setPermissionFlag(e.getPermissionFlag())
-                            .setData(e.getAssociation())
-                    )
-                    .collect(Collectors.toList());
+            List<CrudAssociationPo> collect = btnSetting.stream().filter(e -> e.getEnable() && ObjectNull.isNotNull(e.getAssociation())).map(e -> new CrudAssociationPo().setDataModelId(design.getDataModelId()).setDesignId(design.getId()).setJvsAppId(design.getJvsAppId()).setName(e.getName()).setPermissionFlag(e.getPermissionFlag()).setData(e.getAssociation())).collect(Collectors.toList());
             if (ObjectNull.isNotNull(collect)) {
                 jvsCrudAssociationService.saveBatch(collect);
             }
@@ -491,7 +471,10 @@ public class FormDesignController {
         return R.ok(design);
     }
 
-    private void getLinkFormHtml(FormDesignHtml formDesignHtml, String id, String viewJson) {
+    /**
+     * 表单引用了公式，需要直接替换公式的数据值
+     */
+    private String getLinkFormHtml(FormDesignHtml formDesignHtml, String id, String viewJson) {
         if (ObjectNull.isNotNull(formDesignHtml.getLinkFormId())) {
             //根据公式的 Id进行替换数据
             List<FunctionBusinessPo> functionBusinessPos = execMapper.selectList(Wrappers.query(new FunctionBusinessPo().setDesignId(formDesignHtml.getLinkFormId())));
@@ -502,7 +485,7 @@ public class FormDesignController {
                     e.setId(null);
                     e.setDesignId(id);
                     execMapper.insert(e);
-                    viewJson = viewJson.replace(businessId, e.getId());
+                    viewJson = viewJson.replaceAll(businessId, e.getId());
                 }
             }
 
@@ -514,8 +497,7 @@ public class FormDesignController {
                 execMapper.deleteById(e.getId());
             }
         }
-        //给设计重新赋值
-        formDesignHtml = JSON.parseObject(viewJson, FormDesignHtml.class);
+        return viewJson;
     }
 
     @Log(callBackClass = JvsLogServiceImpl.class)
@@ -586,11 +568,8 @@ public class FormDesignController {
     @ApiOperation(value = "获取指定模型的所有表单")
     @GetMapping("/model/{modelId}/all")
     public R<List<FormPo>> getModelAllForm(@PathVariable String appId, @PathVariable String modelId) {
-        return R.ok(formService.list(Wrappers.<FormPo>lambdaQuery()
-                .eq(FormPo::getDataModelId, modelId)
-                .eq(FormPo::getJvsAppId, appId)
+        return R.ok(formService.list(Wrappers.<FormPo>lambdaQuery().eq(FormPo::getDataModelId, modelId).eq(FormPo::getJvsAppId, appId)
                 //查询非view_json的字段
-                .select(FormPo.class, tableFieldInfo -> !tableFieldInfo.getProperty().equalsIgnoreCase(Get.name(FormPo::getViewJson)))
-                .orderByDesc(FormPo::getCreateTime)));
+                .select(FormPo.class, tableFieldInfo -> !tableFieldInfo.getProperty().equalsIgnoreCase(Get.name(FormPo::getViewJson))).orderByDesc(FormPo::getCreateTime)));
     }
 }

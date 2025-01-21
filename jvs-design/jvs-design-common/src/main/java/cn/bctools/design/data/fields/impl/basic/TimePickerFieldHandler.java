@@ -1,24 +1,20 @@
 package cn.bctools.design.data.fields.impl.basic;
 
-import cn.bctools.design.data.fields.DataFieldHandler;
 import cn.bctools.design.data.fields.DesignField;
 import cn.bctools.design.data.fields.IDataFieldHandler;
-import cn.bctools.design.data.fields.dto.form.html.DatePickerHtml;
 import cn.bctools.design.data.fields.dto.form.html.TimePickerHtml;
 import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.fields.enums.DataQueryType;
-import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.temporal.TemporalAccessor;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static cn.bctools.design.data.fields.impl.basic.DatePickerFieldHandler.DateType.dates;
 import static cn.hutool.core.date.DatePattern.NORM_TIME_FORMATTER;
 import static cn.hutool.core.date.DatePattern.NORM_TIME_PATTERN;
 
@@ -46,6 +42,14 @@ public class TimePickerFieldHandler implements IDataFieldHandler<TimePickerHtml>
             types.add(DataQueryType.le);
         }
         return types;
+    }
+
+    @Override
+    public Object getConversionKey(TimePickerHtml dto, Object o, Map<String, Object> lineData) {
+        if (dto.getIsrange()) {
+            return Arrays.stream(o.toString().split("~")).collect(Collectors.toList());
+        }
+        return o.toString();
     }
 
     @Override

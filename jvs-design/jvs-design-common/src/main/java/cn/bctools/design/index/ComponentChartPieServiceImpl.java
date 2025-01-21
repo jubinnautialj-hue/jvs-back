@@ -13,6 +13,7 @@ import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.index.annotation.FormFormQuery;
 import cn.bctools.index.design.SelectedAttribute;
+import cn.bctools.index.design.component.ComponentChartPie;
 import cn.bctools.index.design.component.service.ComponentChartPieService;
 import cn.bctools.index.design.enums.FormAttributeTypeEnum;
 import cn.bctools.index.design.render.ComponentChartPieRender;
@@ -37,7 +38,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @AllArgsConstructor
 public class ComponentChartPieServiceImpl extends DataModelIndexFieldOrLink implements ComponentChartPieService<ComponentChartPieServiceImpl.ChartPieBase> {
-
 
     JvsAppService jvsAppService;
     DynamicDataService dynamicDataService;

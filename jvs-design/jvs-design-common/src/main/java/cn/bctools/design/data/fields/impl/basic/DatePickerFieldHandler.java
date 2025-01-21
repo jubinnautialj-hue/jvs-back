@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 import static cn.bctools.design.data.fields.impl.basic.DatePickerFieldHandler.DateType.dates;
+import static cn.bctools.design.data.fields.impl.basic.DatePickerFieldHandler.DateType.datetime;
 import static cn.hutool.core.date.DatePattern.NORM_DATE_PATTERN;
 
 /**
@@ -115,8 +116,12 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
     @Override
     public List<DataQueryType> getEnabledQueryTypes(DatePickerHtml fieldJson) {
         DateType dateType = fieldJson.getDatetype();
+        if (ObjectNull.isNull(dateType)) {
+            dateType = datetime;
+        }
         List<DataQueryType> types = new ArrayList<>();
         types.add(DataQueryType.isNull);
+        types.add(DataQueryType.between);
         if (ObjectNull.isNull(dateType)) {
             return types;
         }
@@ -147,13 +152,13 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
         }
         switch (dateType) {
             case date:
-                return DateUtil.parseDate(o.toString());
+                return DateUtil.parseDate(o.toString()).toDateStr();
             case datetime:
                 return DateUtil.parseDateTime(o.toString());
             case daterange:
             case monthrange:
             case datetimerange:
-                return Arrays.stream(((String) o).split("~")).collect(Collectors.toList());
+                return Arrays.stream(o.toString().split("~")).collect(Collectors.toList());
             default:
 
         }

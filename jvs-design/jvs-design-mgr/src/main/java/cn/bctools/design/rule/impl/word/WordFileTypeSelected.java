@@ -16,6 +16,7 @@ public class WordFileTypeSelected implements ParameterSelected<String> {
     @Override
     public List<ParameterOption<String>> getOptions() {
         List<ParameterOption<String>> list = new ArrayList<>();
+        list.add(new ParameterOption<String>().setLabel("xlsx").setValue("xlsx"));
         list.add(new ParameterOption<String>().setLabel("docx").setValue("docx"));
         list.add(new ParameterOption<String>().setLabel("pdf").setValue("pdf"));
         return list;

@@ -16,6 +16,7 @@ import cn.bctools.rule.dto.RuleFunctionDto;
 import cn.bctools.rule.dto.RuleFunctionDtoParameter;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.web.utils.HttpRequestUtils;
+import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.MD5;
 import cn.hutool.http.Method;
@@ -117,7 +118,6 @@ public class RuleExternalServiceImpl extends ServiceImpl<RuleExternalMapper, Rul
                 }
             }
         }
-
         //拼接对象
         String key = "";
         if (!test) {
@@ -174,7 +174,8 @@ public class RuleExternalServiceImpl extends ServiceImpl<RuleExternalMapper, Rul
 
         UriComponentsBuilder uriComponentsBuilder = UriComponentsBuilder.fromUriString(url);
         for (RuleFunctionDtoParameter dto : fieldList) {
-            Object apply = expressionExecFunction.apply(dto.getKey());
+            //如果是测试，显示测试的值
+            Object apply = test ? dto.getTestValue() : expressionExecFunction.apply(dto.getKey());
             if (ObjectNull.isNull(apply)) {
                 apply = variableMap.get(dto.getKey());
             }
@@ -197,7 +198,17 @@ public class RuleExternalServiceImpl extends ServiceImpl<RuleExternalMapper, Rul
                 body.put(dto.getKey(), Boolean.valueOf(apply.toString()));
             } else {
                 //如果公式有值，使用公式，公式没值，使用填写的值
-                body.put(dto.getKey(), apply);
+                if (ObjectNull.isNotNull(dto.getInputType())) {
+                    switch (dto.getInputType()) {
+                        case number:
+                            body.put(dto.getKey(), Convert.toNumber(apply.toString().trim()));
+                            break;
+                        default:
+                            body.put(dto.getKey(), apply);
+                    }
+                } else {
+                    body.put(dto.getKey(), apply);
+                }
             }
 
             if (dto.isNecessity() && !body.containsKey(dto.getKey())) {
@@ -223,6 +234,9 @@ public class RuleExternalServiceImpl extends ServiceImpl<RuleExternalMapper, Rul
                     return redisUtils.get(key);
                 }
             }
+        }
+        if (ObjectNull.isNull(body) && ObjectNull.isNotNull(externalPo.getBody())) {
+            body = JSONObject.parseObject(externalPo.getBody());
         }
         //获取返回结果
         Object externalBody = getExternalBody(variableMap, body, headerMap, externalPo, url);

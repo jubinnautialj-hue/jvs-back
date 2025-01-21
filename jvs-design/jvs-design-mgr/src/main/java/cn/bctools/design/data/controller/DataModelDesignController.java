@@ -47,6 +47,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -412,6 +413,36 @@ public class DataModelDesignController {
             dataFields.add(dataFieldPo);
             offset++;
         }
+        //检查是否有删除字段，对比字段是否和表单的字段不一致。
+        //查询出所有的模型字段
+        List<DataFieldPo> fieldPoList = dataFieldService.list(new LambdaQueryWrapper<DataFieldPo>()
+                .eq(DataFieldPo::getModelId, modelId)
+                .eq(DataFieldPo::getJvsAppId, appId)
+        );
+        Set<String> fieldSet = dataFields.stream().map(DataFieldPo::getFieldKey).collect(Collectors.toSet());
+        for (DataFieldPo fieldPo : fieldPoList) {
+            if (fieldPo.getDesignType().equals(DesignType.data)) {
+                continue;
+            }
+            if (!fieldSet.contains(fieldPo.getFieldKey())) {
+                //此字段不存在不能删除
+                switch (fieldPo.getDesignType()) {
+                    case form:
+                        FormPo formPo = formService.getById(fieldPo.getDesignId());
+                        if (ObjectNull.isNotNull(formPo)) {
+                            throw new BusinessException(formPo.getName() + "表单[" + fieldPo.getFieldKey() + "]字段使用中不能删除");
+                        }
+                        break;
+                    case page:
+                        CrudPage crudPage = crudPageService.getById(fieldPo.getDesignId());
+                        if (ObjectNull.isNotNull(crudPage)) {
+                            throw new BusinessException(crudPage.getName() + "列表字段使用中不能删除");
+                        }
+                        break;
+                }
+            }
+
+        }
         dataFieldService.updateFields(appId, modelId, DesignType.data, modelId, dataFields);
         return R.ok();
     }
@@ -445,7 +476,7 @@ public class DataModelDesignController {
      * 依据模型字段自动生成列表和表单设计
      *
      * @param modelId 模型id
-     * @param menuId 目录id
+     * @param menuId  目录id
      */
     private void generateModelCrudDesign(String modelId, String menuId) {
         DataModelPo model = dataModelService.getModel(modelId);

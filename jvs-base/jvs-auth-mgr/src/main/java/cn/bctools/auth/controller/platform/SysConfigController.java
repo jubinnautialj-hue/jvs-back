@@ -2,8 +2,10 @@ package cn.bctools.auth.controller.platform;
 
 
 import cn.bctools.auth.constants.WxMpErrorMsgEnum;
+import cn.bctools.auth.entity.OauthOther;
 import cn.bctools.auth.login.auth.ldap.LdapAuthConfig;
 import cn.bctools.auth.login.auth.ldap.LdapBase;
+import cn.bctools.auth.service.OauthOtherService;
 import cn.bctools.auth.service.impl.SysConfigServiceImpl;
 import cn.bctools.common.enums.*;
 import cn.bctools.common.exception.BusinessException;
@@ -62,6 +64,7 @@ public class SysConfigController {
     private final LdapAuthConfig ldapAuthConfig;
     private final SysConfigServiceImpl sysConfigService;
     private final RedisUtils redisUtils;
+    private final OauthOtherService otherService;
 
     /**
      * 编辑或修改信息
@@ -144,6 +147,16 @@ public class SysConfigController {
         }
         //判断配置是否正常
         switch (type) {
+            case BACKGROUND_PERSONALIZED_CONFIGURATION:
+                //判断是否关闭登录页
+                SysFrameApplyConfig frameApplyConfig = (SysFrameApplyConfig) JSONObject.parseObject(sysConfigs.getContent(), ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION.cls);
+                if (frameApplyConfig.getSkipLogin()) {
+                    //判断是否配置了有三方登录
+                    if (otherService.count(Wrappers.query(new OauthOther().setEnableDefault(true))) == 0) {
+                        throw new BusinessException("未配置三方授权登录无法关闭登录页");
+                    }
+                }
+                break;
             case ENTERPRISE_WECHAT_APPLICATION_CONFIGURATION:
                 try {
                     SysConfigEnterriseWeChat enterriseWeChat = (SysConfigEnterriseWeChat) JSONObject.parseObject(sysConfigs.getContent(), ConfigsTypeEnum.ENTERPRISE_WECHAT_APPLICATION_CONFIGURATION.cls);

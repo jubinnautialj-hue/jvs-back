@@ -163,7 +163,22 @@ public class DesignUtils {
         if (ObjectUtils.isEmpty(fields)) {
             return Collections.emptyList();
         }
-        Set<String> filedset = new HashSet();
+        //检查是否配置有甘特图， 并字段没有选择上
+        if (page.getGantt()) {
+            if (ObjectNull.isNull(page.getGanttForm().getPlainStart())) {
+                throw new BusinessException("甘特图计划开始时间未选择字段");
+            }
+            if (ObjectNull.isNull(page.getGanttForm().getPlainEnd())) {
+                throw new BusinessException("甘特图计划结束时间未选择字段");
+            }
+            if (ObjectNull.isNull(page.getGanttForm().getReallyStart())) {
+                throw new BusinessException("甘特图实际开始时间未选择字段");
+            }
+            if (ObjectNull.isNull(page.getGanttForm().getReallyEnd())) {
+                throw new BusinessException("甘特图实际结束时间未选择字段");
+            }
+        }
+        Set<String> filedset = new HashSet<>();
         List<DataFieldPo> collect = fields.stream().map(e -> {
             if (filedset.contains(e.getAliasColumnName())) {
                 throw new BusinessException("字段名称重复请删除后保存", e.getShowChinese(), e.getAliasColumnName());

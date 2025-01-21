@@ -40,7 +40,6 @@ public class EmailUtils {
             MailAccount mailAccount = BeanCopyUtil.copy(emailconfig, MailAccount.class);
             mailAccount.setStarttlsEnable(true);
             mailAccount.setSslEnable(true);
-            mailAccount.setPort(465);
             mailAccount.setAuth(true);
             {
                 final Mail mail = Mail.create(mailAccount).setUseGlobalSession(true);

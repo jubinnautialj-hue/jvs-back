@@ -84,6 +84,8 @@ public class RuleFunctionDtoParameter implements Serializable {
      * 默认的值
      */
     private Object defaultValue;
+    @ApiModelProperty("接口的测试值")
+    private Object testValue;
     /**
      * 请求参数的类型
      */

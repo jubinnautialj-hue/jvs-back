@@ -6,6 +6,7 @@ import cn.bctools.design.workflow.support.listener.AbstractCompensateEvent;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -48,13 +49,14 @@ public class AsyncTaskDynamicDataListener extends AbstractCompensateEvent implem
         }
     }
 
+    @SneakyThrows
     private void addQueue(FlowTask flowTask) {
         FlowTask task = new FlowTask()
                 .setId(flowTask.getId())
                 .setTaskStatus(flowTask.getTaskStatus())
                 .setDataModelId(flowTask.getDataModelId())
                 .setDataId(flowTask.getDataId());
-        TASK_QUEUE.offer(task);
+        TASK_QUEUE.put(task);
     }
 
 

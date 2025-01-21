@@ -27,6 +27,8 @@ import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.util.RoleUtils;
 import cn.bctools.design.h5.service.H5DesignService;
+import cn.bctools.design.identification.entity.Identification;
+import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.menu.entity.AppMenu;
 import cn.bctools.design.menu.entity.AppMenuType;
 import cn.bctools.design.menu.service.AppMenuService;
@@ -96,21 +98,23 @@ public class UseComponent implements AppApi, TreeApi {
     DesignPermissionService designPermissionService;
     MultipleMongoConfig multipleMongoConfig;
     MongoProperties mongoProperties;
+    IdentificationService identificationService;
 
     @Override
     public R<List<ModeDto>> mode() {
-        MongoProperties dev = multipleMongoConfig.getDev();
+//        MongoProperties dev = multipleMongoConfig.getDev();
         MongoProperties beta = multipleMongoConfig.getBeta();
         List<ModeDto> objects = new ArrayList<>();
-        objects.add(new ModeDto().setMode(AppVersionTypeEnum.DEV.getMsg()).setDatasource(JSONObject.toJSONString(dev)));
+        // bi 不能配置开发模式的应用
+//        objects.add(new ModeDto().setMode(AppVersionTypeEnum.DEV.getMsg()).setDatasource(JSONObject.toJSONString(dev)));
         objects.add(new ModeDto().setMode(AppVersionTypeEnum.BETA.getMsg()).setDatasource(JSONObject.toJSONString(beta)));
         objects.add(new ModeDto().setMode(AppVersionTypeEnum.GA.getMsg()).setDatasource(JSONObject.toJSONString(mongoProperties)));
         return R.ok(objects);
     }
 
     @Override
-    public R<List<DataModelDto>> apps(String msg) {
-        List<String> versionTypeAppIds = appVersionService.getVersionTypeAppIds(AppVersionTypeEnum.getMsgType(msg));
+    public R<List<DataModelDto>> apps(String mode) {
+        List<String> versionTypeAppIds = appVersionService.getVersionTypeAppIds(AppVersionTypeEnum.getMsgType(mode));
         String userId = UserCurrentUtils.getUserId();
         JSONObject conditionUser = new JSONObject();
         conditionUser.put("type", "user");
@@ -124,8 +128,22 @@ public class UseComponent implements AppApi, TreeApi {
                 .or(orUser -> orUser.apply(SqlFunctionUtil.jsonContainsObject(Get.name(JvsApp::getRole), "$.devMember", conditionUserJson)))
         );
         List<DataModelDto> collect = jvsAppService.list(in)
-                .stream().map(e -> new DataModelDto().setAppId(e.getId()).setAppName(e.getName())).collect(Collectors.toList());
+                //这里需要处理添加应用的标示
+                .stream().map(e -> {
+                    Identification one = identificationService.getOne(Wrappers.query(new Identification().setDesignId(e.getId())));
+                    if (ObjectNull.isNotNull(one)) {
+                        return new DataModelDto().setAppCode(one.getIdentifier()).setAppName(e.getName());
+                    } else {
+                        return null;
+                    }
+                }).filter(Objects::nonNull).collect(Collectors.toList());
         return R.ok(collect);
+    }
+
+    @Override
+    public R<DataModelDto> apps(String mode, String appCode) {
+        List<DataModelDto> data = apps(mode).getData();
+        return R.ok(data.stream().filter(e -> e.getAppCode().equals(appCode)).findFirst().orElse(null));
     }
 
     @Override

@@ -65,6 +65,8 @@ public class DataFieldPo extends BasalPo implements Serializable {
     @TableField(typeHandler = Fastjson2TypeHandler.class)
     @ApiModelProperty("支持的查询类型")
     private JSONArray enabledQueryTypes;
+    @ApiModelProperty("开启数据联动条件")
+    private Boolean dataLinkageEnable;
     @ApiModelProperty("数据联动条件")
     @TableField(typeHandler = Fastjson2TypeHandler.class)
     private JSONArray dataLinkageList;

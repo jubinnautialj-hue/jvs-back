@@ -29,4 +29,5 @@ public interface RuleDesignService extends IService<RuleDesignPo> {
      * @return 返回 map
      */
     Map<? extends String, ? extends List<String>> ruleFlows(String jvsAppId);
+
 }

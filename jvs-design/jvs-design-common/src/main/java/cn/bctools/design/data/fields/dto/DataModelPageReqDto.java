@@ -18,4 +18,7 @@ public class DataModelPageReqDto {
 
     @ApiModelProperty("数据集名")
     private String collectionName;
+
+    @ApiModelProperty("true-绑定流程，false-未绑定流程")
+    private Boolean enableWorkflow;
 }

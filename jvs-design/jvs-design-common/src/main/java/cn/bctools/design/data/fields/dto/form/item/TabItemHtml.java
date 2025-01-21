@@ -31,5 +31,7 @@ public class TabItemHtml extends BaseItemHtml {
      */
     @ApiModelProperty("是否开启脱离数据")
     Boolean detachData = false;
+    @ApiModelProperty("true每次只能展开一个面板 false可以同时展示开多个")
+    Boolean accordion;
 
 }

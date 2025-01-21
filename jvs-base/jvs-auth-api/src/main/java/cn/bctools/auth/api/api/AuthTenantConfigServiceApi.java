@@ -54,4 +54,13 @@ public interface AuthTenantConfigServiceApi {
      */
     @GetMapping(PREFIX + "/keys")
     R<List<ConfigsTypeEnum>> keys();
+
+    /**
+     * 根据租户获取某一个对应的域名
+     *
+     * @param tenantId
+     * @return
+     */
+    @GetMapping("/domain")
+    R<String> domain(@RequestParam("tenantId") String tenantId, @RequestParam("type") ConfigsTypeEnum type);
 }

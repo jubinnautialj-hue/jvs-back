@@ -6,6 +6,8 @@ import cn.bctools.auth.api.enums.UserQueryType;
 import cn.bctools.auth.component.UserInfoComponent;
 import cn.bctools.auth.component.UserRoleComponent;
 import cn.bctools.auth.entity.*;
+import cn.bctools.auth.entity.enums.SexTypeEnum;
+import cn.bctools.auth.entity.enums.UserTypeEnum;
 import cn.bctools.auth.service.*;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.*;
@@ -326,9 +328,7 @@ public class UserApiImpl implements AuthUserServiceApi {
     public R<List<UserDto>> getByRealName(String realName) {
         List<User> users = userService.list(Wrappers.<User>lambdaQuery().like(StringUtils.isNotBlank(realName), User::getRealName, realName));
         String tenantId = UserCurrentUtils.getCurrentUser().getTenantId();
-        List<UserDto> result = users.stream()
-                .map(info -> userInfoComponent.getUserInfoDto(info, tenantId))
-                .collect(Collectors.toList());
+        List<UserDto> result = users.stream().map(info -> userInfoComponent.getUserInfoDto(info, tenantId)).collect(Collectors.toList());
         return R.ok(result);
     }
 
@@ -466,4 +466,22 @@ public class UserApiImpl implements AuthUserServiceApi {
         userTenantService.clearUser(userId);
     }
 
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public R<String> saveOrUpdate(SaveUserDto dto) {
+        User user = BeanCopyUtil.copy(dto, User.class);
+        user.setId(dto.getUserId());
+        user.setCancelFlag(false);
+        user.setSex(SexTypeEnum.getByDesc(dto.getSex()));
+        //获取对应的租户信息
+        user.setUserType(UserTypeEnum.OTHER_USER);
+        UserTenant userTenant = new UserTenant().setRealName(dto.getRealName());
+        if (ObjectNull.isNull(dto.getUserId())) {
+            userService.saveUser(user, userTenant);
+        } else {
+            //表示更新用户信息
+            userService.updateById(user);
+        }
+        return R.ok(user.getId());
+    }
 }

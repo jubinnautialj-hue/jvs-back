@@ -66,5 +66,9 @@ public class PageDesignHtml {
 
     @ApiModelProperty("列表页的表头")
     private List<JSONObject> pageTableTitle;
+    @ApiModelProperty("是否开启甘特图")
+    private Boolean gantt = false;
+    @ApiModelProperty("甘特图配置")
+    private GanttFormHtml ganttForm;
 
 }

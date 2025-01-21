@@ -115,9 +115,11 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             userTenant.setAccountLevel(userLevel.getName());
         }
         SysFrameApplyConfig config = configService.getConfig(ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION);
-        // 设置初始密码
-        String encode = passwordEncoder.encode(config.getDefaultPassword());
-        user.setPassword(encode);
+        if(ObjectNull.isNotNull(user.getPassword())) {
+            // 设置初始密码
+            String encode = passwordEncoder.encode(config.getDefaultPassword());
+            user.setPassword(encode);
+        }
 
         // 保存用户
         this.save(user);

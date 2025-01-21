@@ -102,6 +102,7 @@
             <artifactId>jvs-starter-index</artifactId>
             <version>${project.version}</version>
         </dependency>
+
         <dependency>
             <groupId>wsdl4j</groupId>
             <artifactId>wsdl4j</artifactId>

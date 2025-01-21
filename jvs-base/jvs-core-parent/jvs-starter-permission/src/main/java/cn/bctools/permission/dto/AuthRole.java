@@ -30,4 +30,19 @@ public class AuthRole implements Serializable {
      * 人员
      */
     private List<PersonnelDto> personnels;
+
+    /**
+     * 人员ids
+     */
+    private List<String> userIds;
+
+    /**
+     * 权限类型
+     */
+    private Object personType;
+
+    /**
+     * 权限组名称
+     */
+    private String permissionName;
 }

@@ -66,12 +66,16 @@ public class NumberFieldHandler implements IDataFieldHandler<InputNumberHtml> {
         if (!(o instanceof Number)) {
             throw new RuntimeException("正确格式为数字");
         }
-        //判断是否超过最大最小
-        if (Float.parseFloat(o.toString()) > inputNumberHtml.getMax()) {
-            throw new RuntimeException("数据超过最大值");
+        if (ObjectNull.isNotNull(inputNumberHtml.getMax())) {
+            //判断是否超过最大最小
+            if (Float.parseFloat(o.toString()) > inputNumberHtml.getMax()) {
+                throw new RuntimeException("数据超过最大值");
+            }
         }
-        if (Float.parseFloat(o.toString()) < inputNumberHtml.getMin()) {
-            throw new RuntimeException("数据小余最小值");
+        if (ObjectNull.isNotNull(inputNumberHtml.getMin())) {
+            if (Float.parseFloat(o.toString()) < inputNumberHtml.getMin()) {
+                throw new RuntimeException("数据小余最小值");
+            }
         }
     }
 

@@ -71,8 +71,26 @@ public class OtherLoginUserInfoComponent {
     public User registerUser(OtherUserDto otherUser, UserExtension extension) {
         //判断用户是否存在 ,如果存在 ,直接更新 否则注册一个新的帐号
         User user = null;
+        if (ObjectNull.isNotNull(otherUser.getAccountName())) {
+            user = userService.getOne(Wrappers.query(new User().setAccountName(otherUser.getAccountName())));
+        }
         if (ObjectNull.isNotNull(extension)) {
             user = userService.getById(extension.getUserId());
+        }
+        if (ObjectNull.isNotNull(user)) {
+            if (ObjectNull.isNull(extension)) {
+                //创建扩展信息
+                UserExtension userExtension = new UserExtension()
+                        .setType(otherUser.getLoginType())
+                        .setUserId(user.getId())
+                        .setOpenId(otherUser.getOpenId())
+                        .setNickname(user.getRealName())
+                        .setExtension(otherUser.getOtherUser());
+                //添加扩展参数
+                user.setExtension(otherUser.getOtherUser());
+                //绑定三方信息
+                userExtensionService.save(userExtension);
+            }
             //更新
             user.setHeadImg(otherUser.getAvatar())
                     .setRealName(otherUser.getUserName())

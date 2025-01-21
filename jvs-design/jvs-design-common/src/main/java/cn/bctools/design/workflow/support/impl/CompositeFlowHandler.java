@@ -156,7 +156,9 @@ public class CompositeFlowHandler extends AbstractCompositeFlowHandler {
             flowTaskService.updateById(flowTask);
         }
         // 发布事件：同步流程信息到业务数据
-        applicationEventPublisher.publishEvent(new AsyncTaskDynamicDataEvent(this, flowTask));
+        if (FlowTaskStatusEnum.PENDING.equals(flowTask.getTaskStatus())) {
+            applicationEventPublisher.publishEvent(new AsyncTaskDynamicDataEvent(this, flowTask));
+        }
     }
 
     /**

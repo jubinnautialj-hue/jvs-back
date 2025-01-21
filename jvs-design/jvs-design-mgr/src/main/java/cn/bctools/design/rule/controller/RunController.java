@@ -176,6 +176,10 @@ public class RunController {
         if (ObjectNull.isNotNull(formdesignid) && r.getData() instanceof Map) {
             DynamicDataUtils.setDesignId(formdesignid);
             designHandler.handleButtonInfo((Map<String, Object>) r.getData(), EnvConstant.FORM_BUTTON_DISPLAY);
+            //转换数据值
+            FormPo formPo = formService.getById(formdesignid);
+            Map<String, Object> body = dynamicDataService.paresMapWithEcho(appId, (Map<String, Object>) r.getData(), formPo.getDataModelId(), formdesignid, false);
+            r.setData(body);
         }
         return r;
     }
@@ -273,7 +277,7 @@ public class RunController {
                 //判断有没有删除的字段
                 Object dels = JvsJsonPath.read((data), tablePathKey + "_del");
                 //关联模型不为空的情况
-                if (ObjectNull.isNotNull(dels)) {
+                if (ObjectNull.isNotNull(dels) && ObjectNull.isNotNull(tableFormItemHtml.getDataModelId())) {
                     List<Map> linkedHashMapList = (List) dels;
                     linkedHashMapList.forEach(e -> {
                         String id = Optional.ofNullable(e.get(Get.name(DataFieldPo::getId))).map(String::valueOf).orElse(null);

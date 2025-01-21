@@ -65,7 +65,7 @@ public enum DataFieldType {
     /**
      * Image data field type.
      */
-    image("图片", FormComponentType.basic, false, String.class, true, true),
+    image("图片", FormComponentType.basic, true, String.class, true, true),
     /**
      * File data field type.
      */
@@ -120,11 +120,11 @@ public enum DataFieldType {
      * Image upload data field type.
      */
 //修改兼容
-    imageUpload("上传图片", FormComponentType.advance, false, Map.class, true, true),
+    imageUpload("上传图片", FormComponentType.advance, true, Map.class, true, true),
     /**
      * File upload data field type.
      */
-    fileUpload("上传文件", FormComponentType.advance, false, Map.class, true, true),
+    fileUpload("上传文件", FormComponentType.advance, true, Map.class, true, true),
     /**
      * Signature data field type.
      */

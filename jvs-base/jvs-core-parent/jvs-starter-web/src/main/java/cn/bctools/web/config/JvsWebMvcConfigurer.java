@@ -7,6 +7,7 @@ import cn.bctools.common.utils.SystemThreadLocal;
 import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.feign.config.SwaggerProperties;
 import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.fastjson2.JSONObject;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.slf4j.MDC;
@@ -29,7 +30,9 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -90,7 +93,10 @@ public class JvsWebMvcConfigurer implements WebMvcConfigurer, ClientHttpRequestI
         if (ObjectUtil.isNotEmpty(tenantId)) {
             requestWrapper.getHeaders().add(SysConstant.TENANTID, tenantId);
         }
-        return execution.execute(requestWrapper, body);
+        // 执行请求
+        log.info("Request: " + request.getMethod() + ":" + request.getURI() + " " + "\nHeaders: " + JSONObject.toJSONString(request.getHeaders()) + " " + request.getURI() +
+                "\nBody: " + new String(body));
+        return execution.execute(request, body);
     }
 
     @Override

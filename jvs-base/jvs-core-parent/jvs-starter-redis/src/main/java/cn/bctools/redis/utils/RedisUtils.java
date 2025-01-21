@@ -622,7 +622,7 @@ public class RedisUtils {
     }
 
     /**
-     * 将list放入缓存
+     * 往list头部插入值
      *
      * @param key   键
      * @param value 值
@@ -631,6 +631,23 @@ public class RedisUtils {
     public Boolean lSetList(String key, Object value) {
         try {
             redisTemplate.opsForList().leftPush(prefix + key, value);
+            return true;
+        } catch (Exception e) {
+            log.error("Exception: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 往list尾部插入值
+     *
+     * @param key   键
+     * @param value 值
+     * @return Boolean
+     */
+    public Boolean lSetListRight(String key, Object value) {
+        try {
+            redisTemplate.opsForList().rightPush(prefix + key, value);
             return true;
         } catch (Exception e) {
             log.error("Exception: {}", e.getMessage());

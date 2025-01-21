@@ -1,10 +1,7 @@
 package cn.bctools.rule.config;
 
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.BeanCopyUtil;
-import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.common.utils.SpringContextUtil;
-import cn.bctools.common.utils.SystemThreadLocal;
+import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.function.Get;
 import cn.bctools.rule.annotations.*;
 import cn.bctools.rule.common.LinkFieldSelected;
@@ -60,10 +57,15 @@ public class SystemInit extends SpringContextUtil {
         return functionsMap.values();
     }
 
-    public static Map<String, RuleFunctionDto> getFunctionsMap(Collection o) {
+    public static Map<String, RuleFunctionDto> getFunctionsMap(Collection o, String functionName) {
         StringBuffer name = new StringBuffer("");
         Map<String, RuleFunctionDto> collect = functionsMap.values().stream().map(e -> {
-                    if (!o.contains(e.getGroup())) {
+                    if (ObjectNull.isNotNull(functionName)) {
+                        boolean matchName = e.getFunctionName().toLowerCase().contains(functionName.toLowerCase()) || PinyinUtils.getCameCasePinYin(e.getFunctionName()).toLowerCase().contains(functionName.toLowerCase());
+                        if (!matchName) {
+                            return null;
+                        }
+                    } else if (!o.contains(e.getGroup())) {
                         return null;
                     }
                     if (!e.getStatus()) {

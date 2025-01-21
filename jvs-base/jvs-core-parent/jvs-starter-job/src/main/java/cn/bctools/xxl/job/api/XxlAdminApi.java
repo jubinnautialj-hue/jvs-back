@@ -52,7 +52,7 @@ public interface XxlAdminApi {
      */
     @Deprecated
     @PostMapping("/job/api/stop/{id}")
-    R<Boolean> stop(@PathVariable("id") int id, @RequestHeader("XXL-JOB-ACCESS-TOKEN") String token) throws Exception;
+    R stop(@PathVariable("id") int id, @RequestHeader("XXL-JOB-ACCESS-TOKEN") String token) throws Exception;
 
 
     /**

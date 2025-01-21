@@ -6,6 +6,7 @@ import cn.bctools.common.utils.R;
 import cn.bctools.design.project.dto.AppTemplateTaskProgressResDto;
 import cn.bctools.design.project.entity.JvsAppTemplateTaskProgress;
 import cn.bctools.design.project.entity.enums.AppTemplateTaskProgressEnum;
+import cn.bctools.design.project.handler.AppTemplateTaskProgressHandler;
 import cn.bctools.design.project.service.JvsAppTemplateTaskProgressService;
 import cn.bctools.design.project.service.JvsAppVersionService;
 import cn.bctools.log.annotation.Log;
@@ -31,6 +32,7 @@ public class JvsAppTemplateTaskProgressController {
 
     private final JvsAppTemplateTaskProgressService templateTaskProgressService;
     private final JvsAppVersionService appVersionService;
+    private final AppTemplateTaskProgressHandler progressHandler;
 
     @Log
     @ApiOperation("查询指定应用最近的迭代进度")
@@ -38,12 +40,18 @@ public class JvsAppTemplateTaskProgressController {
     public R<List<AppTemplateTaskProgressResDto>> progress(@PathVariable String appId, AppTemplateTaskProgressEnum progress) {
         // 根据应用id获取“所属应用唯一标识”
         String affiliationApp = appVersionService.getAffiliationAppByAppId(appId);
-        List<JvsAppTemplateTaskProgress> templateTaskProgresses = templateTaskProgressService
-                .list(Wrappers.<JvsAppTemplateTaskProgress>lambdaQuery()
-                        .eq(JvsAppTemplateTaskProgress::getJvsAppId, affiliationApp)
-                        .eq(JvsAppTemplateTaskProgress::getProgress, progress)
-                        .orderByDesc(JvsAppTemplateTaskProgress::getCreateTime)
-                        .last("limit 10"));
+        // 获取应用迭代进度
+        List<JvsAppTemplateTaskProgress> templateTaskProgresses = null;
+        if (AppTemplateTaskProgressEnum.PROCESSING.equals(progress)) {
+            templateTaskProgresses = progressHandler.getProcessingProgressByApp(affiliationApp);
+        } else {
+            templateTaskProgresses = templateTaskProgressService
+                    .list(Wrappers.<JvsAppTemplateTaskProgress>lambdaQuery()
+                            .eq(JvsAppTemplateTaskProgress::getJvsAppId, affiliationApp)
+                            .eq(JvsAppTemplateTaskProgress::getProgress, progress)
+                            .orderByDesc(JvsAppTemplateTaskProgress::getCreateTime)
+                            .last("limit 10"));
+        }
         if (ObjectNull.isNull(templateTaskProgresses)) {
             return R.ok();
         }

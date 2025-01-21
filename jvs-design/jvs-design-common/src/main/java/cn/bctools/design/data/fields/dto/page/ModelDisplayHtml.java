@@ -15,6 +15,8 @@ import java.util.List;
 public class ModelDisplayHtml {
     @ApiModelProperty("数据联动模型id")
     private String dataLinkageModelId;
+    @ApiModelProperty("开启数据联动条件")
+    private Boolean dataLinkageEnable;
     @ApiModelProperty("数据联动条件")
     private List<QueryConditionExtendDto> dataLinkageList;
     @ApiModelProperty("显示字段")

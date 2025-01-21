@@ -94,6 +94,9 @@ public class FlowDesignController {
         }
         DynamicDataUtils.setDto(new DesignRoleSettingDto().setJvsAppId(appId));
         DataModelPo dataModelPo = Optional.ofNullable(dataModelService.getById(dto.getDataModelId())).orElseThrow(() -> new BusinessException("模型不存在"));
+        if (dataModelPo.getEnableWorkflow()) {
+            throw new BusinessException("一个模型只能绑定一个流程设计");
+        }
         FlowDesign design = service.quickCreation(dto);
         dataModelPo.setWorkflowId(design.getId());
         dataModelPo.setEnableWorkflow(true);

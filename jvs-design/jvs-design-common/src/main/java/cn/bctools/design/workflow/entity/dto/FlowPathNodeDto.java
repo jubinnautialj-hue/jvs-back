@@ -6,6 +6,8 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
+
 /**
  * @author zhuxiaokang
  * 工作流任务可执行路径节点
@@ -13,7 +15,10 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 @ApiModel("工作流任务可执行路径节点")
-public class FlowPathNodeDto {
+public class FlowPathNodeDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
 
     @ApiModelProperty(value = "节点id")
     private String id;

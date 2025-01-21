@@ -992,8 +992,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             conditions = conditions.stream().map(e -> e.stream().filter(s -> !s.getCrud()).collect(Collectors.toList())).collect(Collectors.toList());
         }
 
+        List<Criteria> list = new ArrayList<>();
         //拼接查询条件
-        List<Criteria> list = DynamicDataUtils.buildDynamicCriteriaList(Optional.ofNullable(conditions).map(c -> c.get(0)).orElse(null));
+        if (ObjectNull.isNotNull(conditions)) {
+            list = DynamicDataUtils.buildDynamicCriteriaList(Optional.ofNullable(conditions).map(c -> c.get(0)).orElse(null));
+        }
         Boolean isFree = SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_FREE);
 
         Query query = DynamicDataUtils.andOr(list, authCriteria, andOr);
@@ -1623,7 +1626,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                             Object value = entry.getValue();
                             FieldBasicsHtml fieldDto = fieldMap.get(fieldKey);
                             IDataFieldHandler fieldHandler = iDataFieldHandler.get(fieldDto.getType().getDesc());
-                            if (ObjectNull.isNotNull(fieldHandler, fieldDto.getDesignJson())) {
+                            if (ObjectNull.isNotNull(fieldHandler)) {
+                                if (ObjectNull.isNull(fieldDto.getDesignJson())) {
+                                    Map generate = fieldHandler.generate(fieldDto.getLabel(), fieldDto.getFieldKey(), new ArrayList<>());
+                                    fieldDto.setDesignJson(generate);
+                                }
                                 FieldBasicsHtml html = fieldHandler.toHtml(fieldDto);
                                 Object echoValue = fieldHandler.getEcho(html, value, override, olddata);
                                 if (ObjectNull.isNotNull(echoValue)) {

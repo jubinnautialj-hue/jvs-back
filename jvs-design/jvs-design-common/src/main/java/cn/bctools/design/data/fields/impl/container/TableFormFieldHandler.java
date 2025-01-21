@@ -147,46 +147,48 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
     public void filterOrDataLinkage(String appId, Map<String, ? extends FieldBasicsHtml> fieldMap, String key, TableFormItemHtml html, Map<String, Object> map, Integer index, String... parentPath) {
         //判断自己有没有这种数据联动
         if (SystemThreadLocal.get(TABLE_TYPE).equals(TableType.line)) {
-            if (ObjectNull.isNotNull(html.getDataFilterList()) || ObjectNull.isNotNull(html.getDataFilterGroupList())) {
-                List<List<FilterHtml>> dataFilterGroupList = CollectionUtils.isNotEmpty(html.getDataFilterGroupList()) ? html.getDataFilterGroupList() : Collections.singletonList(html.getDataFilterList());
-                List<String> collect = new ArrayList<>();
-                //添加下级字段，目前只有表格才有这个操作
-                addFields(collect, html);
-                //获取查询条件
-                List<List<QueryConditionDto>> queryConditionDtos = dataFilterGroupList.stream().map(filterGroup -> filterGroup.stream()
-                                .peek(s -> {
-                                    //添加查询字段
-                                    collect.add(s.getFieldKey());
-                                }).map(s -> {
-                                    try {
-                                        TypeHtml type = s.getType();
-                                        QueryConditionDto queryConditionDto = new QueryConditionDto().setEnabledQueryTypes(s.getEnabledQueryTypes()).setFieldKey(s.getFieldKey());
-                                        switch (type) {
-                                            case value:
-                                                return queryConditionDto.setValue(s.getValue());
-                                            case prop:
-                                                //获取字段路径
-                                                String path = s.getValue().toString();
-                                                if (JSONUtil.isTypeJSONArray(s.getValue().toString())) {
-                                                    path = ((JSONArray) s.getValue()).stream().map(String::valueOf).collect(Collectors.joining(StrUtil.DOT));
-                                                }
-                                                Object read = JvsJsonPath.read(JSONUtil.toJsonStr(map), path);
-                                                return queryConditionDto.setValue(read);
-                                            default:
-                                                return null;
+            if (ObjectNull.isNotNull(html.getDataModelId())) {
+                if (ObjectNull.isNotNull(html.getDataFilterList()) || ObjectNull.isNotNull(html.getDataFilterGroupList())) {
+                    List<List<FilterHtml>> dataFilterGroupList = CollectionUtils.isNotEmpty(html.getDataFilterGroupList()) ? html.getDataFilterGroupList() : Collections.singletonList(html.getDataFilterList());
+                    List<String> collect = new ArrayList<>();
+                    //添加下级字段，目前只有表格才有这个操作
+                    addFields(collect, html);
+                    //获取查询条件
+                    List<List<QueryConditionDto>> queryConditionDtos = dataFilterGroupList.stream().map(filterGroup -> filterGroup.stream()
+                                    .peek(s -> {
+                                        //添加查询字段
+                                        collect.add(s.getFieldKey());
+                                    }).map(s -> {
+                                        try {
+                                            TypeHtml type = s.getType();
+                                            QueryConditionDto queryConditionDto = new QueryConditionDto().setEnabledQueryTypes(s.getEnabledQueryTypes()).setFieldKey(s.getFieldKey());
+                                            switch (type) {
+                                                case value:
+                                                    return queryConditionDto.setValue(s.getValue());
+                                                case prop:
+                                                    //获取字段路径
+                                                    String path = s.getValue().toString();
+                                                    if (JSONUtil.isTypeJSONArray(s.getValue().toString())) {
+                                                        path = ((JSONArray) s.getValue()).stream().map(String::valueOf).collect(Collectors.joining(StrUtil.DOT));
+                                                    }
+                                                    Object read = JvsJsonPath.read(JSONUtil.toJsonStr(map), path);
+                                                    return queryConditionDto.setValue(read);
+                                                default:
+                                                    return null;
+                                            }
+                                        } catch (Exception exception) {
+                                            return null;
                                         }
-                                    } catch (Exception exception) {
-                                        return null;
-                                    }
-                                }).filter(ObjectNull::isNotNull).collect(Collectors.toList()))
-                        .collect(Collectors.toList());
-                //获取表格字段 判断逻辑为空不处理
-                if (ObjectNull.isNotNull(queryConditionDtos)) {
-                    //如果有行数据，则直接退出， 则表示用户有操作表格数据变化
-                    //需要修改字段一致的情况下，才能触发字段设置的值
-                    if (html.getProp().equals(key)) {
-                        if (ObjectNull.isNotNull(key, html.getProp())) {
-                            setValue(appId, html.getDataModelId(), html, map, collect, queryConditionDtos, parentPath);
+                                    }).filter(ObjectNull::isNotNull).collect(Collectors.toList()))
+                            .collect(Collectors.toList());
+                    //获取表格字段 判断逻辑为空不处理
+                    if (ObjectNull.isNotNull(queryConditionDtos)) {
+                        //如果有行数据，则直接退出， 则表示用户有操作表格数据变化
+                        //需要修改字段一致的情况下，才能触发字段设置的值
+                        if (html.getProp().equals(key)) {
+                            if (ObjectNull.isNotNull(key, html.getProp())) {
+                                setValue(appId, html.getDataModelId(), html, map, collect, queryConditionDtos, parentPath);
+                            }
                         }
                     }
                 }

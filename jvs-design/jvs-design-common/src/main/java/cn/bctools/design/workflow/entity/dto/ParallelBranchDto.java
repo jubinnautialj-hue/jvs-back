@@ -5,6 +5,8 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
+
 /**
  * @author zhuxiaokang
  * 并行分支完成状态
@@ -12,7 +14,10 @@ import lombok.experimental.Accessors;
 @Data
 @Accessors(chain = true)
 @ApiModel("并行分支")
-public class ParallelBranchDto {
+public class ParallelBranchDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
 
     @ApiModelProperty(value = "节点id")
     private String branchId;

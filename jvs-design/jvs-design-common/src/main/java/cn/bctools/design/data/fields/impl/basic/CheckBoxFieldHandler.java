@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -66,6 +67,10 @@ public class CheckBoxFieldHandler extends IMultipleTypeHandler implements IDataF
 
     @Override
     public void checkDataFieldType(CheckboxHtml checkboxHtml, Object o) throws Exception {
+        if (o instanceof String) {
+            o = Arrays.stream(o.toString().split(",")).collect(Collectors.toList());
+            return;
+        }
         if (!(o instanceof List)) {
             throw new RuntimeException("正确格式为数组");
         }

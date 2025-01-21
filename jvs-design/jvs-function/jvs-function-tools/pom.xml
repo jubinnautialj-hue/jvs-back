@@ -54,6 +54,10 @@
             <artifactId>jvs-function-base</artifactId>
             <version>${project.version}</version>
         </dependency>
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-word</artifactId>
+        </dependency>
 
     </dependencies>
 </project>

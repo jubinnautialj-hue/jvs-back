@@ -60,4 +60,13 @@ public class FieldBasicsHtml extends FieldPublicHtml {
     @ApiModelProperty("数字输入框的单位")
     private String unit;
 
+    @Override
+    public String getDataModelId() {
+        //只有打开了配置后才能获取模型 id,否则获取为空
+        if (this.getDataFilterEnable()) {
+            return dataModelId;
+        } else {
+            return null;
+        }
+    }
 }

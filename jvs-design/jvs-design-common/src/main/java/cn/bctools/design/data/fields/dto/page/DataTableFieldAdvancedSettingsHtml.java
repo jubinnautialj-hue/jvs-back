@@ -72,7 +72,7 @@ public class DataTableFieldAdvancedSettingsHtml extends DataTableFieldDesignHtml
     @ApiModelProperty(value = "网络请求字段")
     private String url;
     @ApiModelProperty(value = "字段动态显示")
-    private List<Map<String, Object>> conditionControl;
+    private List<ConditionControlHtml> conditionControl;
     @ApiModelProperty(value = "查询条件宽占比")
     private Integer searchSpan;
     @ApiModelProperty(value = "是否使用动态样式")

@@ -11,13 +11,19 @@ import cn.bctools.design.rule.service.RunLogService;
 import cn.bctools.oss.dto.BaseFile;
 import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.redis.utils.RedisUtils;
+import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleExceptionEnum;
 import cn.bctools.rule.entity.enums.RunType;
+import cn.bctools.rule.entity.enums.type.OutputType;
+import cn.bctools.rule.entity.enums.type.RuleFile;
+import cn.bctools.rule.error.MessageTipsDto;
 import cn.bctools.rule.exception.RuleException;
 import cn.bctools.rule.utils.RuleDesignUtils;
 import cn.bctools.rule.utils.TaskLogUtil;
 import cn.bctools.rule.utils.dto.RuleExecDto;
 import cn.bctools.rule.utils.html.ResultDto;
+import cn.bctools.rule.utils.html.RuleExecuteDto;
+import cn.hutool.core.util.URLUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
@@ -30,6 +36,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestAttributes;
 import org.springframework.web.context.request.RequestContextHolder;
 
+import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -54,6 +61,8 @@ public class RuleStartUtils {
     RuleDesignService ruleDesignService;
     RunLogService runLogService;
     OssTemplate ossTemplate;
+    static final String http = "http";
+
     static final int MAX_THREADS = Runtime.getRuntime().availableProcessors();
     DesignConfig designConfig;
 
@@ -67,6 +76,67 @@ public class RuleStartUtils {
             new ThreadPoolExecutor.AbortPolicy());
     private static final DateTimeFormatter FORMAT_DATETIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     private static final String FORMAT_LOG = "%s [ %s ] %s ";
+
+    /**
+     * 根据逻辑执行获取结果，并返回响应头信息
+     *
+     * @param response    响应对象
+     * @param po          逻辑设计
+     * @param logPo       日志对象
+     * @param data        执行数据
+     * @param ruleExecDto
+     * @return
+     */
+    public R getRuleReturn(HttpServletResponse response, RuleDesignPo po, RunLogPo logPo, RuleExecuteDto data, RuleExecDto ruleExecDto) {
+        start(po, logPo, ruleExecDto);
+        //如果最后的返回为流式返回结果,则直接导出文件结果
+        if (ObjectNull.isNotNull(data.getEndResult()) && ClassType.文件.equals(data.getEndResult().getClassType())) {
+            //处理流式输出
+            RuleFile value = (RuleFile) data.getEndResult().getValue();
+            //判断最后输出节点的类型, 看是否是文件输出类型,如果是就以文件形式的Post结果输出如果是异步
+            if (value.getOutputType().equals(OutputType.download)) {
+                response.setHeader("output_format", URLUtil.encode(value.getOriginalName()));
+            }
+            //兼容预览和下载格式
+            response.setHeader("output_type", value.getOutputType().toString());
+            if (!value.getUrl().startsWith(http)) {
+                value.setUrl(ossTemplate.fileLink(value.getFileName(), value.getBucketName()));
+            }
+            return R.ok(value);
+        }
+        //返回执行日志对象
+        //获取同步返回结果
+        R r = R.ok().setMsg("");
+        //如果最后一个节点为消息节点
+        if (ruleExecDto.getExecuteDto().getStats() && ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getMessageResult())) {
+            //成功的返回消息
+            r = R.ok(ruleExecDto.getExecuteDto().getMessageResult()).setMsg(ruleExecDto.getExecuteDto().getSyncMessageTips());
+        } else if (!ruleExecDto.getExecuteDto().getStats()) {
+            //写入消息状态,末认所有都是返回成功状态
+            response.setHeader("output_status", ruleExecDto.getExecuteDto().getStats().toString());
+            ResultDto endResult = ruleExecDto.getExecuteDto().getEndResult();
+            if (endResult.getValue() instanceof MessageTipsDto) {
+                MessageTipsDto value = (MessageTipsDto) endResult.getValue();
+                response.setHeader("message_close", String.valueOf(value.getOff()));
+                r = R.ok().setMsg(ruleExecDto.getExecuteDto().getSyncMessageTips()).setData(value.getData());
+            } else {
+                r = R.ok().setMsg(ruleExecDto.getExecuteDto().getErrorMessage());
+            }
+        } else if (ruleExecDto.getExecuteDto().getStats() && ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getErrorMessage())) {
+            response.setHeader("output_status", String.valueOf(false));
+            r = R.ok().setMsg(ruleExecDto.getExecuteDto().getErrorMessage());
+        } else if (ObjectNull.isNotNull(data.getEndResult())) {
+            Object value = data.getEndResult().getValue();
+            if (value instanceof MessageTipsDto) {
+                response.setHeader("output_status", ((MessageTipsDto) value).getOnOff().toString());
+                response.setHeader("message_close", ((MessageTipsDto) value).getOff().toString());
+                r.setData(((MessageTipsDto) value).getData()).setMsg(((MessageTipsDto) value).getMessage());
+            } else {
+                r.setData(data.getEndResult().getValue());
+            }
+        }
+        return r;
+    }
 
     public void start(RuleDesignPo po, RunLogPo logPo, RuleExecDto data) {
         //添加执行缓存， 根据类型判断是否有缓存，如果有缓存直接返回数据,不能测试类型

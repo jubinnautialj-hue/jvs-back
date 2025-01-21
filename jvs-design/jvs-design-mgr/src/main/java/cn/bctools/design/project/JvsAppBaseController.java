@@ -27,6 +27,8 @@ import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.data.fields.enums.FormTypeEnum;
 import cn.bctools.design.data.service.DataFieldService;
+import cn.bctools.design.identification.entity.Identification;
+import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.menu.entity.AppMenuType;
 import cn.bctools.design.menu.service.AppMenuTypeService;
 import cn.bctools.design.project.dto.*;
@@ -70,6 +72,7 @@ import java.util.stream.Collectors;
 public class JvsAppBaseController {
 
     JvsAppService service;
+    IdentificationService identificationService;
     RedisUtils redisUtils;
     JvsAppTemplateService templateService;
     CrudPageService pageService;
@@ -122,6 +125,8 @@ public class JvsAppBaseController {
         // 新创建的应用默认启用轻应用版本功能
         app.setEnableVersionFeature(Boolean.TRUE);
         service.save(app);
+        Identification entity = new Identification().setJvsAppId(app.getId()).setDesignId(app.getId()).setDesignType(DesignType.app).setIdentifier(IdGenerator.getIdStr(36));
+        identificationService.save(entity);
         // 创建默认目录
         appMenuTypeService.save(new AppMenuType().setType("未命名目录").setSort(0).setJvsAppId(app.getId()));
         // 初始化版本

@@ -147,6 +147,8 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
             return;
         }
         Set<String> associationSettingsFields = new HashSet<>();
+        //默认添加数据 id，确保左树结构的打开表单时能触发联联动回显
+        associationSettingsFields.add("id");
         List<String> tablePath = new ArrayList<>();
         //判断
         //获取所有字段,做两次遍历， 然后将属性进行判断是否重复，如果重复，表示已经存在

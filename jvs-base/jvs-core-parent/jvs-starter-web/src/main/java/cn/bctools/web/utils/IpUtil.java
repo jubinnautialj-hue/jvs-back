@@ -11,6 +11,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import javax.servlet.http.HttpServletRequest;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.regex.Pattern;
 
 /**
  * @author guojing
@@ -21,6 +22,18 @@ public class IpUtil extends SystemThreadLocal {
     private static final String UNKNOWN = "unknown";
     private static final String LOCALHOST_IP = "0:0:0";
     private static final String LOCALHOST_IP1 = "127.";
+
+    /**
+     * 判断字符串是否是 IP 地址（IPv4 或 IPv6）
+     */
+    public static boolean isIpAddress(String str) {
+        // IPv4 地址的正则表达式
+        String ipv4Pattern = "^((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$";
+        // IPv6 地址的正则表达式
+        String ipv6Pattern = "^([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$";
+
+        return Pattern.matches(ipv4Pattern, str) || Pattern.matches(ipv6Pattern, str);
+    }
 
     /**
      * 获取IP地址

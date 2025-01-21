@@ -23,6 +23,5 @@ public class TableFormItemHtml extends FieldBasicsHtml {
 
     @ApiModelProperty(value = "表格字段")
     private List<FieldBasicsHtml> tableColumn;
-    @ApiModelProperty(value = "模型关联的id")
-    String dataModelId;
+
 }
