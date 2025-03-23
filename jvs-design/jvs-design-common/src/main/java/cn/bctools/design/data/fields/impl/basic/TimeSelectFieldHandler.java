@@ -2,7 +2,6 @@ package cn.bctools.design.data.fields.impl.basic;
 
 import cn.bctools.design.data.fields.DesignField;
 import cn.bctools.design.data.fields.IDataFieldHandler;
-import cn.bctools.design.data.fields.dto.form.html.TimePickerHtml;
 import cn.bctools.design.data.fields.dto.form.html.TimeSelectHtml;
 import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.hutool.core.date.DatePattern;
@@ -11,10 +10,8 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * 表单字段: 固定时间

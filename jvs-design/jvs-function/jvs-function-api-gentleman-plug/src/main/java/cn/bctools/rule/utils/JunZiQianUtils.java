@@ -7,11 +7,11 @@ import cn.bctools.common.utils.PasswordUtil;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.rule.annotations.ParameterValue;
-import cn.bctools.rule.config.SystemInit;
 import cn.bctools.rule.dto.JunZiQianBaseDto;
 import cn.bctools.rule.dto.JunZiQianOption;
 import cn.bctools.rule.entity.enums.InputType;
 import cn.bctools.rule.entity.enums.type.RuleFile;
+import cn.bctools.rule.service.ModelInterface;
 import cn.hutool.core.io.IoUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.junziqian.sdk.bean.ResultInfo;
@@ -63,7 +63,10 @@ public class JunZiQianUtils {
                 })
                 .map(Field::getName)
                 .collect(Collectors.toSet());
-        JunZiQianOption option = JSONObject.parseObject(PasswordUtil.decodedPassword(dto.getOptions(), SpringContextUtil.getKey()), JunZiQianOption.class);
+
+        ModelInterface modelInterface = SpringContextUtil.getBean(ModelInterface.class);
+        Object byKey = modelInterface.getByKey(dto.getOptions());
+        JunZiQianOption option = BeanCopyUtil.copy(JunZiQianOption.class, byKey);
         Map<String, Object> reqBody = BeanCopyUtil.beanToMap(dto);
         if (ObjectNull.isNotNull(fileDto)) {
             OssTemplate bean = SpringContextUtil.getBean(OssTemplate.class);

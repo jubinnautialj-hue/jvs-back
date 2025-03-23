@@ -8,6 +8,7 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alibaba.fastjson2.JSONObject;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -21,6 +22,7 @@ import java.io.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -32,19 +34,25 @@ public class ExcelVariablesReplaceUtil {
 
     @SneakyThrows
     public static void main(String[] args) {
-//        List<ExcelVariable> list = getList();
-        String pathname = "/Users/guojing/Desktop/aabc.xlsx";
-//        File file = new File(pathname);
-//        BufferedInputStream inputStream = FileUtil.getInputStream(file);
-//        ExcelUtils.readAll(inputStream, Object.class);
-//        System.out.println(1);
-//        writeExcel(list, inputStream, new FileOutputStream(new File("abc.xlsx")));
         Map<Object, Map<String, Object>> map = new HashMap<>();
         Map<String, Object> cellMap = new HashMap<>();
-        cellMap.put("abc", "B7Rx6C(name,age,bb,dd,eff,abc)");
-        map.put(2, cellMap);
-        List<Dict> dicts = searchData(FileUtil.getInputStream(pathname), map);
-        System.out.println(dicts);
+        cellMap.put("table", "A6Rx11c(a,b,c,d,e,f,g,h,i,j,k)");
+        map.put("附件2 固定资产投保需求统计表", cellMap);
+//        List<Dict> dicts = ExcelVariablesReplaceUtil.searchData(new ByteArrayInputStream(HttpUtil.downloadBytes("http://10.0.0.219:9000/jvs-public/ten_1/2_2/jvs-auth-mgr/jvs-ui/file/2024/12/25/2024-12-251871808644700487680-%E9%99%84%E4%BB%B6%EF%BC%9A2024-2025%E5%B9%B4%E5%BA%A6%E8%B4%A2%E4%BA%A7%E4%BF%9D%E9%99%A9%E9%9C%80%E6%B1%82%E7%BB%9F%E8%AE%A1%E9%99%84%E4%BB%B61-5%202024-12-25.xlsx")),
+//                map);
+        List<ExcelVariable> list = getList();
+        String pathname = "/Users/guojing/Desktop/aabc.xlsx";
+        File file = new File(pathname);
+        BufferedInputStream inputStream = FileUtil.getInputStream(file);
+//        ExcelUtils.readAll(inputStream, Object.class);
+        System.out.println(1);
+        ByteArrayOutputStream fos = new ByteArrayOutputStream();
+        writeExcel(list, inputStream, fos);
+        byte[] byteArray = fos.toByteArray();
+        FileUtil.writeBytes(byteArray, new File("abc.xlsx"));
+
+//        List<Dict> dicts2 = searchData(FileUtil.getInputStream(pathname), map);
+//        System.out.println(dicts2);
 
     }
 
@@ -83,7 +91,7 @@ public class ExcelVariablesReplaceUtil {
         list.removeIf(e -> ExcelVariable.ExcelType.List.equals(e.getType()));
         list.addAll(excelVariables);
 
-        Map<String, ExcelVariable> variableMap = list.stream().distinct().collect(Collectors.toMap(e -> "${{" + e.getName() + "}}", Function.identity()));
+        Map<String, ExcelVariable> variableMap = list.stream().distinct().collect(Collectors.toMap(e -> "${" + e.getName() + "}", Function.identity()));
 
         //根据变量确定
         Map<Integer, List<ExcelVariable>> listMap = search.stream().collect(Collectors.groupingBy(ExcelVariable::getSheet));
@@ -96,24 +104,28 @@ public class ExcelVariablesReplaceUtil {
             //获取 sheet
             Sheet sheet = workbook.getSheetAt(sheetI);
 
+            AtomicInteger rowSize = new AtomicInteger();
             listMap.get(sheetI).stream().filter(e -> variableMap.containsKey(e.getName())).map(e -> {
                 ExcelVariable excelVariable = variableMap.get(e.getName());
                 return new ExcelVariable().setValue(excelVariable.getValue()).setType(excelVariable.getType()).setSheet(e.getSheet()).setRow(e.getRow()).setColumn(e.getColumn()).setName(e.getName());
-            }).forEach(e -> {
+            }).sorted(Comparator.comparingInt(ExcelVariable::getRow)).forEach(e -> {
                 Row row = sheet.getRow(e.getRow());
                 if (ExcelVariable.ExcelType.List.equals(e.getType())) {
                     //根据字段确定是否添加行  确定添加几行
                     List rowList = (List) e.getValue();
                     if (!nameNowRow.contains(e.getListKey())) {
                         //没有添加过行号了，先添加行
-                        // 向下移动行
-                        sheet.shiftRows(e.getRow(), sheet.getLastRowNum(), rowList.size() - 1);
-                        for (int i = 0; i < rowList.size() - 1; i++) {
-                            Row nowRow = sheet.createRow(e.getRow() + i);
-                            //拷贝格式
-                            copyRow(row, nowRow);
+                        if (rowList.size() > 1) {
+                            // 向下移动行
+                            sheet.shiftRows(e.getRow(), sheet.getLastRowNum(), rowList.size() - 1);
+                            rowSize.addAndGet(rowList.size() - 1);
+                            for (int i = 0; i < rowList.size() - 1; i++) {
+                                Row nowRow = sheet.createRow(e.getRow() + i);
+                                //拷贝格式
+                                copyRow(row, nowRow);
+                            }
+                            nameNowRow.add(e.getListKey());
                         }
-                        nameNowRow.add(e.getListKey());
                     }
                     for (int i = 0; i < rowList.size(); i++) {
                         Row line = sheet.getRow(e.getRow() + i);
@@ -126,11 +138,13 @@ public class ExcelVariablesReplaceUtil {
                         }
                     }
                 } else {
-                    Cell cell = row.getCell(e.getColumn());
+                    Cell cell = sheet.getRow(e.getRow() + rowSize.get()).getCell(e.getColumn());
                     write(cell, e);
                 }
             });
         }
+        // 强制公式重新计算
+        workbook.setForceFormulaRecalculation(true);
         workbook.write(fos);
     }
 
@@ -171,27 +185,31 @@ public class ExcelVariablesReplaceUtil {
     }
 
     private static void write(Cell cell, ExcelVariable e) {
-        String stringCellValue = cell.getStringCellValue();
-        if (!stringCellValue.equals(e.getName())) {
-            //需要判断原始数据中是否存在其它的变量
-            cell.setCellValue(stringCellValue.replace(e.getName(), e.getValue().toString()));
-            return;
-        }
-        switch (e.getType()) {
-            //不存在写入 list数据，这里应该根据值的类型进行写入而不是根据单元格的类型写入
-            case Number:
-                double doub = new BigDecimal(e.getValue().toString()).doubleValue();
-                cell.setCellValue(doub);
-                break;
-            case Date:
-                cell.setCellValue((LocalDateTime) e.getValue());
-                break;
-            case String:
-                cell.setCellValue(e.getValue().toString());
-                break;
-            case Boolean:
-            default:
-                writeValue(cell, e.getValue());
+        try {
+            switch (e.getType()) {
+                //不存在写入 list数据，这里应该根据值的类型进行写入而不是根据单元格的类型写入
+                case Number:
+                    double doub = new BigDecimal(e.getValue().toString()).doubleValue();
+                    cell.setCellValue(doub);
+                    break;
+                case Date:
+                    cell.setCellValue((LocalDateTime) e.getValue());
+                    break;
+                case String:
+                    String stringCellValue = cell.getStringCellValue();
+                    if (!stringCellValue.equals(e.getName())) {
+                        //需要判断原始数据中是否存在其它的变量
+                        cell.setCellValue(stringCellValue.replace(e.getName(), e.getValue().toString()));
+                        return;
+                    }
+                    cell.setCellValue(e.getValue().toString());
+                    break;
+                case Boolean:
+                default:
+                    writeValue(cell, e.getValue());
+            }
+        } catch (Exception ex) {
+            throw new BusinessException(e.getName() + "数据出错 value:" + e.getValue() + " type: " + e.getType());
         }
     }
 
@@ -246,7 +264,7 @@ public class ExcelVariablesReplaceUtil {
     /**
      * 内容中的变量
      */
-    private static String VARIABLE_PATTERN = "\\$\\{.*\\{.*?\\}\\}";
+    private static String VARIABLE_PATTERN = "\\$\\{.*?\\}";
 
     public static void replaceVariables(String inputFilePath, String outputFilePath, Map<String, Object> variables) throws IOException {
         try (FileInputStream fis = new FileInputStream(inputFilePath);
@@ -460,7 +478,9 @@ public class ExcelVariablesReplaceUtil {
                     return;
                 }
             }
-            objectList.add(dict);
+            if (!dict.values().stream().allMatch(ObjectNull::isNull)) {
+                objectList.add(dict);
+            }
             row++;
         }
     }

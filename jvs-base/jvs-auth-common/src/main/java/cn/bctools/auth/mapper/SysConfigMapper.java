@@ -1,4 +1,4 @@
-//package cn.bctools.auth.mapper;
+package cn.bctools.auth.mapper;//package cn.bctools.auth.mapper;
 //
 //import cn.bctools.gateway.entity.SysConfigs;
 //import cn.bctools.database.interceptor.cache.JvsRedisCache;

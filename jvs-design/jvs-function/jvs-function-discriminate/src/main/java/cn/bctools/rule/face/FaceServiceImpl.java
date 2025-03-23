@@ -1,8 +1,6 @@
 package cn.bctools.rule.face;
 
-import cn.bctools.common.exception.BusinessException;
 import cn.bctools.rule.annotations.Rule;
-import cn.bctools.rule.bank.BankDto;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;

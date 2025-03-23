@@ -1,13 +1,13 @@
 package cn.bctools.rule.signature;
 
 import cn.bctools.rule.annotations.Rule;
+import cn.bctools.rule.dto.GentlemanSignatureapimobanshouquanmafaqiDto;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
 import cn.bctools.rule.utils.JunZiQianUtils;
 import lombok.AllArgsConstructor;
-import cn.bctools.rule.dto.GentlemanSignatureapimobanshouquanmafaqiDto;
 
 import java.util.Map;
 

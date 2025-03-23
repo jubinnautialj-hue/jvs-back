@@ -98,8 +98,11 @@ public class AuthorizationManager implements ReactiveAuthorizationManager<Author
                 return Mono.just(new AuthorizationDecision(true));
             } else {
                 return mono.map(e -> ((CustomUser) e.getPrincipal()))
-                        .filter(e -> SpringContextUtil.getMode() ||
-                                Optional.ofNullable(e).map(UserInfoDto::getUserDto).map(UserDto::getUserAgent).orElse("").equals(referer)
+                        .filter(e -> {
+                                    Boolean b = SpringContextUtil.getMode() ||
+                                            ObjectNull.isNotNull(referer) && e.getUserDto().getUserAgent().startsWith(referer);
+                                    return b;
+                                }
                         )
                         .switchIfEmpty(Mono.error(new BusinessException("登录已过期").setCode(-2)))
                         .map(e -> new AuthorizationDecision(true))
@@ -108,8 +111,10 @@ public class AuthorizationManager implements ReactiveAuthorizationManager<Author
         }
         return mono
                 .map(e -> ((CustomUser) e.getPrincipal()))
-                .filter(e -> SpringContextUtil.getMode() ||
-                        ObjectNull.isNotNull(referer) && e.getUserDto().getUserAgent().equals(referer))
+                .filter(e -> {
+                    return SpringContextUtil.getMode() ||
+                            ObjectNull.isNotNull(referer) && e.getUserDto().getUserAgent().startsWith(referer);
+                })
                 .switchIfEmpty(Mono.error(new BusinessException("登录已过期").setCode(-2)))
                 // 2、认证通过且角色匹配的用户可访问当前路径,
                 .flatMapIterable(e -> e.getPermissions())

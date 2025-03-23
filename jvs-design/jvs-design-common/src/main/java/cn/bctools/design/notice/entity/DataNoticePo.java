@@ -1,6 +1,7 @@
 package cn.bctools.design.notice.entity;
 
 import cn.bctools.database.entity.po.BasalPo;
+import cn.bctools.database.handler.Fastjson2TypeHandler;
 import cn.bctools.design.notice.dto.NoticeExtendTemplateDto;
 import cn.bctools.design.notice.entity.enums.NoticeTemplateTypeEnum;
 import cn.bctools.design.notice.entity.handler.NoticeExtendHandler;
@@ -8,7 +9,6 @@ import cn.bctools.design.notice.entity.handler.ReceiverTypeHandler;
 import cn.bctools.design.notice.handler.bo.ReceiverBo;
 import cn.bctools.design.notice.handler.bo.TriggerSettingBo;
 import com.baomidou.mybatisplus.annotation.*;
-import cn.bctools.database.handler.Fastjson2TypeHandler;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

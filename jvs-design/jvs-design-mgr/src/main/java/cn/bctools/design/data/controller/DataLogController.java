@@ -78,7 +78,7 @@ public class DataLogController {
 
     @ApiOperation("新增数据的跟进记录")
     @PostMapping("/follow/{dataModelId}/{dataId}")
-    public R followAll(@PathVariable("dataId") String dataId, @PathVariable("dataModelId") String dataModelId, @RequestBody Map<String, Object> body) {
+    public R followAll(@PathVariable("dataId") String dataId, @PathVariable("dataModelId") String dataModelId, @RequestBody Map<String, Object> body, @PathVariable String appId) {
         dataLogService.follow(dataModelId, dataId, body, UserCurrentUtils.getNullableUser());
         return R.ok();
     }

@@ -1,9 +1,11 @@
 package cn.bctools.design.index;
 
-import cn.bctools.index.design.component.*;
-import cn.bctools.index.design.component.service.*;
+import cn.bctools.index.design.component.ComponentProjectNavigation;
+import cn.bctools.index.design.component.service.ComponentOaTaskService;
+import cn.bctools.index.design.component.service.ComponentProcessManagementService;
+import cn.bctools.index.design.component.service.ComponentProjectNavigationService;
+import cn.bctools.index.design.component.service.LinkComponentNavigationService;
 import cn.bctools.index.design.enums.ComponentType;
-
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.stereotype.Service;

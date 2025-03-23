@@ -7,7 +7,6 @@ import cn.bctools.design.crud.vo.PrintFormElementVo;
 import cn.bctools.design.data.entity.DataModelPo;
 import cn.bctools.design.data.fields.IDataFieldHandler;
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
-import cn.bctools.design.data.fields.dto.FieldPublicHtml;
 import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;

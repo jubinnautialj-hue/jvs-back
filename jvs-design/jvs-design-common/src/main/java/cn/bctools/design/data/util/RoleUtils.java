@@ -2,6 +2,7 @@ package cn.bctools.design.data.util;
 
 import cn.bctools.auth.api.dto.PersonnelDto;
 import cn.bctools.auth.api.enums.PersonnelTypeEnum;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.entity.dto.UserInfoDto;
 import cn.bctools.common.utils.ObjectNull;
@@ -98,7 +99,7 @@ public class RoleUtils {
         UserInfoDto<? extends UserDto> userInfo = UserCurrentUtils.init();
         UserDto userDto = userInfo.getUserDto();
         String userId = userDto.getId();
-        String deptId = userDto.getDeptId();
+        Set<String> deptId = userDto.getDept().stream().map(DeptDto::getDeptId).collect(Collectors.toSet());
         List<String> roleIds = userInfo.getRoles();
         if (ObjectUtils.isEmpty(personnels)) {
             return false;
@@ -115,7 +116,7 @@ public class RoleUtils {
                     match = id.equals(userId);
                     break;
                 case dept:
-                    match = id.equals(deptId);
+                    match = deptId.contains(id);
                     break;
                 case role:
                     match = ObjectUtils.isNotEmpty(roleIds) && roleIds.contains(id);

@@ -61,7 +61,7 @@ public class DataFieldServiceImpl extends ServiceImpl<DataFieldMapper, DataField
     private List<DataFieldPo> doNotShowFieldCache;
     private final MapperMethodHandler mapperMethodHandler;
 
-    static final String[] STR = {"abstract", "id", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const", "continue", "default",
+    static final String[] STR = {"abstract", "assert", "boolean", "break", "byte", "case", "catch", "char", "class", "const", "continue", "default",
             "do", "double", "else", "enum", "extends", "final", "finally", "float", "for", "goto", "if", "implements", "import", "instanceof"
             , "int", "interface", "long", "native", "new", "package", "private", "protected", "public", "return", "short", "static", "strictfp",
             "super", "switch", "synchronized", "this", "throw", "throws", "transient", "try", "void", "volatile", "while"};
@@ -134,7 +134,7 @@ public class DataFieldServiceImpl extends ServiceImpl<DataFieldMapper, DataField
             }
         }
         if (ObjectNull.isNotNull(fieldKeys)) {
-            throw new BusinessException("字段名起名冲突请修改" + JSONObject.toJSONString(fieldKeys));
+            throw new BusinessException("字段名起名冲突或是保留字请修改" + JSONObject.toJSONString(fieldKeys));
         }
         // 不是模型数据字段的类型不保存
         fieldList.removeIf(field -> DataFieldType.notModelFieldTypes().contains(field.getFieldType()));

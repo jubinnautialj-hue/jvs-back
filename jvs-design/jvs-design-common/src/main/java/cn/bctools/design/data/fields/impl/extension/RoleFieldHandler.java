@@ -2,7 +2,6 @@ package cn.bctools.design.data.fields.impl.extension;
 
 import cn.bctools.auth.api.api.AuthRoleServiceApi;
 import cn.bctools.auth.api.dto.SysRoleDto;
-import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;

@@ -1,6 +1,7 @@
 package cn.bctools.rule.data.mongo;
 
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.PasswordUtil;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.rule.annotations.Rule;
@@ -9,6 +10,7 @@ import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.bctools.rule.service.ModelInterface;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.MD5;
 import cn.hutool.json.JSONUtil;
@@ -47,6 +49,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 )
 public class MongoServiceImpl implements BaseCustomFunctionInterface<MongoFunctionDto> {
+
+    @Autowired
+    ModelInterface modelInterface;
 
     @Autowired
     private Gson gson;
@@ -88,9 +93,8 @@ public class MongoServiceImpl implements BaseCustomFunctionInterface<MongoFuncti
 
     private class MongodbAutoConfig {
         private MongoProperties initMongoProperties(MongoFunctionDto dto) {
-            String dbName = dto.getDbName();
-            String decodeDbName = PasswordUtil.decodedPassword(dbName, SpringContextUtil.getKey());
-            MongodbDataSourceSelectedOption selectedOption = gson.fromJson(decodeDbName, MongodbDataSourceSelectedOption.class);
+            Object byKey = modelInterface.getByKey(dto.getDbName());
+            MongodbDataSourceSelectedOption selectedOption = BeanCopyUtil.copy(MongodbDataSourceSelectedOption.class, byKey);
             MongoProperties mongoProperties = new MongoProperties();
             mongoProperties.setHost(selectedOption.getHost());
             mongoProperties.setPort(Optional.ofNullable(selectedOption.getPort()).orElse(27017));

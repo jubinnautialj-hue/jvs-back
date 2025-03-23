@@ -7,7 +7,7 @@ import javax.validation.constraints.NotNull;
 /**
  * Jvs表达式-自定义函数列表
  * <p>
- * 实现类需要添加注解, 否则也不会生效{@link cn.bctools.function.handler.JvsExpression}
+ * 实现类需要添加注解, 否则也不会生效{@link JvsExpression}
  *
  * @Author: GuoZi
  */

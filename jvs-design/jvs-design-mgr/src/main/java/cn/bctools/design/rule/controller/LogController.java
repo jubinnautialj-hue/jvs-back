@@ -10,6 +10,7 @@ import cn.bctools.design.rule.service.RunLogService;
 import cn.bctools.log.annotation.Log;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.rule.entity.enums.RunType;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -136,7 +137,7 @@ public class LogController {
                         "LENGTH(path)  desc " +
                         "limit 1"));
         Page<RunLogPo> page = new Page<RunLogPo>().setSize(1).setCurrent(canvasPage.get(canvasId));
-        if(ObjectNull.isNull(one)){
+        if (ObjectNull.isNull(one)) {
             return R.ok(page);
         }
         //为兼容老数据,不返回相关信息
@@ -212,7 +213,7 @@ public class LogController {
         log.info("用户删除指定逻辑的操作日志 用户 {} ,应用 {}， 时间 {}, {} ", UserCurrentUtils.getAccountName(), appId, startDate, endDate);
         service.remove(Wrappers.query(new RunLogPo().setJvsAppId(appId).setReqRunKey(key))
                 .lambda()
-                .between(RunLogPo::getStartTime, startDate, endDate));
+                .between(RunLogPo::getStartTime, DateUtil.parseLocalDateTime(startDate), DateUtil.parseLocalDateTime(endDate)));
         return R.ok();
     }
 

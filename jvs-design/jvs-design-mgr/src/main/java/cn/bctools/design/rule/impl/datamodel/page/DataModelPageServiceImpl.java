@@ -11,7 +11,6 @@ import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.rule.impl.datamodel.FieldStructureUtils;
-import cn.bctools.design.rule.impl.datamodel.list.DataModelListDto;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.common.RuleElementVo;

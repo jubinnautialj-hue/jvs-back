@@ -8,6 +8,9 @@ import cn.bctools.auth.entity.User;
 import cn.bctools.auth.entity.UserExtension;
 import cn.bctools.auth.login.AuthRequestCustomFactory;
 import cn.bctools.auth.login.auth.other.OauthOtherRequest;
+import cn.bctools.auth.login.auth.other.OtherAuthUser;
+import cn.bctools.auth.login.auth.wx.WeChatEnterpriseQrcodeRequest;
+import cn.bctools.auth.login.auth.wx.WeChatEnterpriseWebRequest;
 import cn.bctools.auth.login.auth.wx.enterprise.BaseWxEnterprise;
 import cn.bctools.auth.login.dto.StandardOwnDto;
 import cn.bctools.auth.login.dto.SyncUserDto;
@@ -19,10 +22,8 @@ import cn.bctools.common.utils.*;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.util.EnumUtil;
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.xkcoding.http.HttpUtil;
 import com.xkcoding.justauth.autoconfigure.JustAuthProperties;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -63,11 +64,11 @@ public class OtherLoginHandler extends BaseWxEnterprise {
     OtherLoginUserInfoComponent otherLoginUserInfoComponent;
 
     public User handle(String code, String appId, String type) {
-        String[] split = type.split("_");
+        String[] split = type.split("__");
         String type1 = split[0];
         AuthDefaultRequest authRequest = getAuthDefaultRequest(type1);
 
-        AuthUser authUser = null;
+
         //现在只支持一个即可，不支持其它的
         if ("token".equals(type) && authRequest instanceof OauthOtherRequest) {
             OauthOtherRequest oauthOtherRequest = (OauthOtherRequest) authRequest;
@@ -75,7 +76,11 @@ public class OtherLoginHandler extends BaseWxEnterprise {
             type1 = oauthOtherRequest.getOauthOther().getName();
             code = JSON.parseObject(PasswordUtil.decodedPassword(code, appId)).getString("token");
             authToken.setAccessToken(code);
-            authUser = oauthOtherRequest.getUserInfo(authToken);
+            OtherAuthUser authUser = (OtherAuthUser) oauthOtherRequest.getUserInfo(authToken);
+            OtherUserDto otherUserDto =
+                    new OtherUserDto().setOpenId(authUser.getUuid()).setUserName(authUser.getNickname()).setAccountName(authUser.getAccount()).setEmail(authUser.getEmail()).setLoginType(type1).setAvatar(authUser.getAvatar()).setDeptId(authUser.getCompany()).setOtherUser(authUser.getRawUserInfo());
+            log.info("三方用户信息返回后数据组装: {}", JSON.toJSONString(otherUserDto));
+            return otherLoginUserInfoComponent.getUser(otherUserDto);
         } else {
             code = JSON.parseObject(PasswordUtil.decodedPassword(code, appId)).getString("code");
 
@@ -93,11 +98,14 @@ public class OtherLoginHandler extends BaseWxEnterprise {
                 log.error(type + "登录失败: {}", response.getMsg());
                 throw new BusinessException(type + "登录失败,三方数据返回为:" + JSONObject.toJSONString(response));
             }
-            authUser = (AuthUser) response.getData();
+            AuthUser authUser = (AuthUser) response.getData();
+            OtherUserDto otherUserDto = new OtherUserDto().setOpenId(authUser.getUuid()).setUserName(authUser.getNickname()).setAccountName(authUser.getUsername()).setEmail(authUser.getEmail()).setLoginType(type1).setAvatar(authUser.getAvatar()).setDeptId(authUser.getCompany()).setOtherUser(authUser.getRawUserInfo());
+            if (authUser instanceof OtherAuthUser) {
+                otherUserDto.setAccountName(((OtherAuthUser) authUser).getAccount());
+            }
+            log.info("三方用户信息返回后数据组装: {}", JSON.toJSONString(otherUserDto));
+            return otherLoginUserInfoComponent.getUser(otherUserDto);
         }
-        OtherUserDto otherUserDto = new OtherUserDto().setOpenId(authUser.getUuid()).setUserName(authUser.getNickname()).setAccountName(authUser.getUsername()).setEmail(authUser.getEmail()).setLoginType(type1).setAvatar(authUser.getAvatar()).setDeptId(authUser.getCompany()).setOtherUser(authUser.getRawUserInfo());
-        log.info("三方用户信息返回后数据组装: {}", JSON.toJSONString(otherUserDto));
-        return otherLoginUserInfoComponent.getUser(otherUserDto);
     }
 
     public AuthDefaultRequest getAuthDefaultRequest(String type) {
@@ -188,9 +196,9 @@ public class OtherLoginHandler extends BaseWxEnterprise {
             case WECHAT_MP:
                 return new AuthWeChatMpRequest(config, authStateCache);
             case WECHAT_ENTERPRISE:
-                return new AuthWeChatEnterpriseQrcodeRequest(config, authStateCache);
+                return new WeChatEnterpriseQrcodeRequest(config, authStateCache);
             case WECHAT_ENTERPRISE_WEB:
-                return new AuthWeChatEnterpriseWebRequest(config, authStateCache);
+                return new WeChatEnterpriseWebRequest(config, authStateCache);
             case TAOBAO:
                 return new AuthTaobaoRequest(config, authStateCache);
             case GOOGLE:

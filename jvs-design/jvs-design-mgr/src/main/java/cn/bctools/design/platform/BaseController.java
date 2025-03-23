@@ -10,7 +10,6 @@ import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.rule.service.RuleDesignService;
 import cn.bctools.design.rule.service.RuleExternalService;
-import cn.bctools.design.screen.service.ScreenService;
 import cn.bctools.design.workflow.service.FlowDesignService;
 import cn.bctools.oss.mapper.SysFileMapper;
 import cn.bctools.redis.utils.RedisUtils;
@@ -35,8 +34,6 @@ import java.util.List;
 public class BaseController {
 
     @Autowired
-    ScreenService screenService;
-    @Autowired
     CrudPageService crudPageService;
     @Autowired
     FormService formService;
@@ -59,7 +56,7 @@ public class BaseController {
     @GetMapping
     public R base() {
         //返回设备号
-        List<PlatformDto.Block> blockList = new ArrayList<PlatformDto.Block>();
+        List<PlatformDto.Block> blockList = new ArrayList<>();
         //查询所有租户的
         TenantContextHolder.clear();
         blockList.add(new PlatformDto.Block().setName("轻应用").setIcon("icon-icon_3-07").setSize(jvsAppService.count()).setMaxSize(0));
@@ -67,7 +64,6 @@ public class BaseController {
         blockList.add(new PlatformDto.Block().setName("逻辑设计").setIcon("icon-liebiaoqingdan").setSize(ruleDesignService.count()).setMaxSize(0));
         blockList.add(new PlatformDto.Block().setName("表单设计").setIcon("icon-icon_1-24").setSize(formService.count()).setMaxSize(0));
         blockList.add(new PlatformDto.Block().setName("列表设计").setIcon("icon-fenxiqushi").setSize(crudPageService.count()).setMaxSize(0));
-        blockList.add(new PlatformDto.Block().setName("大屏设计").setIcon("icon-jingyingfenxisvg").setSize(screenService.count()).setMaxSize(0));
         blockList.add(new PlatformDto.Block().setName("集成&自动化扩展").setIcon("icon-jingyingfenxisvg").setSize(ruleExternalService.count()).setMaxSize(0));
         return R.ok(blockList);
     }

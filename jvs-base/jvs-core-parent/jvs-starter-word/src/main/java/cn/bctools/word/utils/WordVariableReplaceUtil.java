@@ -2,6 +2,8 @@ package cn.bctools.word.utils;
 
 import cn.bctools.common.utils.JvsJsonPath;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.function.Get;
+import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
 import lombok.Getter;
 import lombok.Setter;
@@ -12,6 +14,7 @@ import org.docx4j.XmlUtils;
 import org.docx4j.convert.in.xhtml.FormattingOption;
 import org.docx4j.convert.in.xhtml.XHTMLImporterImpl;
 import org.docx4j.model.datastorage.migration.VariablePrepare;
+import org.docx4j.model.structure.HeaderFooterPolicy;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.MainDocumentPart;
 import org.docx4j.wml.*;
@@ -22,10 +25,13 @@ import org.jsoup.nodes.Entities;
 import org.jsoup.select.Elements;
 
 import javax.xml.bind.JAXBElement;
+import java.io.File;
 import java.math.BigInteger;
 import java.util.*;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @Author: ZhuXiaoKang
@@ -99,6 +105,7 @@ public class WordVariableReplaceUtil {
      */
     private static final Pattern VARIABLE_TABLE_PATTERN = Pattern.compile("##(.*?)##");
 
+
     /**
      * 字段数据替换
      *
@@ -132,16 +139,37 @@ public class WordVariableReplaceUtil {
         if (MapUtils.isEmpty(varsMap)) {
             return;
         }
+        List<String> fields = varsMap.entrySet().stream().filter(e -> ObjectNull.isNull(e.getValue()))
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
         MainDocumentPart mainDocumentPart = mlPackage.getMainDocumentPart();
+        processElements(mainDocumentPart.getContent(), fields, new Stack<String>());
+
         VariablePrepare.prepare(mlPackage);
+
         Docx4jClearUtil.cleanDocumentPart(mainDocumentPart);
 
         // 替换表格列表
         replaceTbl(mlPackage, varsMap);
+        // 替换页眉页脚变量
+        replaceHeaderFooterVariableText(mlPackage, varsMap);
         // 替换普通变量
         replaceVariableTextElement(mlPackage, varsMap);
     }
 
+    /**
+     * 替换页眉页脚普通变了
+     *
+     * @param mlPackage
+     * @param varsMap
+     */
+    private static void replaceHeaderFooterVariableText(WordprocessingMLPackage mlPackage, Map<String, Object> varsMap) {
+        HeaderFooterPolicy headerFooterPolicy = mlPackage.getDocumentModel().getSections().get(0).getHeaderFooterPolicy();
+        List<Object> headers = getVariableTextElement(headerFooterPolicy.getDefaultHeader());
+        List<Object> footers = getVariableTextElement(headerFooterPolicy.getDefaultFooter());
+        List<Object> texts = Stream.of(headers, footers).filter(ObjectNull::isNotNull).flatMap(Collection::stream).collect(Collectors.toList());
+        replaceVariableText(mlPackage, texts, varsMap);
+    }
 
     /**
      * 替换普通变量
@@ -151,6 +179,20 @@ public class WordVariableReplaceUtil {
      */
     private static void replaceVariableTextElement(WordprocessingMLPackage mlPackage, Map<String, Object> varsMap) {
         List<Object> texts = getVariableTextElement(mlPackage.getMainDocumentPart());
+        replaceVariableText(mlPackage, texts, varsMap);
+    }
+
+    /**
+     * 替换变量
+     *
+     * @param mlPackage
+     * @param texts
+     * @param varsMap
+     */
+    private static void replaceVariableText(WordprocessingMLPackage mlPackage, List<Object> texts, Map<String, Object> varsMap) {
+        if (ObjectNull.isNull(texts)) {
+            return;
+        }
         for (Object text : texts) {
             Text textElement = (Text) text;
             // 获取所有变量
@@ -158,11 +200,187 @@ public class WordVariableReplaceUtil {
             variables.forEach(variable -> {
                 String variableDataType = getVariableDataType(variable);
                 String variableKey = getPureKey(variable);
+                String variableParam = getVariableParam(variable);
                 Object dataValue = JvsJsonPath.read(varsMap, variableKey);
-                replace(mlPackage, textElement, variableDataType, variableKey, dataValue);
+                replace(mlPackage, textElement, variableDataType, variableKey, variableParam, dataValue);
             });
-
         }
+    }
+
+    private static final Pattern START_PATTERN = Pattern.compile("\\{\\{#(\\w+)\\}\\}");
+    private static final Pattern END_PATTERN = Pattern.compile("\\{\\{/(\\w+)\\}\\}");
+    private static final Pattern PLACEHOLDER_PATTERN = Pattern.compile("\\{\\{(\\w+)\\}\\}");
+
+    /**
+     * 递归处理所有文档元素
+     */
+    private static void processElements(List<Object> elements, List<String> objects, Stack<String> keyQueue) {
+        List<Object> toRemove = new ArrayList<>();
+        Iterator<Object> iterator = elements.iterator();
+        while (iterator.hasNext()) {
+            Object obj = iterator.next();
+            if (obj instanceof JAXBElement) {
+                obj = ((JAXBElement<?>) obj).getValue();
+            }
+            if (obj instanceof P) {
+                processParagraph((P) obj, toRemove, objects, keyQueue);
+                if (toRemove.contains(obj)) {
+                    iterator.remove();
+                }
+            } else if (obj instanceof Tbl) {
+                processTable((Tbl) obj, toRemove, objects, keyQueue);
+                if (toRemove.contains(obj)) {
+                    iterator.remove();
+                }
+            } else if (obj instanceof ContentAccessor) {
+                // 递归处理子元素（如文本框等）
+                processElements(((ContentAccessor) obj).getContent(), objects, keyQueue);
+            } else {
+            }
+        }
+        elements.removeAll(toRemove);
+    }
+
+    /**
+     * 处理段落（含内联标记）
+     *
+     * @return
+     */
+    private static void processParagraph(P p, List<Object> toRemove, List<String> objects, Stack<String> keyQueue) {
+        Matcher startMatcher = START_PATTERN.matcher(p.toString());
+        Matcher endMatcher = END_PATTERN.matcher(p.toString());
+
+        // 检测条件块开始
+        if (startMatcher.find()) {
+            String condition = startMatcher.group(1);
+            boolean show = objects.contains(condition);
+            if (show) {
+                keyQueue.push(condition);
+            }
+            //同文字里面是否有结束
+            if (endMatcher.find()) {
+                String group = endMatcher.group(1);
+                //相同的文字
+                if (condition.equals(group)) {
+                    //替换内容
+                    boolean boo = false;
+                    Iterator<Object> iterator = p.getContent().iterator();
+                    while (iterator.hasNext()) {
+                        Object o = iterator.next();
+                        if (o instanceof R) {
+                            JAXBElement o1 = (JAXBElement) ((R) o).getContent().get(0);
+                            Text value = (Text) o1.getValue();
+                            String value1 = value.getValue();
+                            //表示开始，，这里就删除
+                            if (value1.equals("{{#" + group + "}}")) {
+                                boo = true;
+                                iterator.remove();
+                            } else if (boo) {
+                                if (value1.equals("{{/" + group + "}}")) {
+                                    boo = false;
+                                    keyQueue.pop();
+                                }
+                                iterator.remove();
+                            }
+                        }
+                    }
+                }
+            }
+        } else if (endMatcher.find()) {
+            // 检测条件块结束
+            if (!keyQueue.isEmpty()) {
+                String pop = keyQueue.get(0);
+                String group = endMatcher.group(1);
+                if (pop.equals(group)) {
+                    keyQueue.pop();
+                    // 清理结束标记
+                    toRemove.add(p);
+                }
+            }
+        }
+
+        // 处理当前条件状态
+        if (!keyQueue.isEmpty()) {
+            toRemove.add(p);
+        }
+    }
+
+    /**
+     * 处理表格结构
+     */
+    private static void processTable(Tbl tbl, List<Object> toRemove, List<String> objects, Stack<String> keyQueue) {
+        // 处理当前条件状态
+        if (!keyQueue.isEmpty()) {
+            toRemove.add(tbl);
+            return;
+        }
+        for (Object rowObj : tbl.getContent()) {
+            if (rowObj instanceof Tr) {
+                Tr row = (Tr) rowObj;
+                for (Object cellObj : row.getContent()) {
+                    if (cellObj instanceof JAXBElement) {
+                        Tc cell = (Tc) ((JAXBElement<?>) cellObj).getValue();
+                        processElements(cell.getContent(), objects, keyQueue);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 替换占位符
+     */
+    private static void replacePlaceholders(P p, ArrayList<String> objects) {
+        for (Object item : p.getContent()) {
+            if (item instanceof R) {
+                R run = (R) item;
+                for (Object textObj : run.getContent()) {
+                    if (textObj instanceof Text) {
+                        Text text = (Text) textObj;
+                        Matcher m = PLACEHOLDER_PATTERN.matcher(text.getValue());
+                        if (m.find()) {
+//                            String value = objects.getOrDefault(m.group(1), "").toString();
+                            text.setValue(m.replaceAll(""));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 在段落中替换正则匹配内容
+     */
+    private static void replaceInParagraph(P p, Pattern pattern, String replacement) {
+        for (Object item : p.getContent()) {
+            if (item instanceof R) {
+                R run = (R) item;
+                for (Object textObj : run.getContent()) {
+                    if (textObj instanceof Text) {
+                        Text text = (Text) textObj;
+                        text.setValue(pattern.matcher(text.getValue()).replaceAll(replacement));
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 提取段落文本
+     */
+    private static String extractText(P p) {
+        StringBuilder sb = new StringBuilder();
+        for (Object item : p.getContent()) {
+            if (item instanceof R) {
+                R run = (R) item;
+                for (Object textObj : run.getContent()) {
+                    if (textObj instanceof Text) {
+                        sb.append(((Text) textObj).getValue());
+                    }
+                }
+            }
+        }
+        return sb.toString();
     }
 
     /**
@@ -220,13 +438,37 @@ public class WordVariableReplaceUtil {
             if (CollectionUtils.isEmpty(tableDataList)) {
                 continue;
             }
-            // 得到变量行(约定表格key所在行的下一行是变量行)
+            // 得到变量行（不限制第一行是变量行，直到找到有变量为止）
             int dynamicTrIndex = tableKeyTrIndex + 1;
-            Tr dynamicTr = (Tr) table.getContent().get(dynamicTrIndex);
-            List<Object> texts = Tool.getAllElementFromObject(dynamicTr, Text.class);
+            Tr dynamicTr = null;
+            List<Object> texts = null;
+            boolean flag = true;
+            while (flag) {
+                if (dynamicTrIndex >= table.getContent().size()) {
+                    flag = false;
+                    continue;
+                }
+                dynamicTr = (Tr) table.getContent().get(dynamicTrIndex);
+                texts = Tool.getAllElementFromObject(dynamicTr, Text.class);
+                if (ObjectNull.isNull(texts)) {
+                    dynamicTrIndex++;
+                    continue;
+                }
+                boolean hasVariable = texts.stream().anyMatch(t -> {
+                    Text text = (Text) t;
+                    String prefix = PREFIX + LEFT_BRACE;
+                    return text.getValue().contains(prefix);
+                });
+                if (hasVariable) {
+                    flag = false;
+                } else {
+                    dynamicTrIndex++;
+                }
+            }
             if (CollectionUtils.isEmpty(texts)) {
                 continue;
             }
+
             String dynamicTrXml = XmlUtils.marshaltoString(dynamicTr);
             // 解析后的变量 key-模板变量，List[0]-类型，List[1]-变量key
             Map<String, List<String>> variableMap = new HashMap<>(8);
@@ -239,6 +481,7 @@ public class WordVariableReplaceUtil {
                 String variableKey = pureKey.substring(lastIndexOf);
                 variableMap.put(content.getValue(), Arrays.asList(variableDataType, variableKey));
             }
+
             // 遍历数据填充表格
             List<Object> newTableDataTr = new ArrayList<>();
             for (Map<String, Object> dataMap : tableDataList) {
@@ -246,14 +489,15 @@ public class WordVariableReplaceUtil {
                 List<Object> newTexts = getVariableTextElement(newTr);
                 for (Object text : newTexts) {
                     Text textElement = (Text) text;
-                    List<String> vs = variableMap.get(textElement.getValue());
-                    if (CollectionUtils.isEmpty(vs)) {
-                        continue;
-                    }
-                    String variableDataType = vs.get(0);
-                    String variableKey = vs.get(1);
-                    Object data = dataMap.get(variableKey);
-                    replace(mlPackage, textElement, variableDataType, getPureKey(textElement.getValue()), data);
+                    // 获取所有变量
+                    List<String> variables = ReUtil.findAllGroup0(VARIABLE_PATTERN, textElement.getValue());
+                    variables.forEach(variable -> {
+                        String variableDataType = getVariableDataType(variable);
+                        String variableKey = getPureKey(variable);
+                        String variableParam = getVariableParam(variable);
+                        Object data = dataMap.get(variableKey);
+                        replace(mlPackage, textElement, variableDataType, variableKey, variableParam, data);
+                    });
                 }
                 newTableDataTr.add(newTr);
             }
@@ -270,14 +514,16 @@ public class WordVariableReplaceUtil {
      * @param textElement      Text节点
      * @param variableDataType 变量类型
      * @param variableKey      变量key（纯粹的变量名，如：name）
+     * @param variableParam    变量属性
      * @param dataValue        变量值
      */
-    private static void replace(WordprocessingMLPackage mlp, Text textElement, String variableDataType, String variableKey, Object dataValue) {
+    private static void replace(WordprocessingMLPackage mlp, Text textElement, String variableDataType, String variableKey, String variableParam, Object dataValue) {
         // 替换为图片
         if (DataType.IMAGE.name().equals(variableDataType)) {
-            List<R> imageRs = WordImageUtil.createImageRs(mlp, dataValue);
+            WordImageUtil.ImgParam imgParam = parseImgParam(variableParam);
+            List<R> imageRs = WordImageUtil.createImageRs(mlp, dataValue, imgParam);
             if (ObjectNull.isNull(imageRs)) {
-                textElement.setValue(textElement.getValue().replace(buildVariableKey(DataType.IMAGE, variableKey), " "));
+                textElement.setValue(textElement.getValue().replace(buildVariableKey(DataType.IMAGE, variableKey, variableParam), " "));
                 return;
             }
             WordImageUtil.replaceImage(textElement, imageRs);
@@ -287,7 +533,7 @@ public class WordVariableReplaceUtil {
         if (DataType.HTML.name().equals(variableDataType)) {
             List<Object> o = importerXmlHtml(mlp, dataValue);
             if (ObjectNull.isNull(o)) {
-                textElement.setValue(textElement.getValue().replace(buildVariableKey(DataType.HTML, variableKey), " "));
+                textElement.setValue(textElement.getValue().replace(buildVariableKey(DataType.HTML, variableKey, variableParam), " "));
                 return;
             }
             R r = (R) textElement.getParent();
@@ -309,7 +555,23 @@ public class WordVariableReplaceUtil {
 
         // 替换为文本
         String replaceData = ObjectNull.isNull(dataValue) ? " " : String.valueOf(dataValue);
-        textElement.setValue(textElement.getValue().replace(buildVariableKey(variableKey), replaceData));
+        String[] textArr = replaceData.split("\n");
+        if (replaceData.contains("\n")) {
+            List<Object> rParentContent = ((R) textElement.getParent()).getContent();
+            for (int i = 0; i < textArr.length; i++) {
+                String text = textArr[i];
+                if (i == 0) {
+                    textElement.setValue(textElement.getValue().replace(buildVariableKey(variableKey), text));
+                } else {
+                    Text t = new Text();
+                    t.setValue(text);
+                    rParentContent.add(t);
+                }
+                rParentContent.add(new Br());
+            }
+        } else {
+            textElement.setValue(textElement.getValue().replace(buildVariableKey(variableKey), replaceData));
+        }
     }
 
     /**
@@ -509,8 +771,21 @@ public class WordVariableReplaceUtil {
      * @return
      */
     public static String buildVariableKey(DataType dataType, String key) {
+        return buildVariableKey(dataType, key, null);
+    }
+
+    /**
+     * 构造变量key
+     *
+     * @param dataType
+     * @param key
+     * @param keyParam
+     * @return
+     */
+    public static String buildVariableKey(DataType dataType, String key, String keyParam) {
         String type = dataType == null ? "" : dataType.name() + TYPE_SYMBOL;
-        return PREFIX + LEFT_BRACE + type + key + RIGHT_BRACE;
+        String param = ObjectNull.isNull(keyParam) ? "" : "?" + keyParam;
+        return PREFIX + LEFT_BRACE + type + key + param + RIGHT_BRACE;
     }
 
 
@@ -521,6 +796,27 @@ public class WordVariableReplaceUtil {
      * @return 去除各种符号后的变量。 如：${IMAGE#name} 返回name
      */
     public static String getPureKey(String variable) {
+        return getVariable(variable).split("\\?")[0];
+    }
+
+    /**
+     * 得到变量参数
+     *
+     * @param variable 变量
+     * @return 变量参数
+     */
+    private static String getVariableParam(String variable) {
+        String[] arr = getVariable(variable).split("\\?");
+        return arr.length == 1 ? null : arr[1];
+    }
+
+    /**
+     * 获取变量
+     *
+     * @param variable 变量key
+     * @return 变量
+     */
+    private static String getVariable(String variable) {
         String dataType = getVariableDataType(variable) + TYPE_SYMBOL;
         int startIndex = variable.indexOf(PREFIX + LEFT_BRACE, 0);
         if (startIndex == -1) {
@@ -550,6 +846,44 @@ public class WordVariableReplaceUtil {
             return "";
         }
         return variable.substring(startIndex + 2, endIndex);
+    }
+
+    /**
+     * 解析图片变量获取
+     * <p>
+     * 变量格式：字段?w=200&h=100
+     * 完整变量格式：${IMAGE#字段?参数}
+     * <p>
+     * “?”后跟参数，参数格式同GET请求参数格式
+     *
+     * @param variableParam 图片变量
+     * @return 图片自定义参数
+     */
+    private static WordImageUtil.ImgParam parseImgParam(String variableParam) {
+        WordImageUtil.ImgParam imgParam = new WordImageUtil.ImgParam();
+        if (ObjectNull.isNull(variableParam)) {
+            return imgParam;
+        }
+        String[] paramArr = variableParam.split("&");
+        for (String p : paramArr) {
+            String[] pArr = p.split("=");
+            if (pArr.length != 2) {
+                continue;
+            }
+            String paramName = pArr[0];
+            String paramValue = pArr[1];
+            if (Get.name(WordImageUtil.ImgParam::getW).equals(paramName)) {
+                if (NumberUtil.isInteger(paramValue)) {
+                    imgParam.setW(Integer.parseInt(paramValue));
+                }
+            }
+            if (Get.name(WordImageUtil.ImgParam::getH).equals(paramName)) {
+                if (NumberUtil.isInteger(paramValue)) {
+                    imgParam.setH(Integer.parseInt(paramValue));
+                }
+            }
+        }
+        return imgParam;
     }
 
     @Getter

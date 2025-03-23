@@ -1,5 +1,6 @@
 package cn.bctools.rule.dingding.work;
 
+import cn.bctools.rule.common.EnvironmentVariableSelected;
 import cn.bctools.rule.common.ParameterSelected;
 import org.springframework.stereotype.Service;
 
@@ -9,5 +10,5 @@ import org.springframework.stereotype.Service;
  * @author jvs
  */
 @Service
-public class DingMsMediaIdSelected implements ParameterSelected<DingMsMediaIdOption> {
+public class DingMsMediaIdSelected implements EnvironmentVariableSelected<DingMsMediaIdOption> {
 }

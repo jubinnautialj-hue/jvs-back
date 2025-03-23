@@ -1,12 +1,12 @@
 package cn.bctools.design.rule.entity;
 
+import cn.bctools.database.handler.Fastjson2TypeHandler;
 import cn.bctools.rule.entity.enums.RunType;
 import cn.hutool.core.date.DatePattern;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import cn.bctools.database.handler.Fastjson2TypeHandler;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;

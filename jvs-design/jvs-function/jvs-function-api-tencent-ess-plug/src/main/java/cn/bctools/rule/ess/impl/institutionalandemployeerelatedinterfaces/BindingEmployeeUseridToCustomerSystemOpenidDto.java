@@ -22,7 +22,7 @@ public class BindingEmployeeUseridToCustomerSystemOpenidDto {
     public String options;
 
     @ParameterValue(info = "(operator)执行本接口操作的员工信息。", necessity = false, type = InputType.map)
-    public Map operator;
+    public Map<String,Object> operator;
 
     @ParameterValue(info = "(UserId)员工在腾讯电子签平台的唯一身份标识，为32位字符串。\n" +
             "可登录腾讯电子签控制台，在 \"更多能力\"->\"组织管理\" 中查看某位员工的UserId(在页面中展示为用户ID)；或者通过DescribeIntegrationEmployees接口获取。", necessity = false, type = InputType.input)

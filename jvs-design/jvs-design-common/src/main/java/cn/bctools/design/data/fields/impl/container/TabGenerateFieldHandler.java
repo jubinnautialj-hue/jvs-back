@@ -17,12 +17,12 @@ import cn.bctools.function.entity.vo.ElementVo;
 import cn.bctools.function.enums.JvsParamType;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSONPath;
-import com.alibaba.nacos.common.utils.StringUtils;
-import com.jayway.jsonpath.JsonPath;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -72,7 +72,6 @@ public class TabGenerateFieldHandler implements IDataFieldHandler<TabGenerateIte
 
     @Override
     public void next(List<ElementVo> list, TabGenerateItemHtml html, Map<String, IDataFieldHandler> handlerMap, ElementVo e) {
-        //todo 生成容器组件不支持公式
         //选项卡的下级
         //获取下级的字段控件
         List<FieldBasicsHtml> publicHtmls = html.getColumn();
@@ -106,7 +105,6 @@ public class TabGenerateFieldHandler implements IDataFieldHandler<TabGenerateIte
 
     @Override
     public void next(List<ElementVo> list, TabGenerateItemHtml html, Function<FieldBasicsHtml, ElementVo> function, Map<String, IDataFieldHandler> handlerMap, String name, String prop) {
-        //todo 生成容器组件不支持公式
         throw new BusinessException("生成容器组件不支持公式");
     }
 
@@ -139,8 +137,8 @@ public class TabGenerateFieldHandler implements IDataFieldHandler<TabGenerateIte
         Map<String, FieldPublicHtml> fieldPublicHtmls = fieldDto.getColumn()
                 .stream()
                 .collect(Collectors.toMap(FieldPublicHtml::getProp, Function.identity()));
-        for (String filedKey : fieldPublicHtmls.keySet()) {
-            FieldPublicHtml fieldPublicHtml = fieldPublicHtmls.get(filedKey);
+        for (Map.Entry<String, FieldPublicHtml> entry : fieldPublicHtmls.entrySet()) {
+            FieldPublicHtml fieldPublicHtml = entry.getValue();
             IDataFieldHandler iDataFieldHandler = dataFieldHandlerMap.get(fieldPublicHtml.getType().getDesc());
             if (ObjectNull.isNotNull(iDataFieldHandler, fieldPublicHtml.getDesignJson())) {
                 FieldBasicsHtml html = iDataFieldHandler.toHtml(fieldPublicHtml.getDesignJson());

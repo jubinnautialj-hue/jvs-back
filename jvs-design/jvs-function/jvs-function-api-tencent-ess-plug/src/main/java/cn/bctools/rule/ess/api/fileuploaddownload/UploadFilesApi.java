@@ -1,13 +1,13 @@
 package cn.bctools.rule.ess.api.fileuploaddownload;
 
+import cn.bctools.rule.ess.common.Client;
+import cn.bctools.rule.ess.config.Config;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.ess.v20201111.EssClient;
 import com.tencentcloudapi.ess.v20201111.models.Caller;
 import com.tencentcloudapi.ess.v20201111.models.UploadFile;
 import com.tencentcloudapi.ess.v20201111.models.UploadFilesRequest;
 import com.tencentcloudapi.ess.v20201111.models.UploadFilesResponse;
-import cn.bctools.rule.ess.common.Client;
-import cn.bctools.rule.ess.config.Config;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayOutputStream;

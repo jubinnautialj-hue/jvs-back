@@ -47,6 +47,7 @@ public class GenerateFileServiceImpl implements BaseCustomFunctionInterface<Gene
         String url = ossTemplate.fileJvsPublicLink(baseFile.getFileName());
         String s = ossTemplate.fileLink(baseFile.getFileName(), OssSystemCons.OSS_BUCKET_NAME);
         return new RuleFile().setBucketName(OssSystemCons.OSS_BUCKET_NAME)
+                .setSize(baseFile.getSize())
                 .setFileName(baseFile.getFileName())
                 .setOutputType(OutputType.download)
                 .setModule(module)

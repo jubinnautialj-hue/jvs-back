@@ -337,6 +337,9 @@ public interface ISelectorDataHandler {
             SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
             SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
             if (ObjectNull.isNull(list)) {
+                if (data instanceof Collection) {
+                    return ((Collection<?>) data).stream().map(e -> e.toString()).collect(Collectors.joining(","));
+                }
                 return data;
             }
             if (StringUtils.isNotBlank(sourceFieldId)) {

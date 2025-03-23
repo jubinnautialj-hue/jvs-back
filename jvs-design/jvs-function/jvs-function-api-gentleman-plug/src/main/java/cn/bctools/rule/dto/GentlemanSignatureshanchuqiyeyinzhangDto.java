@@ -1,12 +1,11 @@
 package cn.bctools.rule.dto;
 
 
-import lombok.Data;
+import cn.bctools.rule.annotations.ParameterValue;
+import cn.bctools.rule.entity.enums.InputType;
 import lombok.AllArgsConstructor;
 import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
-import cn.bctools.rule.annotations.ParameterValue;
-import cn.bctools.rule.entity.enums.InputType;
 import lombok.experimental.Accessors;
 
 /**

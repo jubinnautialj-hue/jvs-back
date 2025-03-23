@@ -18,6 +18,7 @@ import cn.hutool.core.lang.tree.Tree;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -29,10 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -88,13 +86,16 @@ public class DeptController {
         if (CollectionUtils.isEmpty(allDeptList)) {
             return R.ok(Collections.emptyList());
         }
+        Map<String, Long> deptUserCount = new HashMap<>();
         // 查询各部门人员数量
-        Map<String, Long> deptUserCount = userTenantService.list(Wrappers.<UserTenant>lambdaQuery().select(UserTenant::getDeptId, UserTenant::getUserId))
-                .stream().peek(u -> {
-                    if (StringUtils.isBlank(u.getDeptId())) {
-                        u.setDeptId("");
-                    }
-                }).collect(Collectors.groupingBy(UserTenant::getDeptId, Collectors.counting()));
+        userTenantService.list(Wrappers.<UserTenant>lambdaQuery().select(UserTenant::getDeptId, UserTenant::getUserId))
+                .stream()
+                .filter(e -> ObjectNull.isNotNull(e.getDeptId()))
+                .forEach(e ->
+                        e.getDeptId().forEach(a ->
+                            deptUserCount.put(a, deptUserCount.getOrDefault(a, 0L) + 1)
+                        )
+                );
         // 获取部门树
         List<TreePo> list = allDeptList.stream()
                 .map(e -> {
@@ -115,7 +116,6 @@ public class DeptController {
     @PostMapping("/save")
     @Transactional(rollbackFor = Exception.class)
     public R<Boolean> save(@RequestBody @Validated Dept dept) {
-        String leaderId = dept.getLeaderId();
         String parentId = dept.getParentId();
         // 顶级部门的上级id默认为当前租户id
         if (StringUtils.isBlank(parentId) || ROOT_PARENT_DEPT_ID.equalsIgnoreCase(parentId)) {
@@ -123,14 +123,6 @@ public class DeptController {
             dept.setParentId(tenantId);
         }
         deptService.save(dept);
-        // 处理部门负责人
-        if (StringUtils.isNotBlank(leaderId)) {
-            userTenantService.checkUserId(leaderId);
-            userTenantService.update(Wrappers.<UserTenant>lambdaUpdate()
-                    .set(UserTenant::getDeptId, dept.getId())
-                    .set(UserTenant::getDeptName, dept.getName())
-                    .eq(UserTenant::getUserId, leaderId));
-        }
         return R.ok(true, "添加成功");
     }
 
@@ -142,7 +134,7 @@ public class DeptController {
         String deptId = dept.getId();
         String deptName = dept.getName();
         String leaderId = dept.getLeaderId();
-        Dept oldDept = deptService.checkId(deptId);
+        deptService.checkId(deptId);
         // 修改部门信息
         deptService.update(Wrappers.<Dept>lambdaUpdate()
                 .set(Dept::getName, deptName)
@@ -150,20 +142,6 @@ public class DeptController {
                 .set(Dept::getDeptCode, dept.getDeptCode())
                 .set(Dept::getSort, dept.getSort())
                 .eq(Dept::getId, deptId));
-        // 同步部门名称
-        if (!deptName.equals(oldDept.getName())) {
-            userTenantService.update(Wrappers.<UserTenant>lambdaUpdate()
-                    .set(UserTenant::getDeptName, deptName)
-                    .eq(UserTenant::getDeptId, deptId));
-        }
-        // 修改部门负责人信息
-        if (StringUtils.isNotBlank(leaderId)) {
-            userTenantService.checkUserId(leaderId);
-            userTenantService.update(Wrappers.<UserTenant>lambdaUpdate()
-                    .set(UserTenant::getDeptId, deptId)
-                    .set(UserTenant::getDeptName, deptName)
-                    .eq(UserTenant::getUserId, leaderId));
-        }
         return R.ok(true, "修改成功");
     }
 
@@ -172,10 +150,9 @@ public class DeptController {
     @DeleteMapping("/{deptId}")
     @Transactional(rollbackFor = Exception.class)
     public R<Boolean> delete(@PathVariable String deptId) {
-        long count = userTenantService.count(Wrappers.query(new UserTenant().setDeptId(deptId)));
-        if (count > 0) {
-            return R.failed("部门下有用户不能删除");
-        }
+        List<UserTenant> list = userTenantService.list(new LambdaQueryWrapper<UserTenant>().like(UserTenant::getDeptId, deptId));
+        list.forEach(e -> e.getDeptId().removeIf(s -> s.equals(deptId)));
+        userTenantService.updateBatchById(list);
         deptService.removeById(deptId);
         return R.ok(true, "删除成功");
     }
@@ -190,22 +167,17 @@ public class DeptController {
         deptService.updateById(dept);
         // 更新部门负责人
         userTenantService.checkUserId(userId);
-        userTenantService.update(Wrappers.<UserTenant>lambdaUpdate()
-                .set(UserTenant::getDeptId, dept.getId())
-                .set(UserTenant::getDeptName, dept.getName())
-                .eq(UserTenant::getUserId, userId));
         return R.ok(true, "设置成功");
     }
 
     @Log
-    @DeleteMapping("/user/{userId}")
+    @DeleteMapping("/user/{userId}/{deptId}")
     @ApiOperation(value = "用户移除部门", notes = "只是移除部门, 并没有其它操作")
     @Transactional(rollbackFor = Exception.class)
-    public R<?> deleteUser(@PathVariable String userId) {
-        userTenantService.update(Wrappers.<UserTenant>lambdaUpdate()
-                .set(UserTenant::getDeptId, null)
-                .set(UserTenant::getDeptName, null)
-                .eq(UserTenant::getUserId, userId));
+    public R<?> deleteUser(@PathVariable String userId, @PathVariable String deptId) {
+        UserTenant one = userTenantService.getOne(Wrappers.lambdaQuery(new UserTenant().setUserId(userId)));
+        one.getDeptId().removeIf(e -> e.equals(deptId));
+        userTenantService.updateById(one);
         // 处理部门负责人
         deptService.update(Wrappers.<Dept>lambdaUpdate()
                 .set(Dept::getLeaderId, null)
@@ -223,11 +195,14 @@ public class DeptController {
         if (ObjectUtil.isEmpty(userIdSet)) {
             return R.failed("请至少选择一个用户");
         }
-        // 修改用户信息
-        userTenantService.update(Wrappers.<UserTenant>lambdaUpdate()
-                .set(UserTenant::getDeptId, dept.getId())
-                .set(UserTenant::getDeptName, dept.getName())
-                .in(UserTenant::getUserId, userIdSet));
+        List<UserTenant> userTenants = userTenantService.list(new LambdaQueryWrapper<UserTenant>().in(UserTenant::getUserId, userIdSet));
+        for (UserTenant userTenant : userTenants) {
+            if (ObjectNull.isNull(userTenant.getDeptId())) {
+                userTenant.setDeptId(new ArrayList<>());
+            }
+            userTenant.getDeptId().add(deptId);
+        }
+        userTenantService.updateBatchById(userTenants);
         return R.ok(true, "添加成功");
     }
 

@@ -7,7 +7,6 @@ import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.TenantContextHolder;
-import cn.bctools.design.notice.handler.DataNoticeHandler;
 import cn.bctools.design.notice.handler.enums.TriggerTypeEnum;
 import cn.bctools.design.project.service.JvsAppVersionService;
 import cn.bctools.design.util.ModeUtils;

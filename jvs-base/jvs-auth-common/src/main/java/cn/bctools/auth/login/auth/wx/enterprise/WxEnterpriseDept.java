@@ -94,7 +94,7 @@ public class WxEnterpriseDept {
      */
     public JSONObject getDept(String accessToken, Object id) {
         String deptUrl = UrlBuilder.fromBaseUrl(DEPT_DETAIL_URL).queryParam(BaseWxEnterprise.ACCESS_TOKEN, accessToken).queryParam(DEPT_ID, id).build();
-        JSONObject jsonObject = HttpRequestUtils.getJson(deptUrl, com.alibaba.fastjson.JSONObject.class, Boolean.FALSE, new HttpHeaders());
+        JSONObject jsonObject = HttpRequestUtils.getJson(deptUrl, JSONObject.class, Boolean.FALSE, new HttpHeaders());
         if (ObjectUtil.isNull(jsonObject)) {
             throw new BusinessException("获取微信部门用户失败");
         }

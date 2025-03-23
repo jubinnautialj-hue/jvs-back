@@ -35,6 +35,10 @@ public interface JvsTreeService extends IService<JvsTree> {
      */
     Map<String, Object> getByUniqueName(String uniqueName);
 
+    Map<String, Object> getByUniqueName(String uniqueName, String rootId);
+
+    List<String> getByUniqueNameIds(String uniqueName, Object rootId);
+
     /**
      * 根据名称返回次名称的所有树字段
      *

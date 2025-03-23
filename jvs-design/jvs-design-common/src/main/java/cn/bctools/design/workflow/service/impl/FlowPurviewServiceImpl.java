@@ -1,6 +1,7 @@
 package cn.bctools.design.workflow.service.impl;
 
 import cn.bctools.auth.api.dto.SearchUserDto;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.database.util.SqlFunctionUtil;
@@ -20,14 +21,10 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.AllArgsConstructor;
 import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -102,9 +99,18 @@ public class FlowPurviewServiceImpl extends ServiceImpl<FlowPurviewMapper, FlowP
                 .eq(FlowPurview::getPurviewGroup, purviewGroupEnum)
                 .and(wrapper -> wrapper.eq(FlowPurview::getPersonType, PurviewPersonTypeEnum.all)
                         .or(orUser -> orUser.apply(SqlFunctionUtil.jsonContains("users", user.getId(), "$")))
-                        .or(StringUtils.isNotBlank(user.getDeptId()), orDept -> orDept.apply(SqlFunctionUtil.jsonContains("depts", user.getDeptId(), "$")))
-                        .or(StringUtils.isNotBlank(roleIdSql), orRole -> orRole.apply(roleIdSql))
-                        .or(StringUtils.isNotBlank(user.getJobId()), orJob -> orJob.apply(SqlFunctionUtil.jsonContains("jobs", user.getJobId(), "$")))
+                        .or(ObjectNull.isNotNull(user.getDept()), orDept -> {
+                            Iterator<DeptDto> userDeptIterator = user.getDept().iterator();
+                            while (userDeptIterator.hasNext()) {
+                                DeptDto dept = userDeptIterator.next();
+                                orDept.apply(SqlFunctionUtil.jsonContains("depts", dept.getDeptId(), "$"));
+                                if (userDeptIterator.hasNext()) {
+                                    orDept.or();
+                                }
+                            }
+                        })
+                        .or(ObjectNull.isNotNull(roleIdSql), orRole -> orRole.apply(roleIdSql))
+                        .or(ObjectNull.isNotNull(user.getJobId()), orJob -> orJob.apply(SqlFunctionUtil.jsonContains("jobs", user.getJobId(), "$")))
                 );
     }
 

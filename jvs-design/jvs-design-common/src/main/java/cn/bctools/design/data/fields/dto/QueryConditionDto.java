@@ -1,6 +1,7 @@
 package cn.bctools.design.data.fields.dto;
 
 import cn.bctools.design.data.fields.enums.DataQueryType;
+import cn.bctools.rule.dto.LinkTypeEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -27,5 +28,13 @@ public class QueryConditionDto {
 
     @ApiModelProperty("是否是列表过滤")
     private Boolean crud = false;
+    @ApiModelProperty("条件值类型")
+    private LinkTypeEnum prop;
+
+    @ApiModelProperty("公式内容")
+    private String formulaContent;
+
+    @ApiModelProperty("公式id")
+    private String formula;
 
 }

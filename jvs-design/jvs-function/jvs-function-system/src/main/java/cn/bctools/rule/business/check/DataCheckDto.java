@@ -2,14 +2,12 @@ package cn.bctools.rule.business.check;
 
 import cn.bctools.rule.annotations.ParameterValue;
 import cn.bctools.rule.entity.enums.InputType;
-import cn.hutool.core.util.DesensitizedUtil;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 import javax.validation.constraints.NotNull;
-import java.util.List;
 import java.util.Map;
 
 /**

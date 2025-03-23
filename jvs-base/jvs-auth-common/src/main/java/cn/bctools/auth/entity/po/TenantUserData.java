@@ -3,11 +3,16 @@ package cn.bctools.auth.entity.po;
 import cn.bctools.auth.entity.UserTenant;
 import cn.bctools.auth.entity.enums.SexTypeEnum;
 import cn.bctools.auth.entity.enums.UserTypeEnum;
+import cn.bctools.auth.entity.handler.DeptJsonTypeHandler;
+import com.baomidou.mybatisplus.annotation.FieldStrategy;
+import com.baomidou.mybatisplus.annotation.TableField;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * @author zhuxiaokang
@@ -15,7 +20,10 @@ import java.time.LocalDate;
  */
 @Data
 @Accessors(chain = true)
-public class TenantUserData extends UserTenant {
+public class TenantUserData extends UserTenant implements Serializable {
+
+
+    private static final long serialVersionUID = 1L;
 
     /**
      * 用户基本信息
@@ -34,4 +42,6 @@ public class TenantUserData extends UserTenant {
     private UserTypeEnum userType;
     @ApiModelProperty(value = "生日")
     private LocalDate birthday;
+    @ApiModelProperty(value = "部门")
+    private List<String> deptId;
 }

@@ -1,6 +1,5 @@
 package cn.bctools.design.workflow.dto;
 
-import cn.bctools.design.workflow.model.Node;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -21,5 +20,5 @@ public class ApproveNodesDto {
     private Boolean canDynamicAddNode = Boolean.FALSE;
 
     @ApiModelProperty("节点集合")
-    private List<Node> nodes = Collections.emptyList();
+    private List<ApproveNodeDto> nodes = Collections.emptyList();
 }

@@ -4,6 +4,7 @@ import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.rule.common.RuleElementVo;
 import cn.bctools.rule.utils.TaskLogUtil;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -63,7 +64,7 @@ public interface BaseCustomFunctionInterface<T> {
      */
     default List<RuleElementVo> structureType(T o) {
         //如果是空，则默认返回的数据为当前节点，，返回为未知
-        return null;
+        return Collections.emptyList();
     }
 
     /**
@@ -76,12 +77,10 @@ public interface BaseCustomFunctionInterface<T> {
         Iterator<String> iterator = body.keySet().iterator();
         while (iterator.hasNext()) {
             Object o = body.get(iterator.next());
-            if (ObjectNull.isNull(o)) {
-                //如果是数组则不删除
-                if (!(o instanceof List)) {
-                    iterator.remove();
-                }
+            if (ObjectNull.isNull(o) && !(o instanceof List)) {
+                iterator.remove();
             }
+
         }
     }
 

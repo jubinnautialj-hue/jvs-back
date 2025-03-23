@@ -33,6 +33,8 @@ import cn.bctools.design.workflow.support.RuntimeService;
 import cn.bctools.design.workflow.support.StartTask;
 import cn.bctools.design.workflow.support.function.dto.TransferRuntimeDto;
 import cn.bctools.design.workflow.support.function.impl.TransferFunction;
+import cn.bctools.design.workflow.support.listener.taskstart.TaskStartListener;
+import cn.bctools.design.workflow.support.listener.taskstart.TastStartEventEnum;
 import cn.bctools.design.workflow.utils.FlowPathUtil;
 import cn.bctools.design.workflow.utils.FlowUtil;
 import cn.bctools.redis.utils.RedisUtils;
@@ -80,6 +82,7 @@ public class TaskServiceImpl implements TaskService {
     private final FlowTaskPathService flowTaskPathService;
     private final FlowTaskProxyService flowTaskProxyService;
     private final TransferFunction transferFunction;
+    private final TaskStartListener taskStartListener;
 
     /**
      * 启动流程锁
@@ -116,8 +119,11 @@ public class TaskServiceImpl implements TaskService {
         String publishedDesign = flowDesignVersion.getDesignBody();
         String design = FlowUtil.setSelfSelectApprover(true, publishedDesign, flowDesign.getExtend(), variables.getApprovers());
 
-        // 2. 保存业务数据
+        // 启动流程前执行逻辑
         JSONObject data = Optional.ofNullable(variables.getData()).orElse(new JSONObject());
+        taskStartListener.onTaskStartEvent(TastStartEventEnum.BEFORE_START, data, flowDesign.getExtend());
+
+        // 2. 保存业务数据
         if (ObjectNull.isNull(dataId)) {
             DataDto dataDto = flowDynamicDataService.saveModelData(flowDesign.getJvsAppId(), flowDesign.getDataModelId(), data);
             dataId = dataDto.getDataId();

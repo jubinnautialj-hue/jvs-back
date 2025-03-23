@@ -13,7 +13,10 @@ import cn.bctools.design.workflow.enums.NodeOperationTypeEnum;
 import cn.bctools.design.workflow.model.Node;
 import cn.bctools.design.workflow.model.enums.NodeTypeEnum;
 import cn.bctools.design.workflow.model.properties.AutoApproval;
-import cn.bctools.design.workflow.service.*;
+import cn.bctools.design.workflow.service.FlowDesignService;
+import cn.bctools.design.workflow.service.FlowTaskNodeService;
+import cn.bctools.design.workflow.service.FlowTaskPathService;
+import cn.bctools.design.workflow.service.FlowTaskPersonService;
 import cn.bctools.design.workflow.support.FlowResult;
 import cn.bctools.design.workflow.support.RuntimeData;
 import cn.bctools.design.workflow.support.enums.FlowNextTypeEnum;
@@ -169,7 +172,7 @@ public class AutoApprovalFunction extends AbstractFunctionHandler<AutoApprovalDt
     private List<String> getUserIds(Node nextNode, FlowTask flowTask) {
         List<CourseDto> spCourses = getCourses(flowTask);
         if (CollectionUtils.isEmpty(spCourses)) {
-            return null;
+            return Collections.emptyList();
         }
         // 得到下一个节点所在路径，并获取该节点在各个路径中的前一个审批节点id
         List<List<Node>> paths = flowTaskPathService.getNodePaths(flowTask, nextNode.getId());
@@ -195,7 +198,7 @@ public class AutoApprovalFunction extends AbstractFunctionHandler<AutoApprovalDt
             return courseDtos.get(courseDtos.size() - 1);
         }).filter(Objects::nonNull).collect(Collectors.toList());
         if (CollectionUtils.isEmpty(lastCourses)) {
-            return null;
+            return Collections.emptyList();
         }
         // 得到已审批用户id
         return lastCourses.stream()
@@ -216,7 +219,7 @@ public class AutoApprovalFunction extends AbstractFunctionHandler<AutoApprovalDt
     private List<CourseDto> getCourses(FlowTask flowTask) {
         List<CourseDto> spCourses = flowTask.getCourses();
         if (CollectionUtils.isEmpty(spCourses)) {
-            return null;
+            return Collections.emptyList();
         }
         // 若工作流重新启动过，则获取最后一个ROOT节点之后的审批结果
         Optional<CourseDto> rootCourse = spCourses.stream().filter(cc -> NodeTypeEnum.ROOT.equals(cc.getNodeType())).findFirst();

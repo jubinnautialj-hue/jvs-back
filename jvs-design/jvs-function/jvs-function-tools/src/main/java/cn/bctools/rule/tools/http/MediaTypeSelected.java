@@ -26,6 +26,8 @@ public class MediaTypeSelected implements ParameterSelected<String> {
                 new ParameterOption<String>().setLabel(MediaType.MULTIPART_FORM_DATA_VALUE).setValue(MediaType.MULTIPART_FORM_DATA_VALUE),
                 new ParameterOption<String>().setLabel(MediaType.APPLICATION_FORM_URLENCODED_VALUE).setValue(MediaType.APPLICATION_FORM_URLENCODED_VALUE),
                 new ParameterOption<String>().setLabel(MediaType.APPLICATION_XML_VALUE).setValue(MediaType.APPLICATION_XML_VALUE),
+                new ParameterOption<String>().setLabel(MediaType.TEXT_PLAIN_VALUE).setValue(MediaType.TEXT_PLAIN_VALUE),
+                new ParameterOption<String>().setLabel("application/binary").setValue("application/binary"),
                 new ParameterOption<String>().setLabel(MediaType.APPLICATION_OCTET_STREAM_VALUE).setValue(MediaType.APPLICATION_OCTET_STREAM_VALUE)
         );
     }

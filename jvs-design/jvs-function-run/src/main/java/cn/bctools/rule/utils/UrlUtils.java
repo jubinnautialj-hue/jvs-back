@@ -1,5 +1,6 @@
 package cn.bctools.rule.utils;
 
+import lombok.experimental.UtilityClass;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
@@ -9,6 +10,7 @@ import java.util.*;
 /**
  * @author guojing
  */
+@UtilityClass
 public class UrlUtils {
 
     /**

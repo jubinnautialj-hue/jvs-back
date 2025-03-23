@@ -2,8 +2,6 @@ package cn.bctools.design.data.entity;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
-
-import java.util.List;
 /**
  * @author wl
  */

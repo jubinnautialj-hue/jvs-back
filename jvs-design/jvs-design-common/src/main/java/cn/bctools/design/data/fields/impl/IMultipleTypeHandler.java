@@ -1,5 +1,6 @@
 package cn.bctools.design.data.fields.impl;
 
+import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.data.fields.dto.form.FormValueHtml;
@@ -53,7 +54,7 @@ public class IMultipleTypeHandler {
                 if (showPath) {
                     String label = getLabel(value, copys, showPath);
                     //如果为空的时候，处理下一次匹配关系
-                    if(ObjectNull.isNull(label)){
+                    if (ObjectNull.isNull(label)) {
                         continue;
                     }
                     return tree.getLabel() + "/" + label;
@@ -76,5 +77,23 @@ public class IMultipleTypeHandler {
             }
         }
         return "";
+    }
+
+    public void checkFieldTypeAttributeChanged(MultipleHtml html, MultipleHtml dbHtml) {
+        if (ObjectNull.isNotNullOne(html.getFormId(), dbHtml.getFormId())) {
+            String htmlFormId = html.getFormId();
+            String dbFormId = dbHtml.getFormId();
+            if (htmlFormId != null && dbFormId != null && !htmlFormId.equals(dbFormId)) {
+                throw new BusinessException("关联模型不一致");
+
+            }
+        }
+        if (ObjectNull.isNotNullOne(html.getMultiple(), dbHtml.getMultiple())) {
+            Boolean multiple = html.getMultiple();
+            Boolean dbHtmlMultiple = dbHtml.getMultiple();
+            if (multiple != null && dbHtmlMultiple != null && !multiple.equals(dbHtmlMultiple)) {
+                throw new BusinessException("单选和多选不一致");
+            }
+        }
     }
 }

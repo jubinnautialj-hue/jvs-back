@@ -120,6 +120,7 @@ public interface FlowTaskService extends IService<FlowTask> {
      * @return 工作流设计运行中的流程数量
      */
     int countPendingByDesignId(String designId);
+    int countPendingByModeId(String modeId);
 
     /**
      * 查询有未结束任务的工作流设计id
@@ -173,10 +174,19 @@ public interface FlowTaskService extends IService<FlowTask> {
     /**
      * 根据数据id获取任务
      *
+     * @param dataId 数据id集合
+     * @return 任务集合
+     */
+    List<FlowTask> listByDataId(String dataId);
+
+    /**
+     * 根据数据id获取任务
+     *
      * @param dataIds 数据id集合
      * @return 任务集合
      */
     List<FlowTask> listByDataIds(List<String> dataIds);
+
 
     /**
      * 根据数据id删除任务
@@ -184,6 +194,13 @@ public interface FlowTaskService extends IService<FlowTask> {
      * @param dataIds 数据id集合
      */
     void removeTaskAllByDataId(List<String> dataIds);
+
+    /**
+     * 根据数据模型id删除任务
+     *
+     * @param dataModelId 数据模型id
+     */
+    void removeTaskAllByDataModelId(String dataModelId);
 
     /**
      * 根据工作流任务id获取任务
@@ -195,10 +212,19 @@ public interface FlowTaskService extends IService<FlowTask> {
 
     /**
      * 批量填充工作流任务使用的设计
-     * 得到工作流任务正在使用的工作流设计 {@link cn.bctools.design.workflow.entity.FlowTask.designBody}
-     * 该设计可能根据工作流版本id获取，也可能直接获取 {@link cn.bctools.design.workflow.entity.FlowTask.flowDesign}
+     * 得到工作流任务正在使用的工作流设计 {@link FlowTask.designBody}
+     * 该设计可能根据工作流版本id获取，也可能直接获取 {@link FlowTask.flowDesign}
      *
      * @param flowTasks 工作流任务集合
      */
     void fillBatchTaskDesignBody(List<? extends FlowTask> flowTasks);
+
+    /**
+     * 填充工作流任务使用的设计
+     * 得到工作流任务正在使用的工作流设计 {@link FlowTask.designBody}
+     * 该设计可能根据工作流版本id获取，也可能直接获取 {@link FlowTask.flowDesign}
+     *
+     * @param flowTask 工作流任务
+     */
+    void fillTaskDesignBody(FlowTask flowTask);
 }

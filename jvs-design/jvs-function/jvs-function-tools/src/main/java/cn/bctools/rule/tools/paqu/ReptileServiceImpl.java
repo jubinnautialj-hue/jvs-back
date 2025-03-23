@@ -1,4 +1,4 @@
-//package cn.bctools.rule.tools.paqu;
+package cn.bctools.rule.tools.paqu;//package cn.bctools.rule.tools.paqu;
 //
 //import cn.bctools.common.utils.ObjectNull;
 //import cn.bctools.rule.annotations.Rule;

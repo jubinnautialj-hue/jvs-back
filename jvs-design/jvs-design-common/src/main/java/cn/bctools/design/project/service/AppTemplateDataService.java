@@ -3,6 +3,7 @@ package cn.bctools.design.project.service;
 import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.entity.JvsAppVersion;
 import cn.bctools.design.project.entity.TemplateBo;
+import java.util.Collections;
 
 import java.util.List;
 
@@ -22,7 +23,7 @@ public interface AppTemplateDataService<T> {
      * @return 数据 list
      */
     default List<T> list(String jvsAppId, List<String> ids) {
-        return null;
+        return Collections.emptyList();
     }
 
     /**
@@ -33,7 +34,7 @@ public interface AppTemplateDataService<T> {
      * @return 数据 list
      */
     default List<T> list(JvsApp jvsApp, List<String> ids) {
-        return null;
+        return Collections.emptyList();
     }
 
     /**
@@ -44,7 +45,7 @@ public interface AppTemplateDataService<T> {
      * @return 数据 list
      */
     default List<T> list(List<String> modelIds, List<String> ids) {
-        return null;
+        return Collections.emptyList();
     }
 
     /**

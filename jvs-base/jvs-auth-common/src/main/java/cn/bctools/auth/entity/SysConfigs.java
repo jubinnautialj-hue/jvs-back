@@ -1,4 +1,4 @@
-//package cn.bctools.auth.entity;
+package cn.bctools.auth.entity;//package cn.bctools.auth.entity;
 //
 //import cn.bctools.common.enums.ConfigsTypeEnum;
 //import cn.bctools.gateway.entity.TypeEnum;

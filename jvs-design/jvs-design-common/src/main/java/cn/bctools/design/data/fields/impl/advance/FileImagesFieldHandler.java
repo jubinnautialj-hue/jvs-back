@@ -10,12 +10,13 @@ import cn.bctools.oss.dto.FileNameDto;
 import cn.bctools.oss.template.OssTemplate;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -28,8 +29,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @DesignField(value = "图片", type = DataFieldType.image)
+@AllArgsConstructor
 public class FileImagesFieldHandler implements IDataFieldHandler<ImagesHtml> {
-    @Autowired
     OssTemplate ossTemplate;
 
     @Override
@@ -45,7 +46,7 @@ public class FileImagesFieldHandler implements IDataFieldHandler<ImagesHtml> {
                                 e.setName(e.getOriginalName());
                             }
                             if (ObjectNull.isNotNull(e.getBucketName(), e.getFileName())) {
-                                e.setUrl(ossTemplate.fileLink(e.getFileName(), e.getBucketName()));
+                                e.setUrl(ossTemplate.fileLink(e.getFileName(), Optional.ofNullable(e.getBucketName()).orElseGet(() -> "jvs-form-design")));
                             }
                         })
                         .collect(Collectors.toList());

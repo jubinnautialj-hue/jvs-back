@@ -6,7 +6,6 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.common.utils.SystemThreadLocal;
-import cn.bctools.design.constant.CacheConsts;
 import cn.bctools.design.data.fields.DataFieldHandler;
 import cn.bctools.design.data.fields.DesignField;
 import cn.bctools.design.data.fields.IDataFieldHandler;
@@ -46,6 +45,12 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
     public Object getEchoValue(MultipleHtml fieldDto, Object data, boolean override, Map<String, Object> lineData, String... paths) {
         boolean isMulti = !ObjectNull.isNull(fieldDto.getMultiple()) && fieldDto.getMultiple();
         boolean showPath = !ObjectNull.isNull(fieldDto.getShowalllevels()) && fieldDto.getShowalllevels();
+        String b = SystemThreadLocal.get("functionName");
+        if (ObjectNull.isNotNull(b)) {
+            if (b.contains("-导出-") || b.contains("-导入-")) {
+                showPath = true;
+            }
+        }
         List<SysDeptDto> deptList = SystemThreadLocal.get(DataFieldType.department.getDesc());
         if (ObjectNull.isNull(deptList)) {
             //获取所有的部门
@@ -55,14 +60,25 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
         Map<String, Object> deptMap = deptList.stream().collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName));
         DataFieldHandler dataFieldHandler = SpringContextUtil.getBean(DataFieldHandler.class);
 
-        data = dataFieldHandler.handlePathId(data, isMulti, showPath, deptList, SysDeptDto::getId, SysDeptDto::getParentId);
-        return dataFieldHandler.joinFormItems(deptMap, data, isMulti, showPath);
+        if (data instanceof List) {
+            boolean finalShowPath = showPath;
+            List<SysDeptDto> finalDeptList = deptList;
+            return ((List<?>) data).stream().map(e -> dataFieldHandler.handlePathId(e, isMulti, finalShowPath, finalDeptList, SysDeptDto::getId, SysDeptDto::getParentId))
+                    .map(e -> {
+                        return dataFieldHandler.joinFormItems(deptMap, e, isMulti, finalShowPath);
+                    }).collect(Collectors.joining(","));
+        } else {
+            data = dataFieldHandler.handlePathId(data, isMulti, showPath, deptList, SysDeptDto::getId, SysDeptDto::getParentId);
+            return dataFieldHandler.joinFormItems(deptMap, data, isMulti, showPath);
+        }
     }
 
     @Override
     public String getConversionKey(MultipleHtml dto, Object o, Map<String, Object> lineData, Map<String, Map<String, String>> cascaderFieldPathIdsMap, Map<String, List<Map<String, Object>>> generateCascaderList) {
-        if (dto.getMultiple() && o.toString().contains(",")) {
-            Arrays.stream(o.toString().split(",")).forEach(e -> getConversionKey(dto, e.toString().trim(), lineData, cascaderFieldPathIdsMap, generateCascaderList));
+        if (dto.getMultiple() && (o.toString().contains(",") || o.toString().contains("，"))) {
+            String v = o.toString().replace("，", ",");
+            Arrays.stream(v.toString().split(",")).forEach(e -> getConversionKey(dto, e.toString().trim(), lineData, cascaderFieldPathIdsMap, generateCascaderList));
+            return null;
         } else {
             Object obj = getConversionKey(dto, o, lineData);
             //如果转换成功，则将 id放进对象中
@@ -75,7 +91,6 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
                 throw new BusinessException(o.toString().trim() + "部门不存在，不支持导入");
             }
         }
-        return null;
     }
 
     @Override

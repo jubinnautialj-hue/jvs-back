@@ -28,7 +28,7 @@ public enum NodeOperationTypeEnum {
     ;
 
     @JsonValue
-    private String value;
-    private String desc;
+    private final String value;
+    private final String name;
 
 }

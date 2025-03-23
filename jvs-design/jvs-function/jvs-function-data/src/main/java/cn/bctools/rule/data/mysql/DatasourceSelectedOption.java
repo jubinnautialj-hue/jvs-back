@@ -1,8 +1,6 @@
 package cn.bctools.rule.data.mysql;
 
-import cn.bctools.rule.annotations.SelectOption;
 import cn.bctools.rule.annotations.SelectOptionField;
-import cn.bctools.rule.constant.RuleConstant;
 import cn.bctools.rule.entity.enums.InputType;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -12,11 +10,7 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-@SelectOption(RuleConstant.DATASOURCE_OPTION)
 public class DatasourceSelectedOption {
-
-    @SelectOptionField("名称")
-    public String name;
 
     @SelectOptionField("数据库名称")
     public String databaseName;
@@ -31,7 +25,7 @@ public class DatasourceSelectedOption {
     public String ip;
 
     @SelectOptionField("端口")
-    public String port;
+    public Integer port;
 
     
 }

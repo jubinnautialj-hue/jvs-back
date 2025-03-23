@@ -34,8 +34,8 @@ public class MessageTipsSelected implements ParameterSelected<Boolean> {
     @Override
     public List<ParameterOption<Boolean>> getOptions() {
         return Arrays.asList(
-                new ParameterOption().setLabel("成功提示").setShow(SHEnum.vueMessageSuccess).setValue(true),
-                new ParameterOption().setLabel("失败提示").setShow(SHEnum.vueMessageError).setValue(false));
+                new ParameterOption<Boolean>().setLabel("成功提示").setShow(SHEnum.vueMessageSuccess).setValue(true),
+                new ParameterOption<Boolean>().setLabel("失败提示").setShow(SHEnum.vueMessageError).setValue(false));
     }
 
 }

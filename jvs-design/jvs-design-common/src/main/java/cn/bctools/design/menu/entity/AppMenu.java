@@ -2,6 +2,7 @@ package cn.bctools.design.menu.entity;
 
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.database.entity.po.BasalPo;
+import cn.bctools.database.handler.Fastjson2TypeHandler;
 import cn.bctools.design.crud.entity.DesignRole;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.menu.entity.dto.PermissionIdentificationDto;
@@ -12,7 +13,6 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import cn.bctools.database.handler.Fastjson2TypeHandler;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -21,6 +21,7 @@ import lombok.Setter;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -82,7 +83,7 @@ public class AppMenu extends BasalPo implements Serializable {
 
     public List<DesignRole> getRoles() {
         if (ObjectNull.isNull(this.getRole())) {
-            return null;
+            return Collections.emptyList();
         }
         return JSON.parseArray(JSONObject.toJSONString(this.getRole()), DesignRole.class);
     }

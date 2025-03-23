@@ -57,6 +57,8 @@ public class RuleFunctionDto implements Serializable {
     String functionClass;
     @ApiModelProperty("方法的图片")
     String icon;
+    @ApiModelProperty("演示禁用")
+    boolean demoDisabled;
     @JsonIgnore
     @ApiModelProperty("参数实体类")
     String parameterClass;

@@ -1,7 +1,6 @@
 package cn.bctools.design.data.fields.dto.form.item;
 
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
-import cn.bctools.design.data.fields.dto.FieldPublicHtml;
 import cn.bctools.design.data.fields.dto.form.FormValueHtml;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

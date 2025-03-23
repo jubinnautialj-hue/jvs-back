@@ -4,9 +4,9 @@ import cn.bctools.rule.ess.common.Client;
 import cn.bctools.rule.ess.config.Config;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.ess.v20201111.EssClient;
+import com.tencentcloudapi.ess.v20201111.models.UserInfo;
 import com.tencentcloudapi.ess.v20201111.models.VerifyPdfRequest;
 import com.tencentcloudapi.ess.v20201111.models.VerifyPdfResponse;
-import com.tencentcloudapi.ess.v20201111.models.UserInfo;
 
 /**
  * The type Verify pdf api.

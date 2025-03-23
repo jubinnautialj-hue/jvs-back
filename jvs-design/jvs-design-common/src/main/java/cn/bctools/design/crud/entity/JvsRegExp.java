@@ -1,6 +1,5 @@
 package cn.bctools.design.crud.entity;
 
-import cn.bctools.common.utils.BeanValidator;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -12,8 +11,6 @@ import lombok.experimental.Accessors;
 import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Size;
 import java.io.Serializable;
-import java.util.List;
-import java.util.Optional;
 
 /**
  * @author : GaoZeXi

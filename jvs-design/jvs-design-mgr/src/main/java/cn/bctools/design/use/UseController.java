@@ -2,15 +2,19 @@ package cn.bctools.design.use;
 
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
+import cn.bctools.common.utils.jvs.JvsSystemConfig;
+import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.util.ModeUtils;
 import cn.bctools.web.utils.IpUtil;
 import cn.hutool.core.lang.tree.Tree;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -32,6 +36,7 @@ public class UseController {
 
     UseComponent useComponent;
     JvsAppService jvsAppService;
+    JvsSystemConfig jvsSystemConfig;
 
     /**
      * 获取轻应用菜单,返回创建人为自己的应用.并有权限的应用,不管是不是超级管理员.
@@ -40,29 +45,59 @@ public class UseController {
      */
     @GetMapping("/menu")
     @ApiOperation("获取轻应用菜单")
-    public R<List<Tree<Object>>> menu() {
-        List<Tree<Object>> tree = useComponent.menu("", ModeUtils.getRealUser().getId(), IpUtil.isMobile(), ModeUtils.getMode());
+    public R<List<Tree<Object>>> menu(@RequestHeader(value = "host", required = false) String host) {
+        //获取域名匹配的应用
+        JvsApp jvsApp = null;
+        if (ObjectNull.isNotNull(host)) {
+            List<String> identificationDomain = jvsSystemConfig.getIdentificationDomain();
+            if (ObjectNull.isNotNull(identificationDomain)) {
+                for (int i = 0; i < identificationDomain.size(); i++) {
+                    String e = identificationDomain.get(i);
+                    if (e.equals(host)) {
+                        //匹配域名,如果匹配到查询应用是哪一个
+                        String key = host.replaceAll(jvsSystemConfig.getDomain(), "").replaceAll("\\.", "");
+                        jvsApp = jvsAppService.getOne(Wrappers.query(new JvsApp().setAuthorizationKey(key)));
+                    }
+                }
+            }
+        }
+        List<Tree<Object>> tree = useComponent.menu("", ModeUtils.getRealUser().getId(), IpUtil.isMobile(), ModeUtils.getMode(), jvsApp);
         //树结构二次处理
         //获取应用
-        if (ObjectNull.isNotNull(tree)) {
-            tree = tree.stream()
-                    .peek(e -> {
-                        //获取第一级菜单,为了兼容多级菜单，这里处理判断不管是哪一层都直接判断是否是菜单
-                        List<Tree<Object>> menu = e.getChildren();
-                        treeType(menu, Boolean.valueOf(((HashMap) e.get("extend")).get("designRole").toString()));
-                    })
-                    .filter(e -> {
-                        switch (ModeUtils.getMode()) {
-                            case DEV:
-                                //如果是开发，返回所有
-                                return true;
-                            default:
-                                //如果是其它模式， 判断是否有下级，是否返回应用
-                                return ObjectNull.isNotNull(e.getChildren());
-                        }
-                    })
-                    .collect(Collectors.toList());
+        String finalAppid = Optional.ofNullable(jvsApp).map(JvsApp::getId).orElseGet(() -> "");
+        if (ObjectNull.isNull(tree)) {
+            tree = new ArrayList<>();
         }
+        tree = tree.stream()
+                .filter(e -> {
+                    if (ObjectNull.isNotNull(finalAppid)) {
+                        //过滤有只要这一条数据
+                        return e.getId().equals(finalAppid);
+                    } else {
+                        //返回所有
+                        return true;
+                    }
+                })
+                .peek(e -> {
+                    //获取第一级菜单,为了兼容多级菜单，这里处理判断不管是哪一层都直接判断是否是菜单
+                    List<Tree<Object>> menu = e.getChildren();
+                    if (ObjectNull.isNull(finalAppid)) {
+                        treeType(menu, Boolean.valueOf(((HashMap) e.get("extend")).get("designRole").toString()));
+                    } else {
+                        treeType(menu, false);
+                    }
+                })
+                .filter(e -> {
+                    switch (ModeUtils.getMode()) {
+                        case DEV:
+                            //如果是开发，返回所有
+                            return true;
+                        default:
+                            //如果是其它模式， 判断是否有下级，是否返回应用
+                            return ObjectNull.isNotNull(e.getChildren());
+                    }
+                })
+                .collect(Collectors.toList());
         return R.ok(Optional.ofNullable(tree).orElseGet(ArrayList::new));
     }
 

@@ -5,11 +5,9 @@ import cn.bctools.auth.component.SmsEmailComponent;
 import cn.bctools.auth.component.UserInfoComponent;
 import cn.bctools.auth.component.UserRoleComponent;
 import cn.bctools.auth.config.TransitionConfig;
-import cn.bctools.auth.entity.User;
-import cn.bctools.auth.entity.UserExtension;
-import cn.bctools.auth.entity.UserLevel;
-import cn.bctools.auth.entity.UserTenant;
+import cn.bctools.auth.entity.*;
 import cn.bctools.auth.login.enums.LoginTypeEnum;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.TenantsDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.entity.dto.UserInfoDto;
@@ -40,9 +38,7 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -61,6 +57,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     UserService userService;
     UserInfoComponent userInfoComponent;
     TenantService tenantService;
+    DeptService deptService;
     UserExtensionService userExtensionService;
     UserTenantService userTenantService;
     ApplyService applyService;
@@ -222,10 +219,15 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             tenant.setLevelId(value.getAccountLevelId());
             tenant.setJobId(value.getJobId());
             tenant.setJobName(value.getJobName());
-            tenant.setDeptName(value.getDeptName());
-            tenant.setDeptId(value.getDeptId());
-
+            List<String> deptIds = value.getDeptId();
             TenantContextHolder.setTenantId(e.getId());
+            if (ObjectNull.isNotNull(deptIds)) {
+                //获取部门
+                List<DeptDto> collect = deptService.listByIds(deptIds).stream().map(v -> new DeptDto().setDeptId(v.getId()).setDeptName(v.getName()).setDeptCode(v.getDeptCode())).collect(Collectors.toList());
+                tenant.setDept(collect);
+            } else {
+                tenant.setDept(new ArrayList<>());
+            }
             SysConfigs sysConfigs = configsMap.get(e.getId());
             if (ObjectNull.isNotNull(sysConfigs)) {
                 SysApplyConfig config = (SysApplyConfig) BeanCopyUtil.copy(sysConfigs.getContent(), SysApplyConfig.class).setEnable(true);

@@ -45,7 +45,7 @@ public class NumberFieldHandler implements IDataFieldHandler<InputNumberHtml> {
     @Override
     public Object getEchoValue(InputNumberHtml fieldDto, Object data, boolean override, Map<String, Object> lineData, String... paths) {
         if (!NumberUtil.isNumber(data.toString())) {
-            throw new BusinessException("请检查配置字段" + fieldDto.getLabel() + ",不是数字" + data);
+            throw new BusinessException("请检查配置字段[" + fieldDto.getLabel() + "],不是数字" + data);
         }
         Object value = ObjectNull.isNull(data) && ObjectNull.isNotNull(fieldDto.getDefaultValue()) ? fieldDto.getDefaultValue() : data;
         if (ObjectNull.isNull(value)) {

@@ -28,6 +28,8 @@ public class SysDeptDto implements Serializable {
     private String name;
     @ApiModelProperty(value = "部门类型，部门，子公司")
     private DeptEnum type;
+    @ApiModelProperty(value = "部门编码")
+    private String deptCode;
     @ApiModelProperty(value = "顶级部门的上级id默认为当前租户id")
     private String parentId;
     @ApiModelProperty(value = "排序号")
@@ -37,5 +39,7 @@ public class SysDeptDto implements Serializable {
 
     @ApiModelProperty(value = "部门负责人Id")
     private String leaderId;
+    @ApiModelProperty(value = "是否删除")
+    private Boolean delFlag;
 
 }

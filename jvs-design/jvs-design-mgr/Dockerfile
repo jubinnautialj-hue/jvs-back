@@ -1,11 +1,11 @@
 FROM registry.cn-hangzhou.aliyuncs.com/glg/sky-agent:8.8.0
-MAINTAINER jvs <www.bctools.com>
+LABEL maintainer="jvs <www.bctools.com>"
 
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 RUN echo 'Asia/Shanghai' > /etc/timezone
-ADD ./target/jvs-design-mgr.jar /app/app.jar
+COPY ./target/jvs-design-mgr.jar /app/app.jar
 
-ADD fonts /usr/share/fonts/zh_CN
+COPY fonts /usr/share/fonts/zh_CN
 RUN chmod 775 /usr/share/fonts/zh_CN
 
 ENV JAVA_OPTS=""

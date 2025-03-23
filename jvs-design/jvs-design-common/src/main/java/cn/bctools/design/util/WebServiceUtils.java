@@ -10,6 +10,7 @@ import cn.hutool.http.Method;
 import cn.hutool.http.webservice.SoapClient;
 import cn.hutool.http.webservice.SoapProtocol;
 import com.jayway.jsonpath.JsonPath;
+import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -24,21 +25,14 @@ import javax.xml.namespace.QName;
 import java.nio.charset.Charset;
 import java.util.*;
 import java.util.stream.Collectors;
+
 /**
  * @author jvs
  */
 @Slf4j
+@UtilityClass
 public class WebServiceUtils {
-
-//    public static void main(String[] args) {
-//        Set<RuleExternalPo> ruleExternalPos = parseWSDL("http://www.webxml.com.cn/WebServices/WeatherWebService.asmx?wsdl");
-//        RuleExternalPo next = ruleExternalPos.iterator().next();
-//        HashMap<String, Object> bodyMap = new HashMap<>();
-////        bodyMap.put("byProvinceName", "重庆");
-//        execute("http://www.webxml.com.cn/WebServices/WeatherWebService.asmx?wsdl", next.getServerUrl(), next.getUrl(), bodyMap, new HashMap<>());
-//        log.info("=========");
-//        log.info(JSONObject.toJSONString(ruleExternalPos));
-//    }
+    static final String DOCUMENTATION = "wsdl:documentation";
 
     /**
      * 获取所有的方法入参和出参
@@ -53,7 +47,7 @@ public class WebServiceUtils {
         Map<String, Object> stringObjectMap = XmlUtil.xmlToMap(HttpUtil.downloadString(wsdlUrl, Charset.defaultCharset()));
         List<Map<String, Object>> o = (List<Map<String, Object>>) stringObjectMap.get("wsdl:portType");
         List<Map<String, String>> o1 = (List) o.get(0).get("wsdl:operation");
-        List<String> collect1 = o1.stream().map(e -> e.get("wsdl:documentation")).collect(Collectors.toList());
+        List<String> collect1 = o1.stream().map(e -> e.get(DOCUMENTATION)).collect(Collectors.toList());
 
         int i = 0;
         Set<RuleExternalPo> list = new HashSet<>();
@@ -64,13 +58,6 @@ public class WebServiceUtils {
 
             // 读取并解析WSDL文件
             Definition definition = reader.readWSDL(wsdlUrl);
-            Map<?, ?> portTypesa = definition.getAllPortTypes();
-            // 打印所有接口名称
-            for (Object key : portTypesa.keySet()) {
-                PortType portType = (PortType) portTypesa.get(key);
-                log.info("Interface Name: " + portType.getQName().getLocalPart());
-            }
-
             // 打印types部分
             Types types = definition.getTypes();
             if (types != null) {
@@ -135,23 +122,21 @@ public class WebServiceUtils {
 
     private static void printSchemaElements(Element element) {
         if (element != null) {
-            NodeList elementsByTagName = element.getElementsByTagName("wsdl:documentation");
+            NodeList elementsByTagName = element.getElementsByTagName(DOCUMENTATION);
             for (int v = 0; v < elementsByTagName.getLength(); v++) {
                 log.info("Documentation: " + elementsByTagName.item(v).getTextContent());
             }
             NodeList children = element.getChildNodes();
             for (int i = 0; i < children.getLength(); i++) {
-                org.w3c.dom.Node node = children.item(i);
+                Node node = children.item(i);
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element childElement = (Element) node;
-                    NodeList docNodes = childElement.getElementsByTagName("wsdl:documentation");
+                    NodeList docNodes = childElement.getElementsByTagName(DOCUMENTATION);
                     for (int v = 0; v < docNodes.getLength(); v++) {
                         log.info("Documentation: " + docNodes.item(v).getTextContent());
                     }
                     String name = childElement.getAttribute("name");
                     log.info("type: " + name);
-                    // 如果需要进一步处理嵌套元素，可以递归调用
-//                    printSchemaElements(childElement);
                 }
             }
         }

@@ -89,7 +89,8 @@ public class BulletinController {
                 .orderByDesc(Bulletin::getCreateTime);
         service.page(page, query).getRecords().forEach(e -> {
             if (e.getContentType().equals(BulletinEnum.TEXT)) {
-                ((Bulletin) e).setContent(HtmlUtil.cleanHtmlTag(((Bulletin) e).getContent()).replaceAll("\n", ""));
+                String unescape = HtmlUtil.unescape(HtmlUtil.cleanHtmlTag((e).getContent()).replaceAll("\n", ""));
+                e.setContent(unescape);
             }
         });
         return R.ok(page);

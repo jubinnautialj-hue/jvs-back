@@ -66,7 +66,7 @@ public enum ConfigsTypeEnum {
     /**
      * Personalized configuration of enterprise planning configs type enum.
      */
-    PERSONALIZED_CONFIGURATION_OF_ENTERPRISE_PLANNING("项目管理", SysFrameApplyConfig.class, "teamwork", "teamwork-ultimate-mgr", "/jvs-ui-public/img/plan.png", "减少无效会议与沟通的最简单办法"),
+    PERSONALIZED_CONFIGURATION_OF_ENTERPRISE_PLANNING("企业计划", SysFrameApplyConfig.class, "teamwork", "teamwork-ultimate-mgr", "/jvs-ui-public/img/plan.png", "减少无效会议与沟通的最简单办法"),
 
     /**
      * Personalized configuration of email service configs type enum.
@@ -81,7 +81,7 @@ public enum ConfigsTypeEnum {
     /**
      * Personalized configuration for video conferencing configs type enum.
      */
-    PERSONALIZED_CONFIGURATION_FOR_VIDEO_CONFERENCING("视频会议", SysFrameApplyConfig.class, "meeting", "meeting-mgr", "/jvs-ui-public/img/meeting.png", "内部私有化部署的在线会议，安全、私密与便捷的高度融合"),
+    PERSONALIZED_CONFIGURATION_FOR_VIDEO_CONFERENCING("企业会议", SysFrameApplyConfig.class, "meeting", "meeting-mgr", "/jvs-ui-public/img/meeting.png", "内部私有化部署的在线会议，安全、私密与便捷的高度融合"),
 
     /**
      * Personalized configuration iot platforms configs type enum.
@@ -103,6 +103,10 @@ public enum ConfigsTypeEnum {
      */
     AUTOMATION_CONFIGURATION("逻辑引擎", SysFrameApplyConfig.class, "automation", "jvs-automation-mgr", "/jvs-ui-public/img/platform.png", "开箱即用的基础脚手架，微服务构架、VUE+ElementUI、支持多租户"),
 
+    /**
+     * Aps configs type enum.
+     */
+    APS_CONFIGURATION("智能APS", SysFrameApplyConfig.class, "aps", "jvs-aps-mgr", "/jvs-ui-public/img/file.png", "智能APS"),
     /**
      * Jvs design mgr configs type enum.
      */

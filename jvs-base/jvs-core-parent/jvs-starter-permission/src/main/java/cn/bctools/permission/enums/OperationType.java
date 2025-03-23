@@ -20,7 +20,9 @@ public enum OperationType {
     导入,
     下载,
     打印,
-    调试
+    调试,
+    同步,
+    校验
     ;
 
 }

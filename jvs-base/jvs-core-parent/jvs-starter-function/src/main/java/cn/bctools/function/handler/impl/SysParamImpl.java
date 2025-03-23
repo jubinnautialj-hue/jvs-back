@@ -1,6 +1,7 @@
 package cn.bctools.function.handler.impl;
 
 import cn.bctools.auth.api.api.UserExtensionServiceApi;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.function.entity.vo.ElementVo;
@@ -75,11 +76,11 @@ public class SysParamImpl implements IJvsParam<ElementVo> {
             case HeadImg:
                 return UserCurrentUtils.getCurrentUser().getHeadImg();
             case DeptId:
-                return UserCurrentUtils.getDeptId();
+                return UserCurrentUtils.getDept().stream().map(DeptDto::getDeptId).collect(Collectors.toList());
             case DeptName:
-                return UserCurrentUtils.getDeptName();
+                return UserCurrentUtils.getDept().stream().map(DeptDto::getDeptName).collect(Collectors.toList());
             case DeptCode:
-                return UserCurrentUtils.getCurrentUser().getDeptCode();
+                return UserCurrentUtils.getDept().stream().map(DeptDto::getDeptCode).collect(Collectors.toList());
             case UserRole:
                 return UserCurrentUtils.getRole();
             case UserEmployeeNo:

@@ -1,9 +1,7 @@
 package cn.bctools.design.project.service.impl.data;
 
-import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.TenantContextHolder;
-import cn.bctools.database.util.IdGenerator;
 import cn.bctools.design.data.component.DataModelHandler;
 import cn.bctools.design.data.entity.DataModelPo;
 import cn.bctools.design.data.service.DataModelService;
@@ -16,13 +14,14 @@ import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.design.project.service.AppTemplateDataService;
 import cn.bctools.design.util.CurrentAppUtils;
 import cn.bctools.design.util.ModeUtils;
-import com.alibaba.fastjson2.JSON;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.experimental.Accessors;
 import org.springframework.stereotype.Service;
 
+import java.math.BigInteger;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -70,8 +69,6 @@ public class DataModelAppTemplateDataServiceImpl extends AppTemplateDataBase imp
         AppVersionTypeEnum targetVersionType = targetAppVersion.getVersionType();
         List<DataModelPo> allModelList = getModeAllModel(targetVersionType);
 
-        // 重名的数据集别名
-        Set<String> duplicationCollectionNames = new HashSet<>();
         // 待修改的数据集别名集合
         List<UpdateCollectionName> updateCollectionNames = new ArrayList<>();
         // 待新增的模型集合
@@ -86,11 +83,14 @@ public class DataModelAppTemplateDataServiceImpl extends AppTemplateDataBase imp
             model.setBelongMode(targetVersionType);
             // 若目标版本为开发，则重置表编码标识
             if (AppVersionTypeEnum.DEV.equals(targetVersionType)) {
-                model.setTableCode(IdGenerator.get32UUID());
+                model.setTableCode(IdWorker.get32UUID());
             }
             setAppVersion(model, DataModelPo::setAppVersion, targetAppVersion);
-            // 校验重命名的模型数据集别名是否已存在
-            checkDuplicationCollectionNames(model, allModelList, duplicationCollectionNames);
+            // 校验重命名的模型数据集别名是否已存在,别名已存在时，创建新别名
+            if(checkDuplicationCollectionNames(model, allModelList)) {
+                String copyCollectionName = model.getCollectionName() + "_copy_" + new BigInteger(String.valueOf(IdWorker.getId())).toString(36);
+                model.setCollectionName(copyCollectionName);
+            }
             if (dbExistsIds.contains(model.getId())) {
                 updateModels.add(model);
                 // 得到待修改的模型别名集合
@@ -100,9 +100,6 @@ public class DataModelAppTemplateDataServiceImpl extends AppTemplateDataBase imp
             }
         });
 
-        if (ObjectNull.isNotNull(duplicationCollectionNames)) {
-            throw new BusinessException("已存在同名数据集", JSON.toJSONString(duplicationCollectionNames));
-        }
         if (ObjectNull.isNotNull(updateModels)) {
             // 修改数据
             dataModelService.updateBatchById(updateModels);
@@ -141,14 +138,14 @@ public class DataModelAppTemplateDataServiceImpl extends AppTemplateDataBase imp
     /**
      * 校验数据集别名，得到已存在的数据集别名集合
      *
-     * @param dataModel 待入库的模型
-     * @param allModelList 已入库全量模型数据
-     * @param duplicationCollectionNames 已存在数据集别名集合
+     * @param dataModel                  待入库的模型
+     * @param allModelList               已入库全量模型数据
+     * @return true-别名已存在，false-别名不存在
      */
-    private void checkDuplicationCollectionNames(DataModelPo dataModel, List<DataModelPo> allModelList, Set<String> duplicationCollectionNames) {
+    private boolean checkDuplicationCollectionNames(DataModelPo dataModel, List<DataModelPo> allModelList) {
         String collectionName = dataModel.getCollectionName();
         if (ObjectNull.isNull(collectionName)) {
-            return;
+            return false;
         }
         // - 数据集名已存在:
         //      不是当前模型的的数据集名，则表示与其它模型的数据集别名重名了，记录重名的数据集名
@@ -160,22 +157,22 @@ public class DataModelAppTemplateDataServiceImpl extends AppTemplateDataBase imp
                 .findFirst();
         if (duplicationOptional.isPresent()) {
             if (dataModel.getId().equals(duplicationOptional.get().getId())) {
-                return;
+                return false;
             }
-            duplicationCollectionNames.add(collectionName);
-            return;
+            return true;
         }
 
         if (dataModelHandler.collectionExists(collectionName)) {
-            duplicationCollectionNames.add(collectionName);
+            return true;
         }
+        return false;
     }
 
     /**
      * 得到待变更的数据集名集合
      *
-     * @param dataModel 待入库的模型
-     * @param existsDataModels 已入库的模型
+     * @param dataModel             待入库的模型
+     * @param existsDataModels      已入库的模型
      * @param updateCollectionNames 待变更的数据集名集合
      */
     private void buildUpdateCollectionNames(DataModelPo dataModel, List<DataModelPo> existsDataModels, List<UpdateCollectionName> updateCollectionNames) {

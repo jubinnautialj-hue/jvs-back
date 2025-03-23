@@ -1,4 +1,4 @@
-//package cn.bctools.message.push.feign;
+package cn.bctools.message.push.feign;//package cn.bctools.message.push.feign;
 //
 //import cn.bctools.common.utils.R;
 //import cn.bctools.message.push.api.WechatWorkRobotApi;

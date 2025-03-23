@@ -6,7 +6,6 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.common.utils.function.Get;
-import cn.bctools.design.constant.CacheConsts;
 import cn.bctools.design.data.fields.DataFieldHandler;
 import cn.bctools.design.data.fields.DesignField;
 import cn.bctools.design.data.fields.IDataFieldHandler;
@@ -15,12 +14,13 @@ import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.fields.impl.IMultipleTypeHandler;
 import cn.bctools.design.data.fields.impl.ISelectorDataHandler;
 import cn.bctools.redis.utils.RedisUtils;
+import cn.hutool.core.util.ObjUtil;
 import com.alibaba.fastjson2.JSONObject;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -36,12 +36,11 @@ import java.util.stream.Collectors;
 @EqualsAndHashCode(callSuper = true)
 @Component
 @DesignField(value = "用户选择", type = DataFieldType.user)
+@AllArgsConstructor
 public class UserFieldHandler extends IMultipleTypeHandler implements IDataFieldHandler<MultipleHtml>, ISelectorDataHandler {
 
 
-    @Autowired
     AuthUserServiceApi userApi;
-    @Autowired
     RedisUtils redisUtils;
 
     static final List<String> USER_FIELD_LIST = new ArrayList<>();
@@ -62,10 +61,21 @@ public class UserFieldHandler extends IMultipleTypeHandler implements IDataField
             userIds = new ArrayList<>();
             userIds.add(data.toString());
         }
+        //如果全部都是空，则直接返回
+        if (userIds.stream().allMatch(ObjectNull::isNull)) {
+            return "";
+        }
         Map<String, Object> userMap = userApi.getBasicInfoById(userIds, USER_FIELD_LIST).getData().stream().collect(Collectors.toMap(UserDto::getId, user -> StringUtils.defaultIfBlank(user.getRealName(), "")));
         DataFieldHandler dataFieldHandler = SpringContextUtil.getBean(DataFieldHandler.class);
         boolean isMulti = ObjectNull.isNull(fieldDto.getMultiple()) ? false : fieldDto.getMultiple();
         return dataFieldHandler.joinFormItems(userMap, data, isMulti, false);
+    }
+
+    public static void main(String[] args) {
+        ArrayList<Object> objects = new ArrayList<>();
+        objects.add(new ArrayList<>());
+        System.out.println(objects);
+        System.out.println(ObjUtil.isNull(objects));
     }
 
     @Override
@@ -75,9 +85,9 @@ public class UserFieldHandler extends IMultipleTypeHandler implements IDataField
             o = Arrays.stream(o.toString().split(",")).map(String::trim).collect(Collectors.toList());
             Map<String, String> userMap = userApi.getByNames((List<String>) o).getData().stream().collect(Collectors.toMap(UserDto::getRealName, UserDto::getId));
             ((List<?>) o).removeIf(userMap::containsKey);
-            if (((List<?>) o).size() > 0) {
+            if (!((List<?>) o).isEmpty()) {
                 String collect = ((List<?>) o).stream().map(Object::toString).collect(Collectors.joining(","));
-                if (collect.length() > 0) {
+                if (!collect.isEmpty()) {
                     throw new BusinessException(collect + "用户不存在，导入失败");
                 }
             }

@@ -2,16 +2,20 @@ package cn.bctools.auth.component;
 
 import cn.bctools.auth.entity.*;
 import cn.bctools.auth.service.*;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.TenantsDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.entity.dto.UserInfoDto;
-import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.enums.ConfigsTypeEnum;
+import cn.bctools.common.enums.SysConfigBase;
+import cn.bctools.common.enums.SysFrameApplyConfig;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.TenantContextHolder;
+import cn.bctools.common.utils.jvs.JvsServiceConfig;
+import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.gateway.entity.TenantPo;
 import cn.bctools.oss.props.OssProperties;
-import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.web.utils.WebUtils;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -20,8 +24,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -42,6 +48,13 @@ public class UserInfoComponent {
     OssProperties ossProperties;
     UserTenantService userTenantService;
     UserExtensionService userExtensionService;
+    JvsSystemConfig jvsSystemConfig;
+    SysConfigsService configService;
+
+    // 定义域名的正则表达式
+    static String DOMAIN_REGEX =
+            "^(?!-)(?!.*--)(?!.*-\\.)[A-Za-z0-9-]{1,63}(?!-)(\\.[A-Za-z]{2,})+$";
+    static Pattern pattern = Pattern.compile(DOMAIN_REGEX);
 
     /**
      * 根据用户信息，和租户信息获取资源角色，数据权限对象
@@ -52,12 +65,8 @@ public class UserInfoComponent {
      */
     public UserInfoDto<UserDto> getUserInfoDto(UserDto user, TenantsDto one) {
         String userId = user.getId();
-        Dept dept = deptService.getById(one.getDeptId());
-        if (ObjectNull.isNotNull(dept)) {
-            user.setDeptName(one.getDeptName());
-            user.setDeptId(one.getDeptId());
-            user.setDeptCode(dept.getDeptCode());
-        }
+
+        user.setDept(one.getDept());
         // 获取资源权限
         List<String> roleIds = null;
         //如果是管理员或平台管理员,不查询角色
@@ -67,9 +76,23 @@ public class UserInfoComponent {
 
         List<String> permission = permissionService.getPermission(one.getPlatformAdmin(), one.getAdminFlag(), one.getTenantId(), roleIds);
         user.setRoleIds(roleIds);
+        {
+            try {
+                HttpServletRequest request = WebUtils.getRequest();
+                String header = request.getHeader("host");
+                jvsSystemConfig.getIdentificationDomain().forEach(e -> {
+                    if (e.equals(header)) {
+                        //根据域名判断， 是否存在标识，如果存在，则标识直接去掉轻应用标识权限标识。
+                        permission.remove("jvs_app");
+                        permission.remove("jvs_platform");
+                    }
+                });
+            } catch (Exception e) {
+
+            }
+        }
         // 获取子部门id集合
-        String deptId = user.getDeptId();
-        List<String> childDeptIds = deptService.getAllChildId(deptId);
+        List<String> childDeptIds = user.getDept().stream().flatMap(e -> deptService.getAllChildId(e.getDeptId()).stream()).collect(Collectors.toList());
         // 组装用户对象
         return new UserInfoDto<>()
                 .setRoles(roleIds)
@@ -120,12 +143,25 @@ public class UserInfoComponent {
                 String userId = user.getId();
                 userDto = BeanCopyUtil.copy(UserDto.class, user, userTenantMap.get(userId));
                 String headImg = userDto.getHeadImg();
-                if (headImg.startsWith("/")) {
+                if ("/jvs-ui-public/img/headImg.png".equals(headImg)) {
+                    SysFrameApplyConfig config = configService.getConfig(ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION);
+                    JvsServiceConfig service = jvsSystemConfig.getService().stream().filter(e -> ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION.equals(e.getName())).findFirst().get();
+                    if (pattern.matcher(jvsSystemConfig.getDomain()).matches()) {
+                        //直接根据主域名获取前缀获取全地址
+                        String url = "http://" + config.getDomainName() + "." + jvsSystemConfig.getDomain();
+                        headImg = url + "/" + headImg;
+                    } else {
+                        //直接根据主域名获取前缀获取全地址
+                        String url = "http://" + jvsSystemConfig.getDomain() + ":" + service.getPort();
+                        headImg = url + "/" + headImg;
+                    }
+
+                } else if (headImg.startsWith("/")) {
                     try {
                         if (StringUtils.isNotBlank(ossProperties.getOutsideEndpoint())) {
                             headImg = ossProperties.getOutsideEndpoint() + headImg;
                         } else {
-                            headImg = ossProperties.getEndpoint().trim().startsWith("http") ? ossProperties.getEndpoint().trim() : "http://" + ossProperties.getEndpoint().trim() + headImg;
+                            headImg = ossProperties.getEndpoint().trim().startsWith("http") ? ossProperties.getEndpoint().trim() + headImg : "http://" + ossProperties.getEndpoint().trim() + headImg;
                         }
                     } catch (Exception e) {
                         //可能通过逻辑处理无法获取
@@ -133,19 +169,21 @@ public class UserInfoComponent {
                 }
                 Map<String, Object> body = new HashMap<>();
                 userExtensionService.list(Wrappers.<UserExtension>lambdaQuery().eq(UserExtension::getUserId, user.getId())).forEach(e -> {
-                    if (ObjectNull.isNotNull(e.getExtension())){
+                    if (ObjectNull.isNotNull(e.getExtension())) {
                         body.putAll(e.getExtension());
                     }
                 });
                 //设置扩展参数
                 userDto.setExceptions(body);
                 userDto.setHeadImg(headImg);
-                Dept dept = deptService.getById(userDto.getDeptId());
-                if (ObjectNull.isNotNull(dept)) {
-                    userDto.setDeptName(dept.getName());
-                    userDto.setDeptId(dept.getId());
-                    userDto.setDeptCode(dept.getDeptCode());
+                List<String> id = userTenantMap.get(userId).getDeptId();
+                if (ObjectNull.isNotNull(id)) {
+                    List<DeptDto> dtoList =
+                            id.stream().map(e -> deptService.getById(e)).filter(ObjectNull::isNotNull).map(e -> new DeptDto().setDeptId(e.getId()).setDeptName(e.getName()).setDeptCode(e.getDeptCode())).collect(Collectors.toList());
+                    userDto.setDept(dtoList);
                 }
+                List<String> childDeptIds = userDto.getDept().stream().flatMap(e -> deptService.getAllChildId(e.getDeptId()).stream()).collect(Collectors.toList());
+                userDto.setChildDeptIds(childDeptIds);
                 userDto.setId(userId);
                 userDto.setAdminFlag(userId.equalsIgnoreCase(adminUserId));
                 userDto.setRoleIds(Optional.ofNullable(userRoles.get(userId)).orElseGet(ArrayList::new).stream().map(Role::getId).collect(Collectors.toList()));

@@ -1,5 +1,7 @@
 package cn.bctools.auth.component.other;
 
+import cn.bctools.auth.entity.LoginRules;
+import cn.bctools.auth.mapper.LoginRulesMapper;
 import cn.bctools.auth.service.UserDetailsServiceImpl;
 import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.entity.dto.TenantsDto;
@@ -14,11 +16,15 @@ import cn.bctools.oauth2.dto.OtherAuthenticationToken;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.bctools.web.utils.IpUtil;
 import cn.bctools.web.utils.WebUtils;
+import cn.hutool.core.date.DateUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AccountExpiredException;
-import org.springframework.security.authentication.AccountStatusException;
 import org.springframework.security.authentication.AccountStatusUserDetailsChecker;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.core.Authentication;
@@ -35,18 +41,15 @@ import org.springframework.security.oauth2.server.authorization.context.Authoriz
 import org.springframework.security.oauth2.server.authorization.token.DefaultOAuth2TokenContext;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2RefreshTokenGenerator;
 import org.springframework.security.oauth2.server.authorization.token.OAuth2TokenGenerator;
-import org.springframework.security.web.authentication.session.SessionAuthenticationException;
 
-import javax.annotation.Resource;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
+import java.lang.ref.WeakReference;
 import java.time.Duration;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.Date;
 
 /**
  * @author glg
@@ -60,14 +63,16 @@ public class OtherAuthenticationProvider extends AccountStatusUserDetailsChecker
     private final OAuth2TokenGenerator oAuth2TokenGenerator = new OtherOAuth2TokenGenerator();
     private final OAuth2RefreshTokenGenerator refreshTokenGenerator = new OAuth2RefreshTokenGenerator();
     private final PasswordEncoder passwordEncoder;
+    private final LoginRulesMapper loginRulesMapper;
 
 
-    public OtherAuthenticationProvider(OAuth2AuthorizationService oAuth2AuthorizationService, UserDetailsServiceImpl userDetailsService, RegisteredClientRepository registeredClientRepository, RedisUtils redisUtils, PasswordEncoder passwordEncoder) {
+    public OtherAuthenticationProvider(OAuth2AuthorizationService oAuth2AuthorizationService, UserDetailsServiceImpl userDetailsService, RegisteredClientRepository registeredClientRepository, RedisUtils redisUtils, PasswordEncoder passwordEncoder, LoginRulesMapper loginRulesMapper) {
         this.oAuth2AuthorizationService = (JvsOAuth2AuthorizationServiceImpl) oAuth2AuthorizationService;
         this.userDetailsService = userDetailsService;
         this.registeredClientRepository = registeredClientRepository;
         this.redisUtils = redisUtils;
         this.passwordEncoder = passwordEncoder;
+        this.loginRulesMapper = loginRulesMapper;
     }
 
     @Override
@@ -83,6 +88,21 @@ public class OtherAuthenticationProvider extends AccountStatusUserDetailsChecker
 
         OAuth2RefreshToken refreshToken = null;
         String ipAddr = IpUtil.getIpAddr(WebUtils.getRequest());
+        //判断是否是禁止登录
+        List<LoginRules> loginRulesLogs = loginRulesMapper.selectList(new LambdaQueryWrapper<LoginRules>().eq(LoginRules::getStatus, true).eq(LoginRules::getIp, ipAddr));
+        if (ObjectNull.isNotNull(loginRulesLogs)) {
+            //根据时间判断当前是否是禁止登录
+            loginRulesLogs.forEach(e -> {
+                //获取当前时间，并根据 e.getTime() 判断当前是否是禁止登录,e.getTime 是 [12:00:00,14:00:00]
+                Date now = DateUtil.date();
+                Date startTime = DateUtil.parse(e.getTime().get(0));
+                Date endTime = DateUtil.parse(e.getTime().get(1));
+                if (DateUtil.compare(now, startTime) >= 0 && DateUtil.compare(now, endTime) <= 0) {
+                    throw new AccountExpiredException(SpringContextUtil.msg("当前时间禁止登录"));
+                }
+            });
+        }
+
         CustomUser userDetails = null;
         if (ObjectNull.isNotNull(password, userName, clientId)) {
             //给帐号密码添加错误校验次数
@@ -136,10 +156,10 @@ public class OtherAuthenticationProvider extends AccountStatusUserDetailsChecker
                     cookie.setDomain(domain);
                 }
                 WebUtils.getResponse().addCookie(cookie);
-                throw new AccountExpiredException("系统异常");
+                throw new AccountExpiredException("刷新失效", new BusinessException("刷新失效", -2));
             }
         } else {
-            throw new AccountExpiredException("系统异常");
+            throw new AccountExpiredException("登录失效", new BusinessException("登录失效", -2));
         }
         //生成唯一标识写入cookie, 通过租户Id进行拼接
         userDetails.setJvs(userDetails.getUserDto().getTenantId() + DigestUtils.md5Hex(userDetails.getUserDto().getId() + userDetails.getUserDto().getIp() + userDetails.getUserDto().getUserAgent()));

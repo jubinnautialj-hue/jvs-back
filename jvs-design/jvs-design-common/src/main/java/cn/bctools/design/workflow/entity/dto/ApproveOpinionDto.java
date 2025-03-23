@@ -6,6 +6,8 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.util.List;
+import java.util.Map;
 
 /**
  * @author zhuxiaokang
@@ -20,4 +22,10 @@ public class ApproveOpinionDto implements Serializable {
 
     @ApiModelProperty(value = "意见内容")
     private String content;
+
+    /**
+     * {@link cn.bctools.oss.dto.BaseFile}
+     */
+    @ApiModelProperty(value = "签名")
+    private List<Map<String, Object>> sign;
 }

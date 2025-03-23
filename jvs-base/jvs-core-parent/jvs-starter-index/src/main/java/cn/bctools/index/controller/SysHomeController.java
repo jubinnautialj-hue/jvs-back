@@ -53,7 +53,6 @@ import java.util.stream.Collectors;
 @Api(tags = "[index]首页")
 public class SysHomeController {
     static Map<String, String> urlMap = new HashMap<>();
-    static List<ComponentBaseInfo> collect = null;
     /**
      * The Service map.
      */
@@ -83,12 +82,9 @@ public class SysHomeController {
     @ApiOperation("获取当前这个业务项目有哪些组件,和组件属性")
     @GetMapping("/component")
     public R<List> component() {
-        if (ObjectNull.isNotNull(collect)) {
-            return R.ok(collect);
-        }
         SecurityContext context = SecurityContextHolder.getContext();
         Map<String, Object> stringObjectMap = SystemThreadLocal.get();
-        collect = serviceMap.values().parallelStream().map(e -> {
+        List<ComponentBaseInfo> collect = serviceMap.values().parallelStream().map(e -> {
             SecurityContextHolder.setContext(context);
             SystemThreadLocal.setAll(stringObjectMap);
             ComponentBaseInfo generate = e.generate();
@@ -230,7 +226,7 @@ public class SysHomeController {
         if (ObjectNull.isNull(array)) {
             return R.ok(home);
         }
-        List<JSONObject> collect = array.parallelStream()
+        List<JSONObject> collect = array.stream()
                 .map(a -> {
                     SecurityContextHolder.setContext(context);
                     SystemThreadLocal.setAll(stringObjectMap);
@@ -244,13 +240,14 @@ public class SysHomeController {
                     //判断是否启用了缓存
                     Object o = metaData.get(ComponentConstant.COMPONENT_TYPE);
                     Boolean enableCache = designCacheUtil.check(metaData);
-                    if (enableCache) {
-                        Object data = designCacheUtil.getData(metaData);
-                        if (data != null) {
-                            map.put(ComponentConstant.DATA_LOCATION, data);
-                            return JSONUtil.parseObj(map);
-                        }
-                    }
+                    //相同组件不同参数值不能都走缓存
+//                    if (enableCache) {
+//                        Object data = designCacheUtil.getData(metaData);
+//                        if (data != null) {
+//                            map.put(ComponentConstant.DATA_LOCATION, data);
+//                            return JSONUtil.parseObj(map);
+//                        }
+//                    }
 
                     if (ObjectUtil.isNotNull(o)) {
                         String type = StrUtil.toString(o);

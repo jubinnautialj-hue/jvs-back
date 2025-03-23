@@ -1,6 +1,5 @@
 package cn.bctools.design.rule.dto;
 
-import cn.bctools.design.rule.component.CronEnum;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -13,7 +12,7 @@ import lombok.experimental.Accessors;
 public class CronDto {
 
     @ApiModelProperty("cron表达式")
-    private CronEnum cron;
+    private String cron;
 
     @ApiModelProperty("名称")
     private String name;

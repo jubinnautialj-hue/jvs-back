@@ -11,10 +11,9 @@ import cn.bctools.common.utils.BeanToMapUtils;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.SystemThreadLocal;
-import cn.bctools.common.utils.function.Get;
 import cn.bctools.common.utils.jvs.JvsSystemConfig;
-import cn.bctools.database.util.SqlFunctionUtil;
 import cn.bctools.design.config.MultipleMongoConfig;
+import cn.bctools.design.constant.AppConstant;
 import cn.bctools.design.crud.entity.AppUrlPo;
 import cn.bctools.design.crud.entity.DesignRole;
 import cn.bctools.design.crud.entity.JvsTree;
@@ -26,7 +25,6 @@ import cn.bctools.design.data.entity.DataModelPo;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.util.RoleUtils;
-import cn.bctools.design.h5.service.H5DesignService;
 import cn.bctools.design.identification.entity.Identification;
 import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.menu.entity.AppMenu;
@@ -41,7 +39,6 @@ import cn.bctools.design.project.entity.enums.AppVersionStatusEnum;
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.project.service.JvsAppVersionService;
-import cn.bctools.design.screen.service.ScreenService;
 import cn.bctools.design.use.api.AppApi;
 import cn.bctools.design.use.api.TreeApi;
 import cn.bctools.design.use.api.dto.DataModelDto;
@@ -50,7 +47,6 @@ import cn.bctools.design.util.ModeUtils;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.lang.tree.Tree;
-import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -84,12 +80,10 @@ public class UseComponent implements AppApi, TreeApi {
     JvsAppService jvsAppService;
     JvsSystemConfig jvsSystemConfig;
     CrudPageService crudPageService;
-    H5DesignService h5DesignService;
     DataModelService dataModelService;
     AppUrlService appUrlService;
     EnvironmentVariableApi environmentVariableApi;
     RedisUtils redisUtils;
-    ScreenService screenService;
     JvsTreeService treeService;
     AppMenuTypeService appMenuTypeService;
     AppMenuService appMenuService;
@@ -102,11 +96,9 @@ public class UseComponent implements AppApi, TreeApi {
 
     @Override
     public R<List<ModeDto>> mode() {
-//        MongoProperties dev = multipleMongoConfig.getDev();
         MongoProperties beta = multipleMongoConfig.getBeta();
         List<ModeDto> objects = new ArrayList<>();
         // bi 不能配置开发模式的应用
-//        objects.add(new ModeDto().setMode(AppVersionTypeEnum.DEV.getMsg()).setDatasource(JSONObject.toJSONString(dev)));
         objects.add(new ModeDto().setMode(AppVersionTypeEnum.BETA.getMsg()).setDatasource(JSONObject.toJSONString(beta)));
         objects.add(new ModeDto().setMode(AppVersionTypeEnum.GA.getMsg()).setDatasource(JSONObject.toJSONString(mongoProperties)));
         return R.ok(objects);
@@ -115,24 +107,24 @@ public class UseComponent implements AppApi, TreeApi {
     @Override
     public R<List<DataModelDto>> apps(String mode) {
         List<String> versionTypeAppIds = appVersionService.getVersionTypeAppIds(AppVersionTypeEnum.getMsgType(mode));
-        String userId = UserCurrentUtils.getUserId();
+//        String userId = UserCurrentUtils.getUserId();
         JSONObject conditionUser = new JSONObject();
         conditionUser.put("type", "user");
-        conditionUser.put("id", userId);
-        String conditionUserJson = JSON.toJSONString(conditionUser);
+//        conditionUser.put("id", userId);
+//        String conditionUserJson = JSON.toJSONString(conditionUser);
         LambdaQueryWrapper<JvsApp> in = new LambdaQueryWrapper<JvsApp>().select(JvsApp::getId, JvsApp::getName).in(ObjectNull.isNotNull(versionTypeAppIds), JvsApp::getId, versionTypeAppIds);
-        in.and(wrapper -> wrapper.eq(JvsApp::getCreateById, userId)
-                // 查询当前用户作为应用管理员的应用
-                .or(orUser -> orUser.apply(SqlFunctionUtil.jsonContainsObject(Get.name(JvsApp::getRole), "$.adminMember", conditionUserJson)))
-                // 查询当前用户作为应用开发人员的应用
-                .or(orUser -> orUser.apply(SqlFunctionUtil.jsonContainsObject(Get.name(JvsApp::getRole), "$.devMember", conditionUserJson)))
-        );
+//        in.and(wrapper -> wrapper.eq(JvsApp::getCreateById, userId)
+//                // 查询当前用户作为应用管理员的应用
+//                .or(orUser -> orUser.apply(SqlFunctionUtil.jsonContainsObject(Get.name(JvsApp::getRole), "$.adminMember", conditionUserJson)))
+//                // 查询当前用户作为应用开发人员的应用
+//                .or(orUser -> orUser.apply(SqlFunctionUtil.jsonContainsObject(Get.name(JvsApp::getRole), "$.devMember", conditionUserJson)))
+//        );
         List<DataModelDto> collect = jvsAppService.list(in)
                 //这里需要处理添加应用的标示
                 .stream().map(e -> {
                     Identification one = identificationService.getOne(Wrappers.query(new Identification().setDesignId(e.getId())));
                     if (ObjectNull.isNotNull(one)) {
-                        return new DataModelDto().setAppCode(one.getIdentifier()).setAppName(e.getName());
+                        return new DataModelDto().setAppCode(one.getIdentifier()).setAppName(e.getName() + "(" + one.getIdentifier() + ")");
                     } else {
                         return null;
                     }
@@ -186,20 +178,30 @@ public class UseComponent implements AppApi, TreeApi {
      * @param appId  指定应用id   如果指定了id的,只查询某一个轻应用下面的
      * @param userId 当前用户的id   根据用户id查询是否具有相关的权限
      * @param mobile 是否是移动端,如果是Pc端,根据状态显示移动端的或pc端的
+     * @param app
      * @return
      */
-    public List<Tree<Object>> menu(String appId, String userId, boolean mobile, AppVersionTypeEnum mode) {
+    public List<Tree<Object>> menu(String appId, String userId, boolean mobile, AppVersionTypeEnum mode, JvsApp app) {
         List<JvsMenuVo> list = new ArrayList<>();
-        // 查询应用
-        List<JvsApp> jvsApps = getJvsApps(appId, mode);
-        // 有设计权限的应用
-        Map<String, JvsApp> withDesignPermissionAppMap = withDesignPermissionApp(userId, jvsApps, mode);
-        // 无设计权限的应用
-        Map<String, JvsApp> noDesignPermissionAppMap = noDesignPermissionApp(jvsApps, withDesignPermissionAppMap, mode);
-        // 所有应用
         Map<String, JvsApp> allAppMap = new HashMap<>(2);
-        allAppMap.putAll(withDesignPermissionAppMap);
-        allAppMap.putAll(noDesignPermissionAppMap);
+        // 有设计权限的应用
+        Map<String, JvsApp> withDesignPermissionAppMap = new HashMap<>();
+        // 无设计权限的应用
+        Map<String, JvsApp> noDesignPermissionAppMap = new HashMap<>();
+        if (ObjectNull.isNotNull(app)) {
+            allAppMap.put(app.getId(), app);
+            noDesignPermissionAppMap.put(app.getId(), app);
+        } else {
+            // 查询应用
+            List<JvsApp> jvsApps = getJvsApps(appId, mode);
+            // 有设计权限的应用
+            withDesignPermissionAppMap = withDesignPermissionApp(userId, jvsApps);
+            // 无设计权限的应用
+            noDesignPermissionAppMap = noDesignPermissionApp(jvsApps, withDesignPermissionAppMap, mode);
+            // 所有应用
+            allAppMap.putAll(withDesignPermissionAppMap);
+            allAppMap.putAll(noDesignPermissionAppMap);
+        }
         // Map<应用id，版本号>
         Map<String, String> appVersionMap = allAppMap.values()
                 .stream()
@@ -226,6 +228,7 @@ public class UseComponent implements AppApi, TreeApi {
         Map<String, List<DesignRole>> operationPermissionMap = designPermissionService.getBatchOperationPermission(designIds);
         SecurityContext context = SecurityContextHolder.getContext();
         Map<String, Object> threadMap = SystemThreadLocal.get();
+        Map<String, JvsApp> finalWithDesignPermissionAppMap = withDesignPermissionAppMap;
         List<JvsMenuVo> menus = appMenus
                 .parallelStream()
                 //判断是否是移动端,还是Pc显示
@@ -263,7 +266,7 @@ public class UseComponent implements AppApi, TreeApi {
                 //转换为对象信息
                 .map(e -> {
                     SystemThreadLocal.setAll(threadMap);
-                    return transition(e, enableWorkflowMap, checkDesignRole(e.getJvsAppId(), withDesignPermissionAppMap));
+                    return transition(e, enableWorkflowMap, checkDesignRole(e.getJvsAppId(), finalWithDesignPermissionAppMap));
                 })
                 .peek(e -> {
                     if (DesignType.URL.equals(e.getDesign())) {
@@ -349,7 +352,7 @@ public class UseComponent implements AppApi, TreeApi {
             }
         }
         Map<String, Object> map = BeanToMapUtils.beanToMap(vo);
-        map.put("designRole", type);
+        map.put(AppConstant.DesignRole, type);
         vo.setExtend(map);
         return vo;
     }
@@ -418,7 +421,7 @@ public class UseComponent implements AppApi, TreeApi {
         list.add((JvsMenuVo) directory.setExtend(map));
     }
 
-    private void appTree(Collection<JvsApp> values, List<JvsMenuVo> list, Boolean designRole) {
+    public void appTree(Collection<JvsApp> values, List<JvsMenuVo> list, Boolean designRole) {
         values.forEach(e -> {
             TreePo jvsapp = new JvsMenuVo().setIcon(e.getLogo()).setJvsAppId(e.getId()).setType("jvsapp").setId(e.getId()).setParentId("-1").setName(e.getName()).setSort(e.getSort());
             Map<String, Object> map = BeanToMapUtils.beanToMap(jvsapp);
@@ -490,10 +493,9 @@ public class UseComponent implements AppApi, TreeApi {
      *
      * @param userId  用户id
      * @param jvsApps 应用集合
-     * @param mode    模式
      * @return Map<应用id ， 应用>
      */
-    private Map<String, JvsApp> withDesignPermissionApp(String userId, List<JvsApp> jvsApps, AppVersionTypeEnum mode) {
+    private Map<String, JvsApp> withDesignPermissionApp(String userId, List<JvsApp> jvsApps) {
         if (ObjectNull.isNull(jvsApps)) {
             return Collections.emptyMap();
         }

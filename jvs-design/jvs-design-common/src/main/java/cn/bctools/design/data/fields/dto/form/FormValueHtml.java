@@ -1,6 +1,5 @@
 package cn.bctools.design.data.fields.dto.form;
 
-import cn.bctools.design.data.fields.impl.ISelectorDataHandler;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

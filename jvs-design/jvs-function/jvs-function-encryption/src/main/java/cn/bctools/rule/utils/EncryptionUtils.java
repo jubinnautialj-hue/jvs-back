@@ -12,7 +12,6 @@ import cn.hutool.crypto.digest.DigestAlgorithm;
 import cn.hutool.crypto.digest.Digester;
 import cn.hutool.crypto.symmetric.AES;
 import cn.hutool.http.HttpUtil;
-import org.apache.logging.log4j.util.Base64Util;
 
 /**
  * 统一的加解密处理

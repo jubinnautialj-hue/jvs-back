@@ -3,7 +3,6 @@ package cn.bctools.design.data.entity;
 import cn.bctools.database.entity.po.BasePo;
 import cn.bctools.database.handler.Fastjson2TypeHandler;
 import com.baomidou.mybatisplus.annotation.TableField;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

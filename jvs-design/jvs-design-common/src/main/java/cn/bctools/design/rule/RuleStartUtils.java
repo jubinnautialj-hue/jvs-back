@@ -39,6 +39,7 @@ import org.springframework.web.context.request.RequestContextHolder;
 import javax.servlet.http.HttpServletResponse;
 import java.io.ByteArrayInputStream;
 import java.math.BigDecimal;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -74,8 +75,8 @@ public class RuleStartUtils {
             new LinkedBlockingDeque<>(),
             Executors.defaultThreadFactory(),
             new ThreadPoolExecutor.AbortPolicy());
-    private static final DateTimeFormatter FORMAT_DATETIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
-    private static final String FORMAT_LOG = "%s [ %s ] %s ";
+    public static final DateTimeFormatter FORMAT_DATETIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
+    public static final String FORMAT_LOG = "%s [ %s ] %s ";
 
     /**
      * 根据逻辑执行获取结果，并返回响应头信息

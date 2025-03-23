@@ -7,6 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.util.List;
 
 /**
  * @author Administrator
@@ -32,10 +33,8 @@ public class TenantsDto implements Serializable {
     String jobId;
     @ApiModelProperty(value = "岗位名称")
     String jobName;
-    @ApiModelProperty(value = "部门ID")
-    String deptId;
-    @ApiModelProperty(value = "部门名称")
-    String deptName;
+    @ApiModelProperty(value = "部门")
+    List<DeptDto> dept;
     @ApiModelProperty(value = "租户id")
     String tenantId;
 

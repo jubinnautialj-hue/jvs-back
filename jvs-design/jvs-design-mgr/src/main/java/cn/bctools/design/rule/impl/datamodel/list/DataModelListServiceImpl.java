@@ -10,12 +10,14 @@ import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.rule.impl.datamodel.FieldStructureUtils;
 import cn.bctools.design.util.DynamicDataUtils;
+import cn.bctools.design.util.ModeUtils;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.common.RuleElementVo;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import com.alibaba.fastjson2.JSONObject;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +33,6 @@ import java.util.stream.Collectors;
 /**
  * @author guojing
  */
-@Slf4j
 @Order(1)
 @Service
 @AllArgsConstructor
@@ -67,6 +68,7 @@ public class DataModelListServiceImpl implements BaseCustomFunctionInterface<Dat
             List<Sort.Order> collect = dataModelDto.getOrderBy().stream().map(e -> new Sort.Order(e.getDirection(), e.getFieldKey())).collect(Collectors.toList());
             sort = Sort.by(collect);
         }
+        LOG.info("查询条件" + dataModelId + "," + ModeUtils.getMode() + " ," + JSONObject.toJSONString(dataModelDto));
         return dynamicDataService.queryList(dataModelId, criteria, fieldList, sort, dataModelDto.getTop())
                 .stream()
                 .peek(e -> e.put("modelId", dataModelId))

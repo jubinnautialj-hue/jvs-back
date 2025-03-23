@@ -1,15 +1,16 @@
 package cn.bctools.rule.tools.ftp.down;
 
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.PasswordUtil;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.oss.cons.OssSystemCons;
-import cn.bctools.oss.dto.BaseFile;
 import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.bctools.rule.service.ModelInterface;
 import cn.bctools.rule.tools.ftp.FtpSelectedOption;
 import cn.hutool.extra.ftp.Ftp;
 import com.alibaba.fastjson2.JSONObject;
@@ -37,24 +38,19 @@ import java.util.Map;
 public class FtpDownServiceImpl implements BaseCustomFunctionInterface<FtpDownFunctionDto> {
 
     OssTemplate ossTemplate;
+    ModelInterface modelInterface;
+
 
     @Override
     public Object execute(FtpDownFunctionDto dto, Map<String, Object> params) {
-        String dtoFtp = dto.getFtp();
+        Object byKey = modelInterface.getByKey(dto.getFtp());
         //获取的数据源
-        FtpSelectedOption option = JSONObject.parseObject(PasswordUtil.decodedPassword(dtoFtp, SpringContextUtil.getKey()), FtpSelectedOption.class);
+        FtpSelectedOption option = BeanCopyUtil.copy(FtpSelectedOption.class, byKey);
         Ftp ftp = new Ftp(option.getIp(), option.getPort(), option.getUserName(), option.getPassWord());
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ftp.download(dto.getDestPath(), dto.getFileName(), out);
         byte[] bytes = out.toByteArray();
-        if (dto.getOnOff()) {
-            BaseFile baseFile = ossTemplate.putFile(OssSystemCons.OSS_BUCKET_NAME, dto.getFileName(), new ByteArrayInputStream(bytes), "rule", "ftp");
-            String fileLink = ossTemplate.fileJvsPublicLink(baseFile.getFileName());
-            return fileLink;
-        } else {
-            //直接返回byte数组
-            return bytes;
-        }
+        return ossTemplate.putFile(OssSystemCons.OSS_BUCKET_NAME, dto.getFileName(), new ByteArrayInputStream(bytes), "rule", "ftp");
     }
 
 }

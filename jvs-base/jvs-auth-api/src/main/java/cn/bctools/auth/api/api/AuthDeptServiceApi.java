@@ -98,4 +98,16 @@ public interface AuthDeptServiceApi {
      */
     @GetMapping(PREFIX + "/query/parentBranchOffice/{deptId}")
     R<SysDeptDto> getParentBranchOffice(@ApiParam("部门id") @PathVariable("deptId") String deptId);
+
+    /**
+     * 新增或修改部门
+     *
+     * @param dto 部门
+     * @return
+     */
+    @PostMapping(value = "/dept/saveOrUpdate")
+    R<String> saveOrUpdate(@RequestBody SysDeptDto dto);
+
+    @PostMapping(value = "/dept/search")
+    R<List<SysDeptDto>> search(@RequestBody SysDeptDto dto);
 }

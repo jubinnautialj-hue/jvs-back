@@ -1,4 +1,4 @@
-//package cn.bctools.rule.ess.impl.embedablepagerelatedinterfaces;
+package cn.bctools.rule.ess.impl.embedablepagerelatedinterfaces;//package cn.bctools.rule.ess.impl.embedablepagerelatedinterfaces;
 //
 //import cn.bctools.common.exception.BusinessException;
 //import cn.bctools.rule.annotations.Rule;

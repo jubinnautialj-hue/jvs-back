@@ -27,10 +27,10 @@ import org.springframework.http.HttpMethod;
 public class DingUtils {
 
     /**
-     * Gets create todo task headers.
+     * Gets create
      *
      * @param tenantId the tenant id
-     * @return the create todo task headers
+     * @return the create
      */
     public static CreateTodoTaskHeaders getCreateTodoTaskHeaders(String tenantId) {
         String accessToken = getAccessToken(tenantId);
@@ -40,9 +40,9 @@ public class DingUtils {
     }
 
     /**
-     * Gets create todo task headers.
+     * Gets create
      *
-     * @return the create todo task headers
+     * @return the create 
      */
     public static CreateTodoTaskHeaders getCreateTodoTaskHeaders() {
         return getCreateTodoTaskHeaders(TenantContextHolder.getTenantId());

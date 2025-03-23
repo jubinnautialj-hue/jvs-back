@@ -53,6 +53,10 @@ public class CheckBoxFieldHandler extends IMultipleTypeHandler implements IDataF
         return conversionKey(dto, o, lineData, cascaderFieldPathIdsMap, generateCascaderList);
 
     }
+    @Override
+    public void checkFieldTypeAttributeChanged(CheckboxHtml html, CheckboxHtml dbHtml) {
+        super.checkFieldTypeAttributeChanged(html, dbHtml);
+    }
 
     @Override
     public Object getConversionKey(CheckboxHtml dto, Object o, Map<String, Object> lineData) {

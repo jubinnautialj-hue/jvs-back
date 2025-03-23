@@ -20,7 +20,7 @@ public class DataSettingBo implements Serializable {
     /**
      * 公式id
      */
-    String formula;
+    private String formula;
 
     /**
      * 公式的内容如果公式为空,则直接获取值，如果公式不为空，直接执行公式
@@ -33,14 +33,14 @@ public class DataSettingBo implements Serializable {
     /**
      * 是否开启数据脱敏
      */
-    Boolean encryption;
+    private Boolean encryption;
     /**
      * 具体的哪一些人不需要数据脱敏，如果那个设计中没有数据脱敏，将不用获取处理这个数据值
      */
-    List<PersonnelDto> userList;
+    private List<PersonnelDto> userList;
     /**
      * 脱敏字段和处理方式
      */
-    List<EncryptionFieldsPo> encryptionFields;
+    private List<EncryptionFieldsPo> encryptionFields;
 
 }

@@ -1,0 +1,29 @@
+FROM registry.cn-hangzhou.aliyuncs.com/glg/sky-agent:8.8.0
+MAINTAINER guojing <13594163317@163.com>
+
+RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
+RUN echo 'Asia/Shanghai' > /etc/timezone
+ADD ./target/jvs-data-factory-mgr.jar /app/app.jar
+ENV skyname="jvs-data-factory-mgr"
+ENV JAVA_OPTS=""
+ENV skyip="localhost:11800"
+ENV authentication=""
+#镜像默认地址为 -javaagent:/skywalking-agent/skywalking-agent.jar
+ENV skywalkingPath=""
+ENV nacosAddr="cloud-nacos:8848"
+ENV namespace=""
+# 设置java环境变量
+ENV JAVA_HOME /jdk1.8.0_192
+ENV PATH $PATH:$JAVA_HOME/bin
+
+# 将镜像源更换为阿里云
+RUN sed -i 's/mirrorlist/#mirrorlist/g' /etc/yum.repos.d/CentOS-* \
+    && sed -i 's/#baseurl/baseurl/g' /etc/yum.repos.d/CentOS-* \
+    && sed -i 's/mirror.centos.org/mirrors.aliyun.com/g' /etc/yum.repos.d/CentOS-*
+
+RUN yum clean all
+#安装python3
+RUN yum install -y python3 python3-pip
+
+
+ENTRYPOINT ["sh","-c","java $skywalkingPath  -Dskywalking.agent.service_name=$skyname -Dskywalking.agent.authentication=$authentication -Dskywalking.collector.backend_service=$skyip -Dspring.cloud.nacos.discovery.server-addr=$nacosAddr -Dspring.cloud.nacos.discovery.namespace=$namespace  $JAVA_OPTS -jar /app/app.jar"]

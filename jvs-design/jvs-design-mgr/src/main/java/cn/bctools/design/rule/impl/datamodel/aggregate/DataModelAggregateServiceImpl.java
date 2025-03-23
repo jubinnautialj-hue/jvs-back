@@ -4,7 +4,6 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.data.fields.dto.QueryConditionDto;
 import cn.bctools.design.data.service.DynamicDataService;
-import cn.bctools.design.rule.impl.datamodel.list.DataModelListDto;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;

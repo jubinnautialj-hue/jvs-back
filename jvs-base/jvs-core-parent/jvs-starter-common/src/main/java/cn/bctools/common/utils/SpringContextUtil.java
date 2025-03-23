@@ -35,7 +35,8 @@ import org.springframework.web.client.RestTemplate;
 import java.nio.charset.Charset;
 import java.time.LocalDateTime;
 import java.util.*;
-
+import javax.net.ssl.*;
+import java.security.cert.X509Certificate;
 /**
  * 服务上下文工具类，可直接操作此工具类获取版本号，服务名，环境和Spring 管理的Bean对象,在Aop、日志、组件重写等地方频繁使用
  *
@@ -161,6 +162,29 @@ public class SpringContextUtil implements ApplicationContextAware {
         String namespace = context.getEnvironment().getProperty("spring.cloud.nacos.discovery.namespace");
         String envformat = "[%s]-[%s]-[%s]-[%s]";
         env = String.format(envformat, mode, applicationContextName, serverPort, namespace);
+        disableSSLVerification();
+    }
+    public static void disableSSLVerification() {
+        try {
+            TrustManager[] trustAllCertificates = new TrustManager[]{
+                    new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return null;
+                        }
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+                    }
+            };
+
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, trustAllCertificates, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+
+            HostnameVerifier allHostsValid = (hostname, session) -> true;
+            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**

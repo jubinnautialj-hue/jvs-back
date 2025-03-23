@@ -33,6 +33,9 @@ public class FlowExtendDto implements Serializable {
     @ApiModelProperty(value = "是否启用动态增加流程节点")
     private Boolean enableDynamicNode = Boolean.FALSE;
 
+    @ApiModelProperty(value = "任务开始触发事件")
+    private TaskStartTriggerEventDto taskStartTriggerEvent;
+
     @ApiModelProperty(value = "任务结束触发事件")
     private TaskEndTriggerEventDto taskEndTriggerEvent;
 
@@ -41,5 +44,8 @@ public class FlowExtendDto implements Serializable {
 
     @ApiModelProperty(value = "自定义流程任务标题格式")
     private String taskTitleFormat;
+
+    @ApiModelProperty(value = "全局审批按钮配置")
+    private CustomFlowButtonDto flowButton;
 
 }

@@ -2,7 +2,10 @@ package cn.bctools.design.project.service.impl;
 
 import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.*;
+import cn.bctools.common.utils.BeanCopyUtil;
+import cn.bctools.common.utils.JvsAppSecretUtils;
+import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.function.Get;
 import cn.bctools.database.util.IdGenerator;
 import cn.bctools.design.constant.AppConstant;
@@ -17,6 +20,7 @@ import cn.bctools.design.menu.entity.AppMenuType;
 import cn.bctools.design.menu.util.DesignPermissionUtil;
 import cn.bctools.design.notice.entity.DataNoticePo;
 import cn.bctools.design.project.dto.AppVersionSubmitBetaDto;
+import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.project.dto.VersionIterationBaseDto;
 import cn.bctools.design.project.entity.*;
 import cn.bctools.design.project.entity.enums.AppTemplateTaskProgressDetailEnum;
@@ -31,6 +35,7 @@ import cn.bctools.design.project.service.*;
 import cn.bctools.design.project.utils.JvsAppTemplateDataIdUtils;
 import cn.bctools.design.project.utils.JvsAppTemplateUtils;
 import cn.bctools.design.rule.entity.RuleDesignPo;
+import cn.bctools.design.util.ModeUtils;
 import cn.bctools.design.workflow.entity.FlowDesign;
 import cn.bctools.design.workflow.entity.FlowDesignVersion;
 import cn.bctools.design.workflow.entity.FlowPurview;
@@ -183,7 +188,7 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
             throw new BusinessException("模板创建应用或版本迭代失败", e.getMessage());
         } finally {
             redisUtils.unLock(lockKey);
-            templateTaskProgressHandler.removeHeart(lockKey, null);
+            templateTaskProgressHandler.removeHeartAndCache(lockKey, null);
         }
     }
 
@@ -453,7 +458,12 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
                         .setDescription(jvsApp.getDescription())
                         .setDeployData(dto.getDeployData())
                         .setDeployDataModelIds(dto.getDeployDataModelIds());
+                AppVersionTypeEnum targetVersionType = betaVersion.getVersionType();
+                SwitchModeDto currentMode = ModeUtils.getSwitchMode();
+                ModeUtils.setSwitchModel(new SwitchModeDto().setMode(targetVersionType));
                 saveTemplate(templateId, jvsAppTemplate);
+                // 恢复模式上下文
+                ModeUtils.setSwitchModel(currentMode);
                 templateId = jvsAppTemplate.getId();
                 saveAppVersion(jvsApp.getId(), betaVersion, betaVersion, templateId);
                 sourceVersionRef.set(betaVersion);
@@ -665,14 +675,6 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.PAGE, () -> {
             crudPageTemplateService.save(jvsApp, targetVersion, existsIds, templateBo, targetVersionTemplateBo);
         });
-        // 数据模型
-        templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.DATA_MODEL, () -> {
-            dataModelTemplateService.save(jvsApp, targetVersion, existsIds, templateBo, targetVersionTemplateBo);
-        });
-        // 数据模型字段
-        templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.DATA_MODEL_FIELD, () -> {
-            dataFieldTemplateService.save(jvsApp, targetVersion, existsIds, templateBo, targetVersionTemplateBo);
-        });
         // 逻辑引擎
         templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.RULE, () -> {
             functionBusinessTemplateService.save(jvsApp, targetVersion, existsIds, templateBo, targetVersionTemplateBo);
@@ -698,6 +700,14 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.MENU, () -> {
             appMenuTypeTemplateService.save(jvsApp, targetVersion, existsIds, templateBo, targetVersionTemplateBo);
             appMenuTemplateService.save(jvsApp, targetVersion, existsIds, templateBo, targetVersionTemplateBo);
+        });
+        // 数据模型
+        templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.DATA_MODEL, () -> {
+            dataModelTemplateService.save(jvsApp, targetVersion, existsIds, templateBo, targetVersionTemplateBo);
+        });
+        // 数据模型字段
+        templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.DATA_MODEL_FIELD, () -> {
+            dataFieldTemplateService.save(jvsApp, targetVersion, existsIds, templateBo, targetVersionTemplateBo);
         });
         // 模型数据
         templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.DATA, () -> {
@@ -798,8 +808,13 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         initApp(template, jvsApp);
         String newJvsAppId = IdGenerator.get32UUID();
         jvsApp.setId(newJvsAppId);
+        jvsApp.setCreateBy(null);
+        jvsApp.setCreateById(null);
+        jvsApp.setUpdateBy(null);
         // 设置默认权限
         jvsApp.setDefaultRole();
+        // 创建应用时，默认不是推荐应用
+        jvsApp.setRecommend(false);
         jvsAppService.save(jvsApp);
     }
 

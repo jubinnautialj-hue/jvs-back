@@ -48,6 +48,6 @@ public class SearchUserDto {
     @ApiModelProperty("true-筛选权限范围包括指定部门的角色用户id, false-不筛选")
     Boolean filterScopeRoleUser;
     @ApiModelProperty("筛选权限范围包括指定部门的角色用户id")
-    String filterScopeDeptId;
+    List<String> filterScopeDeptIds;
 
 }

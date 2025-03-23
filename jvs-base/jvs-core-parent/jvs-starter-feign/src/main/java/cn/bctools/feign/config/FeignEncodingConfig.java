@@ -2,10 +2,7 @@ package cn.bctools.feign.config;
 
 import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.R;
-import cn.bctools.common.utils.SpringContextUtil;
-import cn.bctools.common.utils.SystemThreadLocal;
-import cn.bctools.common.utils.TenantContextHolder;
+import cn.bctools.common.utils.*;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
@@ -67,6 +64,11 @@ public class FeignEncodingConfig {
                 log.trace("Empty tenant id in context, using default : " + tenantId);
             }
             requestTemplate.header(SysConstant.TENANTID, tenantId);
+            String url = SystemThreadLocal.get("feign_url");
+            if (ObjectNull.isNotNull(url)) {
+                //动态代理具体的服务地址
+                requestTemplate.target(url);
+            }
             log.trace("发送Feign请求: {}, 传递租户：{}, 传递token: {}", requestTemplate.path(), tenantId, requestTemplate.headers().get(HttpHeaders.AUTHORIZATION));
         };
     }

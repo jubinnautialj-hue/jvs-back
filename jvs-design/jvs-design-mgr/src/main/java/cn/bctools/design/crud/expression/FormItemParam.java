@@ -175,7 +175,7 @@ public class FormItemParam implements IJvsParam<ElementVo> {
                 .setPath(fieldDto.getFieldKey())
                 .setName(fieldDto.getFieldName())
                 .setShortName(fieldDto.getFieldName())
-                .setInfo(fieldDto.getFieldKey() + "  " + fieldDto.getFieldName() + "\n" + fieldDto.getType().getDesc())
+                .setInfo(fieldDto.getFieldKey() + "  " + fieldDto.getLabel() + "\n" + fieldDto.getType().getDesc())
                 .setJvsParamType(JvsParamType.getByClass(fieldDto.getType().getAClass()));
     }
 

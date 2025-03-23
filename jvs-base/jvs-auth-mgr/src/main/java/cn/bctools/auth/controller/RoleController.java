@@ -1,6 +1,7 @@
 package cn.bctools.auth.controller;
 
 import cn.bctools.auth.api.enums.PersonnelTypeEnum;
+import cn.bctools.auth.component.UserRoleComponent;
 import cn.bctools.auth.entity.*;
 import cn.bctools.auth.entity.po.UserRoleScope;
 import cn.bctools.auth.service.*;
@@ -11,12 +12,12 @@ import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.entity.po.TreePo;
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.BeanCopyUtil;
-import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.common.utils.R;
-import cn.bctools.common.utils.TreeUtils;
+import cn.bctools.common.utils.*;
 import cn.bctools.log.annotation.Log;
+import cn.bctools.oauth2.config.JvsOAuth2AuthorizationServiceImpl;
+import cn.bctools.oauth2.dto.CustomUser;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
+import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.lang.tree.Tree;
 import cn.hutool.core.util.ObjectUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -28,6 +29,9 @@ import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.security.oauth2.core.endpoint.OAuth2ParameterNames;
+import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
@@ -51,7 +55,10 @@ public class RoleController {
 
     UserService userService;
     RoleService roleService;
+    JvsOAuth2AuthorizationServiceImpl jvsOAuth2AuthorizationService;
+    RedisUtils redisUtils;
     UserRoleService userRoleService;
+    UserRoleComponent userRoleComponent;
     DeptService deptService;
     DeptRoleService deptRoleService;
     UserTenantService userTenantService;
@@ -142,6 +149,7 @@ public class RoleController {
             deptRoleService.clearRoleDept(role.getId());
         }
         roleService.updateById(role);
+        refresh(role.getId());
         return R.ok(true, "修改成功");
     }
 
@@ -184,15 +192,11 @@ public class RoleController {
         if (ObjectUtil.isEmpty(ids)) {
             return R.ok(userPage);
         }
-
-        // 得到管理范围配置的部门
-        List<String> scopeDeptIds = page.getRecords().stream().flatMap(r -> Optional.ofNullable(r.getScopes()).orElseGet(ArrayList::new).stream()).map(UserRoleScope::getDeptId).collect(Collectors.toList());
-        Map<String, Dept> deptMap = ObjectNull.isNotNull(scopeDeptIds) ? deptService.listByIds(scopeDeptIds).stream().collect(Collectors.toMap(Dept::getId, Function.identity())) : Collections.emptyMap();
-
         // 封装响应
         Map<String, UserTenant> userTenantMap = userTenantService.list(new LambdaQueryWrapper<UserTenant>().eq(UserTenant::getTenantId, currentUser.getTenantId())
                 .eq(UserTenant::getCancelFlag, false)
                 .in(UserTenant::getUserId, ids)).stream().collect(Collectors.toMap(UserTenant::getUserId, Function.identity()));
+        Map<String, Dept> deptMap = deptService.list().stream().collect(Collectors.toMap(Dept::getId, Function.identity()));
         Map<String, User> userMap = userService.listByIds(ids).stream().collect(Collectors.toMap(User::getId, Function.identity()));
         List<RoleUserVo> collect = page.getRecords().stream()
                 .map(e -> {
@@ -208,6 +212,14 @@ public class RoleController {
                             .collect(Collectors.toList());
                     return BeanCopyUtil.copy(RoleUserVo.class, userMap.get(e.getUserId()), userTenantMap.get(e.getUserId())).setScopes(userRoleScopeVos);
                 })
+                .peek(e -> {
+                    if (ObjectNull.isNotNull(e.getDeptId())) {
+                        List<String> name = e.getDeptId().stream().filter(deptMap::containsKey)
+                                .filter(v -> ObjectNull.isNotNull(deptMap.get(v).getName()))
+                                .map(v -> deptMap.get(v).getName()).collect(Collectors.toList());
+                        e.setDeptName(name);
+                    }
+                })
                 .filter(e -> ObjectNull.isNotNull(e.getAccountName()))
                 .collect(Collectors.toList());
         //角色下的用户操作
@@ -222,6 +234,7 @@ public class RoleController {
     public R<Boolean> deleteUser(@PathVariable String roleId, @PathVariable String userId) {
         //将某个用户移出某个角色
         userRoleService.remove(Wrappers.query(new UserRole().setUserId(userId).setRoleId(roleId)));
+        refresh(roleId);
         return R.ok(true, "移出成功");
     }
 
@@ -248,6 +261,7 @@ public class RoleController {
                 .map(e -> new UserRole().setUserId(e).setRoleId(roleId).setTenantId(tenantId))
                 .collect(Collectors.toSet());
         userRoleService.saveBatch(collect);
+        refresh(roleId);
         return R.ok(true, "添加成功");
     }
 
@@ -295,6 +309,7 @@ public class RoleController {
         rolePermissionService.remove(Wrappers.query(new RolePermission().setRoleId(roleId)));
         List<RolePermission> collect = list.stream().map(e -> new RolePermission().setRoleId(roleId).setPermissionId(e)).collect(Collectors.toList());
         rolePermissionService.saveBatch(collect);
+        refresh(roleId);
         return R.ok(true, "授权成功");
     }
 
@@ -360,5 +375,32 @@ public class RoleController {
         Optional.ofNullable(roleService.getById(roleId)).orElseThrow(() -> new BusinessException("角色不存在"));
         deptRoleService.updateBatchById(depts);
         return R.ok();
+    }
+
+    /**
+     * 刷新缓存
+     */
+    public void refresh(String roleId) {
+        //强制刷新当前登录用户的权限
+        ArrayList<String> objects = new ArrayList<>();
+        objects.add(roleId);
+        List<String> roleUserIds = userRoleComponent.getRoleUserIds(objects, false, null);
+        String tenantId = TenantContextHolder.getTenantId();
+        Set<String> keys = redisUtils.keys("jvs:token:" + tenantId + "*");
+        keys.parallelStream()
+                .forEach(e -> {
+                    try {
+                        String jvs = e.toString().substring(4);
+                        List o = (List) redisUtils.get(jvs);
+                        Object o1 = o.get(1);
+                        OAuth2Authorization byToken = jvsOAuth2AuthorizationService.findByToken(o1.toString().replaceAll(OAuth2TokenType.REFRESH_TOKEN.getValue().toLowerCase(), ""), OAuth2TokenType.REFRESH_TOKEN);
+                        CustomUser user = byToken.getAttribute("user");
+                        if (roleUserIds.contains(user.getUserDto().getId())) {
+                            //如果用户是匹配的，就删除这个 Key
+                            redisUtils.del(OAuth2ParameterNames.ACCESS_TOKEN + ":" + byToken.getAccessToken().getToken().getTokenValue());
+                        }
+                    } catch (Exception ex) {
+                    }
+                });
     }
 }

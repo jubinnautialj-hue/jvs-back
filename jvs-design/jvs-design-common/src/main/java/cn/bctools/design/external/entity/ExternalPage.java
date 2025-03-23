@@ -1,14 +1,17 @@
 package cn.bctools.design.external.entity;
 
 import cn.bctools.database.entity.po.BasalPo;
+import cn.bctools.database.handler.Fastjson2TypeHandler;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import cn.bctools.database.handler.Fastjson2TypeHandler;
 import io.swagger.annotations.ApiModelProperty;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 

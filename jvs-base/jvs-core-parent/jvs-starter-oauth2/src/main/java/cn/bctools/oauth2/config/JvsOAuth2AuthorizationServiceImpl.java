@@ -94,10 +94,10 @@ public class JvsOAuth2AuthorizationServiceImpl implements OAuth2AuthorizationSer
      */
     public List<OAuth2Authorization> keys(String jvs, OAuth2TokenType oAuth2TokenType) {
         Object o = redisUtils.get("jvs:token:" + jvs);
-        if(ObjectNull.isNull(o)){
+        if (ObjectNull.isNull(o)) {
             return new ArrayList<>();
         }
-        return Optional.of(o).map( e -> ((List<String>) e))
+        return Optional.of(o).map(e -> ((List<String>) e))
                 .orElseGet(ArrayList::new)
                 .stream()
                 .filter(e -> e.endsWith(oAuth2TokenType.getValue()))
@@ -106,6 +106,7 @@ public class JvsOAuth2AuthorizationServiceImpl implements OAuth2AuthorizationSer
                     try {
                         return findByToken(e, oAuth2TokenType);
                     } catch (Exception exception) {
+                        log.error("获取 token失败", exception);
                         return null;
                     }
                 })

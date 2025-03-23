@@ -12,12 +12,13 @@ import cn.bctools.oss.dto.FileNameDto;
 import cn.bctools.oss.template.OssTemplate;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -30,8 +31,8 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @DesignField(value = "上传图片", type = DataFieldType.imageUpload)
+@AllArgsConstructor
 public class FileImageUploadFieldHandler implements IDataFieldHandler<ImageUploadHtml> {
-    @Autowired
     OssTemplate ossTemplate;
 
     /**
@@ -69,7 +70,7 @@ public class FileImageUploadFieldHandler implements IDataFieldHandler<ImageUploa
                                 e.setName(e.getOriginalName());
                             }
                             if (ObjectNull.isNotNull(e.getBucketName(), e.getFileName())) {
-                                e.setUrl(ossTemplate.fileLink(e.getFileName(), e.getBucketName()));
+                                e.setUrl(ossTemplate.fileLink(e.getFileName(), Optional.ofNullable(e.getBucketName()).orElseGet(() -> "jvs-form-design")));
                             }
                         })
                         .collect(Collectors.toList());
@@ -85,7 +86,6 @@ public class FileImageUploadFieldHandler implements IDataFieldHandler<ImageUploa
             throw new RuntimeException("正确格式为键值对");
         }
     }
-
 
 
     @Override

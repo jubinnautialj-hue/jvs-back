@@ -35,4 +35,12 @@ public interface FlowTaskPathService extends IService<FlowTaskPath> {
      * @return 可执行路径路径集合
      */
     List<List<Node>> getNodePaths(FlowTask flowTask, String nodeId);
+
+    /**
+     * 获取流程任务的所有可执行路径
+     *
+     * @param flowTask 流程任务
+     * @return 可执行路径路径集合
+     */
+    List<List<Node>> getNodePaths(FlowTask flowTask);
 }

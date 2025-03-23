@@ -16,7 +16,6 @@ import javax.validation.constraints.NotNull;
 
 @Data
 @Accessors(chain = true)
-@SelectOption(RuleConstant.REDIS_DB_SOURCE_OPTION)
 public class RedisDataSourceSelectedOption {
 
 

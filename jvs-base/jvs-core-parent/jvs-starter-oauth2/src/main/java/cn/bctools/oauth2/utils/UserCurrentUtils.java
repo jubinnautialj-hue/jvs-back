@@ -1,5 +1,6 @@
 package cn.bctools.oauth2.utils;
 
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.entity.dto.UserInfoDto;
 import cn.bctools.common.exception.BusinessException;
@@ -90,17 +91,8 @@ public class UserCurrentUtils {
      *
      * @return 部门ID
      */
-    public static String getDeptId() {
-        return getCurrentUser().getDeptId();
-    }
-
-    /**
-     * 获取用户所在部门名称
-     *
-     * @return 部门名称
-     */
-    public static String getDeptName() {
-        return getCurrentUser().getDeptName();
+    public static List<DeptDto> getDept() {
+        return getCurrentUser().getDept();
     }
 
     /**

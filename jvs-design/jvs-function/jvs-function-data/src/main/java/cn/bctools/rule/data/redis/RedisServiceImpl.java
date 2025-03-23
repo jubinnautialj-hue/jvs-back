@@ -9,12 +9,14 @@ import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.bctools.rule.service.ModelInterface;
 import cn.hutool.core.lang.Validator;
 import cn.hutool.crypto.digest.MD5;
 import com.alibaba.fastjson2.JSON;
-import com.google.gson.Gson;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.data.redis.RedisProperties;
 import org.springframework.data.redis.connection.DataType;
 import org.springframework.data.redis.connection.RedisPassword;
@@ -50,6 +52,8 @@ import java.util.stream.Collectors;
         explain = "redis是一个key-value存储系统。和Memcached类似，它支持存储的value类型相对更多，包括string(字符串)、list(链表)、set(集合)、zset(sorted set --有序集合)和hash（哈希类型）。"
 )
 public class RedisServiceImpl implements BaseCustomFunctionInterface<RedisFunctionDto> {
+    @Autowired
+    ModelInterface modelInterface;
 
     /**
      * StringRedisTemplate实例缓存（ConcurrentHashMap<host, RedisTemplateCache>）
@@ -73,9 +77,8 @@ public class RedisServiceImpl implements BaseCustomFunctionInterface<RedisFuncti
 
     @Override
     public Object execute(RedisFunctionDto dto, Map<String, Object> params) {
-        String dbName = dto.getDbName();
-        String decodeDbName = PasswordUtil.decodedPassword(dbName, SpringContextUtil.getKey());
-        RedisDataSourceSelectedOption sourceSelectedOption = BeanCopyUtil.copy(RedisDataSourceSelectedOption.class, decodeDbName);
+        Object byKey = modelInterface.getByKey(dto.getDbName());
+        RedisDataSourceSelectedOption sourceSelectedOption = BeanCopyUtil.copy(RedisDataSourceSelectedOption.class, byKey);
         dto.setOption(sourceSelectedOption);
         // 参数校验
         checkParam(dto);

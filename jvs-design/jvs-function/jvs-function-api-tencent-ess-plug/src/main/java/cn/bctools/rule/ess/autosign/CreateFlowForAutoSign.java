@@ -3,7 +3,7 @@ package cn.bctools.rule.ess.autosign;
 import cn.bctools.rule.ess.api.CreateFlowByTemplateIdDirectlyApi;
 import cn.bctools.rule.ess.api.fileuploaddownload.DescribeFileUrlsApi;
 import cn.bctools.rule.ess.config.Config;
-import com.tencentcloudapi.ess.v20201111.models.*;
+import com.tencentcloudapi.ess.v20201111.models.FlowCreateApprover;
 import lombok.extern.slf4j.Slf4j;
 
 /**

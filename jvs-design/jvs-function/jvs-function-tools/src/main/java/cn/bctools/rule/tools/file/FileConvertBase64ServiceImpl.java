@@ -13,8 +13,6 @@ import cn.hutool.http.HttpUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.nio.file.Path;
-import java.nio.file.Files;
 import java.util.Map;
 
 /**
@@ -25,7 +23,7 @@ import java.util.Map;
 @Rule(value = "文件转Base64",
         group = RuleGroup.工具插件,
         test = true,
-        returnType = ClassType.文件,
+        returnType = ClassType.文本,
         testShowEnum = TestShowEnum.JSON,
         order = 2,
         explain = "文件转Base64"

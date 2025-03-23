@@ -1,12 +1,13 @@
 package cn.bctools.rule.dto;
 
 
-import lombok.Data;
-import com.alibaba.fastjson2.JSONArray;
-import lombok.AllArgsConstructor;
-import lombok.NoArgsConstructor;
 import cn.bctools.rule.annotations.ParameterValue;
 import cn.bctools.rule.entity.enums.InputType;
+import com.alibaba.fastjson2.JSONArray;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
 /**
@@ -14,6 +15,7 @@ import lombok.experimental.Accessors;
  *
  * @author jvs
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
 @AllArgsConstructor

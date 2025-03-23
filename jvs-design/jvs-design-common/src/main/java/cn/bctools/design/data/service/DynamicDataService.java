@@ -13,6 +13,7 @@ import cn.bctools.design.data.fields.dto.page.ModelDisplayHtml;
 import cn.bctools.design.data.fields.dto.page.ModelDisplayLinkageFieldHtml;
 import cn.bctools.design.data.fields.enums.AggregateEnumType;
 import cn.bctools.function.entity.dto.ExecDto;
+import cn.bctools.function.entity.po.FunctionBusinessPo;
 import cn.bctools.rule.utils.html.RuleExecuteDto;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import org.springframework.data.domain.Sort;
@@ -248,7 +249,7 @@ public interface DynamicDataService {
      * @param stringSet                       the string set
      * @return 查询结果 page
      */
-    Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, String> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts, List<String> fieldKeyList, boolean addButtonInfo,
+    Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts, List<String> fieldKeyList, boolean addButtonInfo,
                                         boolean echo, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet);
 
     /**
@@ -269,7 +270,7 @@ public interface DynamicDataService {
      * @param encryptionData                  the encryption data
      * @return the page
      */
-    Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, String> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts, List<String> fieldKeyList, boolean addButtonInfo,
+    Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts, List<String> fieldKeyList, boolean addButtonInfo,
                                         boolean echo, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet, Boolean encryptionData);
 
     /**
@@ -288,7 +289,7 @@ public interface DynamicDataService {
      * @param fieldBasicsHtmls                the field basics htmls
      * @return the page
      */
-    default Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, String> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts
+    default Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts
             , List<String> fieldKeyList, boolean addButtonInfo, boolean echo, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls) {
         return queryPage(appId, page, modelId, combiningFieldFormulaContentMap, conditions, sorts, fieldKeyList, addButtonInfo, echo, andOr, fieldBasicsHtmls, new HashSet<>());
     }
@@ -748,5 +749,22 @@ public interface DynamicDataService {
     void clearSensitiveBody(String modelId, Map<String, Object> data, Map<String, Object> oldData);
 
 
+    /**
+     * 脱敏数据
+     *
+     * @param data
+     * @param byId
+     */
+    void encryptionData(Map<String, Object> data, DataModelPo byId);
+
+    /**
+     * 获取脱敏字段
+     *
+     * @param byId
+     * @return
+     */
+    List<String> encryptionData(DataModelPo byId);
+
+    List<String> encryptionData(String byId);
 }
 

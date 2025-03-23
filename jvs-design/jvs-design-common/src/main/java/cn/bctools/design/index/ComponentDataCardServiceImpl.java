@@ -12,6 +12,7 @@ import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.project.service.JvsAppVersionService;
 import cn.bctools.design.util.DynamicDataUtils;
+import cn.bctools.design.util.ModeUtils;
 import cn.bctools.index.annotation.FormFormQuery;
 import cn.bctools.index.design.ComponentBaseInfo;
 import cn.bctools.index.design.SelectedAttribute;
@@ -68,6 +69,7 @@ public class ComponentDataCardServiceImpl extends DataModelIndexFieldOrLink impl
 
     @Override
     public ComponentDataCardRender fillData(DataStatisticsParamsBase body) {
+        ModeUtils.setMode();
         ComponentDataCardRender componentDataCardRender = new ComponentDataCardRender();
         if (ObjectNull.isNull(body.getModelIdentifier(), body.getAggregationType())) {
             return null;

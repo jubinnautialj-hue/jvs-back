@@ -104,16 +104,16 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         // 截取"api/mgr"的请求路径
         // lb://jvs-auth-mgr/mgr/jvs-auth/xx -> lb://jvs-auth-mgr/xx
         if (path.startsWith(MGR_URL)) {
-            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 2);
+            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 2,host);
         }
         if (path.startsWith(BIZ_URL)) {
-            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 2);
+            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 2, host);
         }
         if (path.startsWith(OPEN_API_URL)) {
-            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 2);
+            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 2, host);
         }
         if (path.startsWith(OAUTH_TOKEN_URL)) {
-            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 1);
+            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 1, host);
             URI uri = exchange.getRequest().getURI();
             String queryParam = uri.getRawQuery();
             Map<String, String> paramMap = HttpUtil.decodeParamMap(queryParam, Charset.defaultCharset());
@@ -121,7 +121,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             String password = paramMap.get("password");
             String clientId = paramMap.get("client_id");
             if (StrUtil.isNotBlank(password)) {
-                return changeUrl(exchange, chain, uri, paramMap, password, clientId);
+                return changeUrl(exchange, chain, uri, paramMap, password, clientId, host);
             }
         }
         return chain.filter(exchange);
@@ -134,11 +134,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
      * @param chain
      * @param uri
      * @param paramMap
-     * @param clientId
      * @param password
+     * @param clientId
+     * @param host
      * @return
      */
-    private Mono<Void> changeUrl(ServerWebExchange exchange, GatewayFilterChain chain, URI uri, Map<String, String> paramMap, String password, String clientId) {
+    private Mono<Void> changeUrl(ServerWebExchange exchange, GatewayFilterChain chain, URI uri, Map<String, String> paramMap, String password, String clientId, String host) {
         try {
             //appId为与前端对应的客户端名
             password = PasswordUtil.decodedPassword(password, clientId);
@@ -151,7 +152,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                 .replaceQuery(HttpUtil.toParams(paramMap))
                 .build(true)
                 .toUri();
-        ServerHttpRequest newRequest = exchange.getRequest().mutate().uri(newUri).build();
+        ServerHttpRequest newRequest = exchange.getRequest().mutate().header("host",host).uri(newUri).build();
         ServerWebExchange build = exchange.mutate().request(newRequest).build();
         return chain.filter(build);
     }

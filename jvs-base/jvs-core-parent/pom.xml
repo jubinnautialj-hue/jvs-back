@@ -6,7 +6,7 @@
     <parent>
         <groupId>cn.bctools</groupId>
         <artifactId>jvs-base</artifactId>
-        <version>2.2</version>
+        <version>2.3</version>
     </parent>
 
     <groupId>cn.bctools</groupId>
@@ -62,6 +62,7 @@
         <module>jvs-starter-index</module>
         <module>jvs-starter-kafka</module>
         <module>jvs-starter-permission</module>
+        <module>jvs-starter-ai</module>
     </modules>
 
 

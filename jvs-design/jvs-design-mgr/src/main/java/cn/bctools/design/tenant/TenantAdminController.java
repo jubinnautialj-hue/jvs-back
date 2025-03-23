@@ -13,9 +13,7 @@ import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.menu.service.AppMenuService;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.rule.service.RuleDesignService;
-import cn.bctools.design.screen.service.ScreenService;
 import cn.bctools.design.workflow.service.FlowDesignService;
-import com.alibaba.fastjson2.JSONArray;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.annotations.Api;
@@ -42,8 +40,6 @@ import java.util.Objects;
 @RequestMapping("/base/tenant/admin")
 public class TenantAdminController {
     @Autowired
-    ScreenService screenService;
-    @Autowired
     CrudPageService crudPageService;
     @Autowired
     FormService formService;
@@ -63,14 +59,13 @@ public class TenantAdminController {
     @ApiOperation(value = "基础信息")
     @GetMapping
     public R base() {
-        List<PlatformDto.Block> blockList = new ArrayList<PlatformDto.Block>();
+        List<PlatformDto.Block> blockList = new ArrayList<>();
         //只查询当前租户
         blockList.add(new PlatformDto.Block().setName("轻应用").setIcon("icon-icon_3-07").setSize(jvsAppService.count()).setMaxSize(10000));
         blockList.add(new PlatformDto.Block().setName("流程总数").setIcon("icon-icon_1-12").setSize(flowDesignService.count()).setMaxSize(10000));
         blockList.add(new PlatformDto.Block().setName("逻辑总数").setIcon("icon-liebiaoqingdan").setSize(ruleDesignService.count()).setMaxSize(10000));
         blockList.add(new PlatformDto.Block().setName("表单总数").setIcon("icon-icon_1-24").setSize(formService.count()).setMaxSize(20000));
         blockList.add(new PlatformDto.Block().setName("列表总数").setIcon("icon-fenxiqushi").setSize(crudPageService.count()).setMaxSize(10000));
-        blockList.add(new PlatformDto.Block().setName("大屏总数").setIcon("icon-jingyingfenxisvg").setSize(screenService.count()).setMaxSize(10000));
         return R.ok(blockList);
     }
 

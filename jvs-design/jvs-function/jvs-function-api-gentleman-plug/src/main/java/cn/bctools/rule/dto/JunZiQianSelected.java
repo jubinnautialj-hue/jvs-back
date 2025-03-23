@@ -1,5 +1,6 @@
 package cn.bctools.rule.dto;
 
+import cn.bctools.rule.common.EnvironmentVariableSelected;
 import cn.bctools.rule.common.ParameterSelected;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -11,5 +12,5 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @AllArgsConstructor
-public class JunZiQianSelected implements ParameterSelected<JunZiQianOption> {
+public class JunZiQianSelected implements EnvironmentVariableSelected<JunZiQianOption> {
 }

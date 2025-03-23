@@ -1,4 +1,4 @@
-//package cn.bctools.rule.encryption.encryp;
+package cn.bctools.rule.encryption.encryp;//package cn.bctools.rule.encryption.encryp;
 //
 //import cn.bctools.common.exception.BusinessException;
 //import cn.bctools.common.utils.ObjectNull;

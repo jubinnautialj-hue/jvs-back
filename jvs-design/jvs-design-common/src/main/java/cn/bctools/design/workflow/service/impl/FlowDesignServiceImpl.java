@@ -3,10 +3,10 @@ package cn.bctools.design.workflow.service.impl;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
-import cn.bctools.database.util.IdGenerator;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.function.Get;
 import cn.bctools.common.utils.graph.GraphUtils;
+import cn.bctools.database.util.IdGenerator;
 import cn.bctools.design.crud.entity.FormPo;
 import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.crud.utils.DesignUtils;
@@ -40,7 +40,6 @@ import cn.bctools.design.workflow.support.valid.ValidatedFlowDesign;
 import cn.bctools.design.workflow.utils.FlowUtil;
 import cn.bctools.function.entity.po.FunctionBusinessPo;
 import cn.bctools.function.mapper.FunctionBusinessMapper;
-import cn.hutool.crypto.digest.MD5;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -342,7 +341,16 @@ public class FlowDesignServiceImpl extends ServiceImpl<FlowDesignMapper, FlowDes
                         List<Node> manualNodes = getManualNodes(flowDesignBody);
                         design.setDesign(null);
                         PermissionDesignDto permissionDesignDto = BeanCopyUtil.copy(design, PermissionDesignDto.class);
-                        permissionDesignDto.setManualNodes(manualNodes);
+                        if (ObjectNull.isNotNull(manualNodes)) {
+                            List<ApproveNodeDto> manualApproveNodeList = manualNodes.stream()
+                                    .map(n -> {
+                                        // 节点是否允许动态选择审批人
+                                        boolean canDynamicApprover = FlowUtil.getNodeCanDynamicApprover(design.getExtend(), n);
+                                        return BeanCopyUtil.copy(n, ApproveNodeDto.class).setCanDynamicApprover(canDynamicApprover);
+                            }).collect(Collectors.toList());
+                            permissionDesignDto.setManualNodes(manualApproveNodeList);
+                        }
+
                         // 启用了动态增加流程节点 && 不存在人工节点集合，则可以在发起流程时动态增加审批节点
                         permissionDesignDto.setCanDynamicAddNode(design.getExtend().getEnableDynamicNode() && CollectionUtils.isEmpty(manualNodes));
                         permissionDesignDtos.add(permissionDesignDto);
@@ -377,6 +385,7 @@ public class FlowDesignServiceImpl extends ServiceImpl<FlowDesignMapper, FlowDes
             nodeProperties.setTargetObj(n.getProps().getTargetObj());
             nodeProperties.setType(n.getProps().getType());
             nodeProperties.setPersonnelScope(FlowUtil.getPersonnelScope(n));
+            nodeProperties.setDisableDynamicApprover(n.getProps().getDisableDynamicApprover());
             node.setProps(nodeProperties);
             manualNodeList.add(node);
         });

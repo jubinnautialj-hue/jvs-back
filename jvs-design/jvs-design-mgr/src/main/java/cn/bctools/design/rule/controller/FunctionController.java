@@ -42,8 +42,6 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import static cn.bctools.rule.config.SystemInit.selectedMap;
-
 /**
  * 自定义方法控制类
  *
@@ -133,20 +131,20 @@ public class FunctionController {
                 })
                 .sorted(Comparator.comparingInt(RuleFunctionDto::getOrder).reversed())
                 .collect(Collectors.groupingBy(RuleFunctionDto::getGroup));
-        List<FunctionGroupDto> list = new ArrayList<>();
-        List<RuleExternalPo> list1 = null;
+        List<RuleExternalPo> externalPoList = null;
         if (ObjectNull.isNotNull(name) || ObjectNull.isNotNull(o)) {
-            list1 = ruleExternalService.list(new LambdaQueryWrapper<RuleExternalPo>()
+            externalPoList = ruleExternalService.list(new LambdaQueryWrapper<RuleExternalPo>()
                     //如果指定了加载数据，则只查询这些类型的
                     .like(ObjectNull.isNotNull(name), RuleExternalPo::getName, name)
                     .in(ObjectNull.isNotNull(o), RuleExternalPo::getRuleGroup, o));
-            list1.forEach(e -> {
+            externalPoList.forEach(e -> {
                 groups.add(e.getRuleGroup());
             });
         }
         Map<String, List<RuleFunctionDto>> ruleExternal = new HashMap<>(1);
-        if (ObjectNull.isNotNull(list1)) {
-            ruleExternal = list1
+        if (ObjectNull.isNotNull(externalPoList)) {
+            assert externalPoList != null;
+            ruleExternal = externalPoList
                     .stream()
                     .map(e -> new RuleFunctionDto().setEdit(true).setCustomStructure(true).setStatus(e.getStatus()).setIcon(e.getIcon()).setTest(true).setGroup(e.getRuleGroup()).setFunctionName(e.getName()).setExplain(e.getExplainInfo())
                             .setParameters(e.getFieldLists()).setFunctionId(e.getId()))
@@ -167,7 +165,7 @@ public class FunctionController {
                                         .setCustomOption(orDefault)
                                         .setOptionsType(OptionsType.dboptions));
                                 //判断是否存在扩展属性，如果有，添加到第一个属性中用于选择项
-                                return SystemInit.getSelected(e, v -> selectedMap.get(v));
+                                return SystemInit.getSelected(e, v -> SystemInit.getSelectedMap().get(v));
                             }
                             return e;
                         } catch (IllegalArgumentException ex) {
@@ -177,14 +175,13 @@ public class FunctionController {
                     .collect(Collectors.groupingBy(RuleFunctionDto::getGroup));
         }
         boolean isGroup = parameters.containsKey("group");
+        List<FunctionGroupDto> list = new ArrayList<>();
         for (String group : groups) {
             List<RuleFunctionDto> ruleFunctionDtos = collect.getOrDefault(group, new ArrayList<>(1));
             if (ObjectNull.isNotNull(ruleExternal.get(group))) {
                 ruleFunctionDtos.addAll(ruleExternal.get(group));
             }
-            if (ObjectNull.isNotNull(ruleFunctionDtos)) {
-                list.add(new FunctionGroupDto().setGroupName(group).setList(ruleFunctionDtos));
-            } else if (!isGroup) {
+            if (ObjectNull.isNotNull(ruleFunctionDtos) || !isGroup) {
                 list.add(new FunctionGroupDto().setGroupName(group).setList(ruleFunctionDtos));
             }
         }
@@ -234,14 +231,14 @@ public class FunctionController {
         if (ObjectNull.isNotNull(map)) {
             List<FunctionBusinessPo> list = new ArrayList<>();
             String jsonString = JSONObject.toJSONString(testDto);
-            for (String oldId : map.keySet()) {
-                if (jsonString.contains(oldId)) {
-                    FunctionBusinessPo functionBusinessPo = map.get(oldId).setId(IdWorker.getIdStr());
+            for (Map.Entry<String, FunctionBusinessPo> entry : map.entrySet()) {
+                if (jsonString.contains(entry.getKey())) {
+                    FunctionBusinessPo functionBusinessPo = entry.getValue().setId(IdWorker.getIdStr());
                     functionBusinessPo.setCreateTime(LocalDateTime.now());
                     functionBusinessPo.setUpdateTime(LocalDateTime.now());
                     list.add(functionBusinessPo);
                     //产生新的对象数据
-                    jsonString = jsonString.replaceAll(oldId, functionBusinessPo.getId());
+                    jsonString = jsonString.replaceAll(entry.getKey(), functionBusinessPo.getId());
                 }
             }
             functionBusinessService.saveBatch(list);

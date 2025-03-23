@@ -1,11 +1,14 @@
 package cn.bctools.design.filter;
 
+import cn.bctools.auth.api.enums.ModeTypeEnum;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.design.util.ModeUtils;
+import cn.bctools.function.service.ModeTypeService;
 import cn.hutool.core.util.URLUtil;
+import org.springframework.context.annotation.Bean;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.GenericFilterBean;
@@ -55,6 +58,16 @@ public class DesignFilter extends GenericFilterBean {
             ModeUtils.setSwitchModel(new SwitchModeDto().setMode(versionType));
         }
         filterChain.doFilter(servletRequest, servletResponse);
+    }
+
+    /**
+     * 定时任务获取环境变量时获取的模式信息
+     *
+     * @return
+     */
+    @Bean
+    public ModeTypeService typeService() {
+        return () -> ObjectNull.isNotNull(ModeUtils.getMode()) ? ModeTypeEnum.getType(ModeUtils.getMode().name()) : ModeTypeEnum.GA;
     }
 
 }

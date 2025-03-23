@@ -6,7 +6,7 @@
     <parent>
         <groupId>cn.bctools</groupId>
         <artifactId>jvs-design</artifactId>
-        <version>2.2</version>
+        <version>2.3</version>
     </parent>
 
     <groupId>cn.bctools</groupId>
@@ -72,16 +72,6 @@
             <artifactId>jvs-starter-oauth2</artifactId>
             <version>${project.version}</version>
         </dependency>
-        <!--        <dependency>-->
-        <!--            <groupId>com.alibaba</groupId>-->
-        <!--            <artifactId>easyexcel</artifactId>-->
-        <!--            <version>3.1.1</version>-->
-        <!--        </dependency>-->
-        <!--        <dependency>-->
-        <!--            <groupId>cn.bctools</groupId>-->
-        <!--            <artifactId>jvs-function-service</artifactId>-->
-        <!--            <version>${project.version}</version>-->
-        <!--        </dependency>-->
 
         <dependency>
             <groupId>cn.bctools</groupId>

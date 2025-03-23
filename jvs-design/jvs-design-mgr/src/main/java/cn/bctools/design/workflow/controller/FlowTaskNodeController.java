@@ -1,9 +1,11 @@
 package cn.bctools.design.workflow.controller;
 
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.design.workflow.dto.AppendApprovalPointResDto;
+import cn.bctools.design.workflow.dto.ApproveNodeDto;
 import cn.bctools.design.workflow.dto.ApproveNodesDto;
 import cn.bctools.design.workflow.dto.CheckDynamicNodeDto;
 import cn.bctools.design.workflow.entity.FlowDesign;
@@ -106,7 +108,7 @@ public class FlowTaskNodeController {
             @ApiImplicitParam(name = "nextOne", value = "true或null-下一个审批节点, false-所有下级审批节点", required = true)
     })
     @GetMapping("/next/{taskId}/{nodeId}")
-    public R<List<Node>> getNextApproveNode(@PathVariable String taskId, @PathVariable String nodeId, Boolean nextOne) {
+    public R<List<ApproveNodeDto>> getNextApproveNode(@PathVariable String taskId, @PathVariable String nodeId, Boolean nextOne) {
         FlowTaskNode flowTaskNode = flowTaskNodeService.getCurrentPendingNode(taskId, nodeId);
         if (ObjectNull.isNull(flowTaskNode)) {
             return R.ok(Collections.emptyList());
@@ -115,10 +117,16 @@ public class FlowTaskNodeController {
         String designBody = flowTask.getDesignBody();
         Node currentNode = FlowUtil.findNode(designBody, nodeId);
 
+        FlowDesign flowDesign = Optional.ofNullable(flowDesignService.getOne(Wrappers.<FlowDesign>lambdaQuery().eq(FlowDesign::getId, flowTask.getFlowDesignId()))).orElseGet(FlowDesign::new);
+        FlowExtendDto flowExtend = flowDesign.getExtend();
+
         // 若当前节点是回退后的节点，且指定了下一步流转的节点，则直接返回该节点
         BackResubmitDto backResubmit = FlowUtil.parseBackTaskResubmitNextNode(currentNode.getId(), flowTask);
         if (backResubmit.getWhetherResubmit() && ObjectNull.isNotNull(backResubmit.getNextNode())) {
-            return R.ok(Collections.singletonList(backResubmit.getNextNode()));
+            Node nextNode = backResubmit.getNextNode();
+            // 节点是否允许动态选择审批人
+            boolean canDynamicApprover = FlowUtil.getNodeCanDynamicApprover(flowExtend, nextNode);
+            return R.ok(Collections.singletonList(BeanCopyUtil.copy(nextNode, ApproveNodeDto.class).setCanDynamicApprover(canDynamicApprover)));
         }
 
         // 获取当前节点下所有审批节点
@@ -128,7 +136,14 @@ public class FlowTaskNodeController {
         }
         // 返回所有下级审批节点
         if (Boolean.FALSE.equals(nextOne)) {
-            return R.ok(nextNodeAll.stream().map(node -> FlowUtil.findNode(node.getId()).setNode(null)).collect(Collectors.toList()));
+            return R.ok(nextNodeAll.stream()
+                    .map(node -> {
+                        Node n = FlowUtil.findNode(node.getId()).setNode(null);
+                        // 节点是否允许动态选择审批人
+                        boolean canDynamicApprover = FlowUtil.getNodeCanDynamicApprover(flowExtend, n);
+                        return BeanCopyUtil.copy(n, ApproveNodeDto.class).setCanDynamicApprover(canDynamicApprover);
+                    })
+                    .collect(Collectors.toList()));
         }
 
         // 返回下一个审批节点
@@ -160,7 +175,10 @@ public class FlowTaskNodeController {
         if (ObjectNull.isNull(nextOneApproveNode)) {
             return R.ok();
         }
-        return R.ok(Collections.singletonList(FlowUtil.findNode(nextOneApproveNode.getId()).setNode(null)));
+        Node nextNode = FlowUtil.findNode(nextOneApproveNode.getId()).setNode(null);
+        // 节点是否允许动态选择审批人
+        boolean canDynamicApprover = FlowUtil.getNodeCanDynamicApprover(flowExtend, nextNode);
+        return R.ok(Collections.singletonList(BeanCopyUtil.copy(nextNode, ApproveNodeDto.class).setCanDynamicApprover(canDynamicApprover)));
     }
 
 
@@ -216,15 +234,6 @@ public class FlowTaskNodeController {
             // 没有审批节点，校验是否可以动态增加节点
             dto.setCanDynamicAddNode(flowDesign.getExtend().getEnableDynamicNode());
         }
-        // 未允许动态选择审批人时，不返回非“发起人自选”审批节点
-        if (!flowDesign.getExtend().getEnableDynamicApprover()) {
-            nodes = nodes.stream()
-                    .filter(node -> NodePropertiesTypeEnum.SELF_SELECT.equals(node.getProps().getType()))
-                    .collect(Collectors.toList());
-        }
-        dto.setNodes(nodes.stream()
-                .map(node -> FlowUtil.findNode(node.getId()).setNode(null))
-                .collect(Collectors.toList()));
 
         // 得到抄送节点
         List<Node> csNodes = FlowUtil.getOrderNodes(design, Collections.singletonList(NodeTypeEnum.CS))
@@ -233,11 +242,22 @@ public class FlowTaskNodeController {
                 .filter(csNode -> ObjectNull.isNotNull(csNode.getProps().getType()) && NodePropertiesTypeEnum.SELF_SELECT.equals(csNode.getProps().getType()))
                 .collect(Collectors.toList());
         if (ObjectNull.isNotNull(csNodes)) {
-            dto.getNodes().addAll(csNodes.stream().map(node -> FlowUtil.findNode(node.getId()).setNode(null)).collect(Collectors.toList()));
+            nodes.addAll(csNodes);
         }
+
+        dto.setNodes(nodes.stream()
+                .map(node -> {
+                    Node n = FlowUtil.findNode(node.getId()).setNode(null);
+                    // 节点是否允许动态选择审批人
+                    boolean canDynamicApprover = FlowUtil.getNodeCanDynamicApprover(flowDesign.getExtend(), n);
+                    return BeanCopyUtil.copy(n, ApproveNodeDto.class)
+                            .setCanDynamicApprover(canDynamicApprover);
+                })
+                .collect(Collectors.toList()));
 
         return R.ok(dto);
     }
+
 
     @Log
     @ApiOperation(value = "获取工作流任务待审批节点集合", notes = "通常只有一个待审批节点，有并行任务时,可能有多个待审批节点")

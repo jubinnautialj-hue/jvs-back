@@ -1,7 +1,6 @@
 package cn.bctools.rule.common;
 
 import cn.bctools.rule.cons.SHEnum;
-import cn.bctools.rule.entity.enums.InputType;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -28,7 +27,7 @@ public class ParameterOption<T> {
     /**
      * 选项解释
      */
-    T value;
+    Object value;
     /**
      * 扩展
      */

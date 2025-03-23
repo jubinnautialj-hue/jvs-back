@@ -1,4 +1,4 @@
-//package cn.bctools.rule.signature;
+package cn.bctools.rule.signature;//package cn.bctools.rule.signature;
 //
 //import cn.bctools.rule.annotations.Rule;
 //import cn.bctools.rule.entity.enums.ClassType;

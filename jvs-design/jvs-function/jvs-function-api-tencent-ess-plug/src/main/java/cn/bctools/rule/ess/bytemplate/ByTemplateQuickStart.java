@@ -1,14 +1,15 @@
 package cn.bctools.rule.ess.bytemplate;
 
-import cn.bctools.rule.ess.api.fileuploaddownload.DescribeFileUrlsApi;
 import cn.bctools.rule.ess.api.CreateFlowByTemplateIdDirectlyApi;
+import cn.bctools.rule.ess.api.fileuploaddownload.DescribeFileUrlsApi;
 import cn.bctools.rule.ess.config.Config;
 import com.tencentcloudapi.ess.v20201111.models.FlowCreateApprover;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * @author jvs
- * 使用模板发起合同QuickStart
+ * The type By template quick start.
+ *
+ * @author jvs 使用模板发起合同QuickStart
  */
 @Slf4j
 
@@ -16,6 +17,9 @@ public class ByTemplateQuickStart {
 
     /**
      * ByFileQuickStart
+     *
+     * @param args the input arguments
+     * @throws Exception the exception
      */
     public static void main(String[] args) throws Exception {
         // Step 1

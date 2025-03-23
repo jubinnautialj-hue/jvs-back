@@ -7,9 +7,13 @@ import cn.bctools.design.use.api.dto.DataModelSearchDto;
 import io.swagger.annotations.ApiOperation;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.stereotype.Component;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * The interface Data model api.
@@ -36,7 +40,7 @@ public interface DataModelApi {
      */
     @ApiOperation("获取所有数据")
     @GetMapping(PREFIX + "/list")
-    R<List> list(@RequestParam(value = "dataModelId") String dataModelId, @RequestParam(value = "size") long size, @RequestParam(value = "current") long current, @RequestParam(value = "mode") String mode);
+    R<List<Map>> list(@RequestParam(value = "dataModelId") String dataModelId, @RequestParam(value = "size") long size, @RequestParam(value = "current") long current, @RequestParam(value = "mode") String mode);
 
     /**
      * 查询数据模型的数据
@@ -46,7 +50,7 @@ public interface DataModelApi {
      */
     @ApiOperation("查询数据")
     @PostMapping(PREFIX + "/search")
-    R<List> search(@RequestBody DataModelSearchDto searchDto);
+    R<List<Map>> search(@RequestBody DataModelSearchDto searchDto);
 
     /**
      * 根据模型dataModelId  查询条数

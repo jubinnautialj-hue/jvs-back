@@ -1,0 +1,1148 @@
+<!DOCTYPE html>
+<html lang="en" xmlns="http://www.w3.org/1999/html">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="referrer" content="no-referrer" />
+    <link rel="shortcut icon" href="/favicon.ico">
+    <title>J-IM:支持百万在线用户</title>
+    <style type="text/css" media="screen">
+        * {
+            margin: 0;
+            padding: 0;
+        }
+
+        #wrap {
+            margin: 10px auto;
+            width: 80%;
+            height: 99%;
+        }
+
+        .unit {
+            margin-bottom: 5px;
+            padding: 5px;
+            border: solid 1px #000;
+            height: auto;
+            /*clear: both;*/
+            box-sizing: border-box;
+        }
+
+        .unit label {
+            text-align: right;
+            width: 100px;
+            line-height: 30px;
+            display: inline-block;
+        }
+
+        .unit input {
+            line-height: 30px;
+            width: 100px;
+            height: 30px;
+        }
+
+        .log {
+            font-size: 11px;
+            font-family: Courier;
+            overflow: auto;
+            height: 100%;
+            background: black;
+            width: 70%;
+            float: left
+        }
+
+        .log p {
+            padding: 2px;
+            margin: 0;
+        }
+
+        .content {
+            width: 100%;
+            overflow: hidden;
+            height: 95%;
+            margin: 5px 0 5px 0;
+        }
+
+        .friendOnline {
+            width: 15%;
+            height: 100%;
+            float: left;
+            background: #FCFCFC;
+            border: solid 1px #000;
+            box-sizing: border-box;
+            overflow: auto;
+        }
+
+        .groupOnline {
+            width: 15%;
+            height: 100%;
+            float: right;
+            background: #FCFCFC;
+            border: solid 1px #000;
+            box-sizing: border-box;
+            overflow: auto;
+        }
+    </style>
+    <script type="text/javascript" src="./static/js/date.js"></script>
+</head>
+<script>
+    var socket;
+    var logDiv;
+    var code;
+    var logType;
+    var userId;
+    var onSelected;
+    var curUser;
+    var value;
+    var friends = [];
+    var groups = [];
+    var toGroupId;
+
+    function connect() {
+        if (curUser) {
+            console.log("用户对象", JSON.stringify(curUser))
+            alert("当前已登录,请先退出登录!");
+            return;
+        }
+        var ip = document.getElementById("serverIp").value;
+        var port = document.getElementById("port").value;
+        logType = document.getElementById("logType").value;
+        var code = document.getElementById("code").value;
+        var tempLinkId = document.getElementById("tempLinkId").value;
+        value = code;
+        logDiv = document.getElementById('logs');
+        socket = new WebSocket("ws:" + ip + ":" + port + "/im/?logType=" + logType + "&value=" + value + "&tempLinkId=" + tempLinkId);
+        socket.onopen = function (e) {
+        };
+        socket.onerror = function (e) {
+            logDiv.innerHTML += "<font color='red' size='1'>异常:" + e + "</font><br>";
+            scrollToBottom();
+        };
+        socket.onclose = function (e) {
+            curUser = null;
+            logDiv.innerHTML += "<font color='green' size='1'>关闭连接...</font><br>";
+            document.getElementById("groupOnlinePanel").innerHTML = "&nbsp;在线成员(0/0)";
+            document.getElementById("friendOnlinePanel").innerHTML = "&nbsp;在线成员(0/0)";
+            scrollToBottom();
+        };
+        socket.onmessage = function (e) {
+            console.log(e)
+            var data = e.data;
+            var dataObj = eval("(" + data + ")");//转换为json对象
+
+            console.log("响应: ["+JSON.stringify(dataObj) + "]");
+
+            if (dataObj.code != 10000) {
+                console.log("异常消息:"+dataObj.msg);
+            }
+
+            if (dataObj.command == 12) {//接收到聊天响应处理;
+                // alert(JSON.stringify(dataObj))
+                COMMAND_CHAT_RESP(dataObj);
+            } else if (dataObj.command == 18) {//获取用户信息响应处理;
+                COMMAND_GET_USER_RESP(dataObj);
+            } else if (10000 == dataObj.code && dataObj.command == 12) {//聊天发送状态;
+                COMMAND_CHAT_RESP_SEND_STATUS(data);
+            } else if (dataObj.command == 9) {//加入群组的消息通知处理;
+                COMMAND_JOIN_GROUP_NOTIFY_RESP(dataObj);
+            } else if (dataObj.command == 10) {
+                COMMAND_EXIT_GROUP_NOTIFY_RESP(dataObj);
+
+            } else if (dataObj.command == 20) {
+                COMMAND_GET_MESSAGE_RESP(dataObj, data);
+            }
+            else if (dataObj.command == 6) {//登陆命令返回状态处理
+                COMMAND_LOGIN_RESP(dataObj, data);
+            } else if(dataObj.command == 22) { // 处理通知消息
+                COMMAND_NOTIFY_RESP(dataObj);
+            } else {
+                OTHER(data);
+            }
+            scrollToBottom();
+        };
+    }
+
+    //登陆通知处理
+    function COMMAND_LOGIN_RESP(dataObj, data) {
+        // console.log("6登录: "+JSON.stringify(dataObj))
+
+        if (10000 == dataObj.code) {//登陆成功;
+            curUser = dataObj.data;
+            logDiv.innerHTML += "<font color='green' size='1'>连接成功...</font><br>";
+            socket.send(userCmd);//获取登录用户信息;
+            // socket.send(msgCmd);//获取用户离线消息(好友+群组);
+            scrollToBottom();
+        } else if (10008 == dataObj.code) {//登录失败;
+            OTHER(data);
+        }
+    }
+
+    function getUserFriendsAndGroups() {
+        logDiv.innerHTML += "<font color='green' size='1'>获取用户好友和群组信息...</font><br>";
+        var userCmd = "{\"cmd\":\"17\",\"type\":\"2\",\"userId\":\"" + curUser.userId + "\"}";
+        socket.send(userCmd);
+    }
+
+    function COMMAND_EXIT_GROUP_NOTIFY_RESP(data) {
+        var exitGroupNotify = data.data;
+        var onlineUserCmd = "{\"cmd\":\"17\",\"type\":\"2\",\"userId\":\"" + curUser.userId + "\"}";
+        logDiv.innerHTML += "<font color='#A3A3A3' size='1'>" + exitGroupNotify.user.nick + "(" + exitGroupNotify.user.userId + ")退出群聊...</font><br>";
+        socket.send(onlineUserCmd);//获取在线用户列表;
+    }
+
+    //加入群组的消息通知处理;
+    function COMMAND_JOIN_GROUP_NOTIFY_RESP(data) {
+        var user = data.data.user;
+        logDiv.innerHTML += "<font color='#A3A3A3' size='1'>" + user.nick + "(" + user.userId + ")加入群聊...</font><br>";
+        // var onlineUserCmd = "{\"cmd\":17,\"type\":\"0\",\"userId\":\"" + curUser.userId + "\"}";
+        // socket.send(onlineUserCmd);//获取在线用户列表;
+    }
+
+    //加入群组响应状态处理;
+    function COMMAND_JOIN_GROUP_RESP(data) {
+        //成功加入群组响应信息;
+    }
+
+    //发送聊天请求发送状态处理;
+    function COMMAND_CHAT_RESP_SEND_STATUS(data) {
+        //发送成功后的状态处理...
+    }
+
+    //获取用户信息响应处理;
+    function COMMAND_GET_USER_RESP(data) {
+        // console.log("18用户信息响应"+JSON.stringify(data))
+
+        var user = data.data;
+        curUser = user;
+        // 组用户列表
+        initOnlineGroupUsers();
+        // 好友列表
+        initOnlineFriendUsers();
+    }
+
+    //接收到聊天响应处理;
+    function COMMAND_CHAT_RESP(data) {
+        console.log("12聊天响应："+JSON.stringify(data))
+        var chatObj = data.data;
+        if (!chatObj) {
+            return;
+        }
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+        var from = chatObj.from;
+        if (from == curUser.userId)
+            return;
+        var content = chatObj.content;
+        var user = getOnlineUserById(from);
+        if (user) {
+            logDiv.innerHTML += "<font color='#009ACD' size='1' style='font-weight: bold'>" + user.realName + "(" + user.userId + ")" + " " + createTime + "</font><br>";
+        } else {
+            logDiv.innerHTML += "<font color='#009ACD' size='1' style='font-weight: bold'>" + from + " " + createTime + "</font><br>";
+        }
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>&nbsp;" + content + "</font><br>";
+    }
+
+    //接收到通知响应处理;
+    function COMMAND_NOTIFY_RESP(data) {
+        // console.log("22通知: "+JSON.stringify(data))
+
+        var chatObj = data.data;
+        if (!chatObj) {
+            // alert("请求响应不需要处理")
+            return;
+        }
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+        var from = chatObj.from;
+        if (from == curUser.userId)
+            return;
+        var content = chatObj.content;
+        var user = getOnlineUserById(from);
+
+        logDiv.innerHTML += "<font color='#009ACD' size='1' style='font-weight: bold'>" + chatObj.title + ":" + content + " " + createTime + "</font><br>";
+        // if (user) {
+        //     logDiv.innerHTML += "<font color='#009ACD' size='1' style='font-weight: bold'>" + user.nick + "(" + user.id + ")" + " " + createTime + "</font><br>";
+        // } else {
+        //     logDiv.innerHTML += "<font color='#009ACD' size='1' style='font-weight: bold'>" + from + " " + createTime + "</font><br>";
+        // }
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>&nbsp;" + content + "</font><br>";
+
+        //alert("通知：" + chatObj.title + " : " + content);
+    }
+
+
+
+    //处理用户同步+持久化消息
+    function COMMAND_GET_MESSAGE_RESP(dataObj, data) {
+        var msgObj = dataObj.data;
+        var msgFlag = "";
+        if (msgObj.type == 0 || msgObj.type == 2) {
+            msgFlag = "离线消息";
+        }
+        if (msgObj.type == 1 || msgObj.type == 3) {
+            msgFlag = "历史消息";
+        }
+        if (!msgFlag) {
+            OTHER(data);
+        } else {
+            // console.log("20"+msgFlag + ": "+JSON.stringify(data))
+            friendOfflineMessage(msgObj, msgFlag);
+            groupOfflineMessage(msgObj, msgFlag);
+            notifyOfflineMessage(msgObj, msgFlag);
+        }
+    }
+
+
+    // 离线通知消息处理
+    function notifyOfflineMessage(msgObj, msgFlag) {
+        var notifyDatas = msgObj.notifys;
+        // console.log(JSON.stringify(notifyDatas))
+        for (var index in notifyDatas) {
+            var user_id = notifyDatas[index].from;
+            var createTime = new Date(notifyDatas[index].createTime).Format("yyyy/MM/dd HH:mm:ss");
+            logDiv.innerHTML += "<font color='	#009ACD' size='1' style='font-weight: bold'>" + user_id + "</font><font color='#DC143C' size='1' style='font-weight: bold'>(通知" + msgFlag + ")</font>" + "<font color='#009ACD' size='1' style='font-weight: bold'>" + createTime + "</font><br>";
+            logDiv.innerHTML += "<font color='#FFFFFF' size='1'>&nbsp;"+ notifyDatas[index].title + " : "+ notifyDatas[index].content + "</font><br>";
+        }
+    }
+
+    //好友消息
+    function friendOfflineMessage(msgObj, msgFlag) {
+        var friends = msgObj.friends;
+        for (var key in friends) {
+            var chatDatas = friends[key];
+            for (var index in chatDatas) {
+                var user_id = chatDatas[index].from;
+                var createTime = new Date(chatDatas[index].createTime).Format("yyyy/MM/dd HH:mm:ss");
+                logDiv.innerHTML += "<font color='	#009ACD' size='1' style='font-weight: bold'>" + user_id + "</font><font color='#DC143C' size='1' style='font-weight: bold'>(好友" + msgFlag + ")</font>" + "<font color='#009ACD' size='1' style='font-weight: bold'>" + createTime + "</font><br>";
+                logDiv.innerHTML += "<font color='#FFFFFF' size='1'>&nbsp;" + chatDatas[index].content + "</font><br>";
+            }
+        }
+    }
+
+    //群组消息
+    function groupOfflineMessage(msgObj, msgFlag) {
+        var groups = msgObj.groups;
+        for (var key in groups) {
+            var chatDatas = groups[key];
+            for (var index in chatDatas) {
+                var user_id = chatDatas[index].from;
+                var createTime = new Date(chatDatas[index].createTime).Format("yyyy/MM/dd HH:mm:ss");
+                logDiv.innerHTML += "<font color='	#009ACD' size='1' style='font-weight: bold'>" + user_id + "</font><font color='#DC143C' size='1' style='font-weight: bold'>(群聊[" + chatDatas[index].groupId + "]" + msgFlag + ")</font>" + "<font color='#009ACD' size='1' style='font-weight: bold'>" + createTime + "</font><br>";
+                logDiv.innerHTML += "<font color='#FFFFFF' size='1'>&nbsp;" + chatDatas[index].content + "</font><br>";
+            }
+        }
+    }
+
+    //其它信息处理;
+    function OTHER(data) {
+        //处理数据
+        logDiv.innerHTML += "<font color='green' size='1'>" + data + "</font><br>";
+    }
+
+    function getOnlineUserById(id) {
+        var friends = curUser.friends;
+        var onlineUserStr = "";
+        for (var g = 0; g < friends.length; g++) {
+            var friend = friends[g];
+            var users = friend.users;
+            for (var u = 0; u < users.length; u++) {
+                var user = users[u];
+                if (user.userId == id) {
+                    return user;
+                }
+            }
+        }
+    }
+
+    function initOnlineGroupUsers() {
+        if (!curUser.groups) {
+            onlineUserStr = "&nbsp;在线成员(0/0)";
+            document.getElementById("groupOnlinePanel").innerHTML = onlineUserStr;
+            return;
+        }
+        var groups = curUser.groups;
+        var onlineUserStr = "";
+        for (var g = 0; g < groups.length; g++) {
+            var group = groups[g];
+            var users = group.users;
+            onlineUserStr += "<span gid="+group.groupId+" onclick=\"checkGroup(this)\">&nbsp;" + group.name + "在线成员(" + group.online + "/" + users.length + ")</span>";
+            for (var u = 0; u < users.length; u++) {
+                var user = users[u];
+                onlineUserStr += "<div id=\"" + user.userId + "\" nick=\"" + user.realName + "\" style=\"line-height: 25px;margin: 5px 5px 0 5px;padding-left:15px;cursor:pointer;\" onclick=\"onlineDb(this);\" onmouseover=\"onlineMove(this);\"  onmouseleave=\"onlineLeave(this);\">";
+                var photo = ""
+                if (user.avatar) {
+                    photo = user.avatar
+                } else {
+                    photo = "https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fcdn.duitang.com%2Fuploads%2Fitem%2F201301%2F23%2F20130123120100_XYVZw.thumb.700_0.jpeg&refer=http%3A%2F%2Fcdn.duitang.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=jpeg?sec=1624065016&t=e7513469cd2c40236f5a8dfc52f3445e";
+                }
+                onlineUserStr +=  "<img alt=\"" + user.userId + "\" src=\"" + photo + "\" height=\"25px\" width=\"25px;\" style=\"float:left\">&nbsp;";
+                onlineUserStr += "<font size='2'>" + user.realName + "(" + user.userId + ")</font></div>";
+            }
+        }
+        if (!onlineUserStr) {
+            onlineUserStr = "&nbsp;在线成员(0/0)";
+        }
+        document.getElementById("groupOnlinePanel").innerHTML = onlineUserStr;
+    }
+
+    function initOnlineFriendUsers() {
+        if (!curUser.friends) {
+            onlineUserStr = "&nbsp;在线成员(0/0)";
+            document.getElementById("friendOnlinePanel").innerHTML = onlineUserStr;
+            return;
+        }
+        var friends = curUser.friends;
+        var onlineUserStr = "";
+        for (var g = 0; g < friends.length; g++) {
+            var friend = friends[g];
+            var users = friend.users;
+            onlineUserStr += "&nbsp;" + friend.name + "在线成员(" + friend.online + "/" + users.length + ")";
+            for (var u = 0; u < users.length; u++) {
+                var user = users[u];
+                onlineUserStr += "<div id=\"" + user.userId + "\" nick=\"" + user.realName + "\" style=\"line-height: 25px;margin: 5px 5px 0 5px;padding-left:15px;cursor:pointer;\" onclick=\"onlineDb(this);\" onmouseover=\"onlineMove(this);\"  onmouseleave=\"onlineLeave(this);\">";
+
+                var photo = "";
+                if (user.avatar) {
+                    photo = user.avatar
+                } else {
+                    photo = "https://gimg2.baidu.com/image_search/src=http%3A%2F%2Fcdn.duitang.com%2Fuploads%2Fitem%2F201301%2F23%2F20130123120100_XYVZw.thumb.700_0.jpeg&refer=http%3A%2F%2Fcdn.duitang.com&app=2002&size=f9999,10000&q=a80&n=0&g=0n&fmt=jpeg?sec=1624065016&t=e7513469cd2c40236f5a8dfc52f3445e";
+                }
+                onlineUserStr +=  "<img alt=\"" + user.userId + "\" src=\"" + photo + "\" height=\"25px\" width=\"25px;\" style=\"float:left\">&nbsp";
+                onlineUserStr +=  "<font size='2'>" + user.realName + "(" + user.userId + ")</font></div>";
+            }
+        }
+        if (!onlineUserStr) {
+            onlineUserStr = "&nbsp;在线成员(0/0)";
+        }
+        document.getElementById("friendOnlinePanel").innerHTML = onlineUserStr;
+    }
+
+    function disConnect() {
+        socket.close();
+    }
+
+    function send() {
+        var toId = "";
+        if (onSelected) {
+            toId = onSelected.getElementsByTagName("img")[0].alt;
+        }
+        var createTime = new Date().getTime();
+        var content = document.getElementById('content').value;
+        if (content == "")
+            return;
+        var msg = "{\"from\": \"" + curUser.userId + "\",\"to\": \"" + toId + "\",\"cmd\":\"11\",\"createTime\":" + createTime + ",\"chatType\":\"2\",\"msgType\": \"0\",\"content\": \"" + content + "\"}";
+        if (!toId) {
+            alert("请选择要私聊的人!");
+            return;
+        }
+        if (toId == curUser.userId) {
+            alert("无法给自己发送消息!");
+            return;
+        }
+        socket.send(msg);
+        var chatObj = eval("(" + msg + ")");
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+        //处理数据
+        logDiv.innerHTML += "<font color='#228B22' size='1' style='font-weight: bold'>" + curUser.realName + "(" + chatObj.from + ") " + createTime + "</font><br>";
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>&nbsp;" + chatObj.content + "</font><br>";
+        document.getElementById('content').value = "";
+    }
+
+    function sendGroup() {
+
+        if (!toGroupId) {
+            alert("请选择要聊天的群!");
+        }
+
+        var toId = toGroupId;
+
+
+        var createTime = new Date().getTime();
+        var content = document.getElementById('content').value;
+        if (content == "")
+            return;
+        var msg = "{\"from\": \"" + curUser.userId + "\",\"createTime\":" + createTime + ",\"cmd\":\"11\",\"groupId\":\""+toId+"\",\"chatType\":\"1\",\"msgType\":\"0\",\"content\": \"" + content + "\"}";
+        console.log(msg);
+        socket.send(msg);
+        var chatObj = eval("(" + msg + ")");
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+        //处理数据
+        logDiv.innerHTML += "<font color='#228B22' size='1' style='font-weight: bold'>" + curUser.nick + "(" + curUser.userId + ")" + " " + createTime + "</font><br>";
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>&nbsp;" + chatObj.content + "</font><br>";
+        document.getElementById('content').value = "";
+    }
+
+    function sendNotifyAccurate() {
+
+
+        var createTime = new Date().getTime();
+
+        var notifyTitle = document.getElementById('notifyTitle').value;
+        var notifyContent = document.getElementById('notifyContent').value;
+        if (notifyTitle == "" || notifyContent == "") {
+            alert("请输入通知标题和通知内容");
+            return;
+        }
+
+        var toIdStr = document.getElementById("notifyGoal").value;
+        if (toIdStr == "") {
+            alert("请输入目标用户id");
+            return;
+        }
+
+        var toId = "[";
+        var toIdArr = toIdStr.split(",");
+        for (var i=0; i<toIdArr.length; i++) {
+            toId += "\""+toIdArr[i] + "\","
+        }
+        toId = toId.substring(0, toId.length-1);
+        toId += "]"
+
+        var msg = "{\n" +
+            "  \"cmd\": \"21\",\n" +
+            "  \"businessType\": \"0\",\n" +
+            "  \"notifyType\": \"2\",\n" +
+            "  \"toGroupIds\":[],\n" +
+            "  \"toUserIds\": " + toId + "," +
+            "  \"from\": \""+curUser.userId+"\",\n" +
+            "  \"sequence\": \"00000000001\",\n" +
+            "  \"title\": \""+notifyTitle+"\",\n" +
+            "  \"content\": \""+notifyContent+"\"\n" +
+            "}";
+
+        console.log(msg);
+        socket.send(msg);
+        var chatObj = eval("(" + msg + ")");
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+
+        //处理数据
+        logDiv.innerHTML += "<font color='#228B22' size='1' style='font-weight: bold'>" + chatObj.from + " " + createTime + "</font><br>";
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>" + chatObj.title + "&nbsp;" + chatObj.content + "</font><br>";
+        document.getElementById('content').value = "";
+    }
+
+    function sendNotifyGroup() {
+
+        var createTime = new Date().getTime();
+        var notifyTitle = document.getElementById('notifyTitle').value;
+        var notifyContent = document.getElementById('notifyContent').value;
+        if (notifyTitle == "" || notifyContent == "") {
+            return;
+        }
+
+        var toIdStr = document.getElementById("notifyGoal").value;
+        if (toIdStr == "") {
+            alert("请输入目标组id");
+            return;
+        }
+
+        var toId = "[";
+        var toIdArr = toIdStr.split(",");
+        for (var i=0; i<toIdArr.length; i++) {
+            toId += "\""+toIdArr[i] + "\","
+        }
+        toId = toId.substring(0, toId.length-1);
+        toId += "]"
+
+        var msg = "{\n" +
+            "  \"cmd\": \"21\",\n" +
+            "  \"businessType\": \"0\",\n" +
+            "  \"notifyType\": \"1\",\n" +
+            "  \"toGroupIds\":" + toId + "," +
+            "  \"toUserIds\": [],\n" +
+            "  \"from\": \""+curUser.userId+"\",\n" +
+            "  \"sequence\": \"00000000001\",\n" +
+            "  \"title\": \""+notifyTitle+"\",\n" +
+            "  \"content\": \""+notifyContent+"\"\n" +
+            "}";
+        console.log(msg);
+        socket.send(msg);
+        var chatObj = eval("(" + msg + ")");
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+
+        //处理数据
+        logDiv.innerHTML += "<font color='#228B22' size='1' style='font-weight: bold'>" + chatObj.from + " " + createTime + "</font><br>";
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>" + chatObj.title + "&nbsp;" + chatObj.content + "</font><br>";
+        document.getElementById('content').value = "";
+    }
+
+    function sendPublishGroup()  {
+
+        var createTime = new Date().getTime();
+        var notifyTitle = document.getElementById('notifyTitle').value;
+        var notifyContent = document.getElementById('notifyContent').value;
+        if (notifyTitle == "" || notifyContent == "") {
+            return;
+        }
+
+        var toIdStr = document.getElementById("notifyGoal").value;
+        if (toIdStr == "") {
+            alert("请输入目标租户id");
+            return;
+        }
+
+        var toId = "[";
+        var toIdArr = toIdStr.split(",");
+        for (var i=0; i<toIdArr.length; i++) {
+            toId += "\""+toIdArr[i] + "\","
+        }
+        toId = toId.substring(0, toId.length-1);
+        toId += "]"
+
+        var msg = "{\n" +
+            "  \"cmd\": \"21\",\n" +
+            "  \"businessType\": \"0\",\n" +
+            "  \"notifyType\": \"0\",\n" +
+            "  \"tenantIds\":" + toId + "," +
+            "  \"toUserIds\": [],\n" +
+            "  \"from\": \""+curUser.userId+"\",\n" +
+            "  \"sequence\": \"00000000001\",\n" +
+            "  \"title\": \""+notifyTitle+"\",\n" +
+            "  \"content\": \""+notifyContent+"\"\n" +
+            "}";
+        console.log(msg);
+        socket.send(msg);
+        var chatObj = eval("(" + msg + ")");
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+
+        //处理数据
+        logDiv.innerHTML += "<font color='#228B22' size='1' style='font-weight: bold'>" + chatObj.from + " " + createTime + "</font><br>";
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>" + chatObj.title + "&nbsp;" + chatObj.content + "</font><br>";
+        document.getElementById('content').value = "";
+    }
+
+    function sendBusinessAccurate() {
+
+
+        var createTime = new Date().getTime();
+
+        var businessId = document.getElementById('businessId').value;
+        var businessContent = document.getElementById('businessContent').value;
+        var expire = document.getElementById('expire').value;
+        if (businessId == "" || expire == "") {
+            alert("请输入完整数据");
+            return;
+        }
+
+        var msg = "{\n" +
+            "  \"cmd\": \"25\",\n" +
+            "  \"businessId\": \""+businessId+"\",\n" +
+            "  \"from\": \""+curUser.userId+"\",\n" +
+            "  \"expire\": "+expire+"\n";
+
+        if (businessContent != "") {
+            msg +=  "  ,\"content\": "+businessContent+",\n";
+        }
+        msg += "}";
+
+        console.log(msg);
+        socket.send(msg);
+        var chatObj = eval("(" + msg + ")");
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+
+        //处理数据
+        logDiv.innerHTML += "<font color='#228B22' size='1' style='font-weight: bold'>" + chatObj.from + " " + createTime + "</font><br>";
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>" + chatObj.title + "&nbsp;" + chatObj.content + "</font><br>";
+        document.getElementById('content').value = "";
+    }
+
+    function sendUpdateGroupAccurate() {
+
+
+        var createTime = new Date().getTime();
+
+        var groupId = document.getElementById('groupId').value;
+        var extras = document.getElementById('extras').value;
+        if (groupId == "" || extras == "") {
+            alert("请输入完整数据");
+            return;
+        }
+
+        var msg = "{\n" +
+            "  \"cmd\": \"27\",\n" +
+            "  \"groupId\": \""+groupId+"\",\n" +
+            "  \"from\": \""+curUser.userId+"\",\n" +
+            "  \"extras\": "+extras+"\n";
+
+        msg += "}";
+
+        console.log(msg);
+        socket.send(msg);
+        var chatObj = eval("(" + msg + ")");
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+
+        //处理数据
+        logDiv.innerHTML += "<font color='#228B22' size='1' style='font-weight: bold'>" + chatObj.from + " " + createTime + "</font><br>";
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>" + chatObj.title + "&nbsp;" + chatObj.content + "</font><br>";
+        document.getElementById('content').value = "";
+    }
+
+
+    function sendJoinGroupAccurate() {
+
+
+        var createTime = new Date().getTime();
+
+        var groupId = document.getElementById('joinGroupId').value;
+        var groupType = document.getElementById('joinGroupType').value;
+        var groupName = document.getElementById('joinGroupName').value;
+
+        if (groupId == "" || groupType == "") {
+            alert("请输入完整数据");
+            return;
+        }
+
+        var msg = "{\n" +
+            "  \"cmd\": \"7\",\n" +
+            "  \"groupId\": \""+groupId+"\",\n" +
+            "  \"groupType\": "+groupType+",\n" +
+            "  \"name\": \""+groupName+"\",\n" +
+            "  \"from\": \""+curUser.userId+"\",\n" ;
+
+        msg += "}";
+
+        console.log(msg);
+        socket.send(msg);
+        var chatObj = eval("(" + msg + ")");
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+
+        //处理数据
+        logDiv.innerHTML += "<font color='#228B22' size='1' style='font-weight: bold'>" + chatObj.from + " " + createTime + "</font><br>";
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>" + chatObj.title + "&nbsp;" + chatObj.content + "</font><br>";
+        document.getElementById('content').value = "";
+    }
+
+    function sendQuitGroupAccurate() {
+
+
+        var createTime = new Date().getTime();
+
+        var groupId = document.getElementById('quitGroupId').value;
+
+        if (groupId == "") {
+            alert("请输入完整数据");
+            return;
+        }
+
+        var msg = "{\n" +
+            "  \"cmd\": \"29\",\n" +
+            "  \"groupId\": \""+groupId+"\",\n" +
+            "  \"from\": \""+curUser.userId+"\",\n" ;
+
+        msg += "}";
+
+        console.log(msg);
+        socket.send(msg);
+        var chatObj = eval("(" + msg + ")");
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+
+        //处理数据
+        logDiv.innerHTML += "<font color='#228B22' size='1' style='font-weight: bold'>" + chatObj.from + " " + createTime + "</font><br>";
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>" + chatObj.title + "&nbsp;" + chatObj.content + "</font><br>";
+        document.getElementById('content').value = "";
+    }
+
+    function sendGetGroupUserAccurate() {
+
+
+        var createTime = new Date().getTime();
+
+        var groupId = document.getElementById('getGroupId').value;
+
+        if (groupId == "") {
+            alert("请输入完整数据");
+            return;
+        }
+
+        var msg = "{\n" +
+            "  \"cmd\": \"31\",\n" +
+            "  \"groupId\": \""+groupId+"\",\n" +
+            "  \"from\": \""+curUser.userId+"\",\n" ;
+
+        msg += "}";
+
+        console.log(msg);
+        socket.send(msg);
+        var chatObj = eval("(" + msg + ")");
+        var createTime = new Date(chatObj.createTime).Format("yyyy/MM/dd HH:mm:ss");
+
+        //处理数据
+        logDiv.innerHTML += "<font color='#228B22' size='1' style='font-weight: bold'>" + chatObj.from + " " + createTime + "</font><br>";
+        //处理数据
+        logDiv.innerHTML += "<font color='#FFFFFF' size='1'>" + chatObj.title + "&nbsp;" + chatObj.content + "</font><br>";
+        document.getElementById('content').value = "";
+    }
+
+
+
+    function scrollToBottom() {
+        var logDiv = document.getElementById('logs');
+        logDiv.scrollTop = logDiv.scrollHeight;
+    }
+
+    function clearLogs() {
+        var logDiv = document.getElementById('logs');
+        logDiv.innerHTML = "";
+    }
+
+    function showServerConfig(obj) {
+        var target = document.getElementById("serverConfigId");
+        if (target.style.display == "block") {
+            target.style.display = "none";
+            obj.value = "服务器配置";
+        } else {
+            target.style.display = "block";
+            obj.value = '关闭配置';
+        }
+    }
+
+    function displayDiv(obj, divId) {
+        var target = document.getElementById(divId);
+        if (target.style.display == "block") {
+            target.style.display = "none";
+        } else {
+            target.style.display = "block";
+        }
+    }
+
+
+
+    function onlineDb(obj) {
+        if (onSelected) {
+            if (onSelected.id != obj.id) {
+                onSelected.style.background = "";
+            }
+        }
+        obj.style.background = "#D4D4D4";
+        onSelected = obj;
+        var sendBtn = document.getElementById("sendBtn");
+        sendBtn.style = "width: 150px;"
+        sendBtn.value = "发送给:" + onSelected.id;
+    }
+
+    function checkGroup(obj){
+        var groupId = obj.getAttribute("gid");
+        var sendGroupBtn = document.getElementById("sendGroupBtn");
+        sendGroupBtn.style = "width: 150px;"
+        sendGroupBtn.value = "发送到群组:" + groupId;
+        toGroupId = groupId;
+    }
+
+    function onlineMove(obj) {
+        if ("undefined" == typeof (onSelected) || onSelected.id != obj.id) {
+            obj.style.background = "#F0F0F0";
+        }
+    }
+
+    function onlineLeave(obj) {
+        var onlineDiv = document.getElementById("groupOnlinePanel").getElementsByTagName("div");
+        for (var i = 0; i < onlineDiv.length; i++) {
+            if ("undefined" == typeof (onSelected) || onSelected.id != onlineDiv[i].id) {
+                onlineDiv[i].style.background = "";
+            }
+        }
+
+        var onlineFriendDiv = document.getElementById("friendOnlinePanel").getElementsByTagName("div");
+        for (var i = 0; i < onlineFriendDiv.length; i++) {
+            if ("undefined" == typeof (onSelected) || onSelected.id != onlineFriendDiv[i].id) {
+                onlineFriendDiv[i].style.background = "";
+            }
+        }
+    }
+
+    function keyDown(e) {
+        var ev = window.event || e;
+        //13是键盘上面固定的回车键
+        if (ev.keyCode == 13) {
+            sendGroup();
+        }
+    }
+
+    function authCmd() {
+        if (!curUser) {
+            alert("demo中模拟命令需要先登录，请先登录!");
+        }
+        var authCmd = "{\"cmd\":\"3\",\"token\":\"校验码\"}";
+        socket.send(authCmd);
+    }
+
+    function heartbeatCmd() {
+        if (!curUser) {
+            alert("demo中模拟命令需要先登录，请先登录!");
+        }
+        var heartbeatCmd = "{\"cmd\":\"13\",\"hbbyte\":\"-127\"}";
+        socket.send(heartbeatCmd);
+    }
+
+    function friendHistoryCmd() {
+        if (!curUser) {
+            alert("请先登录!");
+            return;
+        }
+        var friend_id = document.getElementById("history_friend_id").value;
+        ;
+        if (friend_id == "") {
+            alert("请输入要获取的好友ID!");
+            return;
+        }
+        var msgHistoryCmd = "{\"cmd\":\"19\",\"offset\":\"0\",\"count\":\"100\",\"beginTime\":\"1614763569000\",\"fromUserId\":\"" + friend_id + "\",\"userId\":\"" + curUser.userId + "\",\"messageType\":\"" + 1 + "\"}";
+        socket.send(msgHistoryCmd);//获取用户历史消息;
+    }
+
+    function friendOfflineCmd() {
+        if (!curUser) {
+            alert("请先登录!");
+            return;
+        }
+        var friend_id = document.getElementById("offline_friend_id").value;
+        ;
+        if (friend_id == "") {
+            alert("请输入要获取的好友ID!");
+            return;
+        }
+        var msgHistoryCmd = "{\"cmd\":\"19\",\"fromUserId\":\"" + friend_id + "\",\"userId\":\"" + curUser.userId + "\",\"messageType\":\"" + 0 + "\"}";
+        socket.send(msgHistoryCmd);//获取用户历史消息;
+    }
+
+    function businessCmd() {
+        if (!curUser) {
+            alert("请先登录!");
+            return;
+        }
+        var business_id = document.getElementById("business_id").value;
+        ;
+        if (business_id == "") {
+            alert("请输入要获取的业务ID!");
+            return;
+        }
+        var msgHistoryCmd = "{\"cmd\":\"19\",\"businessId\":\"" + business_id + "\",\"userId\":\"" + curUser.userId + "\",\"messageType\":\"" + 4 + "\"}";
+        socket.send(msgHistoryCmd);//获取用户历史消息;
+    }
+
+
+
+    function groupHistoryCmd() {
+        if (!curUser) {
+            alert("请先登录!");
+            return;
+        }
+        var group_id = document.getElementById("history_group_id").value;
+        ;
+        if (group_id == "") {
+            alert("请输入要获取的群组ID!");
+            return;
+        }
+        var msgHistoryCmd = "{\"cmd\":\"19\",\"offset\":\"0\",\"count\":\"100\",\"beginTime\":\"1614763569000\",\"groupId\":\"" + group_id + "\",\"userId\":\"" + curUser.userId + "\",\"messageType\":\"" + 1 + "\"}";
+        socket.send(msgHistoryCmd);//获取群组历史消息;
+    }
+
+    function notifyHistoryCmd() {
+        if (!curUser) {
+            alert("请先登录!");
+            return;
+        }
+        var msgHistoryCmd = "{\"cmd\":\"19\",\"offset\":\"0\",\"count\":\"100\",\"beginTime\":\"1614763569000\",\"userId\":\"" + curUser.userId + "\",\"messageType\":\"" + 3 + "\"}";
+        socket.send(msgHistoryCmd);//获取群组历史消息;
+    }
+
+    function groupOfflineCmd() {
+        if (!curUser) {
+            alert("请先登录!");
+            return;
+        }
+        var group_id = document.getElementById("offline_group_id").value;
+        ;
+        if (group_id == "") {
+            alert("请输入要获取的群组ID!");
+            return;
+        }
+        var msgHistoryCmd = "{\"cmd\":\"19\",\"groupId\":\"" + group_id + "\",\"userId\":\"" + curUser.userId + "\",\"messageType\":\"" + 0 + "\"}";
+        socket.send(msgHistoryCmd);//获取群组历史消息;
+    }
+
+    function chatAllOfflineCmd() {
+        if (!curUser) {
+            alert("请先登录!");
+            return;
+        }
+        var msgHistoryCmd = "{\"cmd\":\"19\",\"userId\":\"" + curUser.userId + "\",\"messageType\":\"" + 0 + "\"}";
+        socket.send(msgHistoryCmd);//获取用户历史消息;
+    }
+
+    function notifyAllOfflineCmd() {
+        if (!curUser) {
+            alert("请先登录!");
+            return;
+        }
+        var msgHistoryCmd = "{\"cmd\":\"19\",\"userId\":\"" + curUser.userId + "\",\"messageType\":\"" + 2 + "\"}";
+        socket.send(msgHistoryCmd);//获取用户历史消息;
+    }
+
+
+
+</script>
+<div id="wrap" style="height:600px;">
+    <div class="unit">
+        <label>路由:</label>
+        <input id="logType" value="0"/>
+        <label>临时连接id:</label>
+        <input id="tempLinkId" value=""/>
+        <label style="width: 80px;">登录凭证:</label>
+        <input id="code" value=""/>
+        <input onclick="javascript:connect();" type="button" value="登录"/>
+        <input onclick="javascript:disConnect();" type="button" value="退出"/>
+        <input onclick="javascript:showServerConfig(this);" type="button" value="服务器配置"/>
+    </div>
+    <div class="unit" id="serverConfigId" style="display: none;">
+        <label>服务器IP:</label>
+        <input id="serverIp" value="localhost"/>
+        <label>端口号:</label>
+        <input id="port" value="30015"/>
+    </div>
+
+    <div class="unit">
+       <div>
+           <label>&nbsp其它操作:</label>
+           <input type="button" value="清空记录" onclick="clearLogs();"/>
+           <input type="button" value="鉴权命令" onclick="authCmd();"/>
+           <input type="button" value="心跳命令" onclick="heartbeatCmd();"/>
+           <input type="button" value="获取好友和群组信息" style="width: 150px;" onclick="getUserFriendsAndGroups();"/>
+       </div>
+
+    </div>
+    <div style="height:100%">
+        <label>聊天记录:</label>
+        <div class="content">
+            <div id="friendOnlinePanel" class="friendOnline">
+                &nbsp;在线好友(0/0)
+            </div>
+            <div id="logs" class="unit log">
+            </div>
+            <div id="groupOnlinePanel" class="groupOnline">
+                &nbsp;在线成员(0/0)
+            </div>
+        </div>
+    </div>
+
+    <div class="unit" style="border: none;padding:10px 0 20px 0;">
+        <input onclick="javascript:displayDiv(this, 'sendMsgDiv');" type="button" value="发送消息操作"/>
+        <input onclick="javascript:displayDiv(this, 'getMsgDiv');" type="button" value="获取消息操作"/>
+        <input onclick="javascript:displayDiv(this, 'groupDiv');" type="button" value="群组操作"/>
+    </div>
+
+    <div id="sendMsgDiv" style="margin-bottom: 5px;padding-top: 5px;  height: auto; /*clear: both;*/ box-sizing: border-box; display: none">
+        <span style="color: chocolate; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;">发送消息</span>
+        <div class="unit">
+            <span style="color: blue; font-weight: bolder;padding:10px 0 10px 0; display: inline-block">聊天</span>
+            <div>
+                <label>聊天内容:</label>
+                <input id="content" style="width:500px;" onkeydown="keyDown(event)"/>
+                <input onclick="javascript:sendGroup()" id="sendGroupBtn" type="button" value="群聊"/>&nbsp;
+                <input onclick="javascript:send()" id="sendBtn" type="button" value="私聊"/>
+            </div>
+
+            <span style="margin-top:20px; color: blue; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;width:100%;border-top: solid 1px yellowgreen">通知</span>
+            <div>
+                <label>通知标题:</label>
+                <input id="notifyTitle" style="width:100px;" onkeydown="keyDown(event)"/>
+                <label>通知内容:</label>
+                <input id="notifyContent" style="width:400px;" onkeydown="keyDown(event)"/>
+                <label>通知目标:</label>
+                <input id="notifyGoal" style="width:100px;"  placeholder="id(逗号分割)" onkeydown="keyDown(event)"/>
+                <input onclick="javascript:sendNotifyAccurate()" id="sendNotifyBtn" type="button" value="精确通知"/>
+                <input onclick="javascript:sendNotifyGroup()" id="sendNotifyGroupBtn" type="button" value="组通知"/>
+                <input onclick="javascript:sendPublishGroup()" id="sendPublishGroupBtn" type="button" value="广播"/>
+            </div>
+
+            <span style="margin-top:20px; color: blue; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;width:100%;border-top: solid 1px yellowgreen">自定义消息</span>
+            <div>
+                <label>业务号:</label>
+                <input id="businessId" style="width:100px;" onkeydown="keyDown(event)"/>
+                <label>业务内容:</label>
+                <input id="businessContent" style="width:400px;" placeholder="JSON格式"  onkeydown="keyDown(event)"/>
+                <label>消息有效期:</label>
+                <input id="expire" style="width:100px;" placeholder="单位：秒"  onkeydown="keyDown(event)"/>
+                <input onclick="javascript:sendBusinessAccurate()" id="sendBusinessBtn" type="button" value="发送业务消息"/>
+            </div>
+        </div>
+    </div>
+
+    <div id="getMsgDiv" style="margin-bottom: 5px;padding-top: 5px;  height: auto; /*clear: both;*/ box-sizing: border-box; display: none;">
+        <span style="color: chocolate; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;">获取消息</span>
+        <div class="unit">
+            <span style="color: blue; font-weight: bolder;padding:10px 0 10px 0; display: inline-block;">获取历史消息</span>
+            <div>
+                <input id="history_friend_id" style="width:100px;" placeholder="输入好友ID"/>
+                <input type="button" value="指定好友历史消息" onclick="friendHistoryCmd();" style="width: 150px;"/>
+                <input id="history_group_id" style="width:100px;" placeholder="输入群组ID"/>
+                <input type="button" value="指定群组历史消息" onclick="groupHistoryCmd();" style="width: 150px;"/>
+                <input type="button" value="所有通知历史消息" onclick="notifyHistoryCmd();" style="width: 150px;"/>
+            </div>
+
+            <span style="margin-top:20px; color: blue; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;width:100%;border-top: solid 1px yellowgreen">获取离线消息</span>
+            <div>
+                <input id="offline_friend_id" style="width:100px;" placeholder="输入好友ID"/>
+                <input type="button" value="指定好友离线消息" onclick="friendOfflineCmd();" style="width: 150px;"/>
+                <input id="offline_group_id" style="width:100px;" placeholder="输入群组ID"/>
+                <input type="button" value="指定群组离线消息" onclick="groupOfflineCmd();" style="width: 150px;"/>
+                <input type="button" value="当前用户所有离线消息(私聊+群组)" onclick="chatAllOfflineCmd();" style="width: 220px;"/>
+                <input type="button" value="当前用户所有离线通知消息" onclick="notifyAllOfflineCmd();" style="width: 170px;"/>
+            </div>
+
+            <span style="margin-top:20px; color: blue; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;width:100%;border-top: solid 1px yellowgreen">获取业务消息</span>
+            <div>
+                <input id="business_id" style="width:100px;" placeholder="输入业务消息ID"/>
+                <input type="button" value="获取指定业务消息" onclick="businessCmd();" style="width: 150px;"/>
+            </div>
+        </div>
+    </div>
+
+    <div id="groupDiv" style="margin-bottom: 5px;padding-top: 5px;  height: auto; /*clear: both;*/ box-sizing: border-box; display: none;">
+        <span style="color: chocolate; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;">群组操作</span>
+        <div class="unit">
+            <span style="color: blue; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;">加入群组</span>
+            <div>
+                <input id="joinGroupId" style="width:100px;" onkeydown="keyDown(event)"  placeholder="组id"/>
+                <label>组类型:</label>
+                <input id="joinGroupType" style="width:100px;" onkeydown="keyDown(event)" placeholder="0-普通，1-文件组"/>
+                <label>组名称:</label>
+                <input id="joinGroupName" style="width:100px;" onkeydown="keyDown(event)"/>
+                <input onclick="javascript:sendJoinGroupAccurate()" id="sendJoinGroupAccurate" type="button" value="入群"/>
+            </div>
+
+            <span style="margin-top:20px; color: blue; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;width:100%;border-top: solid 1px yellowgreen">退出群组</span>
+            <div>
+                <input id="quitGroupId" style="width:100px;" onkeydown="keyDown(event)"  placeholder="组id"/>
+                <input onclick="javascript:sendQuitGroupAccurate()" id="sendQuitGroupAccurate" type="button" value="退群"/>
+            </div>
+
+            <span style="margin-top:20px; color: blue; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;width:100%;border-top: solid 1px yellowgreen">修改组用户信息</span>
+            <div>
+                <input id="groupId" style="width:100px;" onkeydown="keyDown(event)" placeholder="组id"/>
+                <label>扩展信息:</label>
+                <input id="extras" style="width:400px;" placeholder="JSON格式"  onkeydown="keyDown(event)"/>
+                <input onclick="javascript:sendUpdateGroupAccurate()" id="sendUpdateGroupAccurate" type="button" value="修改组用户信息"/>
+            </div>
+
+            <span style="margin-top:20px; color: blue; font-weight: bolder;padding:10px 0 10px 0;display: inline-block;width:100%;border-top: solid 1px yellowgreen">获取指定组用户列表</span>
+            <div>
+                <input id="getGroupId" style="width:100px;" onkeydown="keyDown(event)"  placeholder="组id"/>
+                <input onclick="javascript:sendGetGroupUserAccurate()" id="sendGetGroupUserAccurate" type="button" value="获取指定组用户"/>
+            </div>
+        </div>
+    </div>
+
+
+
+
+</div>
+</body>
+</html>

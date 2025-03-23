@@ -10,6 +10,7 @@ import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.hutool.core.img.Img;
 import cn.hutool.core.img.ImgUtil;
 import cn.hutool.core.util.URLUtil;
 import cn.hutool.http.HttpUtil;
@@ -19,7 +20,9 @@ import lombok.SneakyThrows;
 import javax.imageio.stream.MemoryCacheImageOutputStream;
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.*;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.Map;
 
 /**
@@ -53,12 +56,10 @@ public class ImgUtilsServiceImpl implements BaseCustomFunctionInterface<ImgDto> 
             );
             ImgUtil.write(scale, "jpg", outputStream, 0.0f, Color.WHITE);
         } else {
-            ImgUtil.scale(new ByteArrayInputStream(HttpUtil.downloadBytes(dto.getFileUrl())),
-                    byteArrayOutputStream,
-                    dto.getWidth(),
-                    dto.getHeight(),
-                    Color.WHITE
-            );
+            Img.from(new ByteArrayInputStream(HttpUtil.downloadBytes(dto.getFileUrl())))
+                    .setTargetImageType("jpg")
+                    .scale(dto.getWidth(), dto.getHeight(), Color.WHITE)//
+                    .write(byteArrayOutputStream);
         }
         byte[] serialize = byteArrayOutputStream.toByteArray();
         InputStream byteArrayInputStream = new ByteArrayInputStream(serialize);

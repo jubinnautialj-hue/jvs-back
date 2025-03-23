@@ -36,6 +36,10 @@ public class NodeProperties {
     private TimeLimit timeLimit;
     @ApiModelProperty(value = "主管信息")
     private Leader leader;
+
+    @ApiModelProperty(value = "true-启用手写签名，false-不启用手写签名", notes = "启用手写签名后，同意/拒绝时，必须签名")
+    private Boolean enableSign;
+
     @ApiModelProperty(value = "操作按钮配置")
     private List<FlowButton> btn;
     @ApiModelProperty(value = "加签属性配置")
@@ -52,6 +56,8 @@ public class NodeProperties {
     private NodePropertiesTypeEnum type;
     @ApiModelProperty(value = "处理人/角色等信息")
     private Target targetObj;
+    @ApiModelProperty(value = "是否禁止动态选择审批人")
+    private Boolean disableDynamicApprover;
 
     /**
      * 集成&自动化节点属性

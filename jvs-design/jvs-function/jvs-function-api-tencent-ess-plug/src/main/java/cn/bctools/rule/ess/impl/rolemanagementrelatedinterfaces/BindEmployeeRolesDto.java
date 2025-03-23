@@ -23,7 +23,7 @@ public class BindEmployeeRolesDto {
     public String options;
 
     @ParameterValue(info = "(operator)执行本接口操作的员工信息。", necessity = false, type = InputType.map)
-    public Map operator;
+    public Map<String,Object> operator;
 
 
     @ParameterValue(info = "(UserIds)绑定角色的用户id列表，不能重复，不能大于 100 个。", type = InputType.list)

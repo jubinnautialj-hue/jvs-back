@@ -6,12 +6,12 @@
     <parent>
         <groupId>cn.bctools</groupId>
         <artifactId>jvs-core-parent</artifactId>
-        <version>2.2</version>
+        <version>2.3</version>
     </parent>
 
     <groupId>cn.bctools</groupId>
     <artifactId>jvs-starter-dynamic-proxy</artifactId>
-    <version>2.2</version>
+    <version>2.3</version>
     <description>动态数据源代理，主要用于低代码业务实现在逻辑中操作不同的数据源。新增修改删除</description>
 
     <dependencies>

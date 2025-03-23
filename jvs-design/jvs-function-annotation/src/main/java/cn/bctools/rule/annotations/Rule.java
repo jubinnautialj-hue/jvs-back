@@ -11,8 +11,8 @@ import java.lang.annotation.Documented;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
-import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.ElementType.METHOD;
+import static java.lang.annotation.ElementType.TYPE;
 import static java.lang.annotation.RetentionPolicy.RUNTIME;
 
 /**
@@ -32,6 +32,7 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
  * <p>
  * 如果是依赖包引入 服务注册controller时， 需要和  ApiOperation注解一起使用  value值必须一致
  * 例如：
+ * 实现类添加了事务注解会导致生成代理类，所以需要将事务功能分开，不能在 execute(T t, java.util.Map)  方法实现中添加事务
  *
  * @author Administrator
  * @ApiOperation(value = "测试demo")
@@ -118,5 +119,10 @@ public @interface Rule {
      * @return
      */
     int order() default 2147483647;
+
+    /**
+     * 演示环境禁用此节点
+     */
+    boolean demoDisabled() default false;
 
 }

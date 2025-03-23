@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>cn.bctools</groupId>
+        <artifactId>jvs-bi</artifactId>
+        <version>2.3</version>
+    </parent>
+
+    <groupId>cn.bctools</groupId>
+    <artifactId>jvs-data-factory</artifactId>
+    <version>2.3</version>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>jvs-data-factory-api</module>
+        <module>jvs-data-factory-mgr</module>
+        <module>jvs-data-factory-data-dispose</module>
+        <module>jvs-data-factory-common</module>
+    </modules>
+
+</project>

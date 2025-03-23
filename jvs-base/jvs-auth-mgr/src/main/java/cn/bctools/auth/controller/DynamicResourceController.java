@@ -1,6 +1,7 @@
 package cn.bctools.auth.controller;
 
 
+import cn.bctools.auth.constants.AuthConstant;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.auth.entity.po.DynamicResource;
@@ -16,6 +17,7 @@ import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.log.annotation.Log;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
+import cn.bctools.web.utils.WebUtils;
 import cn.hutool.core.lang.Dict;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -31,7 +33,9 @@ import java.net.URISyntaxException;
 import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -50,11 +54,17 @@ public class DynamicResourceController {
     JvsSystemConfig jvsSystemConfig;
 
     static boolean data = false;
+    // 定义域名的正则表达式
+    static String DOMAIN_REGEX =
+            "^(?!-)(?!.*--)(?!.*-\\.)[A-Za-z0-9-]{1,63}(?!-)(\\.[A-Za-z]{2,})+$";
+
+    static Pattern pattern = Pattern.compile(DOMAIN_REGEX);
 
     @Log
     @ApiOperation(value = "是否有低代码资源", notes = "是否有低代码资源,服务不存在,则请求地址就不操作")
     @GetMapping("/design")
     public R design() {
+        log.info(WebUtils.getRequest().getScheme());
         if (!data) {
             data = discoveryClient.getInstances(ConfigsTypeEnum.JVS_DESIGN_MGR.name().toLowerCase().replace("_", "-")).size() > 0;
         }
@@ -92,13 +102,18 @@ public class DynamicResourceController {
                     shortName = config.getDomainName() + ".";
                 }
             }
-            DynamicResource dynamicResource = new DynamicResource().setClientId(e.getName().clientId).setType(e.getName()).setName(SpringContextUtil.msg(e.getName().msg)).setUrl("http://" + shortName + jvsSystemConfig.getDomain() + (jvsSystemConfig.getMultiTenantMode() ? "" :
-                    (":" + e.getPort()))).setDesc(e.getName().desc).setIconUrl(e.getName().iconUrl);
+            DynamicResource dynamicResource =
+                    new DynamicResource().setClientId(e.getName().clientId).setType(e.getName()).setName(SpringContextUtil.msg(e.getName().msg)).setUrl("http://" + shortName + jvsSystemConfig.getDomain() + (jvsSystemConfig.getMultiTenantMode() && pattern.matcher(jvsSystemConfig.getDomain()).matches() ? "" :
+                            (":" + e.getPort()))).setDesc(e.getName().desc).setIconUrl(e.getName().iconUrl);
             if (e.getName().equals(ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION)) {
+                //判断资源类型是否包含，如果不包含就不返回
+                if (!UserCurrentUtils.init().getPermissions().contains(AuthConstant.jvs_base_permission)) {
+                    return null;
+                }
                 url.set(dynamicResource.getUrl());
             }
             return dynamicResource;
-        }).collect(Collectors.toList());
+        }).filter(Objects::nonNull).collect(Collectors.toList());
         TenantContextHolder.setTenantId(UserCurrentUtils.getCurrentUser().getTenantId());
         //加载其它的配置的三方服务模块
         oauthOtherService.list().stream().forEach(e -> {
@@ -128,7 +143,7 @@ public class DynamicResourceController {
             }
         }
         //判断是否是平台用户
-        if (UserCurrentUtils.init().getPermissions().contains("jvs_platform")) {
+        if (UserCurrentUtils.init().getPermissions().contains(AuthConstant.jvs_platform_permission)) {
             //添加后台和应用开发地址
             service.add(new DynamicResource().setUrl(url.get() + "/#/myiframe/urlPath?name=平台信息&src=%2Fjvs-upms-ui%2F#/appBasicInfo").setName("平台运维").setIconUrl("/jvs-ui-public/img/platformope.png"));
         }

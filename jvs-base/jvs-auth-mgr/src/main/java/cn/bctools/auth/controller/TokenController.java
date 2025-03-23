@@ -56,6 +56,9 @@ public class TokenController {
     public R<Page> page(Page page) {
         String tenantId = TenantContextHolder.getTenantId();
         Set<String> keys = redisUtils.keys("jvs:token:" + tenantId + "*");
+        page.setTotal(keys.size());
+        keys = keys.stream().skip((page.getCurrent() - 1) * page.getSize()).limit(page.getSize()).collect(Collectors.toSet());
+
         //处理数据
         List voList = keys.parallelStream()
                 .map(e -> {
@@ -82,7 +85,7 @@ public class TokenController {
                 })
                 .filter(e -> ObjectNull.isNotNull(e))
                 .collect(Collectors.toList());
-        page.setTotal(voList.size()).setRecords(voList);
+        page.setRecords(voList);
         return R.ok(page);
     }
 

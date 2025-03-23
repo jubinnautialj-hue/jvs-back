@@ -2,6 +2,7 @@ package cn.bctools.design.data.fields.dto.enums;
 
 import cn.bctools.auth.api.dto.SysDeptDto;
 import cn.bctools.auth.api.enums.DeptEnum;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.oauth2.utils.AuthorityManagementUtils;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
@@ -9,6 +10,8 @@ import io.swagger.annotations.ApiModel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -78,77 +81,28 @@ public enum DataConditionType {
                     }
                 case 当前登录用户所在部门:
                     if (value.name().equals(str)) {
-                        return UserCurrentUtils.getDeptId();
+                        return UserCurrentUtils.getDept().stream().map(DeptDto::getDeptId).collect(Collectors.toList());
                     }
                 case 当前登录用户同级公司:
-                    String deptId1 = UserCurrentUtils.getDeptId();
-                    if (ObjectNull.isNull(deptId1)) {
-                        return null;
-                    }
-                    SysDeptDto deptDtov = AuthorityManagementUtils.getParentBranchOffice(deptId1);
-                    if (ObjectNull.isNull(deptDtov)) {
-                        //没有找到返回空
-                        return null;
-                    } else {
-                        SysDeptDto parentDept = AuthorityManagementUtils.getParentDept(deptDtov.getId());
-                        if (ObjectNull.isNull(parentDept)) {
-                            return null;
-                        } else {
-                            //找同级公司
-                            List<String> offices = AuthorityManagementUtils.getChildDepts(deptDtov.getId())
-                                    .stream().filter(e -> e.getType().equals(DeptEnum.branchOffice))
-                                    .map(e -> e.getId()).collect(Collectors.toList());
-                            return offices;
-                        }
-                    }
+                    return UserCurrentUtils.getDept().stream().map(e -> getStrings(e.getDeptId())).collect(Collectors.toList());
                 case 当前登录用户同级部门:
-                    //如果没有部门，直接返回顶级
-                    if (ObjectNull.isNull(UserCurrentUtils.getDeptId())) {
-                        //直接返回顶级部门信息
-                        return AuthorityManagementUtils.getChildDepts(UserCurrentUtils.getCurrentUser().getTenantId()).stream().map(SysDeptDto::getId).findFirst().orElseGet(() -> null);
-                    }
-                    SysDeptDto deptDto = AuthorityManagementUtils.getParentDept(UserCurrentUtils.getDeptId());
-                    if (ObjectNull.isNull(deptDto)) {
-                        //没有找到返回空
-                        return null;
-                    } else {
-                        List<String> depts = AuthorityManagementUtils.getChildDepts(deptDto.getId())
-                                .stream().map(e -> e.getId()).collect(Collectors.toList());
-                        return depts;
-                    }
+                    //如果没有部门
+                    return UserCurrentUtils.getDept().stream().map(e -> AuthorityManagementUtils.getParentDept(e.getDeptId()))
+                            .filter(ObjectNull::isNotNull)
+                            .flatMap(e -> AuthorityManagementUtils.getChildDepts(e.getId())
+                                    .stream().map(SysDeptDto::getId)).collect(Collectors.toList());
                 case 当前登录用户所在公司:
-                    SysDeptDto branchOffice = AuthorityManagementUtils.getParentBranchOffice(UserCurrentUtils.getDeptId());
-                    if (ObjectNull.isNull(branchOffice)) {
-                        return null;
-                    }
-                    return branchOffice.getId();
+                    return UserCurrentUtils.getDept().stream().map(e -> AuthorityManagementUtils.getParentBranchOffice(e.getDeptId()).getId()).collect(Collectors.toList());
                 case 当前登录用户所在部门及以下:
                     List<String> collect = new ArrayList<>();
-                    String deptId = UserCurrentUtils.getDeptId();
-                    if (ObjectNull.isNull(deptId)) {
-                        return null;
-                    }
-                    List<SysDeptDto> childDepts = AuthorityManagementUtils.getChildDepts(deptId);
-                    getChildDepts(childDepts, collect);
-                    collect.add(deptId);
+                    UserCurrentUtils.getDept()
+                            .forEach(e -> extracted(e.getDeptId(), collect));
                     return collect;
                 case 当前登录用户所在公司及以下部门:
                     //查询用户所在公司
-                    SysDeptDto sysDeptDto = AuthorityManagementUtils.getParentBranchOffice(UserCurrentUtils.getDeptId());
-                    if (ObjectNull.isNull(sysDeptDto)) {
-                        //获取顶级公司
-                        List<SysDeptDto> deptTree = AuthorityManagementUtils.getDeptTree();
-                        List<String> deptList = new ArrayList<>();
-                        getDeptTree(deptTree, deptList);
-                        return deptList;
-                    } else {
-                        SysDeptDto dept = AuthorityManagementUtils.getParentBranchOffice(sysDeptDto.getId());
-                        List<SysDeptDto> deptDtos = AuthorityManagementUtils.getChildDepts(dept.getId());
-                        List<String> deptList = new ArrayList<>();
-                        deptList.add(sysDeptDto.getId());
-                        getChildDepts(deptDtos, deptList);
-                        return deptList;
-                    }
+                    return UserCurrentUtils.getDept().stream().map(e -> AuthorityManagementUtils.getParentBranchOffice(e.getDeptId()))
+                            .map(DataConditionType::branch)
+                            .collect(Collectors.toList());
                 default:
                     return str;
             }
@@ -157,6 +111,50 @@ public enum DataConditionType {
             return str;
         } catch (RuntimeException e) {
             return "未匹配到数据";
+        }
+    }
+
+    private static void extracted(String deptId, List<String> collect) {
+        List<SysDeptDto> childDepts = AuthorityManagementUtils.getChildDepts(deptId);
+        getChildDepts(childDepts, collect);
+        collect.add(deptId);
+    }
+
+    @NotNull
+    private static List<String> branch(SysDeptDto sysDeptDto) {
+        if (ObjectNull.isNull(sysDeptDto)) {
+            //获取顶级公司
+            List<SysDeptDto> deptTree = AuthorityManagementUtils.getDeptTree();
+            List<String> deptList = new ArrayList<>();
+            getDeptTree(deptTree, deptList);
+            return deptList;
+        } else {
+            SysDeptDto dept = AuthorityManagementUtils.getParentBranchOffice(sysDeptDto.getId());
+            List<SysDeptDto> deptDtos = AuthorityManagementUtils.getChildDepts(dept.getId());
+            List<String> deptList = new ArrayList<>();
+            deptList.add(sysDeptDto.getId());
+            getChildDepts(deptDtos, deptList);
+            return deptList;
+        }
+    }
+
+    @Nullable
+    private static List<String> getStrings(String deptId1) {
+        SysDeptDto deptDtov = AuthorityManagementUtils.getParentBranchOffice(deptId1);
+        if (ObjectNull.isNull(deptDtov)) {
+            //没有找到返回空
+            return null;
+        } else {
+            SysDeptDto parentDept = AuthorityManagementUtils.getParentDept(deptDtov.getId());
+            if (ObjectNull.isNull(parentDept)) {
+                return null;
+            } else {
+                //找同级公司
+                List<String> offices = AuthorityManagementUtils.getChildDepts(deptDtov.getId())
+                        .stream().filter(e -> e.getType().equals(DeptEnum.branchOffice))
+                        .map(SysDeptDto::getId).collect(Collectors.toList());
+                return offices;
+            }
         }
     }
 

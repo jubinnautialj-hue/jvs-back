@@ -1,16 +1,15 @@
 package cn.bctools.rule.tools.ftp.upload;
 
-import cn.bctools.common.utils.PasswordUtil;
-import cn.bctools.common.utils.SpringContextUtil;
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.bctools.rule.service.ModelInterface;
 import cn.bctools.rule.tools.ftp.FtpSelectedOption;
 import cn.hutool.extra.ftp.Ftp;
 import cn.hutool.http.HttpUtil;
-import com.alibaba.fastjson2.JSON;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -32,12 +31,14 @@ import java.util.Map;
         explain = "将文件上传到指定ftp服务器。"
 )
 public class FtpUploadServiceImpl implements BaseCustomFunctionInterface<FtpUploadFunctionDto> {
+    ModelInterface modelInterface;
 
     @Override
     public Object execute(FtpUploadFunctionDto dto, Map<String, Object> params) {
-        String dtoFtp = dto.getFtp();
+        Object byKey = modelInterface.getByKey(dto.getFtp());
         //获取的数据源
-        FtpSelectedOption option = JSON.parseObject(PasswordUtil.decodedPassword(dtoFtp, SpringContextUtil.getKey()), FtpSelectedOption.class);
+        FtpSelectedOption option = BeanCopyUtil.copy(FtpSelectedOption.class, byKey);
+        //获取的数据源
         Ftp ftp = new Ftp(option.getIp(), option.getPort(), option.getUserName(), option.getPassWord());
         byte[] bytes = HttpUtil.downloadBytes(dto.getFileUrl());
         return ftp.upload(dto.getDestPath(), dto.getFileName(), new ByteArrayInputStream(bytes));

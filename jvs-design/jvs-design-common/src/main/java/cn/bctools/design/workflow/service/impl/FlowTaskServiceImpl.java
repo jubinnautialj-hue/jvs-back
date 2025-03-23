@@ -17,10 +17,8 @@ import cn.bctools.design.workflow.dto.PendingApprovesReqDto;
 import cn.bctools.design.workflow.dto.PendingApprovesResDto;
 import cn.bctools.design.workflow.dto.progress.*;
 import cn.bctools.design.workflow.entity.*;
-import cn.bctools.design.workflow.entity.dto.ApproveResultDto;
-import cn.bctools.design.workflow.entity.dto.CourseDto;
-import cn.bctools.design.workflow.entity.dto.FlowExtendDto;
-import cn.bctools.design.workflow.entity.dto.ProxyDto;
+import cn.bctools.design.workflow.entity.dto.*;
+import cn.bctools.design.workflow.entity.enums.FlowTaskNodeApprovalTypeEnum;
 import cn.bctools.design.workflow.entity.enums.FlowTaskStatusEnum;
 import cn.bctools.design.workflow.entity.enums.ProcessStatusEnum;
 import cn.bctools.design.workflow.mapper.FlowDesignMapper;
@@ -28,9 +26,11 @@ import cn.bctools.design.workflow.mapper.FlowTaskMapper;
 import cn.bctools.design.workflow.model.Node;
 import cn.bctools.design.workflow.model.NodeForm;
 import cn.bctools.design.workflow.model.enums.NodeTypeEnum;
+import cn.bctools.design.workflow.model.properties.FlowButton;
 import cn.bctools.design.workflow.service.*;
 import cn.bctools.design.workflow.support.listener.notify.FlowNotifyEvent;
 import cn.bctools.design.workflow.utils.FlowUtil;
+import cn.bctools.oss.dto.BaseFile;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.LocalDateTimeUtil;
@@ -148,7 +148,7 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
         dto.setFlowTaskProgress(progress(flowTask, flowTaskNodes));
         dto.setExtend(getFlowExtend(flowTask.getFlowDesignId()));
         // 待办节点
-        dto.setNodes(progressNodes(flowTask, flowTaskNodes));
+        dto.setNodes(progressNodes(flowTask, flowTaskNodes, dto.getExtend()));
         dto.setJvsAppId(flowTask.getJvsAppId());
         // 增加流程标记
         FlowDesignProgressDto flowDesignProgressDto = BeanCopyUtil.copy(node, FlowDesignProgressDto.class);
@@ -166,7 +166,7 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
      * @param flowTaskNodes
      * @return
      */
-    private List<ProgressNodeDetailDto> progressNodes(FlowTask flowTask, List<FlowTaskNode> flowTaskNodes) {
+    private List<ProgressNodeDetailDto> progressNodes(FlowTask flowTask, List<FlowTaskNode> flowTaskNodes, FlowExtendDto extend) {
         List<ProgressNodeDetailDto> nodes = new ArrayList<>();
         // 待办节点：返回当前节点表单id（发起人表单id or 自定义表单id）
         if (CollectionUtils.isEmpty(flowTaskNodes)) {
@@ -183,17 +183,69 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
                 nodeForm.setFormId(flowTask.getFormId());
                 nodeForm.setVersion(flowTask.getFormVersion());
             }
-            ProgressNodeDetailDto nodeDetail = new ProgressNodeDetailDto()
+            return new ProgressNodeDetailDto()
                     .setFormId(Boolean.TRUE.equals(nodeForm.getSendUserForm()) ? flowTask.getFormId() : nodeForm.getFormId())
                     .setFormVersion(Boolean.TRUE.equals(nodeForm.getSendUserForm()) ? flowTask.getFormVersion() : nodeForm.getVersion())
                     .setNodeId(node.getId())
                     .setNodeName(node.getName())
-                    .setApprovalType(taskNode.getApprovalType());
-            return nodeDetail;
+                    .setApprovalType(taskNode.getApprovalType())
+                    .setButtons(progressNodeButton(extend, node, taskNode.getApprovalType()))
+                    .setEnableSign(node.getProps().getEnableSign());
         }).collect(Collectors.toList());
         return nodes;
     }
 
+    /**
+     * 得到审批节点可用的审批按钮的显示名称
+     *
+     * @param extend 扩展配置
+     * @param node 节点
+     * @param approvalType 节点审批类型
+     * @return 审批节点可用的审批按钮
+     */
+    private List<FlowButtonDto> progressNodeButton(FlowExtendDto extend, Node node, FlowTaskNodeApprovalTypeEnum approvalType) {
+        List<FlowButton> buttons = null;
+        if (FlowTaskNodeApprovalTypeEnum.APPROVAL.equals(approvalType)) {
+            buttons = node.getProps().getBtn();
+        } else {
+            buttons = node.getProps().getAppendApproval().getBtn();
+        }
+        // 待办节点可能没有按钮，如回退到发起人节点，发起人节点就是待办节点，但发起人节点没有可配置的按钮
+        if (ObjectNull.isNull(buttons)) {
+            return Collections.emptyList();
+        }
+        // 从扩展配置中获取审批按钮配置
+        CustomFlowButtonDto customFlowButtonDto = Optional.ofNullable(extend.getFlowButton()).orElseGet(CustomFlowButtonDto::new);
+        return buttons.stream()
+                .filter(FlowButton::getEnable)
+                .map(btn -> {
+                    FlowButtonDto flowButton = new FlowButtonDto();
+                    flowButton.setOperation(btn.getOperation());
+                    flowButton.setDisplayName(btn.getDisplayName());
+                    // 以节点按钮本身的自定义名称优先
+                    if (ObjectNull.isNotNull(flowButton.getDisplayName())) {
+                        return flowButton;
+                    } else {
+                        String displayName = null;
+                        // 若节点按钮本身未配置自定义名称，则从扩展配置中获取按钮名
+                        if (customFlowButtonDto.getEnable()) {
+                            Optional<FlowButtonDto> optionalExtendFlowButton = extend.getFlowButton().getButtons()
+                                    .stream()
+                                    .filter(flowBtn -> btn.getOperation().equals(flowBtn.getOperation()))
+                                    .findFirst();
+                            if (optionalExtendFlowButton.isPresent()) {
+                                displayName = optionalExtendFlowButton.get().getDisplayName();
+                            }
+                        }
+                        if (ObjectNull.isNull(displayName)) {
+                            displayName = btn.getName();
+                        }
+                        flowButton.setDisplayName(displayName);
+                    }
+                   return flowButton;
+                })
+                .collect(Collectors.toList());
+    }
 
     /**
      * 封装任务进度
@@ -379,7 +431,7 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
                         .setId(u.getId())
                         .setRealName(u.getRealName())
                         .setHeadImg(u.getHeadImg())
-                        .setDeptName(u.getDeptName()))
+                        .setDept(u.getDept()))
                 .collect(Collectors.toList());
     }
 
@@ -395,12 +447,12 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
             ProgressPrintResDto dto = BeanCopyUtil.copy(approve, ProgressPrintResDto.class);
             dto.setNodeId(course.getNodeId());
             dto.setNodeName(course.getNodeName());
-            dto.setTime(course.getTime());
             if (ObjectNull.isNotNull(approve.getNodeOperationTypeEnum())) {
-                dto.setNodeOperation(approve.getNodeOperationTypeEnum().getDesc());
+                dto.setNodeOperation(approve.getNodeOperationTypeEnum().getName());
             }
             if (ObjectNull.isNotNull(approve.getOpinion())) {
                 dto.setOpinionContent(approve.getOpinion().getContent());
+                dto.setOpinionSign(Optional.ofNullable(approve.getOpinion().getSign()).map(sign -> BeanCopyUtil.copys(sign, BaseFile.class)).orElse(null));
             }
             return dto;
         }).collect(Collectors.toList())).flatMap(Collection::stream).collect(Collectors.toList());
@@ -513,6 +565,12 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
     }
 
     @Override
+    public int countPendingByModeId(String modeId) {
+        long count = count(Wrappers.<FlowTask>lambdaQuery().eq(FlowTask::getDataModelId, modeId).eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PENDING));
+        return Long.valueOf(count).intValue();
+    }
+
+    @Override
     public Collection<String> pendingFlowDesignIds(Collection<String> flowDesignIds) {
         return list(Wrappers.<FlowTask>lambdaQuery()
                 .in(FlowTask::getFlowDesignId, flowDesignIds)
@@ -587,6 +645,11 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
     }
 
     @Override
+    public List<FlowTask> listByDataId(String dataId) {
+        return list(Wrappers.<FlowTask>lambdaQuery().eq(FlowTask::getDataId, dataId));
+    }
+
+    @Override
     public List<FlowTask> listByDataIds(List<String> dataIds) {
         return list(Wrappers.<FlowTask>lambdaQuery().in(FlowTask::getDataId, dataIds));
     }
@@ -646,6 +709,14 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
         });
     }
 
+    @Override
+    public void fillTaskDesignBody(FlowTask flowTask) {
+        if (ObjectNull.isNotNull(flowTask.getFlowDesign())) {
+            flowTask.setDesignBody(flowTask.getFlowDesign());
+        }
+        // 没保存设计，则根据设计版本id获取工作流设计
+        setFlowDesignBody(flowTask);
+    }
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -654,6 +725,31 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
             return;
         }
         List<String> taskIds = listByDataIds(dataIds).stream().map(FlowTask::getId).collect(Collectors.toList());
+        removeTaskAll(taskIds);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public void removeTaskAllByDataModelId(String dataModelId) {
+        if (ObjectNull.isNull(dataModelId)) {
+            return;
+        }
+        List<String> taskIds = list(Wrappers.<FlowTask>lambdaQuery()
+                .in(FlowTask::getDataModelId, dataModelId)
+                .select(FlowTask::getId))
+                .stream()
+                .map(FlowTask::getId)
+                .collect(Collectors.toList());
+        removeTaskAll(taskIds);
+    }
+
+    /**
+     * 删除流程任务
+     *
+     * @param taskIds 任务id集合
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void removeTaskAll(List<String> taskIds) {
         if (ObjectNull.isNull(taskIds)) {
             return;
         }
@@ -664,6 +760,5 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
         flowTaskParallelService.remove(Wrappers.<FlowTaskParallel>lambdaQuery().in(FlowTaskParallel::getFlowTaskId, taskIds));
         flowTaskPathService.remove(Wrappers.<FlowTaskPath>lambdaQuery().in(FlowTaskPath::getFlowTaskId, taskIds));
         flowTaskPersonService.remove(Wrappers.<FlowTaskPerson>lambdaQuery().in(FlowTaskPerson::getFlowTaskId, taskIds));
-
     }
 }

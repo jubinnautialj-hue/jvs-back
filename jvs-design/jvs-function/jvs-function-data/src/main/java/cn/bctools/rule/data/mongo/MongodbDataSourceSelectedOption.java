@@ -1,8 +1,6 @@
 package cn.bctools.rule.data.mongo;
 
-import cn.bctools.rule.annotations.SelectOption;
 import cn.bctools.rule.annotations.SelectOptionField;
-import cn.bctools.rule.constant.RuleConstant;
 import cn.bctools.rule.entity.enums.InputType;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -14,7 +12,6 @@ import javax.validation.constraints.NotNull;
  */
 @Data
 @Accessors(chain = true)
-@SelectOption(RuleConstant.MONGO_DB_SOURCE_OPTION)
 public class MongodbDataSourceSelectedOption {
 
     @NotNull

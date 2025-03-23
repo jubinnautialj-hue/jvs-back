@@ -1,7 +1,5 @@
 package cn.bctools.design.data.fields.enums;
 
-import org.checkerframework.checker.units.qual.min;
-
 /**
  * @author jvs
  * 模型聚合规则

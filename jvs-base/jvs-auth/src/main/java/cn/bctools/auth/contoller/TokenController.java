@@ -1,8 +1,10 @@
 package cn.bctools.auth.contoller;
 
+import cn.bctools.auth.component.UserRoleComponent;
 import cn.bctools.auth.component.other.OtherOAuth2AccessTokenResponse;
 import cn.bctools.auth.entity.OauthOther;
 import cn.bctools.auth.mapper.OauthOtherMapper;
+import cn.bctools.auth.service.PermissionService;
 import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.auth.service.LoginLogService;
@@ -33,6 +35,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * @author Administrator
@@ -50,6 +53,8 @@ public class TokenController {
     private final OauthOtherMapper oauthOtherMapper;
     private final LoginLogService loginLogService;
     private final SysConfigsService sysConfigsService;
+    private final UserRoleComponent userRoleComponent;
+    private final PermissionService permissionService;
 
     /**
      * 内部跳转时的记录
@@ -106,7 +111,10 @@ public class TokenController {
                     userDto.getTenant().setSystemName(ObjectNull.isNotNull(config.getSystemName()) ? config.getSystemName() : configsTypeEnum.serviceName).setLogo(config.getLogo()).setIcon(config.getIcon());
                     //此处需要替换这个终端的Logo和icon
                     tokenResponse.setUserDto(PasswordUtil.encodePassword(JSON.toJSONString(userDto)));
-                    tokenResponse.setPermissions(user.getPermissions());
+                    List<String> roleIds = userRoleComponent.getUserRoleIds(user.getUserDto().getId());
+                    List<String> permission = permissionService.getPermission(user.getUserDto().getPlatformAdmin(), user.getUserDto().getAdminFlag(), user.getUserDto().getTenantId(), roleIds);
+                    //这里看是否需要刷新权限标识
+                    tokenResponse.setPermissions(permission);
                     tokenResponse.setAccess_token(e.getAccessToken().getToken().getTokenValue());
                     tokenResponse.setRefresh_token(e.getRefreshToken().getToken().getTokenValue());
                     return tokenResponse;

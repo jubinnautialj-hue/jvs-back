@@ -4,7 +4,6 @@ import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.design.workflow.dto.FlowReqDto;
 import cn.bctools.design.workflow.entity.FlowTaskPerson;
 import cn.bctools.design.workflow.entity.FlowTaskProxy;
 import cn.bctools.design.workflow.entity.dto.ProxyDto;
@@ -14,7 +13,6 @@ import cn.bctools.design.workflow.model.Node;
 import cn.bctools.design.workflow.service.FlowTaskNodeService;
 import cn.bctools.design.workflow.service.FlowTaskPersonService;
 import cn.bctools.design.workflow.service.FlowTaskProxyService;
-import cn.bctools.design.workflow.support.RuntimeData;
 import cn.bctools.design.workflow.support.function.AbstractFunctionHandler;
 import cn.bctools.design.workflow.support.function.dto.TransferRuntimeDto;
 import cn.bctools.design.workflow.support.timelimit.TimeLimitMessageHandler;
@@ -31,7 +29,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**

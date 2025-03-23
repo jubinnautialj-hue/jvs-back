@@ -1,8 +1,8 @@
 package cn.bctools.design.data.mapper;
 
 import cn.bctools.database.interceptor.cache.JvsRedisCache;
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import cn.bctools.design.data.entity.DataModelPo;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Mapper;
 

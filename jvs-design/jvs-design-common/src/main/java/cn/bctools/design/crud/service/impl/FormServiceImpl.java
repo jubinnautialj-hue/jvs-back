@@ -9,8 +9,10 @@ import cn.bctools.design.crud.mapper.FormMapper;
 import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.crud.utils.DesignUtils;
 import cn.bctools.design.data.entity.DataFieldPo;
+import cn.bctools.design.data.entity.DataModelPo;
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
 import cn.bctools.design.data.fields.dto.FieldHtml;
+import cn.bctools.design.data.fields.dto.FieldPublicHtml;
 import cn.bctools.design.data.fields.dto.form.FormDesignHtml;
 import cn.bctools.design.data.fields.dto.form.FormValueHtml;
 import cn.bctools.design.data.fields.dto.form.html.TableFormItemHtml;
@@ -40,7 +42,6 @@ import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.web.utils.IpUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONPath;
@@ -60,6 +61,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static cn.bctools.design.crud.utils.DesignUtils.parseField;
 import static cn.bctools.design.data.fields.enums.DataFieldType.RESERVED_WORDS;
 
 /**
@@ -334,6 +336,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                     String hasRelationPropList = "hasRelationPropList";
                     e.setDesignJson((Map<String, Object>) JSONPath.set(e.getDesignJson(), hasRelationPropList, linkField));
                 }
+                break;
             default:
 
         }
@@ -405,7 +408,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                 .eq(FormPo::getJvsAppId, appId)
                 .eq(FormPo::getId, designId));
         if (Objects.isNull(form)) {
-            throw new BusinessException("表单不存在");
+            return;
         }
         //同时删除这个设计下的字段
         dataFieldService.remove(new LambdaQueryWrapper<DataFieldPo>().eq(DataFieldPo::getDesignId, designId));
@@ -475,7 +478,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                     for (Map<String, Object> prop : props) {
                         //获取多选的属性值
                         ArrayList arrayList = (ArrayList) prop.get(fieldKey1);
-                        if (arrayList.contains(form.get("prop"))) {
+                        if (ObjectNull.isNotNull(arrayList) && arrayList.contains(form.get("prop"))) {
                             List displayExpress = (List) form.getOrDefault("displayExpress", new ArrayList<>());
                             displayExpress.add(Dict.create().set("prop", map.get("prop")).set("label", map.get("label")).set("value", prop.get("id")));
                             form.put("displayExpress", displayExpress);
@@ -499,6 +502,18 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
         }
 
         design.setExecs(execs);
+        //处理表单中的脱敏
+        DataModelPo byId = dataModelService.getById(po.getDataModelId());
+        List<String> fields = dynamicDataService.encryptionData(byId);
+        design.getFormdata().get(0).getForms().removeIf(e -> {
+            FieldPublicHtml baseDto = parseField(e, FieldPublicHtml.class);
+            if (fields.contains(baseDto.getProp())) {
+                if (!String.class.equals(baseDto.getType().getAClass())) {
+                    return true;
+                }
+            }
+            return false;
+        });
         //如果是移动端，需要移掉其它的控件
         if (IpUtil.isMobile()) {
 
@@ -552,6 +567,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                                                 switch (a.getType()) {
                                                     case tableForm:
                                                         formField(a.getDesignJson(), fieldHtml, cls);
+                                                        break;
                                                     default:
 
                                                 }
@@ -568,6 +584,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                                                 switch (a.getType()) {
                                                     case tableForm:
                                                         formField(a.getDesignJson(), fieldHtml, cls);
+                                                        break;
                                                     default:
 
                                                 }
@@ -587,6 +604,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                                             case tableForm:
                                                 //处理里面存在表格的情况
                                                 formField(a.getDesignJson(), fieldHtml, cls);
+                                                break;
                                             default:
 
                                         }
@@ -595,6 +613,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                             ).collect(Collectors.toList());
                             field.setChildren(tabList);
                         }
+                        break;
                     default:
 
                 }

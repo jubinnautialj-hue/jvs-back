@@ -3,7 +3,6 @@ package cn.bctools.design.crud.service.impl;
 import cn.bctools.common.entity.po.TreePo;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
-import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.TreeUtils;
 import cn.bctools.design.crud.entity.JvsTree;
 import cn.bctools.design.crud.mapper.JvsTreeMapper;
@@ -75,6 +74,47 @@ public class JvsTreeImpl extends ServiceImpl<JvsTreeMapper, JvsTree> implements 
                 .collect(Collectors.toList());
         List<Tree<Object>> result = TreeUtils.tree(treePos, JvsTree.DICT_ID_ROOT);
         return result.get(0);
+    }
+
+
+    @Override
+    public Map<String, Object> getByUniqueName(String uniqueName, String rootId) {
+        JvsTree tree = this.getOne(Wrappers.<JvsTree>lambdaQuery().select(JvsTree::getGroupId).eq(JvsTree::getUniqueName, uniqueName));
+        if (Objects.isNull(tree)) {
+            return new HashMap<>(1);
+        }
+        String groupId = tree.getGroupId();
+        List<JvsTree> treeList = list(Wrappers.<JvsTree>lambdaQuery().eq(JvsTree::getGroupId, groupId).isNotNull(JvsTree::getUniqueName));
+        List<TreePo> treePos = treeList.stream()
+                .map(e -> BeanCopyUtil.copy(e, TreePo.class).setExtend(e).setId(e.getUniqueName()))
+                .collect(Collectors.toList());
+        List<Tree<Object>> result = TreeUtils.tree(treePos, rootId);
+        return result.get(0);
+    }
+
+    @Override
+    public List<String> getByUniqueNameIds(String uniqueName, Object rootId) {
+        JvsTree tree = this.getOne(Wrappers.<JvsTree>lambdaQuery().select(JvsTree::getGroupId).eq(JvsTree::getUniqueName, uniqueName));
+        if (Objects.isNull(tree)) {
+            return new ArrayList<>();
+        }
+        String groupId = tree.getGroupId();
+        List<JvsTree> treeList = list(Wrappers.<JvsTree>lambdaQuery().eq(JvsTree::getGroupId, groupId).isNotNull(JvsTree::getUniqueName));
+        List<TreePo> treePos = treeList.stream()
+                .map(e -> BeanCopyUtil.copy(e, TreePo.class).setExtend(e).setId(e.getUniqueName()))
+                .collect(Collectors.toList());
+        List<String> objects = new ArrayList<>();
+        if (rootId instanceof List) {
+            ((List<?>) rootId).forEach(e -> {
+                for (TreePo treePo : TreeUtils.getListPassingBy(treePos, e, TreePo::getId, TreePo::getParentId)) {
+                    objects.add(treePo.getId());
+                }
+            });
+        } else {
+            TreeUtils.getListPassingBy(treePos, rootId, TreePo::getId, TreePo::getParentId)
+                    .forEach(e -> objects.add(e.getId()));
+        }
+        return objects;
     }
 
     @Override

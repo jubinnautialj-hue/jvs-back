@@ -3,6 +3,9 @@ package cn.bctools.rule.tools.http;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.SpringContextUtil;
+import cn.bctools.gray.config.GrayLoadBalancerClientConfiguration;
+import cn.bctools.gray.rule.VersionLoadBalancer;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
@@ -15,34 +18,41 @@ import cn.hutool.core.io.resource.InputStreamResource;
 import cn.hutool.core.net.url.UrlBuilder;
 import cn.hutool.core.util.XmlUtil;
 import cn.hutool.http.HttpRequest;
+import cn.hutool.http.HttpResponse;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.cloud.client.ServiceInstance;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import javax.servlet.http.HttpServletRequest;
 import java.io.ByteArrayInputStream;
+import java.net.HttpCookie;
 import java.util.*;
-
-import static org.springframework.util.MimeTypeUtils.TEXT_XML_VALUE;
+import java.util.stream.Collectors;
 
 /**
  * @author guojing
  * @describe 发起一个Get请求
  * 允许自定义结构，不是自动识别的结构
  */
-@Slf4j
 @AllArgsConstructor
 @Rule(value = "网络请求", group = RuleGroup.工具插件, test = true, returnType = ClassType.对象, testShowEnum = TestShowEnum.JSON, order = 21,
 //        iconUrl = "rule-ga",
         customStructure = true, explain = "请求外部http接口，可设置header、请求头、body等参数  "
 
 )
+@Import(GrayLoadBalancerClientConfiguration.class)
 public class HttpServiceImpl implements BaseCustomFunctionInterface<HttpFunctionDto> {
+
+    DiscoveryClient discoveryclient;
+    VersionLoadBalancer versionLoadBalancer;
+
 
     @Override
     public Object execute(HttpFunctionDto dto, Map<String, Object> params) {
@@ -51,10 +61,17 @@ public class HttpServiceImpl implements BaseCustomFunctionInterface<HttpFunction
         if (ObjectNull.isNull(dto.getUrl()) || "http://www.bctools.cn".equals(dto.getUrl())) {
             return JSONObject.parseObject(dto.getJson());
         }
+        if (dto.getUrl().startsWith("lb://")) {
+            String url = dto.getUrl().replaceFirst("lb://", "");
+            String serverName = url.substring(0, url.indexOf("/"));
+            ServiceInstance serviceInstance = versionLoadBalancer.choose(discoveryclient, serverName, SpringContextUtil.getVersion());
+            String newUrl = serviceInstance.getUri().toString() + url.substring(url.indexOf("/"));
+            dto.setUrl(newUrl);
+        }
+
         if (ObjectNull.isNotNull(dto.getBody()) && !isStr) {
             body.putAll((Map<? extends String, ?>) dto.getBody());
         }
-        log.info("执行 入参为:" + JSONObject.toJSONString(dto));
         Map<String, String> headerMap = new HashMap<>(8);
 
         if (ObjectNull.isNull(dto.getSystemHeader()) || !dto.getSystemHeader()) {
@@ -143,7 +160,8 @@ public class HttpServiceImpl implements BaseCustomFunctionInterface<HttpFunction
                                 boolean b = ((Map<?, ?>) o).containsKey("url");
                                 if (b) {
                                     RuleFile copy = BeanCopyUtil.copy(o, RuleFile.class);
-                                    objectMap.put(s, new BytesResource((HttpUtil.downloadBytes(Optional.ofNullable(copy.getPreviewUrl()).orElse(dto.getUrl()))), copy.getOriginalName()));
+                                    objectMap.put(s, new BytesResource((HttpUtil.downloadBytes(Optional.ofNullable(copy.getPreviewUrl()).orElse(copy.getUrl()))),
+                                            Optional.ofNullable(copy.getOriginalName()).orElse(copy.getName())));
                                 } else {
                                     objectMap.put(s, o);
                                 }
@@ -157,6 +175,16 @@ public class HttpServiceImpl implements BaseCustomFunctionInterface<HttpFunction
                     case MediaType.TEXT_XML_VALUE:
                         request.body(dto.getBody().toString());
                         break;
+                    case "application/binary":
+                        //处理数据二进制
+                        //判断 body 是否是 url地址，
+                        if (dto.getBody().toString().startsWith("http")) {
+                            byte[] bytes = HttpUtil.downloadBytes(dto.getBody().toString());
+                            request.body(bytes);
+                        } else {
+                            request.body(dto.getBody().toString().getBytes());
+                        }
+                        break;
                     default:
                         request.body(dto.getBody().toString());
 
@@ -167,7 +195,11 @@ public class HttpServiceImpl implements BaseCustomFunctionInterface<HttpFunction
         if (ObjectNull.isNotNull(headerMap)) {
             headerMap.keySet().forEach(e -> request.header(e, String.valueOf(headerMap.get(e))));
         }
-        String bodyStr = request.execute().body();
+        LOG.info("三方平台请求参数:" + request.toString());
+        request.timeout(dto.getMilliseconds());
+        HttpResponse execute = request.execute();
+        List<HttpCookie> cookies = execute.getCookies();
+        String bodyStr = execute.body();
         //如果返回为 xml 则需要解析 xml
         if (MediaType.APPLICATION_XML_VALUE.equals(contentType)) {
             return XmlUtil.xmlToMap(bodyStr);
@@ -177,8 +209,15 @@ public class HttpServiceImpl implements BaseCustomFunctionInterface<HttpFunction
                 return JSONArray.parseArray(bodyStr);
             }
             if (JSONUtil.isTypeJSONObject(bodyStr)) {
-                return JSONObject.parseObject(bodyStr);
+                JSONObject jsonObject = JSONObject.parseObject(bodyStr);
+                if (ObjectNull.isNotNull(cookies)) {
+                    jsonObject.putAll(cookies.stream().collect(Collectors.toMap(HttpCookie::getName, HttpCookie::getValue)));
+                }
+                return jsonObject;
             }
+        }
+        if (ObjectNull.isNull(bodyStr) || ObjectNull.isNotNull(cookies)) {
+            return cookies.stream().collect(Collectors.toMap(HttpCookie::getName, HttpCookie::getValue));
         }
         return bodyStr;
     }

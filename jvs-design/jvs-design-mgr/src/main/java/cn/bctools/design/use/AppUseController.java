@@ -10,11 +10,15 @@ import cn.bctools.design.crud.entity.FormPo;
 import cn.bctools.design.crud.service.CrudPageService;
 import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.crud.utils.DesignUtils;
+import cn.bctools.design.data.entity.DataModelPo;
 import cn.bctools.design.data.fields.DataFieldHandler;
 import cn.bctools.design.data.fields.IDataFieldHandler;
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
+import cn.bctools.design.data.fields.dto.FieldPublicHtml;
 import cn.bctools.design.data.fields.dto.form.FormDesignHtml;
 import cn.bctools.design.data.fields.dto.form.FormSettingHtml;
+import cn.bctools.design.data.fields.dto.form.html.TableFormItemHtml;
+import cn.bctools.design.data.fields.dto.form.item.TabItemHtml;
 import cn.bctools.design.data.fields.dto.page.ButtonDesignHtml;
 import cn.bctools.design.data.fields.dto.page.DataTableFieldDesignHtml;
 import cn.bctools.design.data.fields.dto.page.PageDesignHtml;
@@ -26,20 +30,15 @@ import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.data.util.RoleUtils;
-import cn.bctools.design.h5.entity.H5Design;
-import cn.bctools.design.h5.service.H5DesignService;
 import cn.bctools.design.menu.service.AppMenuService;
 import cn.bctools.design.permission.service.DesignPermissionService;
 import cn.bctools.design.permission.service.PermissionCompatibleService;
-import cn.bctools.design.project.entity.JvsApp;
-import cn.bctools.design.project.entity.dto.AppRoleDto;
 import cn.bctools.design.project.service.JvsAppService;
-import cn.bctools.design.screen.entity.ScreenPo;
-import cn.bctools.design.screen.service.ScreenService;
 import cn.bctools.design.util.ModeUtils;
+import cn.bctools.design.workflow.service.FlowTaskService;
+import cn.bctools.function.entity.po.FunctionBusinessPo;
 import cn.bctools.function.mapper.FunctionBusinessMapper;
 import cn.bctools.log.annotation.Log;
-import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.oss.props.OssProperties;
 import cn.bctools.web.utils.IpUtil;
 import cn.hutool.core.lang.tree.Tree;
@@ -58,6 +57,8 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import static cn.bctools.design.crud.utils.DesignUtils.parseField;
+
 
 /**
  * @author Administrator
@@ -73,11 +74,10 @@ public class AppUseController {
     AuthRoleServiceApi roleServiceApi;
     UseComponent useComponent;
     FormService formService;
-    ScreenService screenService;
     DataModelService dataModelService;
     JvsAppService jvsAppService;
     CrudPageService crudPageService;
-    H5DesignService h5DesignService;
+    FlowTaskService flowTaskService;
     DataFieldService dataFieldService;
     DynamicDataService dynamicDataService;
     DataFieldHandler dataFieldHandler;
@@ -92,7 +92,7 @@ public class AppUseController {
     public R trees(@PathVariable String appId) {
         //只返回目录
         boolean mobile = IpUtil.isMobile();
-        List<Tree<Object>> tree = useComponent.menu(appId, ModeUtils.getRealUser().getId(), mobile, ModeUtils.getMode());
+        List<Tree<Object>> tree = useComponent.menu(appId, ModeUtils.getRealUser().getId(), mobile, ModeUtils.getMode(), null);
         if (ObjectNull.isNull(tree)) {
             return R.ok();
         }
@@ -107,6 +107,7 @@ public class AppUseController {
     @GetMapping("/crudPage/{id}")
     @ApiOperation("列表页设计数据")
     public R<CrudPage> crud(@PathVariable("id") String id, @PathVariable("appId") String appId) {
+        // 获取列表页设计
         CrudPage po = crudPageService.getById(id);
         if (Objects.isNull(po)) {
             throw new BusinessException("设计页面未找到请联系管理员");
@@ -115,11 +116,7 @@ public class AppUseController {
             throw new BusinessException("应用错误或设计不存在");
         }
 
-        JvsApp app = jvsAppService.getById(po.getJvsAppId());
-        AppRoleDto appRole = Optional.ofNullable(app.getRole()).orElseGet(AppRoleDto::new);
-        boolean isAdmin = UserCurrentUtils.getCurrentUser().getAdminFlag()
-                || jvsAppService.checkRole(appRole.getAdminMember(), UserCurrentUtils.getCurrentUser())
-                || jvsAppService.checkRole(appRole.getDevMember(), UserCurrentUtils.getCurrentUser());
+        boolean isAdmin = jvsAppService.userIsAppAdmin(po.getJvsAppId());
         PageDesignHtml design = DesignUtils.parsePage(po.getViewJson());
         if (!isAdmin) {
             //判断按钮权限进行解析排除
@@ -146,18 +143,19 @@ public class AppUseController {
                 }
             }
         }
-
-        List<ButtonDesignHtml> defaultButtonDesignHtmls = crudPageService.getSystemDefaultButtons();
-        defaultButtonDesignHtmls.forEach(button -> button.setPosition("line"));
-        if (ObjectNull.isNotNull(design)) {
-            if (ObjectNull.isNotNull(design.getButtons())) {
-                design.getButtons().addAll(defaultButtonDesignHtmls);
-            } else {
-                design.setButtons(new ArrayList<>());
-                design.getButtons().addAll(defaultButtonDesignHtmls);
+        //当模型关联的工作流一条数据都没有时不加载默认工作流按钮
+        if (0 != flowTaskService.countPendingByModeId(po.getDataModelId())) {
+            List<ButtonDesignHtml> defaultButtonDesignHtmls = crudPageService.getSystemDefaultButtons();
+            defaultButtonDesignHtmls.forEach(button -> button.setPosition("line"));
+            if (ObjectNull.isNotNull(design)) {
+                if (ObjectNull.isNotNull(design.getButtons())) {
+                    design.getButtons().addAll(defaultButtonDesignHtmls);
+                } else {
+                    design.setButtons(new ArrayList<>());
+                    design.getButtons().addAll(defaultButtonDesignHtmls);
+                }
             }
         }
-        //TODO 对属性字段 进行类型自适应处理
         crudPageService.convertDesign(po, design);
         List<DataTableFieldDesignHtml> list = dataFieldDynamicService.getPageAutoTableFields(po.getJvsAppId(), po.getDataModelId(), po.getId());
         if (ObjectNull.isNotNull(list)) {
@@ -178,8 +176,6 @@ public class AppUseController {
                     e.setEnabledQueryTypes(collect);
                     e.getEnabledQueryTypes().remove(DataQueryType.isNull);
                     e.getEnabledQueryTypes().add(DataQueryType.isNull);
-                } else {
-
                 }
             });
             // 解析显示设置-关联模型，获取关联显示字段填充到列表页设计
@@ -197,43 +193,15 @@ public class AppUseController {
         String userId = ModeUtils.getRealUser().getId();
         boolean mobile = IpUtil.isMobile();
 
-        List<Tree<Object>> tree = useComponent.menu(appId, userId, mobile, ModeUtils.getMode());
+        List<Tree<Object>> tree = useComponent.menu(appId, userId, mobile, ModeUtils.getMode(), null);
         List<Tree<Object>> trees = tree
                 .stream()
                 .findFirst()
-                .map(e -> e.getChildren())
+                .map(Tree::getChildren)
                 .orElseThrow(() -> new BusinessException("应用不存在"));
         return R.ok(trees);
     }
 
-    @Log
-    @GetMapping("/h5/{id}")
-    @ApiOperation("H5设计数据")
-    @Transactional(rollbackFor = Exception.class)
-    public R h5(@PathVariable("id") String id, @PathVariable String appId) {
-        H5Design po = h5DesignService.getById(id);
-        if (!po.getJvsAppId().equals(appId)) {
-            throw new BusinessException("应用错误或设计不存在");
-        }
-        JvsApp byId = jvsAppService.getById(po.getJvsAppId());
-        boolean isAdmin = UserCurrentUtils.getCurrentUser().getAdminFlag() || byId.getCreateById().equals(UserCurrentUtils.getUserId()) || po.getCreateById().equals(UserCurrentUtils.getUserId());
-        if (isAdmin) {
-            return R.ok(po);
-        }
-        return R.ok(po);
-    }
-
-    @Log
-    @GetMapping("/screen/{resourceId}")
-    @ApiOperation("大屏获取")
-    @Transactional(rollbackFor = Exception.class)
-    public R screen(@PathVariable("resourceId") String id, @PathVariable String appId) {
-        ScreenPo one = screenService.getOne(Wrappers.query(new ScreenPo().setId(id).setJvsAppId(appId)));
-        if (ObjectNull.isNull(one)) {
-            throw new BusinessException("应用错误或设计不存在");
-        }
-        return R.ok(one);
-    }
 
     @Log
     @GetMapping("/form/{id}")
@@ -251,16 +219,16 @@ public class AppUseController {
         if (ObjectNull.isNull(po)) {
             return R.ok();
         }
-        JvsApp byId = jvsAppService.getById(po.getJvsAppId());
-        boolean isAdmin = UserCurrentUtils.getCurrentUser().getAdminFlag() || byId.getCreateById().equals(UserCurrentUtils.getUserId()) || po.getCreateById().equals(UserCurrentUtils.getUserId());
+
         FormDesignHtml design = DesignUtils.parseForm(po.getViewJson());
         if (ObjectNull.isNull(design.getFormdata())) {
             return R.ok(po.setViewJson(JSONObject.toJSONString(design)));
         }
         //如果存在富文本和移动端，需要进行单独处理
         boolean mobile = IpUtil.isMobile();
-        if (mobile) {
-            design.getFormdata().get(0).getForms().forEach(e -> {
+        List<Map<String, Object>> forms = design.getFormdata().get(0).getForms();
+        for (Map<String, Object> e : forms) {
+            if (mobile) {
                 if (DataFieldType.htmlEditor.name().equals(e.get("type"))) {
                     //如果是这富文本，需要对其内容进行重新处理
                     Object o = e.get("defaultValue");
@@ -270,8 +238,52 @@ public class AppUseController {
                         e.put("defaultValue", s);
                     }
                 }
-            });
+            }
+            if (DataFieldType.tab.name().equals(e.get("type"))) {
+                TabItemHtml tab = parseField(e, TabItemHtml.class);
+                Set<Map.Entry<String, List<FieldBasicsHtml>>> entries = tab.getColumn().entrySet();
+                for (Map.Entry<String, List<FieldBasicsHtml>> entry : entries) {
+                    for (FieldBasicsHtml baseDto : entry.getValue()) {
+                        if (DataFieldType.tableForm.name().equals(baseDto.getType())) {
+                            if (ObjectNull.isNotNull(baseDto.getDataModelId())) {
+                                TableFormItemHtml table = parseField(baseDto.getDesignJson(), TableFormItemHtml.class);
+                                //判断是否有关联模型，关联模型中是否存在脱敏字段
+                                List<String> fields = dynamicDataService.encryptionData(baseDto.getDataModelId());
+                                //获取字段。将这表格内的字段进行删除掉
+//                                table.getTableColumn().removeIf(a -> fields.contains(a.getProp()));
+//                                baseDto = table;
+                            }
+                        }
+                    }
+                }
+//                e.putAll(BeanToMapUtils.beanToMap(tab));
+            }
+            if (DataFieldType.tableForm.name().equals(e.get("type"))) {
+                TableFormItemHtml baseDto = parseField(e, TableFormItemHtml.class);
+                if (ObjectNull.isNotNull(baseDto.getDataModelId())) {
+                    //判断是否有关联模型，关联模型中是否存在脱敏字段
+                    List<String> fields = dynamicDataService.encryptionData(baseDto.getDataModelId());
+                    //获取字段。将这表格内的字段进行删除掉
+                    baseDto.getTableColumn().removeIf(a -> fields.contains(a.getProp()));
+                    //todo 不处理表格脱敏
+//                    e.putAll(BeanToMapUtils.beanToMap(baseDto));
+                }
+            }
         }
+
+        DataModelPo byId = dataModelService.getById(po.getDataModelId());
+        //处理表单中的脱敏
+        List<String> fields = dynamicDataService.encryptionData(byId);
+        design.getFormdata().get(0).getForms().removeIf(e -> {
+            FieldPublicHtml baseDto = parseField(e, FieldPublicHtml.class);
+            if (fields.contains(baseDto.getProp())) {
+                if (!String.class.equals(baseDto.getType().getAClass())) {
+                    return true;
+                }
+            }
+            return false;
+        });
+
         //操作按钮权限过滤目前只有一个表单，没有多个表单获取 0
         FormSettingHtml formsetting = design.getFormdata().get(0).getFormsetting();
         //设置是否开启数据和日志的默认值
@@ -288,6 +300,8 @@ public class AppUseController {
                 design.getFormdata().get(0).getForms().add(e);
             });
         }
+
+        boolean isAdmin = jvsAppService.userIsAppAdmin(po.getJvsAppId());
         if (isAdmin) {
             return R.ok(po.setViewJson(JSONObject.toJSONString(design)));
         }
@@ -302,6 +316,7 @@ public class AppUseController {
                 return R.failed("没有权限请联系管理员");
             }
         }
+
         Set<String> permit = RoleUtils.getPermitOperation(designRoleList, formButtonList);
         //删除没有权限的
         formButtonList.removeIf(button -> !permit.contains(button.getName()));
@@ -312,7 +327,24 @@ public class AppUseController {
     @ApiOperation("获取表单")
     @GetMapping("/form/design/{resourceId}")
     public R<FormPo> getById(@PathVariable("resourceId") String id, @PathVariable String appId) {
-        return R.ok(formService.getOne(Wrappers.query(new FormPo().setJvsAppId(appId).setId(id))));
+        List<String> execs = new ArrayList<>();
+        //根据结构添加公式组件数据
+        List<FunctionBusinessPo> functionBusinessPos = businessMapper.selectList(Wrappers.query(new FunctionBusinessPo().setDesignId(id)));
+        if (ObjectNull.isNotNull(functionBusinessPos)) {
+            execs.addAll(functionBusinessPos
+                    .stream()
+                    .peek(e -> execs.add(e.getBusinessId()))
+                    .filter(e -> ObjectNull.isNotNull(e.getRelatedIds()))
+                    .flatMap(e -> e.getRelatedIds().stream())
+                    .distinct()
+                    .collect(Collectors.toList()));
+        }
+
+        FormPo one = formService.getOne(Wrappers.query(new FormPo().setJvsAppId(appId).setId(id)));
+        FormDesignHtml design = DesignUtils.parseForm(one.getViewJson());
+        design.setExecs(execs);
+        one.setViewJson(JSONObject.toJSONString(design));
+        return R.ok(one);
     }
 }
 

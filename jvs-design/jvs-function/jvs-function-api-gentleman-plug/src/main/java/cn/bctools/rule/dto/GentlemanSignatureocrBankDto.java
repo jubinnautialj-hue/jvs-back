@@ -6,6 +6,7 @@ import cn.bctools.rule.entity.enums.InputType;
 import cn.bctools.rule.entity.enums.type.RuleFile;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
@@ -14,6 +15,7 @@ import lombok.experimental.Accessors;
  *
  * @author jvs
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
 @AllArgsConstructor

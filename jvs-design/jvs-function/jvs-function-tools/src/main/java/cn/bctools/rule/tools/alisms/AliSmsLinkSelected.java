@@ -36,19 +36,17 @@ public class AliSmsLinkSelected implements LinkFieldSelected<String> {
         fields field = fields.valueOf(body);
         String key = "message:push:SMS" + TenantContextHolder.getTenantId();
         //如果是不是最新的，则直接返回缓存数据
-        switch (field) {
-            case content:
-                //做字段解析
-                AliSmsTemplateVo templateVo = ((List<AliSmsTemplateVo>) ((List<?>) redisUtils.get(key)))
-                        .stream()
-                        .filter(e -> e.getTemplateCode().equals(id))
-                        .findFirst().orElseThrow(() -> new BusinessException("没有找到关联字段"));
-                String templateContent = templateVo.getTemplateContent();
-                Map<String, String> map = getMap(SMSREGEX, templateContent, 2, 1);
-                return map.keySet()
-                        .stream()
-                        .map(e -> new ParameterOption<String>().setLabel(e).setValue(e)).collect(Collectors.toList());
-            default:
+        //做字段解析
+        if (field == fields.content) {
+            AliSmsTemplateVo templateVo = ((List<AliSmsTemplateVo>) redisUtils.get(key))
+                    .stream()
+                    .filter(e -> e.getTemplateCode().equals(id))
+                    .findFirst().orElseThrow(() -> new BusinessException("没有找到关联字段"));
+            String templateContent = templateVo.getTemplateContent();
+            Map<String, String> map = getMap(SMSREGEX, templateContent, 2, 1);
+            return map.keySet()
+                    .stream()
+                    .map(e -> new ParameterOption<String>().setLabel(e).setValue(e)).collect(Collectors.toList());
         }
         throw new BusinessException("没有找到关联字段");
     }
@@ -80,11 +78,13 @@ public class AliSmsLinkSelected implements LinkFieldSelected<String> {
 
     @Override
     public List<String> fields() {
-        return Arrays.stream(fields.values()).map(e -> e.name()).collect(Collectors.toList());
+        return Arrays.stream(fields.values()).map(Enum::name).collect(Collectors.toList());
     }
 
     enum fields {
-        /**content*/
+        /**
+         * content
+         */
         content;
     }
 

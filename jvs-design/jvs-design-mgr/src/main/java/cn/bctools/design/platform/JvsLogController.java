@@ -8,7 +8,6 @@ import cn.bctools.design.crud.entity.FormPo;
 import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.crud.utils.DesignUtils;
 import cn.bctools.design.data.fields.IDataFieldHandler;
-import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
 import cn.bctools.design.data.fields.dto.FieldPublicHtml;
 import cn.bctools.design.data.fields.dto.form.FormDesignHtml;
 import cn.bctools.design.data.fields.dto.form.html.TableFormItemHtml;
@@ -20,8 +19,6 @@ import cn.bctools.log.annotation.Log;
 import cn.hutool.core.lang.Dict;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
@@ -34,7 +31,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**

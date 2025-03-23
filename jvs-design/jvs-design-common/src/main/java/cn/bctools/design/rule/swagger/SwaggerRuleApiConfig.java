@@ -1,6 +1,7 @@
 package cn.bctools.design.rule.swagger;
 
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import org.springframework.context.annotation.Configuration;
 import springfox.documentation.service.Documentation;
 import springfox.documentation.spring.web.DocumentationCache;
@@ -22,8 +23,10 @@ import static springfox.documentation.spring.web.paths.Paths.ROOT;
 @AllArgsConstructor
 public class SwaggerRuleApiConfig {
 
-    public static final Set<String> PRODUCES = Stream.of("*/*").collect(Collectors.toSet());
-    public static final Set<String> CONSUMES = Stream.of("application/json").collect(Collectors.toSet());
+    @Getter
+    protected static final Set<String> PRODUCES = Stream.of("*/*").collect(Collectors.toSet());
+    @Getter
+    protected static final Set<String> CONSUMES = Stream.of("application/json").collect(Collectors.toSet());
 
     private final DocumentationCache documentationCache;
     private final SwaggerRuleApiCacheService swaggerRuleApiCacheService;
@@ -42,6 +45,6 @@ public class SwaggerRuleApiConfig {
                     null, new ArrayList<>());
             documentationCache.addDocumentation(documentation);
         }
-        new Thread(() -> swaggerRuleApiCacheService.initAllSwaggerRuleApi()).start();
+        new Thread(swaggerRuleApiCacheService::initAllSwaggerRuleApi).start();
     }
 }

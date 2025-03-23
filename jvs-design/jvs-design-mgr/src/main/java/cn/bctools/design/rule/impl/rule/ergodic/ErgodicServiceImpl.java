@@ -4,9 +4,12 @@ package cn.bctools.design.rule.impl.rule.ergodic;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.TenantContextHolder;
+import cn.bctools.database.util.IdGenerator;
 import cn.bctools.design.rule.RuleStartUtils;
 import cn.bctools.design.rule.entity.RunLogPo;
 import cn.bctools.design.rule.service.RunLogService;
+import cn.bctools.oss.dto.BaseFile;
+import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
@@ -14,6 +17,7 @@ import cn.bctools.rule.entity.enums.RunType;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
 import cn.bctools.rule.utils.RuleDesignUtils;
 import cn.bctools.rule.utils.RuleSystemThreadLocal;
+import cn.bctools.rule.utils.TaskLogUtil;
 import cn.bctools.rule.utils.dto.RuleExecDto;
 import cn.bctools.rule.utils.html.HtmlGraph;
 import cn.bctools.rule.utils.html.ResultDto;
@@ -26,6 +30,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 
+import java.io.ByteArrayInputStream;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -34,6 +39,9 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+
+import static cn.bctools.design.rule.RuleStartUtils.FORMAT_DATETIME;
+import static cn.bctools.design.rule.RuleStartUtils.FORMAT_LOG;
 
 /**
  * 需要根据画布信息，保存对应的画布日志，用于回显的时候，查看
@@ -45,6 +53,9 @@ import java.util.stream.IntStream;
         explain = "对数组对象进行遍历，也可传入数字做为循环次数，类似 for 循环。")
 
 public class ErgodicServiceImpl implements BaseCustomFunctionInterface<ErgodicDto> {
+
+    @Autowired
+    OssTemplate ossTemplate;
 
     @Autowired
     RunLogService runLogService;
@@ -97,7 +108,7 @@ public class ErgodicServiceImpl implements BaseCustomFunctionInterface<ErgodicDt
             extracted(async, body, currentCanvasDto, execNodeId, graph, htmlGraph, currentCanvasDto.getType());
             return body.get(0);
         } else {
-            throw new BusinessException("不支持此类型");
+            throw new BusinessException("逻辑循环不支持此类型");
         }
     }
 
@@ -142,7 +153,21 @@ public class ErgodicServiceImpl implements BaseCustomFunctionInterface<ErgodicDt
             CompletableFuture<Result> resultCompletableFuture = CompletableFuture.supplyAsync(() -> {
                 RuleSystemThreadLocal.threadLocal.remove();
                 SecurityContextHolder.getContext().setAuthentication(authentication);
-                return getResult(currentCanvasDto, index, body, execNodeId, graph, htmlGraph, tenantId, type);
+                //如果是异步循环，需要将当前循环容器的次数清理掉
+                RuleSystemThreadLocal.clearErgodic();
+                Result result = getResult(currentCanvasDto, index, body, execNodeId, graph, htmlGraph, tenantId, type);
+                try {
+                    String logs = TaskLogUtil.get()
+                            .stream()
+                            .distinct()
+                            .map(e -> String.format(FORMAT_LOG, FORMAT_DATETIME.format(e.getTime()), e.getType(), e.getMsg()))
+                            .collect(Collectors.joining("<br/>"));
+                    BaseFile baseFile = ossTemplate.putFile("jvs-public", "rule/run/log", IdGenerator.getIdStr() + ".log", new ByteArrayInputStream(logs.getBytes()));
+                    String url = ossTemplate.fileLink(baseFile.getFileName(), "jvs-public");
+                    result.log.setLogs(url);
+                } catch (Exception e) {
+                }
+                return result;
             }, RuleStartUtils.EXECUTOR);
             tasks.add(resultCompletableFuture);
         }

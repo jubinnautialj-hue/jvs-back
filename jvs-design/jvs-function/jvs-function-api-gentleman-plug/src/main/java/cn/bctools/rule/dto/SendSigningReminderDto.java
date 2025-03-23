@@ -3,21 +3,18 @@ package cn.bctools.rule.dto;
 
 import cn.bctools.rule.annotations.ParameterValue;
 import cn.bctools.rule.entity.enums.InputType;
-import cn.bctools.rule.entity.enums.type.RuleFile;
-import com.alibaba.fastjson2.JSONArray;
-import io.swagger.models.auth.In;
 import lombok.AllArgsConstructor;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
-
-import java.util.List;
 
 /**
  * The type Gentleman signatureapply sign dto.
  *
  * @author jvs
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
 @AllArgsConstructor

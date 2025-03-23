@@ -1,4 +1,4 @@
-//package cn.bctools.rule.data.es;
+package cn.bctools.rule.data.es;//package cn.bctools.rule.data.es;
 //
 //import cn.bctools.rule.annotations.Rule;
 //import cn.bctools.rule.entity.enums.ClassType;

@@ -33,7 +33,7 @@ public class WorkflowLinkFields implements LinkFieldSelected<String> {
             return null;
         }
 
-        List<ParameterOption<String>> optionList = flowDesignService.getByAppId(byId.getJvsAppId(), new String[]{NodeTypeEnum.SP.name()})
+        return flowDesignService.getByAppId(byId.getJvsAppId(), new String[]{NodeTypeEnum.SP.name()})
                 .stream()
                 .filter(e -> e.getId().equals(id))
                 .flatMap(e -> e.getNodes().stream())
@@ -42,13 +42,12 @@ public class WorkflowLinkFields implements LinkFieldSelected<String> {
                 .map(e ->
                         new ParameterOption<String>().setLabel(e.getName()).setValue(e.getId())
                 ).collect(Collectors.toList());
-        return optionList;
     }
 
     @Override
     public List<String> fields() {
-        return new ArrayList<String>() {{
-            add("approvers");
-        }};
+        List<String> list = new ArrayList<>();
+        list.add("approvers");
+        return list;
     }
 }

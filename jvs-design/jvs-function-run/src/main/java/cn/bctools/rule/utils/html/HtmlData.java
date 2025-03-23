@@ -2,7 +2,6 @@ package cn.bctools.rule.utils.html;
 
 import cn.bctools.rule.common.RuleElementVo;
 import cn.bctools.rule.entity.enums.ClassType;
-import cn.bctools.rule.entity.enums.RuleGroup;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 
@@ -49,6 +48,8 @@ public class HtmlData {
     ClassType returnType = ClassType.未识别;
     private List<List> inPoints;
     private boolean draggable;
+    @ApiModelProperty("是否动态刷新可选项")
+    private boolean skipRefresh;
     private List<List> outPoints;
     private List<HtmlParameters> parameters;
     private String stateImage;

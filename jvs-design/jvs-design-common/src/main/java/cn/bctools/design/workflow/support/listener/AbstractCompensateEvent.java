@@ -80,7 +80,7 @@ public abstract class AbstractCompensateEvent {
                     continue;
                 }
                 // 已存在,表示已处理
-                if (redisUtils.sHasKey(COMPENSATE_CACHE, id)) {
+                if (Boolean.TRUE.equals(redisUtils.sHasKey(COMPENSATE_CACHE, id))) {
                     continue;
                 }
                 redisUtils.sSet(COMPENSATE_CACHE, id);

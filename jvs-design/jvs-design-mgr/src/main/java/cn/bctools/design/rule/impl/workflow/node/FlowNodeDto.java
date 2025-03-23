@@ -1,8 +1,8 @@
 package cn.bctools.design.rule.impl.workflow.node;
 
+import cn.bctools.design.rule.impl.workflow.run.FlowRunParameterSelected;
 import cn.bctools.rule.annotations.ParameterValue;
 import cn.bctools.rule.entity.enums.InputType;
-import cn.bctools.design.rule.impl.workflow.run.FlowRunParameterSelected;
 import lombok.Data;
 import lombok.experimental.Accessors;
 

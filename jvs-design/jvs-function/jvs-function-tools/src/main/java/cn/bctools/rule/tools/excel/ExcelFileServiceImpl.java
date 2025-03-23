@@ -13,7 +13,7 @@ import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.entity.enums.type.OutputType;
 import cn.bctools.rule.entity.enums.type.RuleFile;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
-import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.poi.excel.ExcelUtil;
 import cn.hutool.poi.excel.ExcelWriter;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
@@ -24,9 +24,9 @@ import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.Sheet;
 
-import javax.swing.plaf.FileChooserUI;
-import java.io.*;
-import java.util.Comparator;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -109,12 +109,13 @@ public class ExcelFileServiceImpl implements BaseCustomFunctionInterface<ExcelFi
             BaseFile put = ossTemplate.putFile(OssSystemCons.OSS_BUCKET_NAME, originalName, new FileInputStream(destFile), module);
             String url = ossTemplate.fileLink(put.getFileName(), OssSystemCons.OSS_BUCKET_NAME);
             return new RuleFile().setBucketName(OssSystemCons.OSS_BUCKET_NAME)
+                    .setSize(put.getSize())
                     .setFileName(put.getFileName())
                     .setName(originalName)
                     .setOutputType(OutputType.download)
                     .setModule(module)
                     .setFileType(".xlsx")
-                    .setOriginalName(originalName)
+                    .setOriginalName(originalName + StrUtil.DOT + "xlsx")
                     .setUrl(url);
         } catch (FileNotFoundException e) {
             throw new BusinessException("逻辑生成Excel转换错误");

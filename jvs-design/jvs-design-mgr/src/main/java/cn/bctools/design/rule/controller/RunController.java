@@ -21,9 +21,9 @@ import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.expression.EnvConstant;
 import cn.bctools.design.project.handler.DesignHandler;
+import cn.bctools.design.rule.RuleStartUtils;
 import cn.bctools.design.rule.entity.RuleDesignPo;
 import cn.bctools.design.rule.entity.RunLogPo;
-import cn.bctools.design.rule.RuleStartUtils;
 import cn.bctools.design.rule.service.RuleDesignService;
 import cn.bctools.design.rule.service.RunLogService;
 import cn.bctools.design.util.DynamicDataUtils;
@@ -131,7 +131,7 @@ public class RunController {
             switch (po.getComponentType()) {
                 case form:
                     FormPo byId = formService.getById(po.getComponentDesignId());
-                    if (ObjectNull.isNotNull(variableMap) && !variableMap.isEmpty()) {
+                    if (ObjectNull.isNotNull(variableMap, byId) && !variableMap.isEmpty()) {
                         dataFieldService.getFields(appId, byId.getDataModelId(), true, false).stream().filter(e -> DataFieldType.CONTAINER.contains(e.getFieldType())).forEach(e -> {
                             FieldPublicHtml publicHtml = iDataFieldHandler.get(e.getFieldType().getDesc()).toHtml(e);
                             if (ObjectNull.isNotNull(publicHtml)) {

@@ -5,14 +5,12 @@ import cn.bctools.auth.api.dto.EnvironmentVariableDto;
 import cn.bctools.auth.api.enums.EnvironmentVariableEnum;
 import cn.bctools.auth.api.enums.ModeTypeEnum;
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.JvsJsonPath;
-import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.common.utils.R;
-import cn.bctools.common.utils.SystemThreadLocal;
+import cn.bctools.common.utils.*;
 import cn.bctools.function.entity.vo.ElementVo;
 import cn.bctools.function.enums.JvsParamType;
 import cn.bctools.function.handler.IJvsParam;
 import cn.bctools.function.handler.JvsExpression;
+import cn.bctools.function.service.ModeTypeService;
 import cn.bctools.redis.JvsMessageListenerAdapter;
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
@@ -32,9 +30,11 @@ import java.util.stream.Collectors;
 public class VariableParamImpl extends JvsMessageListenerAdapter implements IJvsParam<ElementVo> {
 
     EnvironmentVariableApi environmentVariableApi;
+    ModeTypeService modeTypeService;
 
-    public VariableParamImpl(EnvironmentVariableApi variableApi) {
+    public VariableParamImpl(EnvironmentVariableApi variableApi, ModeTypeService modeTypeService) {
         this.environmentVariableApi = variableApi;
+        this.modeTypeService = modeTypeService;
     }
 
     @Override
@@ -50,8 +50,7 @@ public class VariableParamImpl extends JvsMessageListenerAdapter implements IJvs
      */
     @Override
     public List<ElementVo> getAllElements() {
-        ModeTypeEnum mode = Optional.ofNullable(SystemThreadLocal.get("app_use_mode")).map(e -> ModeTypeEnum.valueOf(Objects.requireNonNull(JvsJsonPath.read(e, "mode")).toString()
-        )).orElse(ModeTypeEnum.GA);
+        ModeTypeEnum mode = modeTypeService.getMode();
         R<List<EnvironmentVariableDto>> all = environmentVariableApi.getAll(mode);
         if (all.is()) {
             //如果没有环境变量直接返回空
@@ -73,16 +72,15 @@ public class VariableParamImpl extends JvsMessageListenerAdapter implements IJvs
 
     @Override
     public Object get(String paramName, Map<String, Object> data) {
-        ModeTypeEnum mode = Optional.ofNullable(SystemThreadLocal.get("app_use_mode")).map(e -> ModeTypeEnum.valueOf(Objects.requireNonNull(JvsJsonPath.read(e, "mode")).toString()
-        )).orElse(ModeTypeEnum.GA);
+        ModeTypeEnum mode = modeTypeService.getMode();
 
-        if (timedCache.containsKey(mode + paramName)) {
-            return timedCache.get(mode + paramName);
+        if (timedCache.containsKey(TenantContextHolder.getTenantId() + "_" + mode + paramName)) {
+            return timedCache.get(TenantContextHolder.getTenantId() + "_" + mode + paramName);
         }
 
         Object value = Optional.ofNullable(environmentVariableApi.getByKey(paramName, mode).getData()).orElseThrow(() -> new BusinessException("没有找到环境变量")).getValue();
         if (ObjectNull.isNotNull(value)) {
-            timedCache.put(mode + paramName, value);
+            timedCache.put(TenantContextHolder.getTenantId() + "_" + mode + paramName, value);
         }
         return value;
     }

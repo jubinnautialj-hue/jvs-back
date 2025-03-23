@@ -65,7 +65,7 @@ public class SwaggerOpenApiConfiguration implements ApplicationRunner {
     /**
      * 填充所有OpenApi到新组
      * <p>
-     * 扫描使用{@link cn.bctools.common.annoation.OpenApi}注解的类
+     * 扫描使用{@link OpenApi}注解的类
      */
     private void fillOpenApiToSwagger() {
         if (ObjectNull.isNull(openApiPaths)) {

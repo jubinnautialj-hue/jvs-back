@@ -19,7 +19,10 @@ import cn.bctools.rule.entity.enums.RunType;
 import cn.bctools.rule.utils.RuleSystemThreadLocal;
 import cn.bctools.rule.utils.UrlUtils;
 import cn.bctools.rule.utils.dto.RuleExecDto;
-import cn.bctools.rule.utils.html.*;
+import cn.bctools.rule.utils.html.HtmlEdge;
+import cn.bctools.rule.utils.html.HtmlGraph;
+import cn.bctools.rule.utils.html.NodeHtml;
+import cn.bctools.rule.utils.html.RuleExecuteDto;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -60,6 +63,9 @@ public class RuleRunServiceImpl implements RuleRunService, AsyncService {
         RuleSystemThreadLocal.setParameterSelectedOption(variableMap);
         //根据租户ID调用自己的服务
         RuleDesignPo po = ruleService.getEnableDesign(ruleKey);
+        if(ObjectNull.isNull(po)){
+            throw new BusinessException("逻辑不存在");
+        }
         OssUtils.setOssTemplateBusinessId(OssConstantType.OSS_RULE_RUN, po.getJvsAppId());
 
         //通过定时任务执行时，可能租户信息丢失
@@ -146,7 +152,9 @@ public class RuleRunServiceImpl implements RuleRunService, AsyncService {
                 new LinkedBlockingDeque<>(),
                 Executors.defaultThreadFactory(),
                 new ThreadPoolExecutor.AbortPolicy());
+        RuleExecDto rule = RuleSystemThreadLocal.getRule();
         CompletableFuture<RuleExecuteDto> future = CompletableFuture.supplyAsync(() -> {
+            RuleSystemThreadLocal.set(rule);
             //清空数据
             RuleSystemThreadLocal.threadLocal.remove();
             SecurityContextHolder.getContext().setAuthentication(authentication);

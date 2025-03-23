@@ -31,9 +31,10 @@ public class DynamicDataConstant {
         if (Map.class.isAssignableFrom(javaClass)) {
             return Collections.EMPTY_MAP;
         }
-        if (Date.class.isAssignableFrom(javaClass)) {
-            return null;
-        }
+        //处理日期格式回填空问题。
+//        if (Date.class.isAssignableFrom(javaClass)) {
+//            return null;
+//        }
         //其它类型设置为空时给定占位
         return DATA_EMPTY;
     }

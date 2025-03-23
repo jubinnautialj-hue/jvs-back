@@ -233,6 +233,7 @@ public class ImportUserListener implements ReadListener<UserExcelTemplate> {
         }
         // 得到部门路径集合
         Set<String> deptNamePaths = userExcelDatas.stream().filter(u -> StringUtils.isNotBlank(u.getDeptName())).map(UserExcelTemplate::getDeptName).collect(Collectors.toSet());
+        deptNamePaths = deptNamePaths.stream().flatMap(e -> Arrays.stream(e.split(","))).collect(Collectors.toSet());
         deptNamePaths.forEach(deptNamePath -> {
             if (Boolean.FALSE.equals(deptPathCache.containsKey(deptNamePath))) {
                 String[] deptNameArr = deptNamePath.split("/");
@@ -418,6 +419,7 @@ public class ImportUserListener implements ReadListener<UserExcelTemplate> {
             user.setId(IdWorker.get32UUID());
             UserTenant userTenant = BeanCopyUtil.copy(u, UserTenant.class);
             userTenant.setUserId(user.getId());
+            userTenant.setDeptId(Arrays.stream(u.getDeptName().split(",")).collect(Collectors.toList()));
             convertUserTenant(userTenant);
             users.add(user);
             userTenants.add(userTenant);
@@ -446,9 +448,9 @@ public class ImportUserListener implements ReadListener<UserExcelTemplate> {
         }
         Set<String> accountNames = users.stream().map(User::getAccountName).collect(Collectors.toSet());
         if (CollectionUtils.isNotEmpty(accountNames)) {
-            long count = userService.count(Wrappers.<User>lambdaQuery().in(User::getAccountName, accountNames));
-            if (count > 0) {
-                throw new BusinessException("帐号已存在");
+            List<User> count = userService.list(Wrappers.<User>lambdaQuery().in(User::getAccountName, accountNames));
+            if (!count.isEmpty()) {
+                throw new BusinessException(count.stream().map(User::getAccountName).collect(Collectors.joining(",")) + "帐号已存在");
             }
         }
 
@@ -475,18 +477,10 @@ public class ImportUserListener implements ReadListener<UserExcelTemplate> {
      * @param userTenant
      */
     private void convertDept(UserTenant userTenant) {
-        if (StringUtils.isBlank(userTenant.getDeptName())) {
-            return;
-        }
-        Map<String, String> deptCache = deptPathCache.get(userTenant.getDeptName());
-        String deptName = null;
-        String deptId = null;
-        for (Map.Entry<String, String> entry : deptCache.entrySet()) {
-            deptName = entry.getKey();
-            deptId = entry.getValue();
-        }
-        userTenant.setDeptName(deptName);
-        userTenant.setDeptId(deptId);
+        List<String> id = userTenant.getDeptId();
+        id = id.stream().map(e -> deptPathCache.get(e).values().stream().collect(Collectors.toList()).get(0))
+                .collect(Collectors.toList());
+        userTenant.setDeptId(id);
     }
 
     /**

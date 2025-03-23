@@ -42,7 +42,7 @@ public class FormUseController {
                                        @RequestBody(required = false) ExecDto body) {
         // 准备调用公式的数据
         FormPo formPo = Optional.ofNullable(formService.getById(designId)).orElseGet(FormPo::new);
-        Map<String, Object> businessIdPaths = JSONPath.paths(formPo.getTagSetting()).entrySet().stream().filter(e -> e.getKey().contains("businessId")).collect(Collectors.toMap(e -> e.getKey(), e -> e.getValue()));
+        Map<String, Object> businessIdPaths = JSONPath.paths(formPo.getTagSetting()).entrySet().stream().filter(e -> e.getKey().contains("businessId")).collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
         Map<String, Object> params = Optional.ofNullable(body.getParams()).orElseGet(HashMap::new);
         businessIdPaths.forEach((key, value) -> params.put(String.valueOf(value), ""));
         body.setParams(params);

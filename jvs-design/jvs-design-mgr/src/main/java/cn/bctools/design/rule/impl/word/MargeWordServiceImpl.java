@@ -48,11 +48,12 @@ public class MargeWordServiceImpl implements BaseCustomFunctionInterface<MargeWo
         String fileLink = ossTemplate.fileLink(baseFile.getFileName(), OssSystemCons.OSS_BUCKET_NAME);
         return new RuleFile().setBucketName(OssSystemCons.OSS_BUCKET_NAME)
                 .setFileName(baseFile.getFileName())
+                .setSize(baseFile.getSize())
                 .setName(wordDto.getFileName())
                 .setOutputType(OutputType.download)
                 .setModule(RuleConstant.OSS_BUCKET_NAME_PATH + "docx")
                 .setFileType(StrUtil.DOT + "docx")
-                .setOriginalName(wordDto.getFileName())
+                .setOriginalName(wordDto.getFileName() + StrUtil.DOT + "docx")
                 .setUrl(fileLink);
     }
 

@@ -40,7 +40,6 @@ import cn.bctools.design.project.handler.IJvsDesigner;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.sqlInjector.MapperMethodHandler;
 import cn.bctools.design.template.dto.PageTemplateDto;
-import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
@@ -267,7 +266,7 @@ public class CrudPageServiceImpl extends ServiceImpl<CrudPageMapper, CrudPage> i
         //添加默认办理按钮
         List<ButtonDesignHtml> defaultButtonDesignHtmls = getSystemDefaultButtons();
 
-        boolean isAdmin = UserCurrentUtils.getCurrentUser().getAdminFlag() || page.getCreateById().equals(UserCurrentUtils.getUserId());
+        boolean isAdmin = appService.userIsAppAdmin(page.getJvsAppId());
         if (isAdmin) {
             if (EnvConstant.LEFT_TREE_BUTTON_DISPLAY.equals(useCase)) {
                 //树形结构不处理

@@ -5,7 +5,7 @@ import java.util.List;
 /**
  * 获取当前项目各个数据源的表结构信息
  * <p>
- * 该接口有默认实现类: {@link cn.bctools.database.getter.DefaultTableFieldGetter}
+ * 该接口有默认实现类: {@link DefaultTableFieldGetter}
  *
  * @Author: GuoZi
  */

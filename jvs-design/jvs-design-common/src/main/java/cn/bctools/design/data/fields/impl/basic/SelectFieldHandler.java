@@ -18,9 +18,6 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSONObject;
-import com.alibaba.fastjson2.JSONPath;
-import com.alibaba.nacos.common.utils.StringUtils;
-import com.jayway.jsonpath.JsonPath;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -46,13 +43,13 @@ public class SelectFieldHandler extends IMultipleTypeHandler implements IDataFie
 
     @Override
     public void filterOrDataLinkage(String appId, Map<String, ? extends FieldBasicsHtml> fieldMap, String key, MultipleHtml e, Map<String, Object> map, Integer index, String... parentPath) {
-        if (ObjectNull.isNull(e.getDataModelId())) {
+        if (ObjectNull.isNull(e.getDataLinkageList())) {
             return;
         }
         if (ObjectNull.isNotNull(e.getDataFilterList()) || ObjectNull.isNotNull(e.getDataFilterGroupList())) {
             List<List<FilterHtml>> dataFilterGroupList = CollectionUtils.isNotEmpty(e.getDataFilterGroupList()) ? e.getDataFilterGroupList() : Collections.singletonList(e.getDataFilterList());
             //如果查询条件与触发级件相关,则执行,如果不相关则退出关联,处理下拉关联问题
-            if (dataFilterGroupList.stream().flatMap(Collection::stream).filter(a -> a.getFieldKey().equals(key)).findFirst().isPresent()) {
+            if (dataFilterGroupList.stream().flatMap(Collection::stream).anyMatch(a -> a.getFieldKey().equals(key))) {
                 //需要查询的字段，是关联字段和显示字段
                 List<String> collect = new ArrayList<>(1);
                 collect.add(e.getProps().getValue());
@@ -75,7 +72,7 @@ public class SelectFieldHandler extends IMultipleTypeHandler implements IDataFie
                                         switch (type) {
                                             case prop:
                                                 //获取字段路径
-                                                List<String> strings = new ArrayList<String>(Arrays.asList(parentPath));
+                                                List<String> strings = new ArrayList<>(Arrays.asList(parentPath));
                                                 strings.add(e.getProp());
                                                 String paths = strings.stream().filter(ObjectNull::isNotNull).collect(Collectors.joining(StrUtil.DOT));
                                                 Object read = JvsJsonPath.read(JSONUtil.toJsonStr(map), paths);
@@ -123,10 +120,19 @@ public class SelectFieldHandler extends IMultipleTypeHandler implements IDataFie
     }
 
     @Override
+    public void checkFieldTypeAttributeChanged(MultipleHtml html, MultipleHtml dbHtml) {
+        super.checkFieldTypeAttributeChanged(html, dbHtml);
+    }
+
+    @Override
     public void checkDataFieldType(MultipleHtml multipleHtml, Object o) throws Exception {
         if (multipleHtml.getMultiple()) {
             if (!(o instanceof List)) {
-                throw new RuntimeException("正确格式为数组");
+                if (o instanceof String) {
+                    o = Arrays.stream(((String) o).split(",")).collect(Collectors.toList());
+                } else {
+                    throw new RuntimeException("正确格式为数组");
+                }
             }
         } else {
             if (!FormDataTypeEnum.flowable.equals(multipleHtml.getDatatype())) {

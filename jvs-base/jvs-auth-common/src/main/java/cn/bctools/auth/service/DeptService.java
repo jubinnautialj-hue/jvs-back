@@ -1,6 +1,7 @@
 package cn.bctools.auth.service;
 
 import cn.bctools.auth.entity.Dept;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import com.baomidou.mybatisplus.extension.service.IService;
 
@@ -47,6 +48,7 @@ public interface DeptService extends IService<Dept> {
      */
     List<Dept> getAllChild(String deptId);
 
+    List<String> getAllChildId(List<String> deptId);
     /**
      * 拉取三方系统组织架构
      *

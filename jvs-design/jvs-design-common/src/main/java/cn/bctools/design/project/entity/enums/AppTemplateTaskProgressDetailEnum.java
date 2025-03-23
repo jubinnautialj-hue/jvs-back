@@ -56,14 +56,6 @@ public enum AppTemplateTaskProgressDetailEnum {
      */
     PAGE("列表", 140, true),
     /**
-     * Data model app template task progress detail enum.
-     */
-    DATA_MODEL("数据模型", 150, true),
-    /**
-     * Data model field app template task progress detail enum.
-     */
-    DATA_MODEL_FIELD("模型字段", 160, true),
-    /**
      * Rule app template task progress detail enum.
      */
     RULE("逻辑设计", 170, true),
@@ -84,13 +76,21 @@ public enum AppTemplateTaskProgressDetailEnum {
      */
     MENU("菜单", 210, true),
     /**
+     * Data model app template task progress detail enum.
+     */
+    DATA_MODEL("数据模型", 220, true),
+    /**
+     * Data model field app template task progress detail enum.
+     */
+    DATA_MODEL_FIELD("模型字段", 230, true),
+    /**
      * Data app template task progress detail enum.
      */
-    DATA("模型数据", 220, true),
+    DATA("模型数据", 240, true),
     /**
      * App version app template task progress detail enum.
      */
-    APP_VERSION("应用版本", 240, true),
+    APP_VERSION("应用版本", 260, true),
     /**
      * End app template task progress detail enum.
      */

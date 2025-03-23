@@ -102,10 +102,6 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 throw new BusinessException("帐号已存在");
             }
         }
-        if (ObjectNull.isNotNull(userTenant.getDeptId())) {
-            Dept dept = deptMapper.selectById(userTenant.getDeptId());
-            userTenant.setDeptName(dept.getName());
-        }
         if (ObjectNull.isNotNull(userTenant.getJobId())) {
             Job job = jobMapper.selectById(userTenant.getJobId());
             userTenant.setJobName(job.getName());
@@ -223,6 +219,8 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
             String defaultPassword = passwordEncoder.encode(config.getDefaultPassword());
             // 导入数据
             EasyExcel.read(file.getInputStream(), UserExcelTemplate.class, new ImportUserListener(userDto, defaultPassword, deptTree, sysJobDtos)).sheet().doRead();
+        } catch (BusinessException ex) {
+            throw ex;
         } catch (Exception ex) {
             log.error("数据导入异常", ex);
             throw new BusinessException("导入失败");
@@ -371,7 +369,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                 List<UserTenant> existTenantUsers = userTenantService.list(Wrappers.<UserTenant>lambdaQuery().in(UserTenant::getUserId, existExtensionUserIds));
                 if (CollectionUtils.isNotEmpty(existTenantUsers)) {
                     existTenantUsers.forEach(existUserTenant -> {
-                                existExtensions.stream().filter(e -> e.getUserId().equals(existUserTenant.getUserId())).findAny().flatMap(ue -> userTenants.stream().filter(userTenant -> userTenant.getUserId().equals(ue.getUserId()) || userTenant.getUserId().equals(ue.getOpenId())).findFirst()).ifPresent(u -> existUserTenant.setDeptId(u.getDeptId()).setDeptName(u.getDeptName()));
+                                existExtensions.stream().filter(e -> e.getUserId().equals(existUserTenant.getUserId())).findAny().flatMap(ue -> userTenants.stream().filter(userTenant -> userTenant.getUserId().equals(ue.getUserId()) || userTenant.getUserId().equals(ue.getOpenId())).findFirst()).ifPresent(u -> existUserTenant.setDeptId(u.getDeptId()));
                             }
                     );
                     List<String> existTenantUserIds = existTenantUsers.stream().map(UserTenant::getUserId).collect(Collectors.toList());

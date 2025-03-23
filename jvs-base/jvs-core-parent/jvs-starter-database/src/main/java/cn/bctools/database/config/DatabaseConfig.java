@@ -66,15 +66,7 @@ public class DatabaseConfig {
         log.info("[mysql-data] 加载单数据源初始化类: {}", DataSourceInit.class.getName());
         return new DataSourceInit();
     }
-//
-//    /**
-//     * 只支持单数据源，不支持多数据源进行分离
-//     */
-//    @Bean
-//    @ConditionalOnMissingBean
-//    TenantDynamicDatasource mycatController(DataSource dataSource, IDataSourceGetter dataSourceGetter, ITableFieldGetter tableFieldGetter) {
-//        return new TenantDynamicDatasource(dataSourceGetter, tableFieldGetter, dataSource);
-//    }
+
 
     @Bean
     @ConditionalOnMissingBean

@@ -1,5 +1,6 @@
 package cn.bctools.design.rule.impl.dingding.dingding;
 
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.PasswordUtil;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.dingding.DingRes;
@@ -8,6 +9,8 @@ import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.bctools.rule.service.ModelInterface;
+import cn.bctools.rule.tools.ftp.FtpSelectedOption;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,13 +34,16 @@ import java.util.Map;
 public class DingDingServiceImpl implements BaseCustomFunctionInterface<DingDingDto> {
 
     DingSendUtils dingSendUtils;
+    ModelInterface modelInterface;
+
 
     @Override
     public Object execute(DingDingDto dto, Map<String, Object> params) {
-        String dingDingUrl = dto.getDingDingUrl();
-        String decodedPassword = PasswordUtil.decodedPassword(dingDingUrl, SpringContextUtil.getKey());
+
+        Object byKey = modelInterface.getByKey(dto.getDingDingUrl());
         //获取的数据源
-        DingDingSelectedOption option = JSONObject.parseObject(decodedPassword, DingDingSelectedOption.class);
+        DingDingSelectedOption option = BeanCopyUtil.copy(DingDingSelectedOption.class, byKey);
+        //获取的数据源
         try {
             DingRes dingRes = dingSendUtils.sendMessage(option.getWebhook(), option.getSecret(), dto.getContent(), dto.getMobiles());
             log.info("钉钉发送成功,{}", JSONObject.toJSONString(dingRes));

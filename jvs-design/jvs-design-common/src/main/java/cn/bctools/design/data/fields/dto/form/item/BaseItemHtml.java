@@ -1,7 +1,6 @@
 package cn.bctools.design.data.fields.dto.form.item;
 
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
-import cn.bctools.design.data.fields.dto.form.FormRuleHtml;
 import cn.bctools.design.data.fields.dto.form.FormTipHtml;
 import cn.bctools.design.data.fields.enums.DataFieldType;
 import io.swagger.annotations.ApiModel;
@@ -20,7 +19,7 @@ import java.util.List;
 @Data
 @EqualsAndHashCode(callSuper = true)
 @Accessors(chain = true)
-@ApiModel(value = "表单组件数据")
+@ApiModel(value = "表格组件数据")
 public class BaseItemHtml extends FieldBasicsHtml {
 
 
@@ -33,8 +32,7 @@ public class BaseItemHtml extends FieldBasicsHtml {
     @ApiModelProperty("提示")
     private FormTipHtml tips;
 
-    @ApiModelProperty("[仅前端使用]该组件所用到的字段名")
-    private List<String> showFrom;
+
 
     @ApiModelProperty("hasChildren")
     private Boolean hasChildren;
@@ -42,8 +40,6 @@ public class BaseItemHtml extends FieldBasicsHtml {
     private Boolean multiple;
     @ApiModelProperty("collapsetags")
     private Boolean collapsetags;
-    @ApiModelProperty("是否禁用")
-    private Boolean disabled;
     @ApiModelProperty("可否搜索")
     private Boolean filterable;
     @ApiModelProperty("可否创建选项")
@@ -60,8 +56,7 @@ public class BaseItemHtml extends FieldBasicsHtml {
     @ApiModelProperty("宽度比例")
     private int span;
 
-    @ApiModelProperty("校验设置")
-    private List<FormRuleHtml> rules;
+
 
     //todo 在表格中的多选、下拉、单选 、级联组件配置了数据筛选和数据联动或间接公式触发的存在关联的字段全路径key集合 未实现
     /**

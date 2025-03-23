@@ -91,7 +91,7 @@ public class AppMenuAppTemplateDataServiceImpl extends AppTemplateDataBase imple
             // 设置版本号
             setAppVersion(e, AppMenu::setAppVersion, targetAppVersion);
             // 兼容新旧版权限功能
-            if (jvsApp.getEnableVersionFeature()) {
+            if (Boolean.TRUE.equals(jvsApp.getEnableVersionFeature())) {
                 if (ObjectNull.isNull(e.getPermission())) {
                     String designId = e.getDesignId();
                     if (DesignType.page.equals(e.getDesignType())) {

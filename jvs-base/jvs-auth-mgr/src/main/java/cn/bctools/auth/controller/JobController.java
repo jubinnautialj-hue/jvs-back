@@ -1,14 +1,17 @@
 package cn.bctools.auth.controller;
 
+import cn.bctools.auth.entity.Dept;
 import cn.bctools.auth.entity.Job;
 import cn.bctools.auth.entity.User;
 import cn.bctools.auth.entity.UserTenant;
+import cn.bctools.auth.service.DeptService;
 import cn.bctools.auth.service.JobService;
 import cn.bctools.auth.service.UserService;
 import cn.bctools.auth.service.UserTenantService;
 import cn.bctools.auth.vo.JobUserPageReqVo;
 import cn.bctools.auth.vo.UserVo;
 import cn.bctools.common.utils.BeanCopyUtil;
+import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.log.annotation.Log;
 import cn.hutool.core.util.ObjectUtil;
@@ -25,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -42,7 +46,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/job")
 public class JobController {
-
+    DeptService deptService;
     JobService jobService;
     UserService userService;
     UserTenantService userTenantService;
@@ -70,9 +74,21 @@ public class JobController {
         if (ObjectUtil.isEmpty(userIdSet)) {
             return R.ok(userPage);
         }
+        List<String> deptids = page.getRecords().stream().filter(e -> ObjectNull.isNotNull(e.getDeptId())).flatMap(e -> e.getDeptId().stream()).collect(Collectors.toList());
+        Map<String, Dept> deptMap = new HashMap<>();
+        if (ObjectNull.isNotNull(deptids)) {
+            deptMap = deptService.listByIds(deptids).stream().collect(Collectors.toMap(Dept::getId, Function.identity()));
+        }
         Map<String, User> userMap = userService.listByIds(userIdSet).stream().collect(Collectors.toMap(User::getId, Function.identity()));
+        Map<String, Dept> finalDeptMap = deptMap;
         List<UserVo> list = page.getRecords().stream()
                 .map(e -> BeanCopyUtil.copy(UserVo.class, userMap.get(e.getUserId()), e))
+                .peek(e -> {
+                    if (ObjectNull.isNotNull(e.getDeptId())) {
+                        List<String> name = e.getDeptId().stream().map(v -> finalDeptMap.get(v).getName()).collect(Collectors.toList());
+                        e.setDeptName(name);
+                    }
+                })
                 .collect(Collectors.toList());
         userPage.setRecords(list);
         return R.ok(userPage);

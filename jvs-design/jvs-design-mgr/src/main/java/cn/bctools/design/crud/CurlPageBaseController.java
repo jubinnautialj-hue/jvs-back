@@ -5,7 +5,6 @@ import cn.bctools.common.utils.R;
 import cn.bctools.design.data.fields.dto.enums.ButtonTypeEnum;
 import cn.bctools.design.data.fields.dto.enums.FieldTypeEnum;
 import cn.bctools.design.data.fields.dto.enums.QueryTypeEnum;
-
 import cn.hutool.core.util.ObjectUtil;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;

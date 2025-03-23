@@ -1,5 +1,6 @@
 package cn.bctools.rule.ess.impl;
 
+import cn.bctools.rule.common.EnvironmentVariableSelected;
 import cn.bctools.rule.common.ParameterSelected;
 import cn.bctools.rule.ess.TencenCloudApiOption;
 import lombok.AllArgsConstructor;
@@ -14,6 +15,6 @@ import org.springframework.stereotype.Service;
 @Slf4j
 @Service
 @AllArgsConstructor
-public class TencenCloudApiSelected implements ParameterSelected<TencenCloudApiOption> {
+public class TencenCloudApiSelected implements EnvironmentVariableSelected<TencenCloudApiOption> {
 
 }

@@ -3,10 +3,7 @@ package cn.bctools.rule.md5;
 
 import cn.bctools.rule.annotations.Inspect;
 import cn.bctools.rule.annotations.ParameterValue;
-import cn.bctools.rule.encryption.encryp.EncryptDecryptConsSelected;
-import cn.bctools.rule.encryption.encryp.EncryptionEnum;
 import cn.bctools.rule.entity.enums.InputType;
-import cn.bctools.rule.selected.EncryptDecryptSelected;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

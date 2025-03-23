@@ -63,7 +63,7 @@ public class WxMpLoginHandler implements WxMpMessageHandler {
                 //异步推送消息
                 asyncWxKeFuMessage.asyncSetImageMessage(wxMpService, wxMessage.getFromUser());
                 //推送关键字
-                asyncWxKeFuMessage.asyncSetTextMessage(wxMpService, wxMessage.getFromUser(), HtmlUtil.cleanHtmlTag(Jsoup.parse(sysWxMpSettings.getKeywordText()).body().toString()));
+                asyncWxKeFuMessage.asyncSetTextMessage(wxMpService, wxMessage.getFromUser(), HtmlUtil.unescape(HtmlUtil.cleanHtmlTag(Jsoup.parse(sysWxMpSettings.getKeywordText()).body().toString())));
                 return WxMpXmlOutMessage.TEXT()
                         .content(HtmlUtil.cleanHtmlTag(Jsoup.parse(sysWxMpSettings.getWelcomeText()).body().toString()))
                         .fromUser(wxMessage.getToUser())

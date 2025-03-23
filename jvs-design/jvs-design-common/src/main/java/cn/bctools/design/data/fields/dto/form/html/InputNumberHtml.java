@@ -25,5 +25,8 @@ public class InputNumberHtml extends FieldBasicsHtml {
 
     @ApiModelProperty("默认值")
     private Integer defaultValue;
+    @ApiModelProperty("千分位数据")
+    private boolean thoudsandthable;
+
 
 }

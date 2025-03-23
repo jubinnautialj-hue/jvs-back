@@ -3,11 +3,9 @@ package cn.bctools.rule.config;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.function.Get;
+import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.rule.annotations.*;
-import cn.bctools.rule.common.LinkFieldSelected;
-import cn.bctools.rule.common.OptionsDto;
-import cn.bctools.rule.common.ParameterOption;
-import cn.bctools.rule.common.ParameterSelected;
+import cn.bctools.rule.common.*;
 import cn.bctools.rule.dto.OptionsType;
 import cn.bctools.rule.dto.RuleFunctionDto;
 import cn.bctools.rule.dto.RuleFunctionDtoParameter;
@@ -15,9 +13,12 @@ import cn.bctools.rule.entity.enums.InputType;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
 import cn.bctools.rule.mapper.RuleOptionDao;
 import cn.bctools.rule.po.RuleOptionPo;
+import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.ClassUtil;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeansException;
@@ -42,16 +43,18 @@ import java.util.stream.Collectors;
 @Order(100)
 @Component
 @Import({SpringContextUtil.class, RestTemplate.class})
+@Getter
 @AllArgsConstructor
 public class SystemInit extends SpringContextUtil {
 
     /**
      * 如果是启动了多个服务,其它人操作可能会存在问题
      */
-    static Map<String, RuleFunctionDto> functionsMap = new LinkedHashMap<>();
-    public static Map<String, ParameterSelected> selectedMap = null;
-    static Map<String, LinkFieldSelected> fieldSelectedMap = new LinkedHashMap<>();
-    public static Map<String, List<OptionsDto>> selectOption = new HashMap<>(10);
+    private static Map<String, RuleFunctionDto> functionsMap = new LinkedHashMap<>();
+    @Getter
+    private static Map<String, ParameterSelected> selectedMap = null;
+    private static Map<String, LinkFieldSelected> fieldSelectedMap = new LinkedHashMap<>();
+    private static Map<String, List<OptionsDto>> selectOption = new HashMap<>(10);
 
     public static Collection<RuleFunctionDto> getFunctionsMaps() {
         return functionsMap.values();
@@ -59,7 +62,12 @@ public class SystemInit extends SpringContextUtil {
 
     public static Map<String, RuleFunctionDto> getFunctionsMap(Collection o, String functionName) {
         StringBuffer name = new StringBuffer("");
-        Map<String, RuleFunctionDto> collect = functionsMap.values().stream().map(e -> {
+        Map<String, RuleFunctionDto> collect = functionsMap.values().stream()
+                //过滤不禁用的
+                .filter(e -> {
+                    return !e.isDemoDisabled();
+                })
+                .map(e -> {
                     if (ObjectNull.isNotNull(functionName)) {
                         boolean matchName = e.getFunctionName().toLowerCase().contains(functionName.toLowerCase()) || PinyinUtils.getCameCasePinYin(e.getFunctionName()).toLowerCase().contains(functionName.toLowerCase());
                         if (!matchName) {
@@ -113,7 +121,7 @@ public class SystemInit extends SpringContextUtil {
         return optionsDtos;
     }
 
-    public static Map<Class, Map<String, ParameterValue>> fieldTypeMap = new HashMap<>(10);
+    protected static final Map<Class, Map<String, ParameterValue>> fieldTypeMap = new HashMap<>(10);
 
     /**
      * 根据参数类，获取这个参数类的所有属性类型
@@ -150,6 +158,8 @@ public class SystemInit extends SpringContextUtil {
      */
     List<RuleFunctionDto> getFunctions(ApplicationContext context) {
         Map<String, BaseCustomFunctionInterface> beansOfType = context.getBeansOfType(BaseCustomFunctionInterface.class);
+        JvsSystemConfig bean = context.getBean(JvsSystemConfig.class);
+        boolean equals = bean.getDomain().equals("bctools.cn");
 
         List<RuleFunctionDto> functionPoList = beansOfType.keySet().stream()
                 .filter(e -> {
@@ -157,7 +167,7 @@ public class SystemInit extends SpringContextUtil {
                     if (aClass.isAnnotationPresent(Rule.class)) {
                         return true;
                     }
-                    log.warn("{} 方法没有添加Rule注解不会被正常使用", e);
+                    log.error(" 方法没有添加Rule注解不会被正常使用", e);
                     return false;
                 })
                 .map(e -> {
@@ -190,6 +200,7 @@ public class SystemInit extends SpringContextUtil {
                             .functionName(value)
                             .parameters(parameters)
                             .skipRefresh(!present)
+                            .demoDisabled(equals ? rule.demoDisabled() : false)
                             .test(rule.test())
                             .status(rule.enable())
                             .group(rule.group().name())
@@ -203,21 +214,6 @@ public class SystemInit extends SpringContextUtil {
                 }).collect(Collectors.toList());
 
         return functionPoList;
-        //获取注册中心中已经有的代码扩展逻辑
-//        DiscoveryClient bean = SpringContextUtil.getBean(DiscoveryClient.class);
-//        RestTemplate restTemplate = SpringContextUtil.getBean(RestTemplate.class);
-//        bean.getServices()
-//                .forEach(e -> {
-//                    //一个实例,只加一次.不加第二次.如果不一样.保证
-//                    Optional<ServiceInstance> rule = bean.getInstances(e).stream().filter(s -> s.getMetadata().containsKey("rule")).findFirst();
-//                    if (rule.isPresent()) {
-//                        Object data = HttpRequestUtils.getJsonR(rule.get().getUri().toString() + "/rule", R.class, false);
-//                        List<RuleFunctionDto> ruleFunctionDtos = JSONArray.parseArray(JSONObject.toJSONString(data), RuleFunctionDto.class);
-//                        functionPoList.addAll(ruleFunctionDtos);
-//                    }
-//                });
-//
-//        return functionPoList;
     }
 
     /**
@@ -254,6 +250,7 @@ public class SystemInit extends SpringContextUtil {
                     //根据注解类型获取是否支持公式
                     RuleFunctionDtoParameter functionParameter = new RuleFunctionDtoParameter()
                             .setInfo(ann.info())
+                            .setSkipRefresh(true)
                             .setInputType(ann.type())
                             .setSubtype(ann.subtype())
                             .setExplain(ann.explain())
@@ -268,6 +265,7 @@ public class SystemInit extends SpringContextUtil {
                         functionParameter.setSelectedClass(toLowerCaseFirstOne(ann.cls().getSimpleName()));
                         functionParameter.setOptionsType(OptionsType.dynimic);
                         functionParameter.setSelectedClassLink(toLowerCaseFirstOne(ann.linkCls().getSimpleName()));
+                        functionParameter.setSkipRefresh(false);
                         //如果是关联类型,则不能使用公式
                         functionParameter.setSupportFunction(false);
                     } else if (linkFields.values().stream().anyMatch(v -> v.contains(e))) {
@@ -309,20 +307,20 @@ public class SystemInit extends SpringContextUtil {
         if (ObjectNull.isNull(parameterClass)) {
             return null;
         }
-        if (parameterClass.isAnnotationPresent(SelectOption.class)) {
-            functionParameter.setOptionsType(OptionsType.dboptions);
-            //获取类的实现类的泛型类
-            SelectOption annotation = (SelectOption) parameterClass.getAnnotation(SelectOption.class);
-            //设置属性值
-            List<OptionsDto> collect = Arrays.stream(parameterClass.getFields())
-                    .map(v -> new OptionsDto().setType(v.getAnnotation(SelectOptionField.class).type()).setFiled(v.getName()).setName(v.getAnnotation(SelectOptionField.class).value()))
-                    .collect(Collectors.toList());
-            selectOption.put(annotation.value(), collect);
-            functionParameter.setCustomOption(collect);
-            functionParameter.setCustomOptionValue(annotation.value());
-        } else {
-            functionParameter.setOptionsType(OptionsType.dynimic);
+        if (cls.getInterfaces()[0].equals(EnvironmentVariableSelected.class)) {
+            StringBuffer jsonString = new StringBuffer();
+            jsonString.append("<br/>");
+            Arrays.stream(parameterClass.getFields())
+                    .filter(e -> e.isAnnotationPresent(SelectOptionField.class))
+                    .forEach(e -> {
+                        SelectOptionField annotation = e.getAnnotation(SelectOptionField.class);
+                        jsonString.append("key:" + e.getName() + "(" + annotation.value() + ")");
+                        jsonString.append("<br/>");
+                    });
+            String str = functionParameter.getExplain() + "\n请在环境变量中添加键值对数据结构:" + jsonString;
+            functionParameter.setExplain(str);
         }
+        functionParameter.setOptionsType(OptionsType.dynimic);
         return parameterClass;
     }
 
@@ -404,7 +402,6 @@ public class SystemInit extends SpringContextUtil {
                         List options = parameterSelected.getOptions();
                         functionParameter.setOptions(options);
                         if (functionParameter.getOptions().isEmpty()) {
-                            functionDto.setStatus(false);
                             functionDto.setStatusMsg(functionParameter.getStatsMsg());
                         } else {
                             ParameterOption o = (ParameterOption) functionParameter.getOptions().get(0);

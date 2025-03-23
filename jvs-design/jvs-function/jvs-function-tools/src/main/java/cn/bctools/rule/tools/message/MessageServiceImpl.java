@@ -1,6 +1,7 @@
 package cn.bctools.rule.tools.message;
 
 
+import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.message.push.api.InsideNotificationApi;
 import cn.bctools.message.push.dto.messagepush.InsideNotificationDto;
@@ -35,6 +36,8 @@ import java.util.stream.Collectors;
 public class MessageServiceImpl implements BaseCustomFunctionInterface<MessageDto> {
 
     @Autowired
+    AuthUserServiceApi userServiceApi;
+    @Autowired
     InsideNotificationApi insideNotificationApi;
 
     @Override
@@ -43,8 +46,11 @@ public class MessageServiceImpl implements BaseCustomFunctionInterface<MessageDt
         //拼装数据
         Dict set = Dict.create().set("title", messageDto.getTitle()).set("content", messageDto.getContent());
         interiorMessage.setContent(JSONObject.toJSONString(set));
-        List<ReceiversDto> definedReceivers = messageDto.getUserIds().stream().map(u -> new ReceiversDto().setUserId(u)).collect(Collectors.toList());
-        interiorMessage.setDefinedReceivers(definedReceivers);
+        List<ReceiversDto> receiversDtos = userServiceApi.getByIds(messageDto.getUserIds()).getData()
+                .stream()
+                .map(e -> new ReceiversDto().setUserId(e.getId()).setUserName(e.getRealName()).setTenantId(TenantContextHolder.getTenantId()))
+                .collect(Collectors.toList());
+        interiorMessage.setDefinedReceivers(receiversDtos);
         interiorMessage.setTenantId(TenantContextHolder.getTenantId());
         insideNotificationApi.send(interiorMessage);
         return "ok";

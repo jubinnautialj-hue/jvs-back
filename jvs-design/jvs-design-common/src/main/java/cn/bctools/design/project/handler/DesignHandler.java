@@ -2,8 +2,9 @@ package cn.bctools.design.project.handler;
 
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
-import cn.bctools.database.util.IdGenerator;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.database.util.IdGenerator;
+import cn.bctools.design.config.DesignConfig;
 import cn.bctools.design.crud.service.CrudPageService;
 import cn.bctools.design.data.fields.dto.enums.ButtonTypeEnum;
 import cn.bctools.design.data.fields.dto.page.ButtonDesignHtml;
@@ -76,6 +77,9 @@ public class DesignHandler {
     @Lazy
     @Autowired
     FunctionBusinessMapper functionMapper;
+    @Lazy
+    @Autowired
+    DesignConfig designConfig;
     @Lazy
     @Autowired
     ExpressionHandler expressionHandler;
@@ -260,11 +264,13 @@ public class DesignHandler {
                 if (Boolean.parseBoolean(result.toString())) {
                     return true;
                 } else {
-                    HashMap<String, Object> body = new HashMap<>(data);
-                    //将转换的key全部再放回到新的对象中进行匹配是
-                    data.keySet().stream().filter(s -> s.endsWith(DynamicDataUtils.SUFFIX_ECHO)).forEach(s -> body.put(s.substring(0, s.length() - DynamicDataUtils.SUFFIX_ECHO.length()), data.get(s)));
-                    result = expressionHandler.calculate(params, body, useCase);
-                    return Boolean.parseBoolean(result.toString());
+                    if (designConfig.getPageButtonFormulaChinese()) {
+                        HashMap<String, Object> body = new HashMap<>(data);
+                        //将转换的key全部再放回到新的对象中进行匹配是
+                        data.keySet().stream().filter(s -> s.endsWith(DynamicDataUtils.SUFFIX_ECHO)).forEach(s -> body.put(s.substring(0, s.length() - DynamicDataUtils.SUFFIX_ECHO.length()), data.get(s)));
+                        result = expressionHandler.calculate(params, body, useCase);
+                        return Boolean.parseBoolean(result.toString());
+                    }
                 }
             }
         } catch (Exception exception) {
@@ -273,9 +279,9 @@ public class DesignHandler {
         return false;
     }
 
-    public Object runFormula(String expression, Map<String, Object> data, String useCase) {
+    public Object runFormula(FunctionBusinessPo expression, Map<String, Object> data, String useCase) {
         try {
-            List<ExpressionParam> params = ExpressionUtils.parsePostfixExpression(expression);
+            List<ExpressionParam> params = ExpressionUtils.parsePostfixExpression(expression.getBody());
             if (ObjectUtils.isEmpty(params)) {
                 return "公式配置错误";
             }
@@ -363,12 +369,6 @@ public class DesignHandler {
         return false;
     }
 
-    private void clear() {
-        if (Objects.isNull(this.designers)) {
-            this.designers = Collections.emptyList();
-        }
-        this.designers.removeIf(e -> Objects.isNull(e.getClass().getAnnotation(Design.class)));
-    }
 
     private DesignRoleSettingDto getRoleSettingCache(LoadingCacheDto data) {
         return permissionCompatibleService.getRoleSetting(data.dataModelId, data.getPageDesignId());

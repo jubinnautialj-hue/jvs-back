@@ -1,8 +1,10 @@
 package cn.bctools.design.workflow.support.process.impl;
 
 import cn.bctools.common.entity.dto.UserDto;
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.workflow.dto.FlowReqDto;
+import cn.bctools.design.workflow.dto.FlowApprovalUserDTO;
 import cn.bctools.design.workflow.entity.FlowTask;
 import cn.bctools.design.workflow.entity.FlowTaskNode;
 import cn.bctools.design.workflow.enums.NodeOperationTypeEnum;
@@ -59,9 +61,10 @@ public class NextProcess implements ProcessInterface {
         // 若是回退操作，且回退到“发起人”节点，则保存下一步流转信息，且不自动执行
         FlowReqDto flowReq = Optional.ofNullable(runtimeData.getFlowDto()).orElseGet(FlowReqDto::new);
         if (NodeOperationTypeEnum.BACK.equals(flowReq.getNodeOperationType())) {
-            List<UserDto> userDtos = null;
+            List<FlowApprovalUserDTO> userDtos = null;
             if (NodeTypeEnum.ROOT.equals(flowResult.getNode().getType())) {
-                userDtos = Collections.singletonList(new UserDto().setId(flowTask.getCreateById()).setRealName(flowTask.getCreateBy()));
+                UserDto rootUser = new UserDto().setId(flowTask.getCreateById()).setRealName(flowTask.getCreateBy());
+                userDtos = Collections.singletonList(BeanCopyUtil.copy(rootUser, FlowApprovalUserDTO.class));
             }
             saveNextNode(flowResult, flowTask, userDtos);
             saveTaskPerson(flowResult.getNode(), runtimeData, userDtos);
@@ -90,7 +93,7 @@ public class NextProcess implements ProcessInterface {
         switch (flowResult.getNode().getType().getGroup()) {
             case MANUAL:
                 // 人工节点，不自动执行，保存下一节点数据，保存下一节点待审批人集合
-                List<UserDto> userDtos = taskPersonFunction.invoke(flowResult.getNode(), runtimeData);
+                List<FlowApprovalUserDTO> userDtos = taskPersonFunction.invoke(flowResult.getNode(), runtimeData);
                 FlowTaskNode flowTaskNode = saveNextNode(flowResult, flowTask, userDtos);
                 FlowContextUtil.refreshContext(flowTaskNode);
                 saveTaskPerson(flowResult.getNode(), runtimeData, userDtos);
@@ -162,8 +165,12 @@ public class NextProcess implements ProcessInterface {
      * @param flowTask 运行时数据
      * @param users 当前节点审批人
      */
-    private FlowTaskNode saveNextNode(FlowResult flowResult, FlowTask flowTask, List<UserDto> users) {
-        return flowTaskNodeService.saveNextNode(flowResult.getNode(), flowTask, users);
+    private FlowTaskNode saveNextNode(FlowResult flowResult, FlowTask flowTask, List<FlowApprovalUserDTO> users) {
+        List<UserDto> userDtos = null;
+        if (ObjectNull.isNotNull(users)) {
+            userDtos = BeanCopyUtil.copys(users, UserDto.class);
+        }
+        return flowTaskNodeService.saveNextNode(flowResult.getNode(), flowTask, userDtos);
     }
 
     /**
@@ -173,7 +180,7 @@ public class NextProcess implements ProcessInterface {
      * @param runtimeData 运行时数据
      * @param users       指定用户为下一节点待审批人（若不为空，则以此字段数据为下一节点审批人）
      */
-    private void saveTaskPerson(Node nextNode, RuntimeData runtimeData, List<UserDto> users) {
+    private void saveTaskPerson(Node nextNode, RuntimeData runtimeData, List<FlowApprovalUserDTO> users) {
         taskPersonService.saveTaskPerson(nextNode, runtimeData, users);
     }
 }

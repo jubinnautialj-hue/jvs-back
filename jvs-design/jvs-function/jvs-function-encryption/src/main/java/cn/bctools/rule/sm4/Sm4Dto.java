@@ -3,8 +3,8 @@ package cn.bctools.rule.sm4;
 
 import cn.bctools.rule.annotations.Inspect;
 import cn.bctools.rule.annotations.ParameterValue;
-import cn.bctools.rule.selected.EncryptDecryptSelected;
 import cn.bctools.rule.entity.enums.InputType;
+import cn.bctools.rule.selected.EncryptDecryptSelected;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

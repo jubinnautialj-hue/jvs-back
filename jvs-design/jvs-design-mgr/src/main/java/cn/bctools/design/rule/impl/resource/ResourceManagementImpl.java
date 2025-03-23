@@ -36,7 +36,8 @@ public class ResourceManagementImpl implements ResourceManagementInterface {
     @Override
     public void saveNodeResource(String name, ResourceType type, String resourceId, Object map) {
         if (ObjectNull.isNotNull(name)) {
-            optionDao.insert(new RuleOptionPo().setField(RuleConstant.DINGDINGRESOURCE_OPTION).setName(name).setMap(BeanCopyUtil.copy(map, HashMap.class)));
+            //todo 这个资源不能环境变量。后续需要调整
+//            optionDao.insert(new RuleOptionPo().setField(RuleConstant.DINGDINGRESOURCE_OPTION).setName(name).setMap(BeanCopyUtil.copy(map, HashMap.class)));
         }
     }
 }

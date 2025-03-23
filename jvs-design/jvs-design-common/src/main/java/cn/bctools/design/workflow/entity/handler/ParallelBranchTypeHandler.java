@@ -2,7 +2,6 @@ package cn.bctools.design.workflow.entity.handler;
 
 import cn.bctools.design.workflow.entity.dto.ParallelBranchDto;
 import com.alibaba.fastjson2.JSON;
-import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.alibaba.fastjson2.JSONWriter;
 import com.baomidou.mybatisplus.extension.handlers.AbstractJsonTypeHandler;
 

@@ -15,7 +15,7 @@ public enum DeptRangTypeDto {
     /**
      * Dept dept rang type dto.
      */
-    dept("指定部门"),
+    dept("指定部门及以下"),
     ;
 
     /**

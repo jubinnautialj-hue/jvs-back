@@ -1,6 +1,7 @@
 package cn.bctools.design.rule.impl.datamodel.convert;
 
 
+import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.design.data.entity.DataModelPo;
@@ -69,27 +70,34 @@ public class DataModelDataConvertShowServiceImpl implements BaseCustomFunctionIn
             //判断是单条还是多条数据
             List<Map<String, Object>> body = dto.getBody();
             //做数据转换
-            body.forEach(e -> {
-                for (String key : e.keySet()) {
-                    FieldBasicsHtml fieldBasicsHtml = typeMaps.get(key);
-                    if (ObjectNull.isNotNull(fieldBasicsHtml)) {
-                        IDataFieldHandler handler = iDataFieldHandler.get(fieldBasicsHtml.getType().getDesc());
-                        Object o = e.get(key);
-                        if (ObjectNull.isNotNull(o, handler, fieldBasicsHtml.getDesignJson())) {
-                            FieldBasicsHtml html = handler.toHtml(fieldBasicsHtml);
-                            Object obj = handler.getEcho(html, o, dto.getReplace(), e);
-                            e.put(key, obj);
+            try {
+                body.forEach(e -> {
+                    for (String key : e.keySet()) {
+                        FieldBasicsHtml fieldBasicsHtml = typeMaps.get(key);
+                        if (ObjectNull.isNotNull(fieldBasicsHtml)) {
+                            IDataFieldHandler handler = iDataFieldHandler.get(fieldBasicsHtml.getType().getDesc());
+                            Object o = e.get(key);
+                            if (ObjectNull.isNotNull(o, handler, fieldBasicsHtml.getDesignJson())) {
+                                FieldBasicsHtml html = handler.toHtml(fieldBasicsHtml);
+                                Object obj = handler.getEcho(html, o, dto.getReplace(), e);
+                                e.put(key, obj);
+                            }
                         }
                     }
-                }
-            });
+                });
+            } catch (Exception e) {
+                log.error("转换数据异常", e);
+                throw new BusinessException("转换数据异常");
+            }
             return body;
         }, RuleStartUtils.EXECUTOR);
         try {
             return resultCompletableFuture.get();
         } catch (InterruptedException e) {
+            log.error("模型转数据异常", e);
             throw new RuntimeException("", e);
         } catch (ExecutionException e) {
+            log.error("模型转数据异常", e);
             throw new RuntimeException(e);
         }
     }

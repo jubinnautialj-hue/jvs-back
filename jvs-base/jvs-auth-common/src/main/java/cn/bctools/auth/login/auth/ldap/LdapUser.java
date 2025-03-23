@@ -22,7 +22,9 @@ import org.springframework.ldap.query.ContainerCriteria;
 import org.springframework.stereotype.Component;
 
 import javax.naming.directory.SearchControls;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author zhuxiaokang
@@ -113,27 +115,50 @@ public class LdapUser {
         deptUsers.parallelStream().forEach(deptUser -> {
             String openId = deptUser.getId();
             if (StringUtils.isNotBlank(openId)) {
-                User user = deptUser;
-                user.setId(openId)
-                        .setCancelFlag(false)
-                        .setUserType(UserTypeEnum.OTHER_USER);
-                UserTenant userTenant = new UserTenant()
-                        .setUserId(user.getId())
-                        .setRealName(user.getRealName())
-                        .setCancelFlag(false);
-                if (ObjectNull.isNotNull(dept)) {
-                    userTenant.setDeptId(SyncOrgUtils.buildDeptId(tenantId, dept.getId())).setDeptName(dept.getName());
-                }
-                UserExtension userExtension = new UserExtension()
-                        .setExtension(BeanToMapUtils.beanToMap(deptUser))
-                        .setOpenId(openId)
-                        .setNickname(user.getRealName())
-                        .setType(OtherLoginTypeEnum.LDAP.name())
-                        .setUserId(user.getId());
+                // 用户
+                Optional<User> optionalDeptUser = syncUserDto.getUsers().stream()
+                        .filter(user -> user.getId().equals(openId))
+                        .findFirst();
+                User user = null;
+                if (optionalDeptUser.isPresent()) {
+                    user = optionalDeptUser.get();
+                } else {
+                    user = deptUser;
+                    user.setId(openId)
+                            .setCancelFlag(false)
+                            .setUserType(UserTypeEnum.OTHER_USER);
 
-                syncUserDto.getUsers().add(user);
-                syncUserDto.getUserTenants().add(userTenant);
-                syncUserDto.getUserExtensions().add(userExtension);
+                    UserExtension userExtension = new UserExtension()
+                            .setExtension(BeanToMapUtils.beanToMap(deptUser))
+                            .setOpenId(openId)
+                            .setNickname(user.getRealName())
+                            .setType(OtherLoginTypeEnum.LDAP.name())
+                            .setUserId(user.getId());
+
+                    syncUserDto.getUsers().add(user);
+                    syncUserDto.getUserExtensions().add(userExtension);
+                }
+
+                // 用户租户
+                Optional<UserTenant> optionalUserTenant = syncUserDto.getUserTenants().stream()
+                        .filter(userTenant -> userTenant.getUserId().equals(openId))
+                        .findFirst();
+                UserTenant userTenant = null;
+                if (optionalUserTenant.isPresent()) {
+                    userTenant = optionalUserTenant.get();
+                } else {
+                    userTenant = new UserTenant()
+                            .setUserId(user.getId())
+                            .setRealName(user.getRealName())
+                            .setCancelFlag(false);
+                    syncUserDto.getUserTenants().add(userTenant);
+                }
+
+                if (ObjectNull.isNotNull(dept)) {
+                    List<String> userDeptIdsList = Optional.ofNullable(userTenant.getDeptId()).orElseGet(ArrayList::new);
+                    userDeptIdsList.add(SyncOrgUtils.buildDeptId(tenantId, dept.getId()));
+                    userTenant.setDeptId(userDeptIdsList);
+                }
             }
         });
 

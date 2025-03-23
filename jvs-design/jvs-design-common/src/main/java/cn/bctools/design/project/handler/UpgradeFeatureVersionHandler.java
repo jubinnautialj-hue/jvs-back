@@ -78,7 +78,6 @@ public class UpgradeFeatureVersionHandler {
     private final AppTemplateDataService<ExternalPage> externalPageTemplateService;
     private final AppTemplateDataService<AppMenuType> appMenuTypeTemplateService;
     private final AppTemplateDataService<AppMenu> appMenuTemplateService;
-    ;
     private final AppTemplateDataService<Identification> identificationTemplateService;
     private final AppMenuService appMenuService;
     private final FormService formService;
@@ -278,7 +277,7 @@ public class UpgradeFeatureVersionHandler {
      * @param appId          当前应用id
      */
     private void initAppVersionMapping(String affiliationApp, String appId) {
-        Consumer<AppTemplateDataService<?>> saveBatchMappingConsumer = (appTemplateDataServiceImpl) -> {
+        Consumer<AppTemplateDataService<?>> saveBatchMappingConsumer = appTemplateDataServiceImpl -> {
             List<String> ids = new ArrayList<>();
             appTemplateDataServiceImpl.list(appId, ids);
             List<JvsAppVersionMapping> jvsAppVersionMappings = ids.stream()

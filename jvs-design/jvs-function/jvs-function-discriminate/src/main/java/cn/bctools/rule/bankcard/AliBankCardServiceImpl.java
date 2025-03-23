@@ -1,12 +1,15 @@
 package cn.bctools.rule.bankcard;
 
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.bctools.rule.idcard.AliCodeOption;
 import cn.bctools.rule.idcard.AliIdCardReturnDto;
+import cn.bctools.rule.service.ModelInterface;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.AllArgsConstructor;
@@ -31,17 +34,22 @@ import java.util.Map;
 )
 public class AliBankCardServiceImpl implements BaseCustomFunctionInterface<AliBankCardDto> {
 
+    ModelInterface modelInterface;
+
     static final String URL = "http://yhkr.market.alicloudapi.com/communication/personal/1886";
     static final String CODE = "10000";
 
     @Override
     public Object execute(AliBankCardDto dto, Map<String, Object> params) {
+        Object byKey = modelInterface.getByKey(dto.getAppcode());
+        AliCodeOption option = BeanCopyUtil.copy(AliCodeOption.class, byKey);
+
         HashMap<Object, Object> querys = new HashMap<>(1);
         querys.put("name", dto.getName());
         querys.put("idcard", dto.getIdcard());
         querys.put("acct_no", dto.getAcctNo());
         String body = HttpUtil.createPost(URL)
-                .header("Authorization", "APPCODE " + dto.getAppcode())
+                .header("Authorization", "APPCODE " + option.getCode())
                 .header("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
                 .body(JSONObject.toJSONString(querys))
                 .execute().body();

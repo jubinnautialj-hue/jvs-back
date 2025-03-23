@@ -1,5 +1,6 @@
 package cn.bctools.auth.controller;
 
+import cn.bctools.auth.component.UserRoleComponent;
 import cn.bctools.auth.entity.User;
 import cn.bctools.auth.entity.UserInvite;
 import cn.bctools.auth.entity.UserTenant;
@@ -39,6 +40,7 @@ public class InviteController {
 
     RedisUtils redisUtils;
     UserTenantService userTenantService;
+    UserRoleComponent userRoleComponent;
     UserInviteMapper userInviteMapper;
     UserService userService;
 
@@ -68,6 +70,8 @@ public class InviteController {
             } else {
                 long countUser = userTenantService.count(Wrappers.query(new UserTenant().setUserId(currentUser.getId())));
                 if (countUser == 0) {
+                    //授权角色
+                    userRoleComponent.grandDefaultSysRole(currentUser.getId());
                     //查看是否存在
                     userTenantService.saveOrUpdate(new UserTenant().setUserId(currentUser.getId()).setPhone(currentUser.getPhone()).setRealName(currentUser.getRealName()));
                 }
@@ -85,6 +89,8 @@ public class InviteController {
             User user = userService.getById(userId);
             long countUser = userTenantService.count(Wrappers.query(new UserTenant().setUserId(user.getId())));
             if (countUser == 0) {
+                //授权角色
+                userRoleComponent.grandDefaultSysRole(user.getId());
                 //查看是否存在
                 userTenantService.saveOrUpdate(new UserTenant().setUserId(user.getId()).setPhone(user.getPhone()).setRealName(user.getRealName()));
             }

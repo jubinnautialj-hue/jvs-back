@@ -1,11 +1,11 @@
 package cn.bctools.auth.service.impl;
 
+import cn.bctools.auth.constants.AuthConstant;
 import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.auth.entity.RolePermission;
 import cn.bctools.auth.mapper.RolePermissionMapper;
 import cn.bctools.auth.service.PermissionService;
 import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.gateway.entity.Permission;
 import cn.bctools.gateway.entity.TypeEnum;
 import cn.bctools.gateway.mapper.PermissionMapper;
@@ -55,7 +55,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
             return Collections.emptyList();
         }
         return this.list(Wrappers.<Permission>lambdaQuery()
-                .select(Permission::getPermission)
+                .select(Permission::getPermission,Permission::getClientName)
                 .in(Permission::getId, ids));
     }
 
@@ -75,11 +75,13 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
         // 如果是非平台管理员 的其它管理员, 返回除运维管理的资源
         // 如果是管理员, 返回所有资源.
         // 如果是超级管理员，直接查询租户角色权限
+
         //目前只获取后台有权限其它没有
-        List<String> permission = permissionList.stream()
+        List<String> permission = new ArrayList<>();
+        permissionList.stream()
                 .map(Permission::getPermission)
                 .filter(ObjectNull::isNotNull)
-                .collect(Collectors.toList());
+                .forEach(permission::add);
         if (!jvsSystemConfig.getMultiTenantMode()) {
             //如果是单租户模式,直接删除多租户资源
             permission.remove("jvs_tenant");
@@ -92,6 +94,20 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
             //额外的标识信息是否启动
             permission.addAll(jvsSystemConfig.getIdentifications());
         }
+        if (permissionList.stream().noneMatch(e -> AuthConstant.jvs_base.equals(e.getClientName()))) {
+            //添加后台
+            permission.remove(AuthConstant.jvs_base_permission);
+        } else {
+            permission.add(AuthConstant.jvs_base_permission);
+        }
+        //判断是否有平台资源如果有，授权平台资源
+        if (permissionList.stream().anyMatch(e -> AuthConstant.jvs_platform.equals(e.getClientName()))) {
+            //添加后台
+            permission.add(AuthConstant.jvs_platform_permission);
+        } else {
+            permission.remove(AuthConstant.jvs_platform_permission);
+        }
+
         return permission;
     }
 }

@@ -2,6 +2,7 @@ package cn.bctools.design.rule.entity;
 
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.database.handler.Fastjson2TypeHandler;
 import cn.bctools.design.rule.entity.handler.ParameterMapTypeHandler;
 import cn.bctools.rule.dto.RuleFunctionDtoParameter;
 import cn.bctools.rule.entity.enums.InputType;
@@ -11,7 +12,6 @@ import com.baomidou.mybatisplus.annotation.IdType;
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
-import cn.bctools.database.handler.Fastjson2TypeHandler;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;

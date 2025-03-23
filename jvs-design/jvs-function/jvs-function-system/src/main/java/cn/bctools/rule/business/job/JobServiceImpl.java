@@ -2,8 +2,6 @@ package cn.bctools.rule.business.job;
 
 
 import cn.bctools.auth.api.api.AuthJobServiceApi;
-import cn.bctools.oauth2.utils.AuthorityManagementUtils;
-import cn.bctools.auth.api.api.AuthJobServiceApi;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;

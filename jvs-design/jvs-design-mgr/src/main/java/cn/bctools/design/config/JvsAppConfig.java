@@ -6,6 +6,7 @@ import cn.bctools.design.permission.AppPermissionHandler;
 import cn.bctools.design.permission.DesignPermissionHandler;
 import cn.bctools.design.permission.ResourcePermissionHandler;
 import cn.bctools.design.project.service.JvsAppService;
+import cn.bctools.design.project.service.JvsAppVersionService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -42,7 +43,7 @@ public class JvsAppConfig {
      * @return the base interceptor
      */
     @Bean
-    BaseInterceptor baseInterceptor(JvsAppService jvsAppService) {
-        return new BaseInterceptor(jvsAppService);
+    BaseInterceptor baseInterceptor(JvsAppService jvsAppService, JvsAppVersionService jvsAppVersionService) {
+        return new BaseInterceptor(jvsAppService, jvsAppVersionService);
     }
 }

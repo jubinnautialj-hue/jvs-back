@@ -1,8 +1,8 @@
 package cn.bctools.rule.tools.http;
 
-import cn.hutool.http.Method;
 import cn.bctools.rule.common.ParameterOption;
 import cn.bctools.rule.common.ParameterSelected;
+import cn.hutool.http.Method;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -24,7 +24,7 @@ public class HttpTypeSelected implements ParameterSelected<Method> {
     /**
      * 获取请求方法类型
      *
-     * @return {@linkplain java.util.List<ParameterOption>}
+     * @return {@linkplain List<ParameterOption>}
      * @author: guojing
      */
     @Override

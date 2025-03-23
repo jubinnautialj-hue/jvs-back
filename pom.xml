@@ -7,7 +7,7 @@
     <groupId>cn.bctools</groupId>
     <artifactId>jvs</artifactId>
     <packaging>pom</packaging>
-    <version>2.2</version>
+    <version>2.3</version>
 
     <organization>
         <name>jvs</name>
@@ -46,6 +46,8 @@
     <modules>
         <module>jvs-base</module>
         <module>jvs-design</module>
+        <module>jvs-bi</module>
+        <module>jvs-apply-document</module>
     </modules>
 
     <properties>
@@ -117,7 +119,7 @@
             <dependency>
                 <groupId>cn.bctools</groupId>
                 <artifactId>jvs-common-pom</artifactId>
-                <version>2.2</version>
+                <version>2.3</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>

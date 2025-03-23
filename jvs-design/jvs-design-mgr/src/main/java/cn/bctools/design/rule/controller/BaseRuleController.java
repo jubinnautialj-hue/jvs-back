@@ -36,7 +36,9 @@ import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 /**
@@ -54,9 +56,9 @@ public class BaseRuleController {
     @Log
     @ApiOperation("CRON")
     @GetMapping("/cron")
-    public R<List<CronDto>> cron() {
+    public R<List> cron() {
         List<CronDto> objects = Arrays.stream(CronEnum.values())
-                .map(e -> new CronDto().setName(e.getName()).setCron(e))
+                .map(e -> new CronDto().setName(e.getName()).setCron(e.getCorn()))
                 .collect(Collectors.toList());
         return R.ok(objects);
     }

@@ -28,7 +28,6 @@ public class AutoFillConfig implements MetaObjectHandler {
         UserInfoDto<UserDto> user = SystemThreadLocal.get("user");
         if (ObjectUtil.isNotEmpty(user)) {
             UserDto userDto = user.getUserDto();
-            this.strictInsertFill(metaObject, Get.name(BasePo::getDeptId), userDto::getDeptId, String.class);
             this.strictInsertFill(metaObject, Get.name(BasePo::getJobId), userDto::getJobId, String.class);
             this.strictInsertFill(metaObject, Get.name(BasePo::getCreateBy), userDto::getRealName, String.class);
             this.strictInsertFill(metaObject, Get.name(BasePo::getUpdateBy), userDto::getRealName, String.class);

@@ -34,9 +34,14 @@ import cn.bctools.function.service.FunctionBusinessService;
 import cn.bctools.log.annotation.Log;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.redis.utils.RedisUtils;
+import cn.bctools.rule.config.SystemInit;
+import cn.bctools.rule.dto.RuleFunctionDto;
+import cn.bctools.rule.dto.RuleFunctionDtoParameter;
 import cn.bctools.rule.utils.html.HtmlGraph;
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.net.URLEncodeUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
@@ -54,7 +59,6 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * @author guojing
@@ -139,14 +143,12 @@ public class RuleController {
                         RuleDesignPo::getSecret,
                         RuleDesignPo::getIcons,
                         RuleDesignPo::getCreateTime,
-                        RuleDesignPo::getUpdateTime,
                         RuleDesignPo::getEnable
                 )
                 //通过应用创建的，不显示在列表页中
                 .eq(RuleDesignPo::getJvsAppId, appId)
                 .eq(ObjectNull.isNotNull(ruleDesignPo.getReqType()), RuleDesignPo::getReqType, ruleDesignPo.getReqType())
                 .isNotNull(RuleDesignPo::getName)
-                .isNull(RuleDesignPo::getComponentId)
                 .like(ObjectUtil.isNotEmpty(name), RuleDesignPo::getName, name)
                 .like(ObjectUtil.isNotEmpty(content), RuleDesignPo::getDescription, content)
                 .orderByDesc(RuleDesignPo::getCreateTime));
@@ -170,8 +172,9 @@ public class RuleController {
         boolean notNull = ObjectUtil.isNull(ruleDesignPo.getReqType());
         List<RuleType> list = new ArrayList<>();
         if (notNull) {
-            list.add(RuleType.Source_code_development_docking_logic);
-            list.add(RuleType.Low_code_logic);
+            for (RuleType value : RuleType.values()) {
+                list.add(value);
+            }
         } else {
             list.add(ruleDesignPo.getReqType());
         }
@@ -397,6 +400,26 @@ public class RuleController {
         }
     }
 
+    @Log(back = false)
+    @ApiOperation("获取下拉组件选项")
+    @GetMapping("/select/{componentName}/{keyName}")
+    public R<List> select(@PathVariable("componentName") String componentName, @PathVariable("keyName") String keyName, @PathVariable String appId) {
+        // 查询所有已经设计好的数据
+        List options = new ArrayList();
+        SystemThreadLocal.set("jvsAppId", appId);
+        Map<String, RuleFunctionDto> functionsMap = SystemInit.getFunctionsMap(null, componentName);
+        RuleFunctionDto ruleFunctionDto = functionsMap.get(componentName);
+        if (ruleFunctionDto == null) {
+            return R.ok(options);
+        }
+        List<RuleFunctionDtoParameter> parameters = ruleFunctionDto.getParameters().parallelStream().filter(e -> StrUtil.equals(e.getKey(), keyName)).collect(Collectors.toList());
+        if (CollectionUtil.isEmpty(parameters)) {
+            return R.ok(options);
+        }
+        RuleFunctionDtoParameter parameter = CollectionUtil.getFirst(parameters);
+        options = parameter.getOptions();
+        return R.ok(options);
+    }
 
     /**
      * 新增、修改逻辑设计

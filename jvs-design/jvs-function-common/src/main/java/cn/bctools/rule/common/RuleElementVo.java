@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
 import java.util.List;
 
 /**
@@ -16,7 +17,8 @@ import java.util.List;
 @Accessors(chain = true)
 @AllArgsConstructor
 @NoArgsConstructor
-public class RuleElementVo {
+public class RuleElementVo implements Serializable {
+    private static final long serialVersionUID = 1L;
 
     @ApiModelProperty("名称")
     public String name;

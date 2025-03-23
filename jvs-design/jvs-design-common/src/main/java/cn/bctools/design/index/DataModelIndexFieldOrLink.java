@@ -6,6 +6,7 @@ import cn.bctools.design.data.fields.enums.AggregateEnumType;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.identification.service.IdentificationService;
+import cn.bctools.design.util.ModeUtils;
 import cn.bctools.index.design.SelectedAttribute;
 
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ public class DataModelIndexFieldOrLink {
         //获取所有的模型标识,用户直接选择模型的标识
         IdentificationService identificationService = SpringContextUtil.getBean(IdentificationService.class);
         DataFieldService fieldService = SpringContextUtil.getBean(DataFieldService.class);
+        ModeUtils.setMode();
         List<SelectedAttribute> dicData = identificationService.getIdentificationModel()
                 .stream()
                 .filter(e -> e.getDesignType().equals(DesignType.data))

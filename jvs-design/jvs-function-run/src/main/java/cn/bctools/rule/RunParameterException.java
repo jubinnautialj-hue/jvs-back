@@ -1,11 +1,7 @@
 package cn.bctools.rule;
 
 import cn.bctools.common.exception.BusinessException;
-import lombok.AllArgsConstructor;
-import lombok.Data;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.experimental.Accessors;
 
 import java.io.Serializable;
 import java.util.Map;

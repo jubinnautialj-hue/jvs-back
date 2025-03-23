@@ -1,5 +1,6 @@
 package cn.bctools.gray.config;
 
+import cn.bctools.common.exception.BusinessException;
 import cn.bctools.gray.rule.VersionLoadBalancer;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cloud.loadbalancer.annotation.LoadBalancerClientConfiguration;

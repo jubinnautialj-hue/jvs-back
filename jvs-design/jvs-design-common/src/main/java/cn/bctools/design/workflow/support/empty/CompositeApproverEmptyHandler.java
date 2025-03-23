@@ -1,7 +1,8 @@
 package cn.bctools.design.workflow.support.empty;
 
-import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.BeanCopyUtil;
+import cn.bctools.design.workflow.dto.FlowApprovalUserDTO;
 import cn.bctools.design.workflow.model.Node;
 import cn.bctools.design.workflow.model.enums.NodePropertiesUserEmptyEnum;
 import cn.bctools.design.workflow.support.RuntimeData;
@@ -36,7 +37,7 @@ public class CompositeApproverEmptyHandler {
      * @param node 节点
      * @param runtimeData 运行时信息
      */
-    public List<UserDto> execute(List<UserDto> userDtos, Node node, RuntimeData runtimeData) {
+    public List<FlowApprovalUserDTO> execute(List<FlowApprovalUserDTO> userDtos, Node node, RuntimeData runtimeData) {
         if (CollectionUtils.isNotEmpty(userDtos)) {
             return userDtos;
         }
@@ -47,6 +48,6 @@ public class CompositeApproverEmptyHandler {
         }
 
         ApproverEmptyInterface approverEmptyInterface = Optional.ofNullable(approverEmptyInterfaceMap.get(node.getProps().getUserEmpty().getValue())).orElseThrow(() -> new BusinessException("审批人为空处理方式暂未支持"));
-        return approverEmptyInterface.execute(node, runtimeData);
+        return BeanCopyUtil.copys(approverEmptyInterface.execute(node, runtimeData), FlowApprovalUserDTO.class);
     }
 }

@@ -15,7 +15,7 @@ import java.util.Map;
 public class OtherUserDto {
     @ApiModelProperty(value = "头像")
     private String avatar;
-    @ApiModelProperty(value = "部门Id")
+    @ApiModelProperty(value = "部门Id",notes = "三方返回的部门Id，可能是数组，也可能是字符串")
     private String deptId;
     @ApiModelProperty(value = "用户姓名", notes = "不指定用户姓名，会随机生成姓名")
     private String userName;

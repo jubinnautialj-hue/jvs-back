@@ -124,8 +124,8 @@ public class InsideNoticeController {
     @DeleteMapping("/del/single/{id}")
     @ApiOperation("删除单条消息")
     public R<Boolean> delSignle(@ApiParam("id") @PathVariable("id") String id) {
-        //
         return R.ok(insideNoticeService.update(new LambdaUpdateWrapper<InsideNotice>()
+                .eq(InsideNotice::getUserId, UserCurrentUtils.getUserId())
                 .set(InsideNotice::getDelFlag, Boolean.TRUE).eq(InsideNotice::getId, id)
         ));
     }

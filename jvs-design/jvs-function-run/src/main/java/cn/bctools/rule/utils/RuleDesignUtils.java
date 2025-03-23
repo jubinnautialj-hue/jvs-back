@@ -221,6 +221,7 @@ public class RuleDesignUtils {
                 //中止后，不再继续执行
                 if (!RuleSystemThreadLocal.runStop()) {
                     if ("循环控制".equals(currentNode.getData().getFunctionName()) && Boolean.parseBoolean(resultDto.getValue().toString())) {
+                        log.info("存在循环控制,退出循环");
                         //表示循环控制退出
                         return;
                     }
@@ -298,6 +299,7 @@ public class RuleDesignUtils {
         nextEdgeList.removeAll(collect);
         //如果存在异步线，则直接执行
         if (ObjectNull.isNotNull(collect)) {
+            log.info("执行异步线操作");
             AsyncService bean = SpringContextUtil.getBean(AsyncService.class);
             List<CompletableFuture<RuleExecuteDto>> futureList = new ArrayList<>();
             collect.forEach(e -> {
@@ -329,9 +331,14 @@ public class RuleDesignUtils {
             }
         }
 
+        if (ObjectNull.isNull(nextEdgeList)) {
+            log.info("没有找到下级节点数据");
+        }
+
         for (HtmlEdge e : nextEdgeList) {
             //如果为异常线，不处理
             if ("abnormal".equals(e.getState())) {
+                log.info("当前线为异常线直接退出", e.getId());
                 continue;
             }
             // 判断是否执行节点
@@ -360,6 +367,12 @@ public class RuleDesignUtils {
                 doNext(edges, nodes, nextNode, executeDto);
                 //逻辑的开始节点直接通过消息节点结束，并带有排序顺序执行时直接返回
                 try {
+                    //如果最后一个节点是消息节点代表程序中止， 则直接中止程序
+                    //中止后，不再继续执行
+                    if ("循环控制".equals(executeDto.getEndResult().getFunctionName()) && Boolean.parseBoolean(executeDto.getEndResult().getValue().toString())) {
+                        //表示循环控制退出
+                        break;
+                    }
                     if ("提示消息".equals(RuleSystemThreadLocal.getRule().getExecuteDto().getEndResult().getFunctionName())) {
                         //表示程序中止
                         return;
@@ -579,7 +592,7 @@ public class RuleDesignUtils {
                 try {
                     execute = bean.execute(req, variableMap);
                 } catch (Exception e) {
-                    log.error("节点执行异常", StackTraceElementUtils.logThrowableToString(e));
+                    log.error("节点执行异常", e);
                     throw new RunParameterException(e.getMessage(), body);
                 }
                 if (ObjectNull.isNotNull(bind)) {

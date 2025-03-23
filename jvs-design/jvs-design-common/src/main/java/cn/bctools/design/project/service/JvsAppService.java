@@ -97,4 +97,12 @@ public interface JvsAppService extends IService<JvsApp> {
      * @return true-已启用轻应用版本功能，false-未启用轻应用版本功能
      */
     Boolean appEnableVersionFeature(String appId);
+
+    /**
+     * 登录用户是否具有指定应用的管理员权限
+     *
+     * @param appId 应用id
+     * @return true-有应用管理员权限，false-无应用管理员权限
+     */
+    Boolean userIsAppAdmin(String appId);
 }

@@ -25,10 +25,6 @@ import java.util.Map;
         testShowEnum = TestShowEnum.TEXT
 )
 public class VinServiceImpl implements BaseCustomFunctionInterface<VinDto> {
-    public static void main(String[] args) {
-        Object execute = new VinServiceImpl().execute(new VinDto().setYearLetter("G").setFactoryCode("R").setSerialNumber("20245").setVinTopEight("wwertyuI").setFactoryCode("Y"), null);
-        System.out.println(execute);
-    }
 
     @Override
     public Object execute(VinDto vinDto, Map<String, Object> params) {

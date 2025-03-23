@@ -5,12 +5,14 @@ import cn.bctools.rule.ess.api.flowmanage.CreateFlowByFilesApi;
 import cn.bctools.rule.ess.api.flowmanage.CreateSchemeUrlApi;
 import com.tencentcloudapi.ess.v20201111.models.ApproverInfo;
 import com.tencentcloudapi.ess.v20201111.models.CreateSchemeUrlResponse;
+import lombok.experimental.UtilityClass;
 
 /**
  * The type Create flow by file directly api.
  *
  * @author jvs
  */
+@UtilityClass
 public class CreateFlowByFileDirectlyApi {
 
     /**

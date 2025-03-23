@@ -15,7 +15,6 @@ import cn.bctools.function.entity.vo.ElementVo;
 import cn.bctools.function.enums.JvsParamType;
 import cn.bctools.function.handler.IJvsParam;
 import cn.bctools.function.handler.JvsExpression;
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;

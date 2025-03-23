@@ -1,21 +1,23 @@
 package cn.bctools.design.jvslog.service.impl;
 
 import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.design.project.dto.DesignRoleSettingDto;
-import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.design.jvslog.entity.JvsLog;
 import cn.bctools.design.jvslog.mapper.JvsLogMapper;
 import cn.bctools.design.jvslog.service.JvsLogService;
+import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.service.JvsAppService;
+import cn.bctools.design.util.DynamicDataUtils;
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import org.springframework.beans.factory.annotation.Autowired;
+import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.PostConstruct;
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -25,9 +27,9 @@ import java.util.concurrent.LinkedBlockingQueue;
  * @author guojing
  */
 @Service
+@AllArgsConstructor
 public class JvsLogServiceImpl extends ServiceImpl<JvsLogMapper, JvsLog> implements JvsLogService {
 
-    @Autowired
     JvsAppService jvsAppService;
 
     private final BlockingQueue<JvsLog> logBatch = new LinkedBlockingQueue<>();

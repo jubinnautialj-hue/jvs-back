@@ -37,7 +37,6 @@ import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.annotations.Api;
 import lombok.extern.slf4j.Slf4j;
@@ -89,7 +88,7 @@ public class DataModelComponent implements DataModelApi {
     }
 
     @Override
-    public R<List> list(String dataModelId, long size, long current, String mode) {
+    public R<List<Map>> list(String dataModelId, long size, long current, String mode) {
         ModeUtils.setSwitchModel(new SwitchModeDto().setMode(AppVersionTypeEnum.getMsgType(mode)));
         Query query = new Query(Criteria.where(DynamicDataService.MONGO_ID).exists(true).andOperator(Criteria.where("delFlag").is(false)));
         //这里的数量如果为0 就表示获取全部数据
@@ -97,12 +96,12 @@ public class DataModelComponent implements DataModelApi {
             long skip = size * (current - 1);
             query.skip(skip).limit((int) size);
         }
-        List mapList = dataModelHandler.find(query, Map.class, dataModelId);
+        List<Map> mapList = dataModelHandler.find(query, Map.class, dataModelId);
         return R.ok(mapList);
     }
 
     @Override
-    public R<List> search(DataModelSearchDto searchDto) {
+    public R<List<Map>> search(DataModelSearchDto searchDto) {
         ModeUtils.setSwitchModel(new SwitchModeDto().setMode(AppVersionTypeEnum.getMsgType(searchDto.getMode())));
         Criteria criteria = buildQuery(searchDto);
         Query query = new Query(criteria);
@@ -111,7 +110,7 @@ public class DataModelComponent implements DataModelApi {
             long skip = searchDto.getSize() * (searchDto.getCurrent() - 1);
             query.skip(skip).limit((int) searchDto.getSize());
         }
-        List mapList = dataModelHandler.find(query, Map.class, searchDto.getId());
+        List<Map> mapList = dataModelHandler.find(query, Map.class, searchDto.getId());
         return R.ok(mapList);
     }
 
@@ -129,9 +128,16 @@ public class DataModelComponent implements DataModelApi {
     public R<List<DataFiledDto>> fieldMapData(String appId, String dataModelId, String mode) {
         log.info("获取数据应用的信息,{},{},{}", appId, dataModelId, mode);
         ModeUtils.setSwitchModel(new SwitchModeDto().setMode(AppVersionTypeEnum.getMsgType(mode)));
+        Map<String, Integer> fields = new HashMap<>();
+
         List<DataFiledDto> collect = dataFieldService.getAllField(appId, dataModelId).stream()
                 .filter(e -> !DesignType.data.equals(e.getDesignType()))
                 .map(e -> {
+                    if (fields.containsKey(e.getFieldName())) {
+                        fields.put(e.getFieldName(), fields.get(e.getFieldName()) + 1);
+                    } else {
+                        fields.put(e.getFieldName(), 1);
+                    }
                     DataFiledDto dataFiledDto =
                             new DataFiledDto().setDataType(DataFieldTypeDataEnum.STRING).setCls(e.getFieldType().getAClass()).setColumnCount(e.getFieldName()).setColumnName(e.getFieldKey()).setModelId(e.getModelId());
                     //此处需要对类型进行转换 bi 的特殊类型处理
@@ -186,6 +192,11 @@ public class DataModelComponent implements DataModelApi {
                     return dataFiledDto;
                 })
                 .collect(Collectors.toList());
+        collect.forEach(e -> {
+            if (fields.get(e.getColumnCount()) > 1) {
+                e.setColumnCount(e.getColumnCount() + "(" + e.getColumnName() + ")");
+            }
+        });
         return R.ok(collect);
     }
 
@@ -193,9 +204,16 @@ public class DataModelComponent implements DataModelApi {
     public R<List<DataFiledDto>> fieldMap(String appId, String dataModelId, String mode) {
         log.info("获取数据应用的信息,{},{},{}", appId, dataModelId, mode);
         ModeUtils.setSwitchModel(new SwitchModeDto().setMode(AppVersionTypeEnum.getMsgType(mode)));
+        Map<String, Integer> fields = new HashMap<>();
+
         List<DataFiledDto> collect = dataFieldService.getAllField(appId, dataModelId).stream()
                 .filter(e -> !DesignType.data.equals(e.getDesignType()))
                 .map(e -> {
+                    if (fields.containsKey(e.getFieldName())) {
+                        fields.put(e.getFieldName(), fields.get(e.getFieldName()) + 1);
+                    } else {
+                        fields.put(e.getFieldName(), 1);
+                    }
                     DataFiledDto dataFiledDto =
                             new DataFiledDto().setType(DataFieldTypeEnum.字符串).setCls(e.getFieldType().getAClass()).setColumnCount(e.getFieldName()).setColumnName(e.getFieldKey()).setModelId(e.getModelId());
                     //此处需要对类型进行转换 bi 的特殊类型处理
@@ -241,6 +259,11 @@ public class DataModelComponent implements DataModelApi {
                     return dataFiledDto;
                 })
                 .collect(Collectors.toList());
+        collect.forEach(e -> {
+            if (fields.get(e.getColumnCount()) > 1) {
+                e.setColumnCount(e.getColumnCount() + "(" + e.getColumnName() + ")");
+            }
+        });
         return R.ok(collect);
     }
 
@@ -248,15 +271,23 @@ public class DataModelComponent implements DataModelApi {
     public R<List<DataFiledDto>> dataFieldMap(String tableCode, String appCode, String mode) {
         JvsApp app = getJvsApp(appCode, mode);
         Identification identification = identificationService.getOne(new LambdaQueryWrapper<Identification>()
-                        .eq(Identification::getJvsAppId,app.getId())
+                .eq(Identification::getJvsAppId, app.getId())
                 .eq(Identification::getIdentifier, tableCode));
         if (ObjectNull.isNull(identification)) {
             return R.ok();
         }
         ModeUtils.setSwitchModel(new SwitchModeDto().setMode(AppVersionTypeEnum.getMsgType(mode)));
-        List<DataFiledDto> collect = dataFieldService.getAllField(identification.getJvsAppId(), identification.getDesignId()).stream()
+        Map<String, Integer> fields = new HashMap<>();
+
+        List<DataFiledDto> collect = dataFieldService.getAllField(identification.getJvsAppId(), identification.getDesignId())
+                .stream()
                 .filter(e -> !DesignType.data.equals(e.getDesignType()))
                 .map(e -> {
+                    if (fields.containsKey(e.getFieldName())) {
+                        fields.put(e.getFieldName(), fields.get(e.getFieldName()) + 1);
+                    } else {
+                        fields.put(e.getFieldName(), 1);
+                    }
                     DataFiledDto dataFiledDto =
                             new DataFiledDto().setDataType(DataFieldTypeDataEnum.STRING).setCls(e.getFieldType().getAClass()).setColumnCount(e.getFieldName()).setColumnName(e.getFieldKey()).setModelId(e.getModelId());
                     //此处需要对类型进行转换 bi 的特殊类型处理
@@ -265,6 +296,9 @@ public class DataModelComponent implements DataModelApi {
                             dataFiledDto.setDataType(DataFieldTypeDataEnum.BOOLEAN);
                             return dataFiledDto;
                         case inputNumber:
+                            if (ObjectNull.isNull(e.getDesignJson())) {
+                                return null;
+                            }
                             //如果是数字，需要明确整数位数，和小数位数
                             InputNumberHtml html = (InputNumberHtml) handlerMap.get(e.getType().getDesc()).toHtml(e.getDesignJson());
                             dataFiledDto.setFormat("38," + html.getPrecision());
@@ -277,6 +311,9 @@ public class DataModelComponent implements DataModelApi {
                             dataFiledDto.setDataType(fieldType);
                             return dataFiledDto;
                         case datePicker:
+                            if (ObjectNull.isNull(e.getDesignJson())) {
+                                return null;
+                            }
                             dataFiledDto.setDataType(DataFieldTypeDataEnum.DATETIME);
                             if (ObjectNull.isNull(e.getDesignJson())) {
                                 dataFiledDto.setFormat(NORM_DATETIME_PATTERN);
@@ -310,18 +347,30 @@ public class DataModelComponent implements DataModelApi {
                     }
                     return dataFiledDto;
                 })
+                .filter(Objects::nonNull)
                 .collect(Collectors.toList());
+        collect.forEach(e -> {
+            if (fields.get(e.getColumnCount()) > 1) {
+                e.setColumnCount(e.getColumnCount() + "(" + e.getColumnName() + ")");
+            }
+        });
         return R.ok(collect);
     }
 
     @Override
     public R<List<DataModelDto>> dataModelList(String appCode, String mode) {
+        AppVersionTypeEnum msgType = AppVersionTypeEnum.getMsgType(mode);
+        ModeUtils.setSwitchModel(new SwitchModeDto().setMode(msgType));
         JvsApp app = getJvsApp(appCode, mode);
         List<DataModelDto> collect = dataModelService.list(Wrappers.query(new DataModelPo().setAppId(app.getId())))
                 .parallelStream()
                 //数据必须要大于 0
-                .filter(e -> dataModelHandler.estimatedCount(ObjectNull.isNull(e.getCollectionName()) ? e.getId() : e.getCollectionName()) > 0)
+                .filter(e -> {
+                    ModeUtils.setSwitchModel(new SwitchModeDto().setMode(msgType));
+                    return dataModelHandler.estimatedCount(ObjectNull.isNull(e.getCollectionName()) ? e.getId() : e.getCollectionName()) > 0;
+                })
                 .map(e -> {
+                    ModeUtils.setSwitchModel(new SwitchModeDto().setMode(msgType));
                     Identification one = identificationService.getOne(Wrappers.query(new Identification().setDesignId(e.getId())));
                     if (ObjectNull.isNotNull(one)) {
                         return new DataModelDto().setTableCode(e.getTableCode()).setTableCode(one.getIdentifier()).setAppName(app.getName()).setTableName(ObjectNull.isNull(e.getCollectionName()) ? e.getId() :
@@ -345,7 +394,7 @@ public class DataModelComponent implements DataModelApi {
                 .eq(JvsAppVersion::getVersionType, msgType)
                 .in(JvsAppVersion::getJvsAppId, appIds)
                 .ne(JvsAppVersion::getVersionStatus, AppVersionStatusEnum.HISTORY));
-        if(ObjectNull.isNull(appVersion)){
+        if (ObjectNull.isNull(appVersion)) {
             throw new BusinessException("应用不存在");
         }
         return appService.getById(appVersion.getJvsAppId());

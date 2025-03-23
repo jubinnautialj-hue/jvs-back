@@ -1,4 +1,4 @@
-//package cn.bctools.rule.ess.autosign;
+package cn.bctools.rule.ess.autosign;//package cn.bctools.rule.ess.autosign;
 //
 //import cn.bctools.rule.ess.common.Client;
 //import cn.bctools.rule.ess.config.Config;

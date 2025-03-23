@@ -2,6 +2,7 @@ package cn.bctools.design.workflow.support.condition.impl;
 
 import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.auth.api.dto.SearchUserDto;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.design.workflow.model.ConditionProperties;
@@ -59,7 +60,7 @@ public class ConditionSendUserImpl implements ConditionInterface {
             UserDto user = Optional.ofNullable(authUserServiceApi.userSearch(search).getData().get(0)).orElseThrow(() -> new BusinessException("未找到发起人信息"));
             return conditionOrganizers.stream().anyMatch(organizer ->
                             // 部门id匹配条件 OR 角色id匹配条件 OR 岗位id匹配条件
-                            (TargetObjectTypeEnum.dept.equals(organizer.getType()) && organizer.getId().equals(user.getDeptId()))
+                            (TargetObjectTypeEnum.dept.equals(organizer.getType()) && user.getDept().stream().map(DeptDto::getDeptId).anyMatch(e->e.equals(organizer.getId())))
                             ||
                             (TargetObjectTypeEnum.role.equals(organizer.getType()) && CollectionUtils.isNotEmpty(user.getRoleIds()) && user.getRoleIds().contains(organizer.getId()))
                             ||

@@ -2,8 +2,9 @@ package cn.bctools.rule.data.mysql.select;
 
 import cn.bctools.rule.annotations.Inspect;
 import cn.bctools.rule.annotations.ParameterValue;
-import cn.bctools.rule.entity.enums.InputType;
 import cn.bctools.rule.data.mysql.DatasourceSelected;
+import cn.bctools.rule.data.selected.MysqlEnvironmentVariableSelected;
+import cn.bctools.rule.entity.enums.InputType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,7 +23,7 @@ import javax.validation.constraints.NotNull;
 public class MysqlSelectDto {
 
     @NotNull(message = "数据源不能为空")
-    @ParameterValue(info = "目标数据源", type = InputType.selected,  cls = DatasourceSelected.class)
+    @ParameterValue(info = "目标数据源", type = InputType.selected,  cls = MysqlEnvironmentVariableSelected.class)
     public String databaseName;
 
     @NotNull(message = "执行SQL语句不能为空")

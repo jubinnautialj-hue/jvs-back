@@ -25,9 +25,10 @@ public class UrlUtils {
      * @param exchange
      * @param serverHttpResponseDecorator
      * @param i
+     * @param host
      * @return
      */
-    public static ServerWebExchange getServerWebExchange(ServerWebExchange exchange, ServerHttpResponse serverHttpResponseDecorator, int i) {
+    public static ServerWebExchange getServerWebExchange(ServerWebExchange exchange, ServerHttpResponse serverHttpResponseDecorator, int i, String host) {
         // 1. 清洗请求头中from 参数
         ServerHttpRequest request = exchange.getRequest();
         String rawPath = request.getURI().getRawPath();
@@ -40,6 +41,7 @@ public class UrlUtils {
             Object attribute = exchange.getAttribute(HttpHeaders.AUTHORIZATION);
             if (ObjectNull.isNotNull(attribute)) {
                 mutate.header(HttpHeaders.AUTHORIZATION, attribute.toString());
+                mutate.header("host", host);
             }
         }
         ServerHttpRequest serverHttpRequest = mutate.path(newPath).build();

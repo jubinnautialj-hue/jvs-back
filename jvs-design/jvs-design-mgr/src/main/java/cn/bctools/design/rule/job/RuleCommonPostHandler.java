@@ -9,9 +9,9 @@ import cn.bctools.design.constant.OssConstantType;
 import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.project.entity.JvsAppVersion;
 import cn.bctools.design.project.service.JvsAppVersionService;
+import cn.bctools.design.rule.RuleStartUtils;
 import cn.bctools.design.rule.entity.RuleDesignPo;
 import cn.bctools.design.rule.entity.RunLogPo;
-import cn.bctools.design.rule.RuleStartUtils;
 import cn.bctools.design.rule.service.RuleDesignService;
 import cn.bctools.design.rule.service.RunLogService;
 import cn.bctools.design.util.CurrentAppUtils;
@@ -66,12 +66,17 @@ public class RuleCommonPostHandler {
         CurrentAppUtils.clear();
         //逻辑如果需要传递参数，直接查询数据库修改Data即可
         RuleDesignPo po = ruleService.getEnableDesign(ruleKey);
-        JvsAppVersion app = jvsAppVersionService.getUseAppVersion(po.getJvsAppId());
-        ModeUtils.setSwitchModel(new SwitchModeDto().setMode(app.getVersionType()));
         if (ObjectNull.isNull(po)) {
             XxlJobHelper.log("查询逻辑数据为空:{}", ruleKey);
             return;
         }
+        JvsAppVersion app = jvsAppVersionService.getUseAppVersion(po.getJvsAppId());
+        if (ObjectNull.isNull(app)) {
+            XxlJobHelper.log("查询应用数据为空:{}", ruleKey);
+            return;
+        }
+        XxlJobHelper.log("当前设计的模式为:{}", app.getVersionType());
+        ModeUtils.setSwitchModel(new SwitchModeDto().setMode(app.getVersionType()));
         //设置逻辑的租户id保证下级使用同级租户执行
         TenantContextHolder.setTenantId(po.getTenantId());
         XxlJobHelper.log("查询数据为:{}", JSONObject.toJSONString(po));

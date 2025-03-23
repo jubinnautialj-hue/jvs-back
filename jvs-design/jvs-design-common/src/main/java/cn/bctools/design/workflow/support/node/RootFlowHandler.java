@@ -1,5 +1,6 @@
 package cn.bctools.design.workflow.support.node;
 
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
@@ -22,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -88,6 +90,7 @@ public class RootFlowHandler extends AbstractFlowHandler {
         }
 
         // 校验自定义可发起工作流任务的权限
+        List<String> currentUserDeptIds = Optional.ofNullable(currentUser.getDept()).orElseGet(ArrayList::new).stream().map(DeptDto::getDeptId).collect(Collectors.toList());
         return sendFlowPurviewList.stream()
                 .anyMatch(purview -> {
                     List<String> userIds = purview.getPersonnelIdByType(TargetObjectTypeEnum.user);
@@ -97,7 +100,8 @@ public class RootFlowHandler extends AbstractFlowHandler {
                     return
                             // 权限配置中包含当前用户的id || 部门 || 岗位 || 角色
                             userIds.contains(currentUser.getId()) ||
-                            deptIds.contains(currentUser.getDeptId()) ||
+                            // 用户可以有多个部门，所以只要用户的任意部门id包含在权限中（两个集合存在交集）就表示有权限
+                            CollectionUtil.containsAny(deptIds, currentUserDeptIds) ||
                             jobIds.contains(currentUser.getJobId()) ||
                             // 用户可以有多个角色，所以只要用户的任意角色id包含在权限中（两个集合存在交集）就表示有权限
                             CollectionUtil.containsAny(roleIds, currentUser.getRoleIds()) ;

@@ -2,15 +2,18 @@ package cn.bctools.function.config;
 
 import cn.bctools.auth.api.api.EnvironmentVariableApi;
 import cn.bctools.auth.api.api.UserExtensionServiceApi;
+import cn.bctools.auth.api.enums.ModeTypeEnum;
 import cn.bctools.function.component.ExpressionComponent;
 import cn.bctools.function.controller.ExpressionController;
 import cn.bctools.function.handler.ExpressionAfterHandler;
+import cn.bctools.function.handler.ExpressionBeforeHandler;
 import cn.bctools.function.handler.ExpressionHandler;
 import cn.bctools.function.handler.impl.BaseFunctionImpl;
 import cn.bctools.function.handler.impl.SysParamImpl;
 import cn.bctools.function.handler.impl.VariableParamImpl;
 import cn.bctools.function.mapper.SysFunctionMapper;
 import cn.bctools.function.service.FunctionBusinessService;
+import cn.bctools.function.service.ModeTypeService;
 import cn.bctools.function.service.SysFunctionService;
 import cn.bctools.redis.JvsMessageListenerAdapter;
 import cn.bctools.redis.utils.RedisUtils;
@@ -30,6 +33,12 @@ import org.springframework.data.redis.connection.Message;
 @AllArgsConstructor
 @EnableConfigurationProperties
 public class FunctionAutoConfiguration {
+
+    @Bean
+    @ConditionalOnMissingBean(ModeTypeService.class)
+    public ModeTypeService modeTypeService() {
+        return () -> ModeTypeEnum.GA;
+    }
 
     /**
      * 基础函数
@@ -59,13 +68,20 @@ public class FunctionAutoConfiguration {
         return (designId, init, body) -> body.getParams();
     }
 
+    @Bean
+    @ConditionalOnMissingBean(ExpressionBeforeHandler.class)
+    public ExpressionBeforeHandler expressionBeforeHandler() {
+        //默认不处理
+        return (designId, useCase, init, body) -> body;
+    }
+
     /**
      * 环境变量的处理实现场景
      */
     @Bean("jvsEnvironment")
     @ConditionalOnMissingBean(VariableParamImpl.class)
-    public VariableParamImpl variableParamImpl(EnvironmentVariableApi variableApi) {
-        return new VariableParamImpl(variableApi);
+    public VariableParamImpl variableParamImpl(EnvironmentVariableApi variableApi, ModeTypeService modeTypeService) {
+        return new VariableParamImpl(variableApi, modeTypeService);
     }
 
     /**
@@ -74,8 +90,8 @@ public class FunctionAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public ExpressionController commonFunctionController(ExpressionComponent expressionComponent, ExpressionHandler expressionHandler, FunctionBusinessService functionBusinessMapper,
-                                                         ExpressionAfterHandler expressionAfterHandler, SysFunctionService sysFunctionService, RedisUtils redisUtils) {
-        return new ExpressionController(expressionHandler, expressionComponent, functionBusinessMapper, expressionAfterHandler, sysFunctionService, redisUtils);
+                                                         ExpressionAfterHandler expressionAfterHandler, SysFunctionService sysFunctionService, RedisUtils redisUtils, ExpressionBeforeHandler expressionBeforeHandler) {
+        return new ExpressionController(expressionHandler, expressionComponent, functionBusinessMapper, expressionAfterHandler, sysFunctionService, redisUtils, expressionBeforeHandler);
     }
 
     /**

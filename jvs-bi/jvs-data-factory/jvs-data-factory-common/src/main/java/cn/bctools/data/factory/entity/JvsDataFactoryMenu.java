@@ -1,0 +1,49 @@
+package cn.bctools.data.factory.entity;
+
+import cn.bctools.database.entity.po.BasalPo;
+import com.baomidou.mybatisplus.annotation.*;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+import lombok.experimental.Accessors;
+
+import javax.validation.constraints.NotBlank;
+import javax.validation.constraints.NotNull;
+import java.io.Serializable;
+import java.util.List;
+
+/**
+ * 一级菜单
+ *
+ * @author zqs
+ */
+@EqualsAndHashCode(callSuper = true)
+@Data
+@Accessors(chain = true)
+@TableName(value = "jvs_data_factory_menu", autoResultMap = true)
+@ApiModel
+public class JvsDataFactoryMenu extends RolePo implements Serializable {
+
+    private static final long serialVersionUID = -5623407547220439967L;
+    @ApiModelProperty("id")
+    @TableId(type = IdType.ASSIGN_UUID)
+    @NotNull(message = "设计不能为空")
+    private String id;
+    @NotBlank(message = "名称不能为空")
+    @ApiModelProperty("名称")
+    private String name;
+    @ApiModelProperty("图标")
+    private String icon;
+    @TableLogic
+    @ApiModelProperty("逻辑删除")
+    private Boolean delFlag;
+    @ApiModelProperty("排序")
+    private Long sort;
+    @ApiModelProperty("子菜单")
+    @TableField(exist = false)
+    private List<JvsDataFactory> children;
+    @ApiModelProperty("此菜单的子集数据量方便前端按钮显示")
+    @TableField(exist = false)
+    private Long count;
+}

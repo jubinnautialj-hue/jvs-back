@@ -27,6 +27,7 @@ import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
+import cn.bctools.design.expression.EnvConstant;
 import cn.bctools.design.jvslog.service.impl.JvsLogServiceImpl;
 import cn.bctools.design.menu.entity.AppMenu;
 import cn.bctools.design.menu.service.AppMenuService;
@@ -493,6 +494,9 @@ public class FormDesignController {
         //查询当前这个设计的全部公式，删除多余的
         List<FunctionBusinessPo> functionBusinessPos = execMapper.selectList(Wrappers.query(new FunctionBusinessPo().setDesignId(id)));
         for (FunctionBusinessPo e : functionBusinessPos) {
+            if (EnvConstant.FORM_QR_CODE_TAG.equals(e.getUseCase())) {
+                continue;
+            }
             if (!viewJson.contains(e.getId())) {
                 execMapper.deleteById(e.getId());
             }

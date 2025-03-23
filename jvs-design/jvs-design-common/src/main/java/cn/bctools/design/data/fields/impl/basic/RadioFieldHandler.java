@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
-import java.util.zip.DataFormatException;
 
 /**
  * 表单字段: 单选框
@@ -55,7 +54,10 @@ public class RadioFieldHandler extends IMultipleTypeHandler implements IDataFiel
     public Object getConversionKey(RadioItemHtml dto, Object o, Map<String, Object> oldData) {
         return conversionKey(dto, o, oldData);
     }
-
+    @Override
+    public void checkFieldTypeAttributeChanged(RadioItemHtml html, RadioItemHtml dbHtml) {
+        super.checkFieldTypeAttributeChanged(html, dbHtml);
+    }
     @Override
     public Boolean whetherCoverValue() {
         return Boolean.FALSE;

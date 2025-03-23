@@ -1,12 +1,10 @@
 package cn.bctools.rule.speech;
 
-import cn.bctools.common.exception.BusinessException;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
-import cn.bctools.rule.speech.SpeechDto;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 

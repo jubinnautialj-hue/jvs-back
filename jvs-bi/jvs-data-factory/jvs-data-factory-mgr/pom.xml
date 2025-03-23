@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>cn.bctools</groupId>
+        <artifactId>jvs-data-factory</artifactId>
+        <version>2.3</version>
+    </parent>
+
+    <groupId>cn.bctools</groupId>
+    <artifactId>jvs-data-factory-mgr</artifactId>
+    <version>2.3</version>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-web</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-data-factory-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-data-factory-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-job</artifactId>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+                <version>2.5.4</version>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <version>2.6</version>
+                <artifactId>maven-resources-plugin</artifactId>
+                <configuration>
+                    <encoding>UTF-8</encoding>
+                    <!--不进行过滤的扩展名-->
+                    <nonFilteredFileExtensions>
+                        <nonFilteredFileExtension>tgz</nonFilteredFileExtension>
+                    </nonFilteredFileExtensions>
+                </configuration>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>
+

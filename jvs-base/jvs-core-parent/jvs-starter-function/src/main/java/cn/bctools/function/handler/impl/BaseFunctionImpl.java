@@ -2,19 +2,25 @@ package cn.bctools.function.handler.impl;
 
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
+import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.function.entity.po.BaseFunctionPo;
 import cn.bctools.function.entity.vo.ElementVo;
+import cn.bctools.function.enums.JvsParamType;
 import cn.bctools.function.handler.IJvsFunction;
 import cn.bctools.function.handler.JvsExpression;
 import cn.bctools.function.mapper.SysFunctionMapper;
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
+import cn.hutool.core.util.NumberUtil;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
+import jdk.nashorn.internal.ir.ObjectNode;
 import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +29,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.annotation.Order;
 
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * 基础函数
@@ -72,6 +79,31 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
     @Override
     public Object calculate(String functionName, Object... params) {
         ScriptDto scriptDto = this.getScriptDtoFromCache(functionName, params);
+        //判断类型是否符合
+        if (ObjectNull.isNotNull(scriptDto.getInParamTypes())) {
+            for (int i = 0; i < scriptDto.getInParamTypes().size(); i++) {
+                JvsParamType inParamType = scriptDto.getInParamTypes().get(i);
+                switch (inParamType) {
+                    case number:
+                        if (NumberUtil.isNumber(params[i].toString())) {
+                            if (NumberUtil.parseNumber(params[i].toString()).intValue() == NumberUtil.parseNumber(params[i].toString()).doubleValue()) {
+                                params[i] = NumberUtil.parseNumber(params[i].toString()).intValue();
+                            } else {
+                                params[i] = NumberUtil.parseNumber(params[i].toString()).doubleValue();
+                            }
+                        }
+                        break;
+                    case bool:
+                        if (!(params[i] instanceof Boolean)) {
+                            params[i] = Boolean.valueOf(params[i].toString());
+                        }
+                        break;
+                    case text:
+                    case date:
+                    case any:
+                }
+            }
+        }
         Script script = scriptDto.getScript().newInstance();
         int expectedParamCount = scriptDto.getExpectedParamCount();
         boolean hasDynamicParam = scriptDto.isHasDynamicParam();
@@ -130,6 +162,10 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
         scriptDto.setScript(script.getClass());
         scriptDto.setHasDynamicParam(hasDynamicParam);
         scriptDto.setExpectedParamCount(expectedParamCount);
+        if (ObjectNull.isNotNull(baseFunctionPo.getInParamTypes())) {
+            List<JvsParamType> collect = (List<JvsParamType>) baseFunctionPo.getInParamTypes().stream().map(e -> JvsParamType.valueOf(e.toString())).collect(Collectors.toList());
+            scriptDto.setInParamTypes(collect);
+        }
         scriptCache.put(cacheKey, scriptDto);
         return scriptDto;
     }
@@ -216,6 +252,7 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
         Class<? extends Script> script;
         int expectedParamCount;
         boolean hasDynamicParam;
+        private List<JvsParamType> inParamTypes;
     }
 
 }

@@ -7,6 +7,7 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -57,17 +58,18 @@ public class UserDto implements Serializable {
      */
     private String jobName;
     /**
-     * 部门Id
+     * 用户部门
      */
-    private String deptId;
-    /**
-     * 部门编号
-     */
-    private String deptCode;
-    /**
-     * 部门名称
-     */
-    private String deptName;
+    private List<DeptDto> dept = new ArrayList<>();
+
+    public List<DeptDto> getDept() {
+        if (ObjectNull.isNull(dept)) {
+            return new ArrayList<>(0);
+        } else {
+            return dept;
+        }
+    }
+
     /**
      * 密码
      */
@@ -96,6 +98,10 @@ public class UserDto implements Serializable {
      * 角色id集合
      */
     private List<String> roleIds;
+    /**
+     * 下级部门id集合
+     */
+    private List<String> childDeptIds;
     /**
      * 职工编号
      */

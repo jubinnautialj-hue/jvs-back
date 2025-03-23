@@ -1,8 +1,8 @@
 package cn.bctools.design.workflow.dto.progress;
 
 import cn.bctools.design.workflow.entity.dto.CourseDto;
-import cn.bctools.design.workflow.model.properties.ApprovalModeProperties;
 import cn.bctools.design.workflow.model.enums.NodePropertiesModeEnum;
+import cn.bctools.design.workflow.model.properties.ApprovalModeProperties;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

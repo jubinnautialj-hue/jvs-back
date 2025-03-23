@@ -55,21 +55,17 @@ public class AppMenuHandler {
             if (appMenuTypes.size() != appMenuTypes.stream().map(AppMenuType::getType).distinct().count()) {
                 throw new BusinessException("已存在重名目录");
             }
-            appMenuTypes.forEach(appMenuType -> {
-                appMenuType
-                        // 目录id与应用id相同，则设置父级目录为null；否则设置父级目录为目标目录id
-                        .setParentId(appId.equals(typeId) ? null : typeId)
-                        .setSort(ids.indexOf(appMenuType.getId()));
-            });
+            appMenuTypes.forEach(appMenuType -> appMenuType
+                    // 目录id与应用id相同，则设置父级目录为null；否则设置父级目录为目标目录id
+                    .setParentId(appId.equals(typeId) ? null : typeId)
+                    .setSort(ids.indexOf(appMenuType.getId())));
             appMenuTypeService.updateBatchById(appMenuTypes);
         }
 
         // 修改设计排序
         List<AppMenu> appMenus = appMenuService.list(Wrappers.<AppMenu>lambdaQuery().eq(AppMenu::getJvsAppId, appId).in(AppMenu::getDesignId, ids));
         if (ObjectNull.isNotNull(appMenus)) {
-            appMenus.forEach(appMenu -> {
-                appMenu.setType(typeId).setSort(ids.indexOf(appMenu.getDesignId()));
-            });
+            appMenus.forEach(appMenu -> appMenu.setType(typeId).setSort(ids.indexOf(appMenu.getDesignId())));
             appMenuService.updateBatchById(appMenus);
         }
     }

@@ -2,10 +2,8 @@ package cn.bctools.design.rule.impl.word;
 
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.word.utils.Tool;
-import cn.bctools.word.utils.Tool;
 import cn.hutool.http.HttpUtil;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
-import lombok.SneakyThrows;
 import lombok.SneakyThrows;
 import org.apache.commons.io.IOUtils;
 import org.docx4j.XmlUtils;
@@ -158,7 +156,6 @@ public class MargeDoc {
                             continue;
                         }
                         pList.forEach(p -> updatePImageReferences(doc, (P)p));
-                        System.err.println(1);
                     }
                 }
             }

@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>jvs-data-factory</artifactId>
+        <groupId>cn.bctools</groupId>
+        <version>2.3</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>jvs-data-factory-data-dispose</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-web</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-database</artifactId>
+        </dependency>
+        <!-- 用户信息 -->
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-oauth2</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+</project>

@@ -1,8 +1,8 @@
 package cn.bctools.design.crud.service.impl;
 
 import cn.bctools.common.utils.BeanCopyUtil;
-import cn.bctools.database.util.IdGenerator;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.database.util.IdGenerator;
 import cn.bctools.design.crud.dto.AutoCreateCrudDesignDto;
 import cn.bctools.design.crud.entity.CrudPage;
 import cn.bctools.design.crud.entity.DesignRole;

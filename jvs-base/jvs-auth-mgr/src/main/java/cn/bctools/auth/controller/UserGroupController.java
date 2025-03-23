@@ -1,8 +1,10 @@
 package cn.bctools.auth.controller;
 
+import cn.bctools.auth.entity.Dept;
 import cn.bctools.auth.entity.User;
 import cn.bctools.auth.entity.UserGroup;
 import cn.bctools.auth.entity.UserTenant;
+import cn.bctools.auth.service.DeptService;
 import cn.bctools.auth.service.UserGroupService;
 import cn.bctools.auth.service.UserService;
 import cn.bctools.auth.service.UserTenantService;
@@ -44,6 +46,7 @@ import java.util.stream.Collectors;
 public class UserGroupController {
 
     private final UserService userService;
+    private final DeptService deptService;
     private final UserGroupService userGroupService;
     private final UserTenantService userTenantService;
 
@@ -76,7 +79,14 @@ public class UserGroupController {
         }
         Map<String, User> userMap = userService.listByIds(userIdSet).stream().collect(Collectors.toMap(User::getId, Function.identity()));
         List<UserVo> list = page.getRecords().stream()
-                .map(e -> BeanCopyUtil.copy(UserVo.class, userMap.get(e.getUserId()), e).setId(e.getUserId()).setUserId(e.getUserId()))
+                .map(e -> {
+                    UserVo userVo = BeanCopyUtil.copy(UserVo.class, userMap.get(e.getUserId()), e).setId(e.getUserId()).setUserId(e.getUserId());
+                    if (ObjectNull.isNotNull(e.getDeptId())) {
+                        List<String> names = deptService.listByIds(e.getDeptId()).stream().map(Dept::getName).collect(Collectors.toList());
+                        userVo.setDeptName(names);
+                    }
+                    return userVo;
+                })
                 .collect(Collectors.toList());
         userPage.setRecords(list);
         return R.ok(userPage);

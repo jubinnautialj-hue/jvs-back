@@ -2,7 +2,6 @@ package cn.bctools.design.config;
 
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;
-import cn.bctools.database.util.IdGenerator;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.project.enums.DesignIdPrefixEnum;
 import cn.bctools.design.project.handler.Design;

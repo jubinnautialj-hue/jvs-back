@@ -1,6 +1,5 @@
 package cn.bctools.design.rule.impl.rule.app.rule;
 
-import cn.bctools.design.rule.impl.datamodel.DataModelLinkSelected;
 import cn.bctools.rule.annotations.ParameterValue;
 import cn.bctools.rule.entity.enums.InputType;
 import lombok.Data;

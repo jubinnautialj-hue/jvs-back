@@ -1,11 +1,14 @@
 package cn.bctools.design.workflow.dto.progress;
 
 import cn.bctools.design.workflow.entity.dto.ApproveResultDto;
+import cn.bctools.oss.dto.BaseFile;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
+
+import java.util.List;
 
 /**
  * @author zhuxiaokang 
@@ -29,4 +32,7 @@ public class ProgressPrintResDto extends ApproveResultDto {
 
     @ApiModelProperty(value = "审批意见")
     private String opinionContent;
+
+    @ApiModelProperty(value = "手写签名")
+    private List<BaseFile> opinionSign;
 }

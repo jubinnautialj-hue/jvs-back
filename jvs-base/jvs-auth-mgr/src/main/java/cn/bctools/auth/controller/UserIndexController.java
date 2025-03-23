@@ -3,6 +3,7 @@ package cn.bctools.auth.controller;
 import cn.bctools.auth.component.SmsEmailComponent;
 import cn.bctools.auth.component.UserInfoComponent;
 import cn.bctools.auth.entity.*;
+import cn.bctools.auth.entity.enums.BulletinEnum;
 import cn.bctools.auth.entity.enums.BulletinTypeEnum;
 import cn.bctools.auth.login.auth.OtherLoginHandler;
 import cn.bctools.auth.login.auth.ding.BaseDd;
@@ -37,6 +38,7 @@ import cn.hutool.http.HtmlUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.ObjectUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
@@ -95,12 +97,20 @@ public class UserIndexController {
     public R bulletins(@PathVariable String appKey, @RequestParam(value = "count", required = false, defaultValue = "1") int count) {
         //处理移动端和PC端的显示问题
         BulletinTypeEnum bulletinTypeEnum = IpUtil.isMobile() ? BulletinTypeEnum.MOBILE : BulletinTypeEnum.PC;
-        List<Bulletin> list = bulletinService.list(new LambdaQueryWrapper<Bulletin>().eq(Bulletin::getPublish, true).eq(Bulletin::getType, bulletinTypeEnum)
+        LambdaQueryWrapper<Bulletin> last = new LambdaQueryWrapper<Bulletin>().eq(Bulletin::getPublish, true).eq(Bulletin::getType, bulletinTypeEnum)
                 //结束时间大于当前时间
                 .gt(Bulletin::getEndTime, DateUtil.date())
+                .orderByDesc(Bulletin::getStartTime)
                 //开始时间大于大前时间
                 .lt(Bulletin::getStartTime, DateUtil.date()).apply(SqlFunctionUtil.jsonContains("app_keys", appKey, "$"))
-                .last(" limit " + count));
+                .last(" limit " + count);
+        List<Bulletin> list = bulletinService.list(last);
+        list.forEach(e -> {
+            if (e.getContentType().equals(BulletinEnum.TEXT)) {
+                String unescape = HtmlUtil.unescape(HtmlUtil.cleanHtmlTag((e).getContent()).replaceAll("\n", ""));
+                e.setContent(unescape);
+            }
+        });
         if (count > 1) {
             return R.ok(list);
         }
@@ -108,6 +118,27 @@ public class UserIndexController {
             return R.ok(list.get(0));
         }
         return R.ok();
+    }
+
+    @Log(back = false)
+    @ApiOperation("获取公告")
+    @GetMapping("/bulletin/{appKey}/page")
+    public R bulletinsPage(Page<Bulletin> page, @PathVariable String appKey) {
+        //处理移动端和PC端的显示问题
+        BulletinTypeEnum bulletinTypeEnum = IpUtil.isMobile() ? BulletinTypeEnum.MOBILE : BulletinTypeEnum.PC;
+        LambdaQueryWrapper<Bulletin> last = new LambdaQueryWrapper<Bulletin>().eq(Bulletin::getPublish, true).eq(Bulletin::getType, bulletinTypeEnum)
+                //结束时间大于当前时间
+                .gt(Bulletin::getEndTime, DateUtil.date())
+                .orderByDesc(Bulletin::getStartTime)
+                //开始时间大于大前时间
+                .lt(Bulletin::getStartTime, DateUtil.date()).apply(SqlFunctionUtil.jsonContains("app_keys", appKey, "$"));
+        bulletinService.page(page, last).getRecords().forEach(e -> {
+            if (e.getContentType().equals(BulletinEnum.TEXT)) {
+                String unescape = HtmlUtil.unescape(HtmlUtil.cleanHtmlTag((e).getContent()).replaceAll("\n", ""));
+                e.setContent(unescape);
+            }
+        });
+        return R.ok(page);
     }
 
 
@@ -514,7 +545,7 @@ public class UserIndexController {
                 .orderByDesc(Bulletin::getCreateTime));
         //截取数据,不需要太长的消息信息
         list.forEach(e -> {
-            String s = HtmlUtil.cleanHtmlTag(e.getContent());
+            String s = HtmlUtil.unescape(HtmlUtil.cleanHtmlTag(e.getContent()));
             e.setContent(s.substring(0, s.length() < 400 ? s.length() : 400));
         });
         List<Object> collect = list.stream().map(e -> DateUtils.transformation(e, Get.name(Bulletin::getStartTime))).collect(Collectors.toList());

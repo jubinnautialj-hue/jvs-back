@@ -5,19 +5,19 @@ import cn.bctools.auth.api.dto.EnvironmentVariableDto;
 import cn.bctools.auth.api.dto.SysRoleDto;
 import cn.bctools.auth.api.dto.SysTenantDto;
 import cn.bctools.auth.api.enums.ModeTypeEnum;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.JvsJsonPath;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SystemThreadLocal;
 import cn.bctools.common.utils.function.Get;
-import cn.bctools.design.crud.dto.PrintTemplateDto;
 import cn.bctools.design.crud.entity.PrintTemplate;
 import cn.bctools.design.crud.entity.enums.DesignTypeEnum;
 import cn.bctools.design.crud.mapper.PrintTemplateMapper;
 import cn.bctools.design.crud.service.PrintTemplateService;
 import cn.bctools.design.crud.vo.PrintOtherField;
+import cn.bctools.design.data.entity.DataModelPo;
 import cn.bctools.design.data.entity.DynamicDataPo;
 import cn.bctools.design.data.fields.IDataFieldHandler;
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
@@ -26,6 +26,7 @@ import cn.bctools.design.data.fields.impl.container.TabFieldHandler;
 import cn.bctools.design.data.fields.impl.container.TabGenerateFieldHandler;
 import cn.bctools.design.data.fields.impl.container.TableFormFieldHandler;
 import cn.bctools.design.data.service.DataFieldService;
+import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.expression.EnvConstant;
 import cn.bctools.design.project.handler.IJvsDesigner;
@@ -33,6 +34,7 @@ import cn.bctools.design.sqlInjector.MapperMethodHandler;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.design.util.ModeUtils;
 import cn.bctools.design.workflow.dto.progress.ProgressPrintResDto;
+import cn.bctools.design.workflow.service.ApprovalRecordService;
 import cn.bctools.design.workflow.service.FlowDynamicDataService;
 import cn.bctools.design.workflow.service.FlowTaskService;
 import cn.bctools.design.workflow.service.impl.FlowDynamicDataServiceImpl;
@@ -81,6 +83,8 @@ import java.util.stream.Collectors;
 @AllArgsConstructor
 public class PrintTemplateServiceImpl extends ServiceImpl<PrintTemplateMapper, PrintTemplate> implements PrintTemplateService, IJvsDesigner {
 
+
+    private final DataModelService dataModelService;
     private final DynamicDataService dynamicDataService;
     private final Map<String, IDataFieldHandler> fieldHandlerMap;
     private final DataFieldService dataFieldService;
@@ -94,6 +98,7 @@ public class PrintTemplateServiceImpl extends ServiceImpl<PrintTemplateMapper, P
     private final EnvironmentVariableApi environmentVariableApi;
     private final AuthRoleServiceApi authRoleServiceApi;
     private final AuthTenantServiceApi authTenantServiceApi;
+    private final ApprovalRecordService approvalRecordService;
 
     @Override
     public List<PrintTemplate> getDesignAll(String appId, String designId) {
@@ -178,9 +183,12 @@ public class PrintTemplateServiceImpl extends ServiceImpl<PrintTemplateMapper, P
                     iDataFieldHandler.tableSetData(fieldHandlerMap, fieldsMap, publicHtml, data, publicHtml.getProp());
                 }
             }
-        };
+        }
+        ;
         data = dynamicDataService.echo(data, fields, true);
-
+        DataModelPo byId = dataModelService.getById(dataId);
+        //处理表单中的脱敏
+        dynamicDataService.encryptionData(data, byId);
         //获取表单字段
         List<ElementVo> formParams = getFormParams(printTemplate.getDesignId());
         // 封装系统参数信息
@@ -243,13 +251,13 @@ public class PrintTemplateServiceImpl extends ServiceImpl<PrintTemplateMapper, P
                     data.put(prefix + SysParamEnums.HeadImg.getId(), userDto.getHeadImg());
                     break;
                 case DeptId:
-                    data.put(prefix + SysParamEnums.DeptId.getId(), userDto.getDeptId());
+                    data.put(prefix + SysParamEnums.DeptId.getId(), userDto.getDept().stream().map(DeptDto::getDeptId).collect(Collectors.toList()));
                     break;
                 case DeptName:
-                    data.put(prefix + SysParamEnums.DeptName.getId(), userDto.getDeptName());
+                    data.put(prefix + SysParamEnums.DeptName.getId(), userDto.getDept().stream().map(DeptDto::getDeptName).collect(Collectors.toList()));
                     break;
                 case DeptCode:
-                    data.put(prefix + SysParamEnums.DeptCode.getId(), userDto.getDeptCode());
+                    data.put(prefix + SysParamEnums.DeptCode.getId(),  userDto.getDept().stream().map(DeptDto::getDeptCode).collect(Collectors.toList()));
                     break;
                 case UserRole:
                     String roleName = authRoleServiceApi.getByIds(userDto.getRoleIds()).getData().stream()
@@ -339,14 +347,21 @@ public class PrintTemplateServiceImpl extends ServiceImpl<PrintTemplateMapper, P
      * @param data
      */
     private void packWorkFlowData(Map<String, Object> data) {
+        String dataId = String.valueOf(data.get("id"));
         // 封装审批过程
         List<ProgressPrintResDto> progress = new ArrayList<>();
-        FlowDynamicDataServiceImpl.FlowTaskModelData flowTaskModelData = flowDynamicDataService.getFlowTaskData(String.valueOf(data.get("id")));
+        FlowDynamicDataServiceImpl.FlowTaskModelData flowTaskModelData = flowDynamicDataService.getFlowTaskData(dataId);
         if (StringUtils.isNotBlank(flowTaskModelData.getId())) {
             progress = flowTaskService.getProgressPrint(flowTaskModelData.getId());
         }
 
         data.put(PrintOtherField.Flow.WORKFLOW_PROGRESS.getKey(), JSON.parseArray(JSON.toJSONString(progress)));
+
+        // 封装审批记录
+        Map<String, Object> flowRecord = approvalRecordService.getFlowRecord(dataId);
+        if (ObjectNull.isNotNull(flowRecord)) {
+            data.putAll(flowRecord);
+        }
     }
 
     @Override

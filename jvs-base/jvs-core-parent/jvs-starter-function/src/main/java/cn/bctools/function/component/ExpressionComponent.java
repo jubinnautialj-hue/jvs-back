@@ -40,7 +40,23 @@ public class ExpressionComponent {
 
     public void getExpression(String designId, String useCase, ExecDto body) {
 
-        List<FunctionBusinessPo> functionList = getFunctionList(designId, useCase);
+        List<FunctionBusinessPo> functionList = new ArrayList<>();
+        List<FunctionBusinessPo> list = getFunctionList(designId, useCase)
+                .stream()
+                .filter(e -> {
+                    //判断是否是表格内触发点
+                    if (ObjectNull.isNotNull(body.getIndex())) {
+                        if (e.getBusinessId().equals(body.getModifiedField())) {
+                            //判断是否是同级，可能是表格外或表格内
+                            if (e.getType().equals("tableForm")) {
+                                return false;
+                            }
+                        }
+                    }
+                    return true;
+                })
+                .collect(Collectors.toList());
+        functionList = list;
         TableType type = SystemThreadLocal.get("tableType");
 
         //表示表格内触发点, 判断是否有父级
@@ -55,18 +71,40 @@ public class ExpressionComponent {
                 switch (type) {
                     case add:
                     case line:
-                        functionList = functionList.stream()
+                        functionList = list.stream()
                                 //如果操作触发点,不是表格, 就不做父级过滤，父级的表格操作也需要在计算
-                                .filter(e -> e.getBusinessId().contains(parentKeyPath) || JSON.toJSONString(e.getRelatedIds()).contains(parentKeyPath))
+                                .filter(e -> {
+                                    if (e.getBusinessId().contains(parentKeyPath)) {
+                                        return true;
+                                    } else if (JSON.toJSONString(e.getRelatedIds()).contains(parentKeyPath + ".")) {
+                                        if (ObjectNull.isNotNull(body.getIndex())) {
+                                            //表示表格
+                                        }
+                                        if (ObjectNull.isNull(e.getType())) {
+                                            return false;
+                                        } else {
+                                            return true;
+                                        }
+                                    } else {
+                                        return true;
+                                    }
+                                })
                                 .collect(Collectors.toList());
                         break;
                     case del:
-                        functionList = functionList.stream()
+                        functionList = list.stream()
                                 //如果操作触发点,不是表格, 就不做父级过滤
                                 .filter(e -> !e.getBusinessId().contains(parentKeyPath + "."))
                                 .collect(Collectors.toList());
                         break;
-
+                }
+                //判断是否有关联引用关系，如果存在，需要进行递归执行所有关联公式,但这里可能会存在死循环， 所以最多 3 层
+                //删除已经需要执行的公式
+                list.removeAll(functionList);
+                if (ObjectNull.isNotNull(list, functionList)) {
+                    //判断是否还存在上级关联执行的公式
+                    List<FunctionBusinessPo> finalFunctionList = functionList;
+                    list = list.stream().filter(e -> finalFunctionList.stream().anyMatch(a -> a.getBusinessId().equals(a.getBusinessId()))).collect(Collectors.toList());
                 }
 
             }
@@ -152,12 +190,20 @@ public class ExpressionComponent {
                 }
             }
         }
-        //触发同级公式
-//        String mid = body.getParentKey().get(body.getParentKey().size());
-//        body.getParentKey().remove(body.getParentKey().size());
-//        getModifiedParams(body.setModifiedField(mid).setIndex(null), useCase, paramBusinessIds, functionMap);
-//
-//        getModifiedParams(designId, useCase, new ExecDto().setIndex(null).setParams(body.getParams()).setParentKey(body.getParentKey()).setModifiedField(mid));
+        if (ObjectNull.isNotNull(list)) {
+            Map<String, FunctionBusinessPo> businessPoMap = list.stream().collect(Collectors.toMap(FunctionBusinessPo::getBusinessId, Function.identity()));
+            // 构建变量引用的关系图
+            ExpressionGraph<String> graph = ExpressionGraphUtils.buildFunctionGraph(list);
+            //这里需要根据顺序计算，避免表单中的相互引用时导致的间隔多步不执行情况
+            for (String node : graph.getNodes()) {
+                if (businessPoMap.containsKey(node)) {
+                    // 计算各个参数, 以远距离优先搜索为顺序
+                    Map<String, FunctionBusinessPo> functionMap = getFunctionMap(list, body);
+                    List<String> paramBusinessIds = ExpressionGraphUtils.getCalculateSort(graph, body.getModifiedField());
+                    getModifiedParams(body.setModifiedField(businessPoMap.get(node).getBusinessId()).setIndex(null), useCase, paramBusinessIds, functionMap);
+                }
+            }
+        }
 
     }
 
@@ -226,7 +272,7 @@ public class ExpressionComponent {
                     }
                     strings.add(businessId);
                     businessId = strings.stream().collect(Collectors.joining("."));
-                    function = functionMap.remove(businessId);
+                    function = functionMap.get(businessId);
                 }
 
                 if (Objects.isNull(function)) {

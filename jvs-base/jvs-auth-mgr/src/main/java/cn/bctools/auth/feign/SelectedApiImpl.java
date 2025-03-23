@@ -7,6 +7,7 @@ import cn.bctools.auth.entity.Job;
 import cn.bctools.auth.entity.Role;
 import cn.bctools.auth.entity.UserGroup;
 import cn.bctools.auth.service.*;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.utils.*;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -61,33 +62,23 @@ public class SelectedApiImpl implements SelectedServiceApi {
         }
         // 添加顶级部门节点
         String rootDeptId = TenantContextHolder.getTenantId();
-        List<Dept> list = null;
+        List<Dept> list = new ArrayList<>();
         if (ObjectNull.isNotNull(searchDto.getRangType())) {
             switch (searchDto.getRangType()) {
                 case current:
                     //本部门及以下
-                    rootDeptId = UserCurrentUtils.getDeptId();
-                    if (ObjectNull.isNull(rootDeptId)) {
-                        list = new ArrayList<>();
-                    } else {
-                        list = deptService.getAllChild(rootDeptId);
-                    }
+                    list = UserCurrentUtils.getDept().stream().flatMap(e -> deptService.getAllChild(e.getDeptId()).stream()).collect(Collectors.toList());
                     break;
                 case samelevel:
-                    String deptId = UserCurrentUtils.getDeptId();
-                    if (ObjectNull.isNull(deptId)) {
-                        list = new ArrayList<>();
-                    } else {
-                        //同级部门及以下
-                        rootDeptId = deptService.getById(UserCurrentUtils.getDeptId()).getParentId();
-                        list = deptService.getAllChild(rootDeptId);
-                    }
+                    list = UserCurrentUtils.getDept().stream()
+                            .map(e -> deptService.getById(e.getDeptId()))
+                            .flatMap(e -> deptService.getAllChild(e.getParentId()).stream())
+                            .collect(Collectors.toList());
                     break;
                 case dept:
                     if (ObjectNull.isNotNull(searchDto.getRangIds())) {
-                        rootDeptId = searchDto.getRangIds().get(0);
-                        //指定部门及以下
-                        list = deptService.getAllChild(rootDeptId);
+                        //指定部门
+                        list = searchDto.getRangIds().stream().flatMap(e -> deptService.getAllChild(e).stream()).collect(Collectors.toList());
                     }
             }
         } else {
@@ -108,14 +99,51 @@ public class SelectedApiImpl implements SelectedServiceApi {
 
         //如果是为默认的租户顶级，添加一级
         if (rootDeptId == TenantContextHolder.getTenantId()) {
-            SysDeptDto root = new SysDeptDto().setId(rootDeptId).setSort(0).setChildList(Collections.emptyList());
-            deptList.add(root);
-            // 转树形结构
-            SysDeptDto deptDto = TreeUtils.list2Tree(deptList, rootDeptId, SysDeptDto::getId, SysDeptDto::getParentId, SysDeptDto::setChildList, Comparator.comparing(SysDeptDto::getSort));
-            if (Objects.isNull(deptDto)) {
-                userSelectedDto.setDepts(Collections.emptyList());
+            if (ObjectNull.isNull(searchDto.getRangType())) {
+                SysDeptDto root = new SysDeptDto().setId(rootDeptId).setSort(0).setChildList(Collections.emptyList());
+                deptList.add(root);
+                // 转树形结构
+                SysDeptDto deptDto = TreeUtils.list2Tree(deptList, rootDeptId, SysDeptDto::getId, SysDeptDto::getParentId, SysDeptDto::setChildList, Comparator.comparing(SysDeptDto::getSort));
+                if (Objects.isNull(deptDto)) {
+                    userSelectedDto.setDepts(Collections.emptyList());
+                } else {
+                    userSelectedDto.setDepts(deptDto.getChildList());
+                }
             } else {
-                userSelectedDto.setDepts(deptDto.getChildList());
+                List<SysDeptDto> deptlist = new ArrayList<>();
+                switch (searchDto.getRangType()) {
+                    case dept:
+                        if (ObjectNull.isNotNull(searchDto.getRangIds())) {
+                            searchDto.getRangIds().forEach(e -> {
+                                SysDeptDto sysDeptDto = TreeUtils.list2Tree(deptList, e, SysDeptDto::getId, SysDeptDto::getParentId, SysDeptDto::setChildList, Comparator.comparing(SysDeptDto::getSort));
+                                deptlist.add(sysDeptDto);
+                            });
+                        }
+                        break;
+                    case current:
+                        Set<String> ids = UserCurrentUtils.getCurrentUser().getDept().stream().map(DeptDto::getDeptId).collect(Collectors.toSet());
+                        if (ObjectNull.isNotNull(ids)) {
+                            ids.forEach(e -> {
+                                SysDeptDto sysDeptDto = TreeUtils.list2Tree(deptList, e, SysDeptDto::getId, SysDeptDto::getParentId, SysDeptDto::setChildList, Comparator.comparing(SysDeptDto::getSort));
+                                deptlist.add(sysDeptDto);
+                            });
+                        }
+                        break;
+                    case samelevel:
+                        if (ObjectNull.isNotNull(UserCurrentUtils.getDept())) {
+                            UserCurrentUtils.getDept()
+                                    .stream()
+                                    .map(e -> deptService.getById(e.getDeptId()))
+                                    .flatMap(e -> deptService.list(new LambdaQueryWrapper<Dept>().eq(Dept::getParentId, e.getParentId())).stream())
+                                    .filter(ObjectNull::isNotNull)
+                                    .forEach(e -> {
+                                        SysDeptDto sysDeptDto = TreeUtils.list2Tree(deptList, e.getId(), SysDeptDto::getId, SysDeptDto::getParentId, SysDeptDto::setChildList, Comparator.comparing(SysDeptDto::getSort));
+                                        deptlist.add(sysDeptDto);
+                                    });
+                        }
+                        break;
+                }
+                userSelectedDto.setDepts(deptlist);
             }
         } else {
             // 转树形结构

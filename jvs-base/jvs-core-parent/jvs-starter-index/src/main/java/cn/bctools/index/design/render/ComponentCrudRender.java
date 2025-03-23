@@ -5,6 +5,8 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
+import java.util.List;
+
 /**
  * The type Component crud render.
  *
@@ -15,4 +17,5 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class ComponentCrudRender extends OptionsBase {
     Object data;
+    List<Object> pages;
 }

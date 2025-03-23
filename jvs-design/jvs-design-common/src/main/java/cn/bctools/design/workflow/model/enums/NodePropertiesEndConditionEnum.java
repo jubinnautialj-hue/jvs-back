@@ -19,6 +19,6 @@ public enum NodePropertiesEndConditionEnum {
     LEAVE("LEAVE", "指定领导级别"),
     ;
 
-    private String value;
-    private String desc;
+    private final String value;
+    private final String desc;
 }

@@ -39,6 +39,7 @@ import org.springframework.util.MultiValueMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -143,9 +144,10 @@ public class OauthOtherRequest extends AuthDefaultRequest {
     }
 
     private OtherAuthUser getUser(JSONObject object, AuthToken authToken) {
+        log.info("映射字段关系:{}", JSONObject.toJSONString(field));
         String string = object.getString(field.getUuid());
         if (ObjectNull.isNull(string)) {
-            throw new BusinessException("获取三方用户对象失败,未获取到用户id,三方返回信息为:", JSONObject.toJSONString(object) + " \n 示例结构: {\n" +
+            throw new BusinessException("获取三方用户对象失败,未获取到用户id,三方返回信息为:{}", JSONObject.toJSONString(object) + " \n 示例结构: {\n" +
                     "\"uuid\":\"xx\",\n" +
                     "\"name\":\"张三\"\n" +
                     "}");
@@ -166,7 +168,7 @@ public class OauthOtherRequest extends AuthDefaultRequest {
         otherAuthUser.setAvatar(avatar);
         otherAuthUser.setEnable(field.getEnable());
         otherAuthUser.setBlog(object.getString(field.getBlog()));
-        otherAuthUser.setCompany(object.getString(field.getCompany()));
+        otherAuthUser.setCompany(JSONObject.toJSONString(object.get(field.getCompany())));
         otherAuthUser.setLocation(object.getString(field.getLocation()));
         otherAuthUser.setEmail(object.getString(field.getEmail()));
         otherAuthUser.setRemark(object.getString(field.getRemark()));
@@ -254,7 +256,9 @@ public class OauthOtherRequest extends AuthDefaultRequest {
                     .setPhone(savePhone)
                     .setCancelFlag(false);
             if (ObjectNull.isNotNull(dept)) {
-                userTenant.setDeptId(SyncOrgUtils.buildDeptId(TenantContextHolder.getTenantId(), dept.getId())).setDeptName(dept.getName());
+                List<String> userDeptIdsList = Optional.ofNullable(userTenant.getDeptId()).orElseGet(ArrayList::new);
+                userDeptIdsList.add(SyncOrgUtils.buildDeptId(TenantContextHolder.getTenantId(), dept.getId()));
+                userTenant.setDeptId(userDeptIdsList);
             }
             UserExtension userExtension = new UserExtension()
                     .setExtension(BeanUtil.beanToMap(resUser))

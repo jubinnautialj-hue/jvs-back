@@ -1,5 +1,6 @@
 package cn.bctools.design.data.controller;
 
+import cn.bctools.auth.api.api.AuthDeptServiceApi;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.function.Get;
@@ -10,6 +11,7 @@ import cn.bctools.design.crud.entity.CrudPage;
 import cn.bctools.design.crud.entity.FormPo;
 import cn.bctools.design.crud.service.CrudPageService;
 import cn.bctools.design.crud.service.FormService;
+import cn.bctools.design.crud.service.JvsTreeService;
 import cn.bctools.design.crud.utils.Decimal128ListConvert;
 import cn.bctools.design.crud.utils.DesignUtils;
 import cn.bctools.design.data.component.DataModelHandler;
@@ -22,7 +24,6 @@ import cn.bctools.design.data.fields.dto.*;
 import cn.bctools.design.data.fields.dto.enums.ButtonTypeEnum;
 import cn.bctools.design.data.fields.dto.enums.DataConditionType;
 import cn.bctools.design.data.fields.dto.enums.FormDataTypeEnum;
-import cn.bctools.design.data.fields.dto.form.FormDesignHtml;
 import cn.bctools.design.data.fields.dto.form.FormValueHtml;
 import cn.bctools.design.data.fields.dto.form.MultipleHtml;
 import cn.bctools.design.data.fields.dto.form.html.TableFormItemHtml;
@@ -40,6 +41,7 @@ import cn.bctools.design.data.fields.impl.container.TableFormFieldHandler;
 import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
+import cn.bctools.design.data.util.QueryConditionUtils;
 import cn.bctools.design.expression.EnvConstant;
 import cn.bctools.design.notice.handler.DataNoticeHandler;
 import cn.bctools.design.notice.handler.enums.TriggerTypeEnum;
@@ -62,9 +64,11 @@ import cn.bctools.design.workflow.service.FlowDynamicDataService;
 import cn.bctools.design.workflow.service.impl.FlowDynamicDataServiceImpl;
 import cn.bctools.function.entity.dto.ExecDto;
 import cn.bctools.function.entity.dto.TableType;
+import cn.bctools.function.entity.po.FunctionBusinessPo;
 import cn.bctools.function.handler.ExpressionAfterHandler;
 import cn.bctools.function.handler.IJvsFunction;
 import cn.bctools.function.mapper.FunctionBusinessMapper;
+import cn.bctools.function.service.FunctionBusinessService;
 import cn.bctools.log.annotation.Log;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.oss.dto.BaseFile;
@@ -146,6 +150,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 
 import static cn.bctools.design.util.DynamicDataUtils.KEY_AUTH_CRITERIA;
 
@@ -160,43 +165,132 @@ import static cn.bctools.design.util.DynamicDataUtils.KEY_AUTH_CRITERIA;
 @AllArgsConstructor
 @RequestMapping("/app/use/{appId}/dynamic/data")
 public class DynamicDataUseController {
+    /**
+     * The constant FILE_TYPE.
+     */
     public static final String FILE_TYPE = ".xlsx";
+    /**
+     * The constant FILE_NAME_EXPORT.
+     */
     public static final String FILE_NAME_EXPORT = "";
+    /**
+     * The constant FILE_NAME_TEMPLATE.
+     */
     public static final String FILE_NAME_TEMPLATE = "模板-";
     private static final String FORM_ID = "formId";
     private static final Integer EXCEL_DATA_MIN_SIZE = 2;
 
+    /**
+     * The Form service.
+     */
     FormService formService;
+    /**
+     * The Page service.
+     */
     CrudPageService pageService;
+    /**
+     * The Function business mapper.
+     */
     FunctionBusinessMapper functionBusinessMapper;
+    /**
+     * The Data field service.
+     */
     DataFieldService dataFieldService;
+    /**
+     * The Oss template.
+     */
     OssTemplate ossTemplate;
+    /**
+     * The Dynamic data service.
+     */
     DynamicDataService dynamicDataService;
+    /**
+     * The Expression after handler.
+     */
     ExpressionAfterHandler expressionAfterHandler;
+    /**
+     * The Data model handler.
+     */
     DataModelHandler dataModelHandler;
+    /**
+     * The Design config.
+     */
     DesignConfig designConfig;
+    /**
+     * The Data model service.
+     */
     DataModelService dataModelService;
+    FunctionBusinessService functionBusinessService;
+
+    /**
+     * The Cascader field handler.
+     */
     CascaderFieldHandler cascaderFieldHandler;
+    JvsTreeService jvsTreeService;
+    AuthDeptServiceApi authDeptServiceApi;
+    /**
+     * The Field handler map.
+     */
     Map<String, IDataFieldHandler> fieldHandlerMap;
+    /**
+     * The Tab field handler.
+     */
     TabFieldHandler tabFieldHandler;
+    /**
+     * The Table form field handler.
+     */
     TableFormFieldHandler tableFormFieldHandler;
+    /**
+     * The Design handler.
+     */
     DesignHandler designHandler;
+    /**
+     * The Array list convert.
+     */
     ArrayListConvert arrayListConvert;
+    /**
+     * The Decimal 128 list convert.
+     */
     Decimal128ListConvert decimal128ListConvert;
+    /**
+     * The Local date time convert.
+     */
     LocalDateTimeConvert localDateTimeConvert;
+    /**
+     * The Data notice handler.
+     */
     DataNoticeHandler dataNoticeHandler;
+    /**
+     * The Rule run service.
+     */
     RuleRunService ruleRunService;
+    /**
+     * The Rule design service.
+     */
     RuleDesignService ruleDesignService;
+    /**
+     * The Rule start utils.
+     */
     RuleStartUtils ruleStartUtils;
+    /**
+     * The Run api controller.
+     */
     RunApiController runApiController;
+    /**
+     * The Run log service.
+     */
     RunLogService runLogService;
+    /**
+     * The Flow dynamic data service.
+     */
     FlowDynamicDataService flowDynamicDataService;
 
     /**
      * 获取字段列表
      *
      * @param modelId 模型id
-     * @return 字段信息集合
+     * @param appId   the app id
+     * @return 字段信息集合 fields
      */
     @ApiOperation("获取字段列表")
     @GetMapping("/fields/{modelId}")
@@ -207,17 +301,34 @@ public class DynamicDataUseController {
         return R.ok(fields);
     }
 
+    /**
+     * Gets data model name.
+     *
+     * @param modelId the model id
+     * @param appId   the app id
+     * @return the data model name
+     */
     @Log
     @ApiOperation("获取模型名称")
     @GetMapping("/modelName/{modelId}")
     public R<DataModelPo> getDataModelName(@PathVariable("modelId") String modelId, @PathVariable String appId) {
         DataModelPo byId = dataModelService.getById(modelId);
-        if (!byId.getAppId().equals(appId)) {
-            throw new BusinessException("应用错误或设计不存在");
+        if (ObjectNull.isNull(byId) || (!byId.getAppId().equals(appId))) {
+            throw new BusinessException("应用错误或模型不存在");
         }
         return R.ok(byId);
     }
 
+    /**
+     * Gets button.
+     *
+     * @param dataId  the data id
+     * @param modelId the model id
+     * @param appId   the app id
+     * @param token   the token
+     * @param body    the body
+     * @return the button
+     */
     @Log
     @ApiOperation("获取自定义按钮的组件信息重定向")
     @PostMapping("/{modelId}/button/{dataId}")
@@ -240,9 +351,13 @@ public class DynamicDataUseController {
     /**
      * 数据联动触发器处理
      *
-     * @param modelId  模型id
-     * @param designId 表单设计id
-     * @return 字段信息集合
+     * @param appId     the app id
+     * @param modelId   模型id
+     * @param init      the init
+     * @param tableType the table type
+     * @param designId  表单设计id
+     * @param body      the body
+     * @return 字段信息集合 fields
      */
     @ApiOperation("数据联动触发器处理")
     @PostMapping("/DataModelTriggering/{designId}/{modelId}")
@@ -411,9 +526,10 @@ public class DynamicDataUseController {
     /**
      * 新增数据
      *
+     * @param appId   the app id
      * @param modelId 模型id
      * @param data    数据内容
-     * @return 保存后的数据id
+     * @return 保存后的数据id r
      */
     @Log
     @ApiOperation("新增数据")
@@ -440,9 +556,10 @@ public class DynamicDataUseController {
     /**
      * 删除数据
      *
+     * @param appId   the app id
      * @param modelId 模型id
      * @param dataId  数据id
-     * @return 数据版本号
+     * @return 数据版本号 r
      */
     @Log
     @ApiOperation("删除数据")
@@ -469,8 +586,10 @@ public class DynamicDataUseController {
     /**
      * 删除数据
      *
+     * @param appId   the app id
      * @param modelId 模型id
-     * @return 数据版本号
+     * @param ids     the ids
+     * @return 数据版本号 r
      */
     @Log
     @ApiOperation("批量删除数据")
@@ -507,6 +626,14 @@ public class DynamicDataUseController {
         }
     }
 
+    /**
+     * Delete dynamic data r.
+     *
+     * @param appId   the app id
+     * @param modelId the model id
+     * @param dataIds the data ids
+     * @return the r
+     */
     @Log
     @ApiOperation("删除数据")
     @DeleteMapping("/delete/list/{modelId}")
@@ -531,10 +658,11 @@ public class DynamicDataUseController {
     /**
      * 修改数据
      *
+     * @param appId   the app id
      * @param modelId 模型id
      * @param dataId  数据id
      * @param data    数据内容
-     * @return 数据版本号
+     * @return 数据版本号 r
      */
     @Log
     @ApiOperation("修改数据")
@@ -546,6 +674,8 @@ public class DynamicDataUseController {
         setFunctionName("修改数据");
         Map<String, FieldBasicsHtml> fieldsMap = dataFieldService.getDesignIdFields(appId, modelId, designId, true, true).stream().filter(e -> ObjectNull.isNotNull(e.getType())).collect(Collectors.toMap((FieldBasicsHtml::getFieldKey),
                 Function.identity(), (e, e2) -> e));
+        //将字段判断是否存在树形关系，并避免回显死循环
+        AtomicReference<QueryConditionDto> treeQuery = new AtomicReference<>();
         for (FieldBasicsHtml e : fieldsMap.values()) {
             IDataFieldHandler iDataFieldHandler = fieldHandlerMap.get(e.getType().getDesc());
             // 没有找到实现类，直接跳过
@@ -561,9 +691,34 @@ public class DynamicDataUseController {
             boolean setEmpty = ObjectNull.isNotNull(publicHtml.getProp()) && Boolean.TRUE.equals(publicHtml.getEmptyEnable()) && ObjectNull.isNull(data.get(publicHtml.getProp()));
             if (setEmpty) {
                 //处理分割线和小标题，不属于数据
-                if (ObjectNull.isNotNull(publicHtml.getType().getAClass()) && !publicHtml.getType().equals(DataFieldType.tab)) {
+                if (ObjectNull.isNotNull(publicHtml.getType().getAClass()) && !publicHtml.getType().equals(DataFieldType.tab) && !publicHtml.getType().equals(DataFieldType.cascader)) {
                     data.put(publicHtml.getProp(), DynamicDataConstant.getEmpty(publicHtml.getType().getAClass()));
                 }
+            }
+            if (DataFieldType.select.equals(publicHtml.getType()) || DataFieldType.cascader.equals(publicHtml.getType())) {
+                MultipleHtml html = (MultipleHtml) fieldHandlerMap.get(publicHtml.getType().getDesc()).toHtml(publicHtml.getDesignJson());
+                if (ObjectNull.isNotNull(html)) {
+                    if (modelId.equals(html.getFormId()) && html.getDatatype().equals(FormDataTypeEnum.dataModel)) {
+                        //树形结构，将对应的字段
+                        if (ObjectNull.isNotNull(html.getProps().getSecTitle())) {
+                            treeQuery.set(new QueryConditionDto().setFieldKey(html.getProps().getSecTitle()).setValue(null).setEnabledQueryTypes(DataQueryType.eq));
+                        }
+                    }
+                }
+            }
+        }
+        if (ObjectNull.isNotNull(treeQuery.get())) {
+            //获取当前这条数据的 id
+            String id = data.get("id").toString();
+            //寻找当前这条数据的下级
+            QueryConditionDto queryConditionDto = treeQuery.get();
+            ArrayList<String> fields = new ArrayList<>();
+            fields.add(queryConditionDto.getFieldKey());
+            queryConditionDto.setValue(id);
+            List<Map<String, Object>> mapList = dynamicDataService.queryList(modelId, fields, queryConditionDto);
+            if (ObjectNull.isNotNull(mapList)) {
+                //表示为树形关系
+                checkTreeIDExists(id, queryConditionDto, fields, modelId, mapList);
             }
         }
 
@@ -582,16 +737,41 @@ public class DynamicDataUseController {
 
         MapDifference<String, Object> difference = Maps.difference(oldData, data);
         dataNoticeHandler.sendNotify(TenantContextHolder.getTenantId(), appId, TriggerTypeEnum.EDITED, modelId, dataId, data, difference.entriesDiffering().keySet());
-        return R.ok().setMsg("");
+        return R.ok().setMsg("修改成功");
+    }
+
+    /**
+     * 检查树形关系的值是否是下级，如果找到了对应的下级关系值，则表示存在循环引用，不允许保存
+     *
+     * @param query
+     * @param fields
+     * @param modelId
+     * @param mapList
+     */
+    private void checkTreeIDExists(String id, QueryConditionDto query, ArrayList<String> fields, String modelId, List<Map<String, Object>> mapList) {
+        for (Map<String, Object> map : mapList) {
+            String mapId = map.get("id").toString();
+            if (mapId.equals(id)) {
+                throw new BusinessException("不允许选择下级数据作为父级");
+            }
+            query.setValue(mapId);
+            List<Map<String, Object>> list = dynamicDataService.queryList(modelId, fields, query);
+            if (ObjectNull.isNotNull(list)) {
+                checkTreeIDExists(mapId, query, fields, modelId, list);
+            }
+        }
+
     }
 
     /**
      * 保存关联数据id集合并调用逻辑引擎
      *
-     * @param modelId 模型id
-     * @param dataId  数据id
-     * @param dto     入参
-     * @return 保存后的数据id
+     * @param appId    the app id
+     * @param modelId  模型id
+     * @param dataId   数据id
+     * @param dto      入参
+     * @param response the response
+     * @return 保存后的数据id r
      */
     @Log
     @ApiOperation("保存关联数据id集合并调用逻辑引擎")
@@ -635,10 +815,13 @@ public class DynamicDataUseController {
     /**
      * 分页查询数据
      *
-     * @param modelId 模型id
-     * @param formId  设计ID
-     * @param fieldId 组件ID  如果组件ID携带有， 则表示是弹框如果，弹窗查看是否跳过设计数据权限
-     * @return 数据集合
+     * @param appId        the app id
+     * @param modelId      模型id
+     * @param formId       设计ID
+     * @param fieldId      组件ID  如果组件ID携带有， 则表示是弹框如果，弹窗查看是否跳过设计数据权限
+     * @param notification the notification
+     * @param queryPageDto the query page dto
+     * @return 数据集合 r
      */
     @Log
     @ApiOperation("分页查询数据")
@@ -678,17 +861,20 @@ public class DynamicDataUseController {
                 return true;
             }).collect(Collectors.toList());
         }
-        Map<String, String> combiningFieldFormulaContentMap = new HashMap<>(8);
+        Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap = new HashMap<>(8);
         Map<String, FieldBasicsHtml> collectMap = dataFieldService.getAllField(appId, modelId, true, true, e -> false).stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity(), (e1, e2) -> e1));
         // Map<列表字段key，关联字段>
         Map<String, ModelDisplayHtml> modelDisplayMap = new HashMap<>();
 
         //转换查询条件，有可能存在树形
-        CrudPage crudPage = pageService.getOne(Wrappers.query(new CrudPage().setDataModelId(modelId).setId(designId).setJvsAppId(appId)));
+        List<CrudPage> crudPage = pageService.list(Wrappers.query(new CrudPage().setDataModelId(modelId).setJvsAppId(appId)));
         //记录甘特图的设置属性值，确定是哪哪几个字段进行处理的，需要对其数据进行排列并取最大最小
         List<String> dateField = new ArrayList<>();
+        Optional<String> retrievalKey = Optional.empty();
         if (ObjectNull.isNotNull(crudPage)) {
-            PageDesignHtml pageDesignHtml = DesignUtils.parsePage(crudPage.getViewJson());
+            crudPage.sort(Comparator.comparing(CrudPage::getUpdateTime).reversed());
+            CrudPage page = crudPage.stream().filter(e -> e.getId().equals(designId)).findAny().orElseGet(() -> crudPage.get(0));
+            PageDesignHtml pageDesignHtml = DesignUtils.parsePage(page.getViewJson());
             if (pageDesignHtml.getGantt()) {
                 //表示开启了甘特图配置,需要获取配置的字段
                 dateField.add(pageDesignHtml.getGanttForm().getPlainStart());
@@ -697,6 +883,12 @@ public class DynamicDataUseController {
                 dateField.add(pageDesignHtml.getGanttForm().getReallyEnd());
             }
             List<QueryConditionDto> finalQueryConditions = queryConditions;
+            retrievalKey = pageDesignHtml.getDataPage().getAutoTableFields().stream()
+                    .filter(e -> ObjectNull.isNotNull(e.getEnableRetrieval()))
+                    .filter(DataTableFieldDesignHtml::getEnableRetrieval)
+                    .filter(e -> collectMap.containsKey(e.getAliasColumnName()))
+                    .filter(e -> collectMap.get(e.getAliasColumnName()).getFieldType().equals(DataFieldType.select))
+                    .map(DataTableFieldDesignHtml::getAliasColumnName).findFirst();
             pageDesignHtml.getDataPage().getAutoTableFields().stream()
                     .filter(e -> ObjectNull.isNotNull(e.getEnableRetrieval()))
                     .filter(DataTableFieldDesignHtml::getEnableRetrieval)
@@ -721,14 +913,105 @@ public class DynamicDataUseController {
                         return e;
                     });
         }
+        Map<String, Object> map = new HashMap<>();
+        if (ObjectNull.isNull(queryPageDto.getConditions())) {
+            queryPageDto.setConditions(new ArrayList<>());
+        } else {
+            queryPageDto.getConditions().forEach(e -> map.put(e.getFieldKey(), e.getValue()));
+        }
+        //判断查询条件是否是部门字段，如果是部门字段，需要将部门做修改为多条件查询
+        if (ObjectNull.isNotNull(queryPageDto.getConditions())) {
+            queryPageDto.getConditions().forEach(e -> {
+                if (collectMap.containsKey(e.getFieldKey()) && DataFieldType.department.equals(collectMap.get(e.getFieldKey()).getType())) {
+                    e.setEnabledQueryTypes(DataQueryType.in);
+                    //查询当前部门及以下
+                    List<String> ids = new ArrayList<>();
+                    if (e.getValue() instanceof Collection) {
+                        ids = ((Collection<?>) e.getValue()).stream().flatMap(a -> authDeptServiceApi.getChildList(a.toString()).getData().stream()).distinct().map(a -> a.getId()).collect(Collectors.toList());
+                    } else {
+                        ids = authDeptServiceApi.getChildList(e.getValue().toString()).getData().stream().map(a -> a.getId()).collect(Collectors.toList());
+                    }
+                    e.setValue(ids);
+                }
+                if (collectMap.containsKey(e.getFieldKey()) && DataFieldType.cascader.equals(collectMap.get(e.getFieldKey()).getType())) {
+                    //todo 系统字典
+                    CascaderItemHtml html = cascaderFieldHandler.toHtml(collectMap.get(e.getFieldKey()).getDesignJson());
+                    if (html.getDatatype().equals(FormDataTypeEnum.system)) {
+                        e.setEnabledQueryTypes(DataQueryType.in);
+                        //系统字段
+                        List<String> ids = jvsTreeService.getByUniqueNameIds(html.getDictName(), e.getValue());
+                        //查询出所有的
+                        if (ObjectNull.isNotNull(ids)) {
+                            e.setValue(ids);
+                        }
+                    }
+                    if (html.getDatatype().equals(FormDataTypeEnum.dataModel) && ObjectNull.isNotNull(html.getFormId())) {
+                        e.setEnabledQueryTypes(DataQueryType.in);
+                        List<String> ids = cascaderFieldHandler.getByDataModelIds(html.getFormId(), html.getProps(), e.getValue());
+                        if (ObjectNull.isNotNull(ids)) {
+                            e.setValue(ids);
+                        }
+                    }
+                    if (html.getDatatype().equals(FormDataTypeEnum.rule)) {
+                        e.setEnabledQueryTypes(DataQueryType.in);
+                        List<String> ids = cascaderFieldHandler.getByDataRuleIds(html.getOptionHttp(), html.getProps(), e.getValue());
+                        if (ObjectNull.isNotNull(ids)) {
+                            e.setValue(ids);
+                        }
+                    }
+                }
+            });
+        }
+        if (ObjectNull.isNotNull(queryPageDto.getGroupConditions())) {
+            queryPageDto.getGroupConditions().forEach(e -> {
+                e.forEach(a -> {
+                    if (collectMap.containsKey(a.getFieldKey())) {
+                        if (!a.getEnabledQueryTypes().equals(DataQueryType.isNull)) {
+                            if (!a.getEnabledQueryTypes().equals(DataQueryType.eq)) {
+                                //判断类型是否匹配，匹配需要调整查询值进行强制转换，如时间，数字
+                                switch (collectMap.get(a.getFieldKey()).getType()) {
+                                    case inputNumber:
+                                        try {
+                                            BigDecimal next;
+                                            if (a.getValue() instanceof Collection) {
+                                                next = (BigDecimal) NumberUtil.parseNumber(((Collection<?>) a.getValue()).iterator().next().toString());
+                                            } else {
+                                                next = (BigDecimal) NumberUtil.parseNumber(a.getValue().toString());
+                                            }
+                                            if (next.scale() > 0) {
+                                                a.setValue(next.doubleValue());
+                                            } else {
+                                                a.setValue(next.longValue());
+                                            }
+                                        } catch (NumberFormatException ex) {
+                                            throw new BusinessException("查询条件值类型不匹配");
+                                        }
+                                }
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+
+        AtomicReference<String> treeTitleName = new AtomicReference<>("");
         //表示是否是树形关系，并自己关联了自己
         AtomicReference<QueryConditionDto> treeQuery = new AtomicReference<>();
-        if (StringUtils.isNotBlank(designId)) {
-            if (ObjectNull.isNotNull(crudPage)) {
-                setFunctionName("分页查询");
+        if (ObjectNull.isNotNull(crudPage)) {
+            setFunctionName("分页查询");
+            CrudPage page = crudPage.stream().filter(e -> e.getId().equals(designId)).findAny().orElseGet(() -> crudPage.get(0));
+            PageDesignHtml pageDesignHtml = DesignUtils.parsePage(page.getViewJson());
+            //如果关键字查询条件不为空的时候
+            if (ObjectNull.isNotNull(queryPageDto.getKeywords())) {
+                List<QueryConditionDto> list =
+                        pageDesignHtml.getDataPage().getAutoTableFields().stream().filter(DataTableFieldDesignHtml::getShow).map(e -> new QueryConditionDto().setFieldKey(e.getAliasColumnName()).setEnabledQueryTypes(DataQueryType.like).setValue(queryPageDto.getKeywords().trim())).collect(Collectors.toList());
+                queryConditions.addAll(list);
+            }
+            if (StringUtils.isNotBlank(designId)) {
                 List<String> formula = new ArrayList<>();
-                PageDesignHtml pageDesignHtml = DesignUtils.parsePage(crudPage.getViewJson());
                 //1将字段添加起来
+                List<QueryConditionDto> finalQueryConditions1 = queryConditions;
                 pageDesignHtml.getDataPage().getAutoTableFields().forEach(e -> {
                     //判断这个模型中展示的字段，是否存在自己关联自己情况，如果存在，则直接返回树形，并添加筛选条件
                     if (collectMap.containsKey(e.getAliasColumnName())) {
@@ -736,9 +1019,27 @@ public class DynamicDataUseController {
                         if (DataFieldType.select.equals(fieldBasicsHtml.getType()) || DataFieldType.cascader.equals(fieldBasicsHtml.getType())) {
                             MultipleHtml html = (MultipleHtml) fieldHandlerMap.get(fieldBasicsHtml.getType().getDesc()).toHtml(fieldBasicsHtml.getDesignJson());
                             if (ObjectNull.isNotNull(html)) {
+                                if (html.getDatatype().equals(FormDataTypeEnum.system) && DataFieldType.cascader.equals(fieldBasicsHtml.getType())) {
+                                    //todo 系统字典
+                                    cascaderFieldHandler.getTreeDict(((CascaderItemHtml) html).getDictName());
+                                }
                                 if (modelId.equals(html.getFormId()) && html.getDatatype().equals(FormDataTypeEnum.dataModel)) {
                                     //树形结构，将对应的字段
-                                    treeQuery.set(new QueryConditionDto().setFieldKey(html.getProps().getSecTitle()).setValue(null).setEnabledQueryTypes(DataQueryType.isNull));
+                                    if (ObjectNull.isNotNull(html.getProps().getSecTitle())) {
+                                        treeTitleName.set(html.getProps().getLabel());
+                                        Object o = map.get(html.getProps().getSecTitle());
+                                        if (ObjectNull.isNotNull(o)) {
+                                            queryPageDto.getConditions().removeIf(a -> a.getFieldKey().equals(html.getProps().getSecTitle()));
+                                            finalQueryConditions1.removeIf(a -> a.getFieldKey().equals(html.getProps().getSecTitle()));
+                                            if (o instanceof List) {
+                                                treeQuery.set(new QueryConditionDto().setFieldKey("id").setValue(o).setEnabledQueryTypes(DataQueryType.in));
+                                            } else {
+                                                treeQuery.set(new QueryConditionDto().setFieldKey("id").setValue(o).setEnabledQueryTypes(DataQueryType.eq));
+                                            }
+                                        } else {
+                                            treeQuery.set(new QueryConditionDto().setFieldKey(html.getProps().getSecTitle()).setValue(null).setEnabledQueryTypes(DataQueryType.isNull));
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -748,7 +1049,7 @@ public class DynamicDataUseController {
                     if (ObjectNull.isNotNull(advancedSettings)) {
                         //表示组合显示字段
                         if (ObjectNull.isNotNull(advancedSettings.getCombiningFieldFormulaContent())) {
-                            combiningFieldFormulaContentMap.put(e.getAliasColumnName(), e.getAdvancedSettings().getCombiningFieldFormulaContent());
+                            combiningFieldFormulaContentMap.put(e.getAliasColumnName(), functionBusinessService.getById(e.getAdvancedSettings().getFormula()));
                         }
                         // 显示方式为关联模型时，将筛选条件加入
                         if (ObjectNull.isNotNull(advancedSettings.getModelDisplay()) && ObjectNull.isNotNull(advancedSettings.getModelDisplay().getDataLinkageList())) {
@@ -776,12 +1077,7 @@ public class DynamicDataUseController {
                 if (ObjectNull.isNotNull(formula)) {
                     functionBusinessMapper.selectBatchIds(formula).forEach(e -> queryField.addAll(e.getRelatedIds()));
                 }
-                //如果关键字查询条件不为空的时候
-                if (ObjectNull.isNotNull(queryPageDto.getKeywords())) {
-                    List<QueryConditionDto> list =
-                            pageDesignHtml.getDataPage().getAutoTableFields().stream().filter(DataTableFieldDesignHtml::getShow).map(e -> new QueryConditionDto().setFieldKey(e.getAliasColumnName()).setEnabledQueryTypes(DataQueryType.like).setValue(queryPageDto.getKeywords().trim())).collect(Collectors.toList());
-                    queryConditions.addAll(list);
-                }
+
                 //列表页筛选条件，与数据权限不同，是直接进行数据筛选
                 if (ObjectNull.isNotNull(pageDesignHtml.getParameters())) {
                     pageDesignHtml.getParameters().stream().filter(e -> ObjectNull.isNotNull(e.getValue(), e.getKey(), e.getOperator())).map(e -> {
@@ -815,7 +1111,12 @@ public class DynamicDataUseController {
                             }
                         }
                         return queryConditionDto;
-                    }).peek(e -> e.setCrud(true)).peek(e -> stringSet.add(e.getFieldKey())).forEach(e -> queryPageDto.getConditions().add(e));
+                    }).peek(e -> e.setCrud(true)).peek(e -> stringSet.add(e.getFieldKey())).forEach(e -> {
+                        if (ObjectNull.isNull(queryPageDto.getConditions())) {
+                            queryPageDto.setConditions(new ArrayList<>());
+                        }
+                        queryPageDto.getConditions().add(e);
+                    });
                     //4列表过滤
                     pageDesignHtml.getParameters().forEach(e -> queryField.add(e.getKey()));
                 }
@@ -826,13 +1127,17 @@ public class DynamicDataUseController {
             }
         }
         //删除多余的字段
-        collectMap.keySet().removeIf(e -> {
-            if (ObjectNull.isNull(queryField)) {
-                return false;
-            } else {
-                return !queryField.contains(e);
-            }
-        });
+        collectMap.keySet().
+
+                removeIf(e ->
+
+                {
+                    if (ObjectNull.isNull(queryField)) {
+                        return false;
+                    } else {
+                        return !queryField.contains(e);
+                    }
+                });
         List<String> collect = new ArrayList<>(collectMap.keySet());
 
         List<List<QueryConditionDto>> queryGroupConditions = new ArrayList<>();
@@ -852,19 +1157,41 @@ public class DynamicDataUseController {
             }
             queryGroupConditions = Collections.singletonList(queryConditions);
         }
+        // 条件值转换
+        queryGroupConditions.stream()
+                        .
+
+                flatMap(Collection::stream)
+                        .
+
+                forEach(condition ->
+
+                        convertQueryValue(condition, collectMap));
 
         Page<DynamicDataPo> page = new Page<>(queryPageDto.getCurrent(), queryPageDto.getSize());
-        collect.addAll(dataFieldService.getDoNotShowFields().stream().map(DataFieldPo::getFieldKey).collect(Collectors.toList()));
+        collect.addAll(dataFieldService.getDoNotShowFields().
+
+                stream().
+
+                map(DataFieldPo::getFieldKey).
+
+                collect(Collectors.toList()));
         if (ObjectNull.isNotNull(treeQuery.get())) {
-            if (ObjectNull.isNull(queryGroupConditions)) {
-                queryGroupConditions = Collections.singletonList(Collections.singletonList(treeQuery.get()));
-            } else {
-                queryGroupConditions.get(0).add(treeQuery.get());
+            if (!queryGroupConditions.stream().flatMap(Collection::stream).filter(e -> e.getFieldKey().equals(treeQuery.get().getFieldKey())).findFirst().isPresent()) {
+                if (!queryGroupConditions.stream().flatMap(Collection::stream).filter(e -> e.getFieldKey().equals(treeTitleName.get())).findFirst().isPresent()) {
+                    if (ObjectNull.isNull(queryGroupConditions)) {
+                        queryGroupConditions = Collections.singletonList(Collections.singletonList(treeQuery.get()));
+                    } else {
+                        queryGroupConditions.get(0).add(treeQuery.get());
+                    }
+                }
             }
         }
+
         Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, combiningFieldFormulaContentMap, queryGroupConditions, queryPageDto.getSorts(), collect, true, true, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
+        List<List<QueryConditionDto>> queryGroup = Collections.singletonList(Collections.singletonList(treeQuery.get()));
         //如果是树，并关联自己，需要对数据进行关联查询下级直到查询不到结果为止
-        List<Map<String, Object>> mapList = treeStructure(modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, queryGroupConditions, queryPageDto.getSorts(), collect,
+        List<Map<String, Object>> mapList = treeStructure(modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, queryGroup, queryPageDto.getSorts(), collect,
                 ObjectNull.isNull(queryPageDto.getKeywords()),
                 new ArrayList<>(collectMap.values()), stringSet);
         pageResult.setRecords(mapList);
@@ -874,19 +1201,78 @@ public class DynamicDataUseController {
         return R.ok(pageResult);
     }
 
-    private List<Map<String, Object>> treeStructure(Map<String, ModelDisplayHtml> modelDisplayMap, List<Map<String, Object>> records, AtomicReference<QueryConditionDto> treeQuery, String appId, String modelId,
-                                                    Map<String, String> combiningFieldFormulaContentMap,
-                                                    List<List<QueryConditionDto>> queryGroupConditions, List<QueryOrderDto> sorts, List<String> collect, Boolean isnull, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet) {
+    /**
+     * 转换查询条件值
+     *
+     * @param queryConditionDto 查询条件
+     * @param fieldHtmlMap      字段设计
+     */
+    private void convertQueryValue(QueryConditionDto queryConditionDto, Map<String, FieldBasicsHtml> fieldHtmlMap) {
+        FieldBasicsHtml fieldBasicsHtml = fieldHtmlMap.get(queryConditionDto.getFieldKey());
+        if (ObjectNull.isNull(fieldBasicsHtml)) {
+            return;
+        }
+        // 数字组件查询时，将条件值转换为数字
+        if (DataFieldType.inputNumber.equals(fieldBasicsHtml.getFieldType())) {
+            Function<Object, Object> convertNumber = value -> {
+                if (!NumberUtil.isNumber(value.toString())) {
+                    return value;
+                }
+                BigDecimal bigDecimal = new BigDecimal(value.toString());
+                Object convertValue = bigDecimal.doubleValue();
+                if (bigDecimal.scale() == 0) {
+                    convertValue = bigDecimal.intValue();
+                }
+                return convertValue;
+            };
+
+            Object value = queryConditionDto.getValue();
+            if (ObjectNull.isNull(value)) {
+                return;
+            } else if (value instanceof Collection) {
+                List<Object> values = (List) value;
+                value = Stream.of(values).flatMap(Collection::stream).map(convertNumber::apply).collect(Collectors.toList());
+            } else {
+                value = convertNumber.apply(queryConditionDto.getValue());
+            }
+            queryConditionDto.setValue(value);
+        }
+    }
+
+    /**
+     * 将列表的数据以树形结构重新组装
+     *
+     * @param modelDisplayMap                 是否存在数据筛选
+     * @param records                         分页数据
+     * @param treeQuery                       树形查询条件
+     * @param appId                           应用 id
+     * @param modelId                         模型 id
+     * @param combiningFieldFormulaContentMap 查询条件
+     * @param queryGroupConditions            查询条件
+     * @param sorts                           排序
+     * @param fields                          所有字段名
+     * @param andOr                           使用and拼接还是or拼接查询条件
+     * @param fieldBasicsHtmls                所有字段名
+     * @param stringSet                       暂时无用
+     * @return
+     */
+    private List<Map<String, Object>> treeStructure(Map<String, ModelDisplayHtml> modelDisplayMap, List<Map<String, Object>> records, AtomicReference<QueryConditionDto> treeQuery, String appId, String
+            modelId,
+                                                    Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap,
+                                                    List<List<QueryConditionDto>> queryGroupConditions, List<QueryOrderDto> sorts, List<String> fields, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet) {
         // 显示设置-关联模型数据回显
         dynamicDataService.echoModelDisplay(appId, records, modelDisplayMap);
         if (ObjectNull.isNotNull(treeQuery.get())) {
+            if (treeQuery.get().getFieldKey().equals("id")) {
+                return records;
+            }
             //删除第一个树关系
             for (Map<String, Object> record : records) {
-                queryGroupConditions.get(0).get(0).setEnabledQueryTypes(DataQueryType.eq).setValue(record.get("id"));
-                Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, new Page<>(1, 200), modelId, combiningFieldFormulaContentMap, queryGroupConditions, sorts, collect, true, true, isnull, fieldBasicsHtmls, stringSet);
+                queryGroupConditions.get(0).get(0).setEnabledQueryTypes(DataQueryType.eq).setCrud(true).setValue(record.get("id"));
+                Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, new Page<>(1, 200), modelId, combiningFieldFormulaContentMap, queryGroupConditions, sorts, fields, true, true, andOr, fieldBasicsHtmls, stringSet);
                 dynamicDataService.echoModelDisplay(appId, pageResult.getRecords(), modelDisplayMap);
                 if (ObjectNull.isNotNull(pageResult.getRecords())) {
-                    List<Map<String, Object>> mapList = treeStructure(modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, queryGroupConditions, sorts, collect, isnull,
+                    List<Map<String, Object>> mapList = treeStructure(modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, queryGroupConditions, sorts, fields, andOr,
                             fieldBasicsHtmls, stringSet);
                     record.put("children", mapList);
                 }
@@ -899,7 +1285,7 @@ public class DynamicDataUseController {
 
     private List<List<QueryConditionDto>> getQueryConditions(List<List<QueryConditionDto>> conditions, Map<String, FieldBasicsHtml> collectMap, Object notification) {
         //过滤空的条件
-        List<List<QueryConditionDto>> queryConditions = conditions.stream().map(groupConditions -> groupConditions.stream().filter(e -> ObjectNull.isNotNull(e.getValue(), e.getEnabledQueryTypes())).peek(e -> {
+        return conditions.stream().map(groupConditions -> groupConditions.stream().filter(e -> ObjectNull.isNotNull(e.getValue(), e.getEnabledQueryTypes())).peek(e -> {
             //排除查询条件中带_的字段
             if (e.getFieldKey().endsWith(DynamicDataUtils.SUFFIX_ECHO)) {
                 e.setFieldKey(null);
@@ -964,24 +1350,30 @@ public class DynamicDataUseController {
                 String formId1 = fieldBasicsHtml.getDesignJson().get("formId").toString();
                 Map<String, Object> props = (Map<String, Object>) fieldBasicsHtml.getDesignJson().get("props");
                 String label = props.get("label").toString();
-                Object o1 = dynamicDataService.getByIds(formId1, (List<String>) e.getValue()).stream().map(m -> m.get(label)).collect(Collectors.toList());
-                Criteria haoCaiMingChen = DynamicDataUtils.like(new Criteria(), label, o1);
-                DynamicDataUtils.freePermit();
-                ArrayList<String> objects = new ArrayList<>();
-                objects.add(label);
-                List<String> ids = dynamicDataService.queryList(formId1, haoCaiMingChen, objects).stream().map(s -> s.get("id").toString()).collect(Collectors.toList());
-                e.setValue(ids);
+                if (!(e.getValue() instanceof List)) {
+                    ArrayList<Object> value = new ArrayList<>();
+                    value.add(e.getValue());
+                    e.setValue(value);
+                } else {
+                    Object o1 = dynamicDataService.getByIds(formId1, (List<String>) e.getValue()).stream().map(m -> m.get(label)).collect(Collectors.toList());
+                    Criteria haoCaiMingChen = DynamicDataUtils.like(new Criteria(), label, o1);
+                    DynamicDataUtils.freePermit();
+                    ArrayList<String> objects = new ArrayList<>();
+                    objects.add(label);
+                    List<String> ids = dynamicDataService.queryList(formId1, haoCaiMingChen, objects).stream().map(s -> s.get("id").toString()).collect(Collectors.toList());
+                    e.setValue(ids);
+                }
             }
         }).collect(Collectors.toList())).collect(Collectors.toList());
-        return queryConditions;
     }
 
     /**
      * 查询所有数据
      *
+     * @param appId    the app id
      * @param modelId  模型id
      * @param fieldKey 数据字段
-     * @return 数据集合
+     * @return 数据集合 r
      */
     @ApiOperation("查询所有数据")
     @GetMapping("/query/list/{modelId}")
@@ -1010,8 +1402,10 @@ public class DynamicDataUseController {
     /**
      * 查询树形数据
      *
-     * @param modelId 模型id
-     * @return 数据集合
+     * @param appId        the app id
+     * @param modelId      模型id
+     * @param fieldTreeDto the field tree dto
+     * @return 数据集合 r
      */
     @ApiOperation("查询树形数据")
     @PostMapping("/query/tree/{modelId}")
@@ -1048,11 +1442,13 @@ public class DynamicDataUseController {
             criteria = DynamicDataUtils.buildDynamicGroupCriteria(conditions);
         }
         List<Map<String, Object>> result = dynamicDataService.queryList(modelId, criteria, fieldList);
+        Set<String> ids = new HashSet<>();
         // 根据树形结构查询递归反推查询整体树型
         if (ObjectNull.isNotNull(criteria) && ObjectNull.isNotNull(fieldTreeDto.getSecTitle()) && ObjectNull.isNotNull(result)) {
             Map<String, Map<String, Object>> map = result.stream().collect(Collectors.toMap(e -> e.get("id").toString(), e -> e));
+            ids.addAll(map.keySet());
             List<String> parentValues = result.stream().filter(e -> ObjectNull.isNotNull(e.get(fieldTreeDto.getSecTitle()))).map(e -> e.get(fieldTreeDto.getSecTitle()).toString()).collect(Collectors.toList());
-            getParentList(modelId, fieldList, fieldTreeDto.getValue(), fieldTreeDto.getSecTitle(), parentValues, map);
+            getParentList(modelId, fieldList, fieldTreeDto.getValue(), fieldTreeDto.getSecTitle(), parentValues, map, ids);
             result = map.values().stream().collect(Collectors.toList());
         }
         // 需要控制权限，并将权限的信息返回在数据按钮上面，进行处理
@@ -1081,8 +1477,9 @@ public class DynamicDataUseController {
      * @param parentFieldName 父字段名
      * @param parentValues    父字段值
      * @param map             数据
+     * @param ids
      */
-    private void getParentList(String modelId, List<String> fieldList, String parentValueName, String parentFieldName, List<String> parentValues, Map<String, Map<String, Object>> map) {
+    private void getParentList(String modelId, List<String> fieldList, String parentValueName, String parentFieldName, List<String> parentValues, Map<String, Map<String, Object>> map, Set<String> ids) {
         if (ObjectNull.isNull(parentValues)) {
             return;
         }
@@ -1095,12 +1492,25 @@ public class DynamicDataUseController {
                 if (ObjectNull.isNotNull(e.get(parentFieldName))) {
                     parentValues.add(e.get(parentFieldName).toString());
                 }
-                map.put(e.get("id").toString(), e);
+                String id = e.get("id").toString();
+                if (!ids.contains(id)) {
+                    ids.add(id);
+                    map.put(id, e);
+                }
             });
-            getParentList(modelId, fieldList, parentValueName, parentFieldName, parentValues, map);
+            parentValues.removeAll(ids);
+            getParentList(modelId, fieldList, parentValueName, parentFieldName, parentValues, map, ids);
         }
     }
 
+    /**
+     * Post query list r.
+     *
+     * @param appId        the app id
+     * @param dataModelId  the data model id
+     * @param queryPageDto the query page dto
+     * @return the r
+     */
     @ApiOperation("post查询所有数据")
     @PostMapping("/query/list/{modelId}")
     @Transactional(rollbackFor = Exception.class)
@@ -1124,9 +1534,11 @@ public class DynamicDataUseController {
     /**
      * 查询单条数据
      *
+     * @param appId       the app id
      * @param dataModelId 模型id
+     * @param designId    the design id
      * @param dataId      数据id
-     * @return 数据内容
+     * @return 数据内容 r
      */
     @Log
     @ApiOperation("查询单条转换后的数据")
@@ -1139,6 +1551,9 @@ public class DynamicDataUseController {
         Map<String, Object> data = dynamicDataService.querySingle(appId, dataModelId, dataId, true);
         //做数据转换操作
         data = dynamicDataService.paresMapWithEcho(appId, data, dataModelId, designId, true);
+        DataModelPo byId = dataModelService.getById(dataId);
+        //处理表单中的脱敏
+        dynamicDataService.encryptionData(data, byId);
         return R.ok(data);
     }
 
@@ -1146,9 +1561,11 @@ public class DynamicDataUseController {
     /**
      * 查询单条数据并进行数据转换，包含按钮，和数据脱敏,数据权限
      *
+     * @param appId       the app id
      * @param dataModelId 模型id
      * @param dataId      数据id
-     * @return 数据内容
+     * @param designId    the design id
+     * @return 数据内容 r
      */
     @Log
     @ApiOperation("查询单条数据")
@@ -1160,17 +1577,20 @@ public class DynamicDataUseController {
         //查询单条数据，并处理数据权限，并添加默认按钮,不做转换
         Map<String, Object> data = dynamicDataService.querySingle(appId, dataModelId, dataId, true);
         //做数据转换操作
-        data = dynamicDataService.paresMapWithEcho(appId, data, dataModelId, designId, false);
+        List<FieldBasicsHtml> fields = dataFieldService.getFields(appId, dataModelId, null, true, false);
+        data = dynamicDataService.echo(data, fields, false);
+        DataModelPo byId = dataModelService.getById(dataModelId);
+        //处理表单中的脱敏
+        dynamicDataService.encryptionData(data, byId);
         // 扩展返回数据
         dynamicDataService.expandOtherData(data);
         if (ObjectNull.isNotNull(designId)) {
             FormPo po = formService.getById(designId);
             //根据设计判断哪些字段是存在有关联模型的，如果有直接删除对应的数据
             if (ObjectNull.isNotNull(po)) {
-                FormDesignHtml design = DesignUtils.parseForm(po.getViewJson());
-                List<DataFieldPo> fieldPos = DesignUtils.getFields(design, po.getDataModelId(), designId);
                 //判断哪些是有关联模型的进行过滤出来
-                List<String> tableField = fieldPos.stream().filter(e -> e.getFieldType().equals(DataFieldType.tableForm))
+                List<String> tableField = fields.stream().filter(e -> e.getFieldType().equals(DataFieldType.tableForm))
+                        .filter(e -> ObjectNull.isNotNull(e.getDesignJson()))
                         .map(e -> tableFormFieldHandler.toHtml(e.getDesignJson()))
                         .filter(e -> ObjectNull.isNotNull(e.getDataModelId()))
                         .map(FieldPublicHtml::getProp)
@@ -1184,10 +1604,11 @@ public class DynamicDataUseController {
     /**
      * 查询单个字段的值
      *
+     * @param appId   the app id
      * @param modelId 模型id
      * @param dataId  数据id
      * @param fieldId 字段key
-     * @return 单个字段的值
+     * @return 单个字段的值 r
      */
     @ApiOperation("查询单个字段的值")
     @GetMapping("/query/field/{modelId}/{dataId}/{fieldId}")
@@ -1200,10 +1621,11 @@ public class DynamicDataUseController {
     /**
      * 导入数据
      *
+     * @param appId    the app id
      * @param file     数据文件
      * @param modelId  模型id
      * @param designId 设计id
-     * @return 操作结果
+     * @return 操作结果 r
      */
     @Log
     @ApiOperation("导入")
@@ -1248,9 +1670,18 @@ public class DynamicDataUseController {
                     .sorted(Comparator.comparingInt(fieldIndex::indexOf))
                     .collect(Collectors.toList()));
         }
+
+        DataModelPo byId = dataModelService.getById(crudPage.getDataModelId());
+        //处理表单中的脱敏字段
+        List<String> encryptionFields = dynamicDataService.encryptionData(byId);
+        //根据脱敏字段进行去掉
+        if (ObjectNull.isNotNull(encryptionFields)) {
+            fieldKeyList.removeAll(encryptionFields);
+        }
         if (excelData.get(0).size() != fieldKeyList.size()) {
             return R.failed("导入的模板格式不正确,请检查文件");
         }
+
 
         List<FieldBasicsHtml> fields = dataFieldService.getFields(appId, modelId, true, false);
         // 处理Excel表数据
@@ -1276,6 +1707,8 @@ public class DynamicDataUseController {
         dynamicDataService.checkDataFieldType(appId, modelId, mapDataList);
         Map<String, String> ids = new HashMap<>(8);
         String linkFieldKey = null;
+        //自己关联自己
+        FormValueHtml formValueHtml = null;
         Map<String, FieldBasicsHtml> typeMaps =
                 fields.stream().filter(e -> DataFieldType.SELECT_CONVERSION.contains(e.getType()) || e.getType().equals(DataFieldType.datePicker) || e.getType().equals(DataFieldType.timePicker) || e.getType().equals(DataFieldType.timeSelect)).collect(Collectors.toMap(FieldPublicHtml::getFieldKey,
                         //这里直接转换获取真实类型数据
@@ -1323,6 +1756,7 @@ public class DynamicDataUseController {
                         if (modelId.equals(((MultipleHtml) html).getFormId())) {
                             //设置自己关联自己的Key 然后将所有不为空的key给添加上id
                             linkFieldKey = ((MultipleHtml) html).getProps().getLabel();
+                            formValueHtml = ((MultipleHtml) html).getProps();
                         }
                     }
                 }
@@ -1339,7 +1773,7 @@ public class DynamicDataUseController {
                     if (is && ObjectNull.isNotNull(((MultipleHtml) html).getProps())) {
                         String label = ((MultipleHtml) html).getProps().getLabel();
                         //不管是否是单选多选 ，都可以自己关联自己。这样都可能会导入数据
-                        if (ObjectNull.isNotNull(((MultipleHtml) html).getMultiple()) && ((MultipleHtml) html).getMultiple()) {
+                        if ((ObjectNull.isNotNull(((MultipleHtml) html).getMultiple()) && ((MultipleHtml) html).getMultiple())) {
                             //多选 对数据进行分割后组装为新的数组,不支持新增数据
                             String finalLinkFieldKey = linkFieldKey;
                             List<Object> list = Arrays.stream(o.toString().split(",")).map(e -> {
@@ -1367,8 +1801,52 @@ public class DynamicDataUseController {
                                         return idStr;
                                     }
                                 }
-                            }).collect(Collectors.toList());
+                            }).filter(ObjectNull::isNotNull).collect(Collectors.toList());
                             map.put(key, list);
+                        } else if (html instanceof CascaderItemHtml) {
+                            //多选 对数据进行分割后组装为新的数组,不支持新增数据
+                            String finalLinkFieldKey = linkFieldKey;
+                            Object list = null;
+                            if (((CascaderItemHtml) html).getMultiple()) {
+                                list = Arrays.stream(o.toString().split("/")).map(e -> {
+                                    //如果是多选中，如果是模型自己关联了自己，则直接需要将没有找到的数据进行填充并生成新的数据
+                                    {
+                                        //判断数据是否为空，如果为空，产生一个新的灵气
+                                        if (ObjectNull.isNull(o)) {
+                                            //生成一个新的 id
+                                            List<Map<String, Object>> mapList = generateCascaderList.get(modelId);
+                                            String idStr = mapList.stream().filter(b -> b.get(label).equals(map.get(label))).map(b -> b.get("id").toString())
+                                                    .findFirst().orElseGet(IdWorker::getIdStr);
+                                            map.put("id", idStr);
+                                            if (generateCascaderList.containsKey(modelId)) {
+                                                generateCascaderList.get(modelId).removeIf(b -> idStr.equals(b.get("id")));
+                                            }
+                                            if (html.getProp().equals(finalLinkFieldKey)) {
+                                                //表示这个字段自己关联了自己，将这个字段的 key,设置为关联的 id,并同时添加这一条数据
+                                            }
+                                            return idStr;
+                                        } else {
+                                            //如果不为空，在树结构中获取这个数据的id,这个 id 会在前一个步骤已经生成了。
+                                            String idStr = cascaderFieldPathIdsMap.get(html.getProp()).get(e.toString().trim());
+                                            if (ObjectNull.isNull(idStr)) {
+                                                return IdWorker.getIdStr();
+                                            }
+                                            if (generateCascaderList.containsKey(modelId)) {
+                                                generateCascaderList.get(modelId).removeIf(b -> idStr.equals(b.get("id")));
+                                            }
+                                            return idStr;
+                                        }
+                                    }
+                                }).filter(ObjectNull::isNotNull).collect(Collectors.toList());
+                            } else {
+                                if (ObjectNull.isNotNull(o)) {
+                                    //如果不是多选，需要直接处理
+                                    list = cascaderFieldPathIdsMap.get(((CascaderItemHtml) html).getProps().getSecTitle()).getOrDefault(o.toString(), IdWorker.getIdStr());
+                                }
+                            }
+                            if (ObjectNull.isNotNull(list)) {
+                                map.put(key, list);
+                            }
                         } else {
                             //单选,并判断类型，是否关联了模型，如果关联了自己，如果不是自己不处理
                             //判断是否为空串，
@@ -1405,8 +1883,23 @@ public class DynamicDataUseController {
                     } else {
                         //如果为空直接不处理，并需要删除 Key 避免重复，
                         if (ObjectNull.isNotNull(o)) {
-                            Object obj = iDataFieldHandler.getConversionKey(html, o, map);
-                            map.put(key, obj);
+                            if (cascaderFieldPathIdsMap.containsKey(html.getProp())) {
+                                if (html instanceof MultipleHtml) {
+                                    if (((MultipleHtml) html).getMultiple()) {
+                                        Set<String> obj = Arrays.stream(o.toString().replace("，", ",").split(",")).distinct().map(e -> cascaderFieldPathIdsMap.get(html.getProp()).get(e)).collect(Collectors.toSet());
+                                        map.put(key, obj);
+                                    } else {
+                                        String obj = cascaderFieldPathIdsMap.get(html.getProp()).get(o.toString());
+                                        map.put(key, obj);
+                                    }
+                                } else {
+                                    String obj = cascaderFieldPathIdsMap.get(html.getProp()).get(o.toString());
+                                    map.put(key, obj);
+                                }
+                            } else {
+                                Object obj = iDataFieldHandler.getConversionKey(html, o, map);
+                                map.put(key, obj);
+                            }
                         } else {
                             //但需要校验是否必填 ,如果这个字段为必填写，则直接报错。
 
@@ -1427,18 +1920,77 @@ public class DynamicDataUseController {
             }
         }
         if (ObjectNull.isNotNull(generateCascaderList)) {
-            generateCascaderList.keySet().forEach(e -> {
+            for (Map.Entry<String, List<Map<String, Object>>> entry : generateCascaderList.entrySet()) {
+
                 try {
-                    List<Map<String, Object>> list = generateCascaderList.get(e);
+                    List<Map<String, Object>> list = entry.getValue();
+                    //过滤出当前模型的数据，避免重复新增
+                    if (entry.getKey().equals(modelId) && ObjectNull.isNotNull(formValueHtml)) {
+                        FormValueHtml finalFormValueHtml = formValueHtml;
+                        list.removeIf(e -> {
+                            if (e.containsKey(finalFormValueHtml.getSecTitle()) && e.containsKey(finalFormValueHtml.getLabel())) {
+                                //判断是否删除
+                                try {
+                                    //删除的同时需要将id复制到数据中
+                                    for (Map<String, Object> dataMap : mapDataList) {
+                                        if (dataMap.get(finalFormValueHtml.getSecTitle()).equals(e.get(finalFormValueHtml.getSecTitle()))) {
+                                            if (dataMap.get(finalFormValueHtml.getLabel()).equals(e.get(finalFormValueHtml.getLabel()))) {
+                                                if (mapDataList.stream().filter(b -> b.get(finalFormValueHtml.getLabel()).equals(dataMap.get(finalFormValueHtml.getLabel()))
+                                                        && b.get(finalFormValueHtml.getSecTitle()).equals(dataMap.get(finalFormValueHtml.getSecTitle()))
+                                                ).findAny().isPresent()) {
+                                                    dataMap.put("id", e.get("id"));
+                                                    dataMap.put("dataId", e.get("id"));
+                                                    return true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    return false;
+                                } catch (Exception ex) {
+                                    //可能不存在，就不删除
+                                    return false;
+                                }
+                            } else {
+                                return false;
+                            }
+                        });
+                    }
                     if (ObjectNull.isNotNull(list)) {
-                        dynamicDataService.saveBatch(appId, e, list);
+                        dynamicDataService.saveBatch(appId, entry.getKey(), list);
                     }
                 } catch (Exception ignored) {
 
                 }
-            });
-        }
 
+            }
+        }
+//        //这里考虑是否重复插入已经存在的数据
+//        if (ObjectNull.isNotNull(formValueHtml)) {
+//            FormValueHtml valueHtml = formValueHtml;
+//            String error = IntStream.iterate(0, i -> i + 1)
+//                    .limit(mapDataList.size())
+//                    .filter(i -> mapDataList.get(i).containsKey(valueHtml.getLabel()))
+//                    .filter(i -> mapDataList.get(i).containsKey(valueHtml.getSecTitle()))
+//                    .filter(e -> {
+//                        List<QueryConditionDto> objects = new ArrayList<>();
+//                        objects.add(new QueryConditionDto().setValue(mapDataList.get(e).get(valueHtml.getSecTitle())).setFieldKey(valueHtml.getSecTitle()).setEnabledQueryTypes(DataQueryType.eq));
+//                        objects.add(new QueryConditionDto().setValue(mapDataList.get(e).get(valueHtml.getLabel())).setFieldKey(valueHtml.getLabel()).setEnabledQueryTypes(DataQueryType.eq));
+//                        QueryListDto queryPageDto = new QueryListDto();
+//                        queryPageDto.setGroupConditions(Collections.singletonList(objects));
+//                        List<Map<String, Object>> mapList = dynamicDataService.postQueryList(modelId, queryPageDto);
+//                        if (mapList.size() > 0) {
+//                            return true;
+//                        } else {
+//                            return false;
+//                        }
+//                    })
+//                    .mapToObj(String::valueOf)
+//                    .collect(Collectors.joining("、"));
+//            if (ObjectNull.isNotNull(error)) {
+//                return R.failed("第" + error + "行数据已经存在");
+//            }
+//        }
+        //这里需要判断是否已经存在，如果存在，则不新增这个数据
         RuleExecuteDto executeDto = dynamicDataService.saveBatch(appId, modelId, mapDataList);
         if (ObjectNull.isNotNull(executeDto) && ObjectNull.isNotNull(executeDto.getStats())) {
             if (executeDto.getStats()) {
@@ -1452,6 +2004,13 @@ public class DynamicDataUseController {
 
     /**
      * 支持移动端小程序导出功能
+     *
+     * @param appId    the app id
+     * @param keywords the keywords
+     * @param modelId  the model id
+     * @param designId the design id
+     * @param query    the query
+     * @param response the response
      */
     @ApiOperation("导出")
     @GetMapping("/export/{modelId}")
@@ -1463,8 +2022,11 @@ public class DynamicDataUseController {
     /**
      * 导出数据
      *
+     * @param appId    the app id
      * @param modelId  模型id
+     * @param keywords the keywords
      * @param designId 设计id
+     * @param query    the query
      * @param ids      选中的ids数据,如果不为空,以id为准
      * @param response Http响应对象
      */
@@ -1489,9 +2051,7 @@ public class DynamicDataUseController {
                 //默认所有数据字段
                 fieldsDesign = pageDesignHtml.getDataPage().getAutoTableFields().stream().map(DataTableFieldDesignHtml::getAliasColumnName).collect(Collectors.toList());
             } else {
-                List<String> fieldIndex = pageDesignHtml.getDataPage().getAutoTableFields().stream().map(DataTableFieldDesignHtml::getAliasColumnName).collect(Collectors.toList());
                 fieldsDesign = new ArrayList<>(first.get().getExportFields().stream().map(DataTableFieldDesignHtml::getAliasColumnName)
-                        .sorted(Comparator.comparingInt(fieldIndex::indexOf))
                         .collect(Collectors.toList()));
             }
 
@@ -1568,7 +2128,13 @@ public class DynamicDataUseController {
                     queryGroupConditions = queryGroupConditions.stream().map(e -> e.stream().filter(s -> !s.getCrud()).collect(Collectors.toList())).collect(Collectors.toList());
                 }
             }
-
+            DataModelPo byId = dataModelService.getById(crudPage.getDataModelId());
+            //处理表单中的脱敏字段
+            List<String> encryptionFields = dynamicDataService.encryptionData(byId);
+            //根据脱敏字段进行去掉
+            if (ObjectNull.isNotNull(encryptionFields)) {
+                fieldsDesign.removeAll(encryptionFields);
+            }
             //调整excel导出顺序
             List<List<String>> fieldNameList = fieldsDesign.stream().filter(collectMap::containsKey).map(e -> Collections.singletonList(collectMap.get(e).getFieldName())).collect(Collectors.toList());
 
@@ -1593,6 +2159,7 @@ public class DynamicDataUseController {
             List<FieldBasicsHtml> fieldBasicsHtmls = dataFieldService.getFields(appId, modelId, null, true, false);
             Map<String, FieldBasicsHtml> fieldMap = fieldBasicsHtmls.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity()));
             List<String> fieldsDesignCopy = fieldsDesign;
+
             List<BaseFile> url = Collections.synchronizedList(new ArrayList<>());
             //异步处理业务数据导出
             Authentication authenticationAuthentication = null;
@@ -1714,9 +2281,11 @@ public class DynamicDataUseController {
     /**
      * 下载数据导入的模板
      *
+     * @param appId    the app id
      * @param modelId  模型id
      * @param designId 设计id
      * @param response Http响应对象
+     * @throws IOException the io exception
      */
     @Log
     @ApiOperation("下载模板")
@@ -1774,6 +2343,13 @@ public class DynamicDataUseController {
 
                 return;
             }
+            DataModelPo byId = dataModelService.getById(crudPage.getDataModelId());
+            //处理表单中的脱敏字段
+            List<String> encryptionFields = dynamicDataService.encryptionData(byId);
+            //根据脱敏字段进行去掉
+            if (ObjectNull.isNotNull(encryptionFields)) {
+                fieldsDesign.removeAll(encryptionFields);
+            }
             //屏蔽掉描述字段
             List<String> collect = new ArrayList<>();
             importFields.stream()
@@ -1804,6 +2380,14 @@ public class DynamicDataUseController {
         }
     }
 
+    /**
+     * Query single flow task ids r.
+     *
+     * @param appId       the app id
+     * @param dataModelId the data model id
+     * @param dataId      the data id
+     * @return the r
+     */
     @Log
     @ApiOperation("查询单条数据所有工作流任务id")
     @GetMapping("/query/single/flow/task/ids/{modelId}/{dataId}")
@@ -1930,6 +2514,13 @@ public class DynamicDataUseController {
         return allData;
     }
 
+    /**
+     * Query page r.
+     *
+     * @param appId the app id
+     * @param dto   the dto
+     * @return the r
+     */
     @Log
     @ApiOperation("分页查询关联数据")
     @PostMapping("/query/page/linkage")
@@ -1949,6 +2540,9 @@ public class DynamicDataUseController {
         // 查询模型数据
         List<QueryOrderDto> orderBys = new ArrayList<>();
         orderBys.add(new QueryOrderDto().setFieldKey(Get.name(DynamicDataPo::getCreateTime)).setDirection(Sort.Direction.DESC));
+        if (dto.getDataLinkageList().stream().anyMatch(e -> LinkTypeEnum.formula.equals(e.getProp()))) {
+            QueryConditionUtils.replaceConditionValue(dto.getDataLinkageList(), dto.getLineData(), false);
+        }
         List<List<QueryConditionDto>> queryGroupConditions = Collections.singletonList(dto.getDataLinkageList());
         Page<DynamicDataPo> page = new Page<>(dto.getCurrent(), dto.getSize());
         Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, null, queryGroupConditions, orderBys, linkageQueryFieldKeys, true, true, true, new ArrayList<>(collectMap.values()), null);

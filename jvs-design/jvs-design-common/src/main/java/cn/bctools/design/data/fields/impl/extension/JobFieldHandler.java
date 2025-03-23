@@ -2,10 +2,8 @@ package cn.bctools.design.data.fields.impl.extension;
 
 import cn.bctools.auth.api.api.AuthJobServiceApi;
 import cn.bctools.auth.api.dto.SysJobDto;
-import cn.bctools.auth.api.dto.SysRoleDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.SpringContextUtil;
-import cn.bctools.design.constant.CacheConsts;
 import cn.bctools.design.data.fields.DataFieldHandler;
 import cn.bctools.design.data.fields.DesignField;
 import cn.bctools.design.data.fields.IDataFieldHandler;

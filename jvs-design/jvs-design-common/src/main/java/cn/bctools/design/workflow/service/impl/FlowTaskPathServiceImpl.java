@@ -42,14 +42,21 @@ public class FlowTaskPathServiceImpl extends ServiceImpl<FlowTaskPathMapper, Flo
     @Override
     public List<List<Node>> getNodePaths(FlowTask flowTask, String nodeId) {
         // 从数据库获取路径，若数据库中没有则从设计中获取路径（兼容已启动且未结束的工作流任务）
+        List<List<Node>> paths = getNodePaths(flowTask);
+        // 获取包含当前节点的可执行路径
+        return paths.stream().filter(path -> path.stream().anyMatch(node -> nodeId.equals(node.getId()))).collect(Collectors.toList());
+    }
+
+    @Override
+    public List<List<Node>> getNodePaths(FlowTask flowTask) {
         List<List<Node>> paths = null;
+        // 从数据库获取路径，若数据库中没有则从设计中获取路径（兼容已启动且未结束的工作流任务）
         List<FlowTaskPath> flowTaskPaths = list(Wrappers.<FlowTaskPath>lambdaQuery().eq(FlowTaskPath::getFlowTaskId, flowTask.getId()));
         if (CollectionUtils.isNotEmpty(flowTaskPaths)) {
             paths = flowTaskPaths.stream().map(flowTaskPath -> BeanCopyUtil.copys(flowTaskPath.getPath(), Node.class)).collect(Collectors.toList());
         } else {
             paths = FlowPathUtil.getNodePaths(flowTask.getDesignBody());
         }
-        // 获取包含当前节点的可执行路径
-        return paths.stream().filter(path -> path.stream().anyMatch(node -> nodeId.equals(node.getId()))).collect(Collectors.toList());
+        return paths;
     }
 }

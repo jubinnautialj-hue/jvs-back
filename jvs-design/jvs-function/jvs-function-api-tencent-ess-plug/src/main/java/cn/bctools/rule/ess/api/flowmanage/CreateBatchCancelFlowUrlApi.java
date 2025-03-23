@@ -4,7 +4,9 @@ import cn.bctools.rule.ess.common.Client;
 import cn.bctools.rule.ess.config.Config;
 import com.tencentcloudapi.common.exception.TencentCloudSDKException;
 import com.tencentcloudapi.ess.v20201111.EssClient;
-import com.tencentcloudapi.ess.v20201111.models.*;
+import com.tencentcloudapi.ess.v20201111.models.CreateBatchCancelFlowUrlRequest;
+import com.tencentcloudapi.ess.v20201111.models.CreateBatchCancelFlowUrlResponse;
+import com.tencentcloudapi.ess.v20201111.models.UserInfo;
 
 /**
  * @author jvs

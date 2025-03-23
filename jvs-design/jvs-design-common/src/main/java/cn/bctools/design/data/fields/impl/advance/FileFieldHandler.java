@@ -19,6 +19,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 /**
@@ -50,7 +51,7 @@ public class FileFieldHandler implements IDataFieldHandler<FileHtml> {
                                 e.setName(e.getOriginalName());
                             }
                             if (ObjectNull.isNotNull(e.getBucketName(), e.getFileName())) {
-                                e.setUrl(ossTemplate.fileLink(e.getFileName(), e.getBucketName()));
+                                e.setUrl(ossTemplate.fileLink(e.getFileName(), Optional.ofNullable(e.getBucketName()).orElseGet(() -> "jvs-form-design")));
                             }
                         })
                         .collect(Collectors.toList());

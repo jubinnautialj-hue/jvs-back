@@ -4,6 +4,7 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.TenantContextHolder;
+import cn.bctools.design.crud.entity.IndexFields;
 import cn.bctools.design.crud.service.CrudPageService;
 import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.data.component.DataModelHandler;
@@ -28,6 +29,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -70,6 +72,8 @@ public class DynamicDataDesignController {
         }
         dataModelPo.setId(modelId);
         dynamicDataService.refreshData(modelId, dataModelPo);
+        List<IndexFields> indexFields = byId.getIndexFields();
+        dataModelPo.setIndexFields(indexFields);
         dataModelService.updateById(dataModelPo);
         return R.ok();
     }

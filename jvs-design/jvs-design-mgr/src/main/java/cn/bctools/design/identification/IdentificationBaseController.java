@@ -7,9 +7,6 @@ import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.identification.dto.GetIdentifierMappingReqDto;
 import cn.bctools.design.identification.entity.Identification;
 import cn.bctools.design.identification.service.IdentificationService;
-import cn.bctools.design.project.service.JvsAppVersionService;
-import cn.bctools.design.util.ModeUtils;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
@@ -17,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -55,7 +53,10 @@ public class IdentificationBaseController {
         if (ObjectNull.isNotNull(identificationModel)) {
             Identification identification = identificationModel.get(0);
             String designId = identification.getDesignId();
-            List<FieldBasicsHtml> allField = fieldService.getAllField(identification.getJvsAppId(), designId, true, true, e -> field.contains(e.getProp()));
+            List<FieldBasicsHtml> allField = fieldService.getAllField(identification.getJvsAppId(), designId, true, true, e -> !field.contains(e.getProp()));
+            //删除 id行
+            allField.remove(0);
+            allField.sort(Comparator.comparingInt(o -> field.indexOf(o.getProp())));
             return R.ok(allField);
         }
         return R.ok();

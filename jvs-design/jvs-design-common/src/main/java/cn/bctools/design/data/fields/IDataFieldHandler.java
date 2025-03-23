@@ -59,7 +59,7 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
      */
     default Object getEcho(@NotNull T fieldDto, @NotNull Object data, boolean override, Map<String, Object> lineData, String... paths) {
         if (ObjectNull.isNull(data)) {
-            return null;
+            return fieldDto.getDefaultValue();
         } else {
             return getEchoValue(fieldDto, data, override, lineData, paths);
         }
@@ -117,7 +117,7 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
      * @return TRUE -覆盖，FALSE-不覆盖
      */
     default Boolean whetherCoverValue() {
-        return null;
+        return Boolean.FALSE;
     }
 
     /**
@@ -152,7 +152,7 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
             jsonObject.put(TYPE, DataFieldType.SWITCH);
         }
         if (DataFieldType.tableForm.name().equals(jsonObject.getString(TYPE)) || DataFieldType.tab.name().equals(jsonObject.getString(TYPE))) {
-            String fieldJsonStr = JSON.toJSONString(jsonObject).replaceAll("\"type\":\"switch\"", "\"type\":\"" + DataFieldType.SWITCH.name() + "\"");
+            String fieldJsonStr = JSON.toJSONString(jsonObject).replace("\"type\":\"switch\"", "\"type\":\"" + DataFieldType.SWITCH.name() + "\"");
             jsonObject = JSON.parseObject(fieldJsonStr);
         }
         FieldPublicHtml t = BeanCopyUtil.copy(cls, jsonObject);
@@ -182,13 +182,12 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
      * @param t 根据泛型判断是否存在下集类型
      */
     default void isNext(T t) {
-        return;
     }
 
     /**
      * 解析下级字段
      * 于用公式逻辑处理
-     * 此方法已经摒弃,使用 {@linkplain IDataFieldHandler#next(java.util.List, cn.bctools.design.data.fields.dto.FieldPublicHtml, java.util.Map, cn.bctools.function.entity.vo.ElementVo) }代替
+     * 此方法已经摒弃,使用 {@linkplain IDataFieldHandler#next(List, FieldPublicHtml, Map, ElementVo) }代替
      *
      * @param list       公式数据
      * @param publicHtml 字段对象信息
@@ -198,7 +197,6 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
      * @param prop       父级
      */
     default void next(List<ElementVo> list, T publicHtml, Function<FieldBasicsHtml, ElementVo> function, Map<String, IDataFieldHandler> handlerMap, String name, String prop) {
-        return;
     }
 
     /**
@@ -279,7 +277,7 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
                 } else {
                     //如果触发器为空,则关联值为默认值
                     if (ObjectNull.isNull(map.get(key))) {
-                        List<String> strings = new ArrayList<String>(Arrays.asList(parentPath));
+                        List<String> strings = new ArrayList<>(Arrays.asList(parentPath));
                         //如果是容器类型才加，如果不是就不加
                         if (DataFieldType.CONTAINER.contains(e.getType())) {
                             strings.add(e.getProp());
@@ -295,13 +293,13 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
                                     break;
                                 case inputNumber:
                                     obj = Integer.valueOf(e.getDefaultValue().toString());
+                                    break;
                                 default:
                             }
                         }
                         if (ObjectNull.isNotNull(paths, obj)) {
                             JSONPath.set(map, paths, obj);
                         }
-                        return;
                     }
                 }
             }
@@ -362,7 +360,7 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
         Sort sort = Sort.by(Get.name(DynamicDataPo::getCreateTime)).descending();
         List<Map> maps = dynamicDataService.queryList(appId, modelId, criteria, sort, new ArrayList<>(), collect);
         //获取返回的数据
-        List<String> strings = new ArrayList<String>(Arrays.asList(parentPath));
+        List<String> strings = new ArrayList<>(Arrays.asList(parentPath));
         //如果是容器类型才加，如果不是就不加
         if (DataFieldType.CONTAINER.contains(e.getType())) {
             strings.add(e.getProp());

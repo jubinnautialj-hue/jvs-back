@@ -36,7 +36,6 @@ import cn.bctools.rule.utils.RuleElementUtils;
 import cn.bctools.rule.utils.RuleSystemThreadLocal;
 import cn.bctools.rule.utils.dto.RuleExecDto;
 import cn.bctools.rule.utils.html.*;
-
 import cn.hutool.core.collection.ListUtil;
 import com.alibaba.cloud.commons.lang.StringUtils;
 import com.alibaba.fastjson2.JSONObject;
@@ -50,7 +49,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * The type Rule item param.
+ * 实现一个逻辑的公式场景
+ * 用于获取和解析逻辑的参数
  *
  * @author guojing
  */
@@ -848,18 +848,21 @@ public class RuleItemParam implements IJvsParam<ElementVo> {
                 //直接返回节点
                 Object o = nodeResult.get(s[0]).getValue();
                 if (o instanceof Collection) {
-                    //TODO 数组未做处理
-                    return o;
+                    try {
+                        return ((ArrayList) o).stream().map(e -> ((Map) e).get(s[1])).collect(Collectors.toList());
+                    } catch (Exception e) {
+                        return o;
+                    }
                 } else {
                     return JvsJsonPath.read(o, paramName.replaceAll(s[0].trim() + "\\.", ""));
                 }
             } else {
                 Object nodeData = RuleDesignUtils.execNodeId(s[0]);
-                if(ObjectNull.isNotNull(nodeData)){
+                if (ObjectNull.isNotNull(nodeData)) {
                     //判断是不是节点，如果是节点，则直接获取节点的数据值
                     String substring = paramName.substring(paramName.indexOf(SHOW_PREFIX) + 1);
                     //避免是对象或字符串需要再转一次
-                    return JvsJsonPath.read(JSONObject.toJSONString(nodeData),substring);
+                    return JvsJsonPath.read(JSONObject.toJSONString(nodeData), substring);
                 }
                 //处理循环
                 //执行后返回结果,根据节点返回具体的值

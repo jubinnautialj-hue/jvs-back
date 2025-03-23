@@ -67,6 +67,8 @@ public class RuleFunctionDtoParameter implements Serializable {
     private String selectedClass;
     @ApiModelProperty("关联类型处理")
     private String selectedClassLink;
+    @ApiModelProperty("是否跳过刷新动态参数")
+    Boolean skipRefresh;
     /**
      * 选项的值
      */

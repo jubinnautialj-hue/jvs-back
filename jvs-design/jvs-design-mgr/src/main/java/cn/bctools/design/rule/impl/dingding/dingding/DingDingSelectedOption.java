@@ -1,8 +1,6 @@
 package cn.bctools.design.rule.impl.dingding.dingding;
 
-import cn.bctools.rule.annotations.SelectOption;
 import cn.bctools.rule.annotations.SelectOptionField;
-import cn.bctools.rule.constant.RuleConstant;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -11,7 +9,6 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-@SelectOption(RuleConstant.DINGDING_OPTION)
 public class DingDingSelectedOption {
 
     @SelectOptionField("名称")

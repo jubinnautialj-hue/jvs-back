@@ -10,7 +10,10 @@ import cn.bctools.auth.entity.enums.SexTypeEnum;
 import cn.bctools.auth.entity.enums.UserTypeEnum;
 import cn.bctools.auth.service.*;
 import cn.bctools.common.entity.dto.UserDto;
-import cn.bctools.common.utils.*;
+import cn.bctools.common.utils.BeanCopyUtil;
+import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.R;
+import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.gateway.entity.TenantPo;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.hutool.core.util.ObjectUtil;
@@ -28,10 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import javax.annotation.Nullable;
 import javax.validation.constraints.NotNull;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Objects;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -76,6 +76,9 @@ public class UserApiImpl implements AuthUserServiceApi {
             return R.failed("用户不存在");
         }
         User user = userService.getById(userId);
+        if (ObjectNull.isNull(user)) {
+            return R.failed("用户不存在");
+        }
         String tenantId = TenantContextHolder.getTenantId();
         UserDto userDto = userInfoComponent.getUserInfoDto(user, tenantId);
         // 用户对象转换
@@ -117,7 +120,20 @@ public class UserApiImpl implements AuthUserServiceApi {
     @Override
     @ApiOperation("根据部门id集合查询用户对象集合")
     public R<List<UserDto>> getByDeptIds(List<String> deptIds) {
-        return getUsersByTenantInfo(deptIds, UserTenant::getDeptId);
+        if (ObjectUtils.isEmpty(deptIds)) {
+            return R.ok(Collections.emptyList());
+        }
+        LambdaQueryWrapper<UserTenant> queryWrapper = Wrappers.lambdaQuery();
+        Iterator<String> deptIdIterator = deptIds.iterator();
+        while (deptIdIterator.hasNext()) {
+            queryWrapper.like(UserTenant::getDeptId, deptIdIterator.next());
+            if (deptIdIterator.hasNext()) {
+                queryWrapper.or();
+            }
+        }
+        List<UserTenant> userTenantList = userTenantService.list(queryWrapper);
+        List<String> userIds = userTenantList.stream().map(UserTenant::getUserId).collect(Collectors.toList());
+        return this.getByIds(userIds);
     }
 
     @Override
@@ -147,17 +163,25 @@ public class UserApiImpl implements AuthUserServiceApi {
             return R.ok(Collections.emptyList());
         }
         List<UserGroup> groups = userGroupService.list();
-        groups.removeIf(group -> ObjectUtils.isEmpty(group.getUsers()) || !group.getUsers().contains(userId));
-        // 用户群组对象转换
-        return R.ok(BeanCopyUtil.copys(groups, UserGroupDto.class));
+        if (ObjectNull.isNotNull(groups)) {
+            groups.removeIf(group -> ObjectUtils.isEmpty(group.getUsers()) || !group.getUsers().contains(userId));
+            // 用户群组对象转换
+            return R.ok(BeanCopyUtil.copys(groups, UserGroupDto.class));
+        } else {
+            return R.ok(new ArrayList<>());
+        }
     }
 
     @Override
     @ApiOperation("根据用户组id查询该组的所有用户")
     public R<List<UserDto>> userGroupsUser(String groupId) {
         UserGroup userGroup = userGroupService.getById(groupId);
-        List<String> userIds = userGroup.getUsers();
-        return this.getByIds(userIds);
+        if (ObjectNull.isNotNull(userGroup)) {
+            List<String> userIds = userGroup.getUsers();
+            return this.getByIds(userIds);
+        } else {
+            return R.ok(new ArrayList<>());
+        }
     }
 
     @ApiOperation("基础信息查询，只查询id，名称， 头像")
@@ -223,6 +247,11 @@ public class UserApiImpl implements AuthUserServiceApi {
             }
             hasCondition = true;
         }
+        if (ObjectNull.isNull(userInfoIds)) {
+            if (ObjectNull.isNotNullOne(dto.getPhone(), dto.getAccountName(), dto.getEmail(), dto.getRealName())) {
+                return R.ok(Collections.emptyList());
+            }
+        }
         // 用户id集
         List<String> userIds = dto.getUserIds();
         if (ObjectUtils.isNotEmpty(userIds)) {
@@ -235,7 +264,7 @@ public class UserApiImpl implements AuthUserServiceApi {
         // 角色id集
         List<String> roleIds = dto.getRoleIds();
         if (ObjectUtils.isNotEmpty(roleIds)) {
-            List<String> ids = userRoleComponent.getRoleUserIds(roleIds, dto.getFilterScopeRoleUser(), dto.getFilterScopeDeptId());
+            List<String> ids = userRoleComponent.getRoleUserIds(roleIds, dto.getFilterScopeRoleUser(), dto.getFilterScopeDeptIds());
             boolean isEmptyResult = this.handleSearchResult(userIdCondition, ids, isAnd, hasCondition);
             if (isEmptyResult) {
                 return R.ok(Collections.emptyList());
@@ -475,12 +504,27 @@ public class UserApiImpl implements AuthUserServiceApi {
         user.setSex(SexTypeEnum.getByDesc(dto.getSex()));
         //获取对应的租户信息
         user.setUserType(UserTypeEnum.OTHER_USER);
-        UserTenant userTenant = new UserTenant().setRealName(dto.getRealName());
-        if (ObjectNull.isNull(dto.getUserId())) {
+        UserTenant userTenant = new UserTenant().setPhone(dto.getPhone()).setCancelFlag(dto.getCancelFlag()).setRealName(dto.getRealName());
+        if (ObjectNull.isNotNull(dto.getJobId())) {
+            Job job = jobService.getById(dto.getJobId());
+            if (ObjectNull.isNotNull(job)) {
+                userTenant.setJobId(dto.getJobId());
+                userTenant.setJobName(job.getName());
+            }
+        }
+        if (ObjectNull.isNotNull(dto.getDeptId())) {
+            userTenant.setDeptId(dto.getDeptId());
+        }
+        User userServiceById = userService.getById(dto.getUserId());
+        if (ObjectNull.isNull(userServiceById)) {
             userService.saveUser(user, userTenant);
         } else {
+            userTenant.setDeptId(dto.getDeptId());
             //表示更新用户信息
             userService.updateById(user);
+            UserTenant one = userTenantService.getOne(Wrappers.query(new UserTenant().setUserId(userServiceById.getId())));
+            userTenant.setId(one.getId());
+            userTenantService.updateById(userTenant);
         }
         return R.ok(user.getId());
     }

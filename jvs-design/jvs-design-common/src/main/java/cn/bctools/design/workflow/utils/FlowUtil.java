@@ -5,6 +5,7 @@ import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.workflow.dto.startflow.SelfSelectApprover;
 import cn.bctools.design.workflow.entity.FlowTask;
+import cn.bctools.design.workflow.entity.dto.ApproveResultDto;
 import cn.bctools.design.workflow.entity.dto.CourseDto;
 import cn.bctools.design.workflow.entity.dto.FlowExtendDto;
 import cn.bctools.design.workflow.enums.BackTaskResubmitEnum;
@@ -356,8 +357,9 @@ public class FlowUtil {
             // 修改节点审批人信息
             selfSelectOptional.ifPresent(selfSelect -> {
                 // 是发起流程，且是发起人自选，可设置审批人
-                // 不是发起流程，则启用了”允许动态选择审批人“开关才能动态设置人员
-                boolean canUpdatePersonnel = (start && NodePropertiesTypeEnum.SELF_SELECT.equals(propertiesType)) || extend.getEnableDynamicApprover();
+                // 不是发起流程，则启用了”允许动态选择审批人“开关，且节点未禁止动态选择审批人，才能动态设置人员
+                boolean canUpdatePersonnel = (start && NodePropertiesTypeEnum.SELF_SELECT.equals(propertiesType))
+                        || (extend.getEnableDynamicApprover() && !FlowUtil.getDisableDynamicApprover(nodeProperties));
                 if (canUpdatePersonnel) {
                     // 修改节点审批人信息
                     target.setPersonnels(selfSelect.getApprovers());
@@ -634,5 +636,119 @@ public class FlowUtil {
         return resubmitDto.setWhetherResubmit(true)
                 .setNextNode(nextNode)
                 .setBackTaskResubmit(backProperties.getResubmit());
+    }
+
+    /**
+     * 节点配置是否禁用动态选择审批人
+     *
+     * @param props 节点配置
+     * @return true-禁用动态选择审批人，false-不禁用动态选择审批人
+     */
+    public static Boolean getDisableDynamicApprover(NodeProperties props) {
+        boolean disableDynamicApprover = true;
+        switch (props.getType()) {
+            case SELF_SELECT:
+                // 发起人自选，只能是false
+                disableDynamicApprover = false;
+                break;
+            case JOB:
+            case ROLE:
+            case ASSIGN_USER:
+                // 兼容旧数据，未配置是否禁止动态选择审批人时，默认为false
+                disableDynamicApprover = Optional.ofNullable(props.getDisableDynamicApprover()).orElse(false);
+                break;
+            default:
+                // 其它类型，默认禁止动态选择审批人
+                break;
+        }
+        return disableDynamicApprover;
+    }
+
+    /**
+     * 获取节点是否可动态选择审批人配置
+     *
+     * @param extend 流程高级设置
+     * @param node 流程节点
+     * @return true-可动态选择审批人，false-不能动态选择审批人
+     */
+    public static boolean getNodeCanDynamicApprover(FlowExtendDto extend, Node node) {
+        return extend.getEnableDynamicApprover() && !FlowUtil.getDisableDynamicApprover(node.getProps());
+    }
+
+
+    /**
+     * 从审批过程中提取最终审批过程
+     * <p>
+     *     每个审批节点只保留最后一次审批记录（排除回退操作，也就是从流程起点至终点，只保留最终一份记录）
+     *
+     * @param flowTask 流程实例
+     * @param nodePaths 流程路径集合
+     * @return 最终审批记录
+     */
+    public static List<CourseDto> extractFinalTaskCourse(FlowTask flowTask, List<List<Node>> nodePaths) {
+        LinkedList<CourseDto> finalTaskCourse = new LinkedList<>();
+        if (ObjectNull.isNull(flowTask) || ObjectNull.isNull(flowTask.getCourses())) {
+            return finalTaskCourse;
+        }
+        // 已添加 和 不需要添加的节点id
+        Set<String> excludedIds  = new HashSet<>();
+        LinkedList<CourseDto> courses = flowTask.getCourses();
+        ListIterator<CourseDto> listIterator = courses.listIterator(courses.size());
+        while (listIterator.hasPrevious()) {
+            CourseDto courseDto = listIterator.previous();
+            // 以开始节点为界限，得到最后一个开始节点之后的所有审批人(因为可能重启过流程)
+            // 回退到发起人节点，倒序的第一个节点就是ROOT，需要跳过
+            if (NodeTypeEnum.ROOT.equals(courseDto.getNodeType())) {
+                break;
+            }
+            String nodeId = courseDto.getNodeId();
+
+            // 若是回退操作，找到回退目标节点与当前节点之间的所有节点id，这部分节点的审批记录不转换
+            List<String> backBetweenNodeIds = getBackSubListBetween(courseDto, nodePaths);
+            if (ObjectNull.isNotNull(backBetweenNodeIds)) {
+                excludedIds.addAll(backBetweenNodeIds);
+            }
+            // 跳过已转换或不需要转换的节点
+            if (excludedIds.contains(nodeId)) {
+                continue;
+            }
+            excludedIds.add(nodeId);
+            finalTaskCourse.addFirst(courseDto);
+        }
+        return finalTaskCourse;
+    }
+
+    /**
+     * 获取回退目标节点与回退节点之间（包括回退节点id和回退目标节点id）的节点id
+     *
+     * @param courseDto 审批记录
+     * @param nodePaths 节点路径
+     * @return 在回退目标节点与回退节点之间的节点id集合
+     */
+    public static List<String> getBackSubListBetween(CourseDto courseDto, List<List<Node>> nodePaths) {
+        Optional<ApproveResultDto> backOptional = courseDto.getApproveResultDtos().stream()
+                .filter(re -> NodeOperationTypeEnum.BACK.equals(re.getNodeOperationTypeEnum()))
+                .findFirst();
+        if (!backOptional.isPresent()) {
+            return Collections.emptyList();
+        }
+        String backNodeId = backOptional.get().getBackNodeId();
+        String nodeId = courseDto.getNodeId();
+        List<String> nodeIds = Arrays.asList(backNodeId, nodeId);
+        return nodePaths.stream()
+                .map(paths -> {
+                    List<String> pathNodeIds = paths.stream().map(Node::getId).collect(Collectors.toList());
+                    if (pathNodeIds.containsAll(nodeIds)) {
+                        int backNodeIdIndex = pathNodeIds.indexOf(backNodeId);
+                        int nodeIdIndex = pathNodeIds.indexOf(nodeId);
+                        List<String> betweenNodeIds = pathNodeIds.subList(backNodeIdIndex, nodeIdIndex);
+                        betweenNodeIds.add(nodeId);
+                        return betweenNodeIds;
+                    }
+                    return null;
+                })
+                .filter(ObjectNull::isNotNull)
+                .flatMap(Collection::stream)
+                .collect(Collectors.toList());
     }
 }

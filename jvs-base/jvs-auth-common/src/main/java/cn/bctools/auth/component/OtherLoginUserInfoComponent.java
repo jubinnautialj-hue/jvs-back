@@ -15,6 +15,9 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.database.util.IdGenerator;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -69,6 +72,7 @@ public class OtherLoginUserInfoComponent {
      */
     @Transactional(rollbackFor = Exception.class)
     public User registerUser(OtherUserDto otherUser, UserExtension extension) {
+        UserExtension userExtension = new UserExtension();
         //判断用户是否存在 ,如果存在 ,直接更新 否则注册一个新的帐号
         User user = null;
         if (ObjectNull.isNotNull(otherUser.getAccountName())) {
@@ -80,8 +84,7 @@ public class OtherLoginUserInfoComponent {
         if (ObjectNull.isNotNull(user)) {
             if (ObjectNull.isNull(extension)) {
                 //创建扩展信息
-                UserExtension userExtension = new UserExtension()
-                        .setType(otherUser.getLoginType())
+                userExtension.setType(otherUser.getLoginType())
                         .setUserId(user.getId())
                         .setOpenId(otherUser.getOpenId())
                         .setNickname(user.getRealName())
@@ -100,10 +103,16 @@ public class OtherLoginUserInfoComponent {
             userService.updateById(user);
             UserTenant one = userTenantService.getOne(Wrappers.query(new UserTenant().setUserId(user.getId())));
             if (ObjectNull.isNotNull(one)) {
-                String deptId = ObjectNull.isNotNull(otherUser.getDeptId()) ? otherUser.getDeptId() : one.getDeptId();
-                one.setDeptId(deptId);
-                one.setRealName(user.getRealName());
-                userTenantService.updateById(one);
+                if (ObjectNull.isNotNull(one.getDeptId())) {
+                    if (ObjectNull.isNotNull(otherUser.getDeptId())) {
+                        if (JSONUtil.isTypeJSON(otherUser.getDeptId())) {
+                            one.getDeptId().addAll(JSONArray.parseArray(otherUser.getDeptId(), String.class));
+                        } else {
+                            one.getDeptId().add(otherUser.getDeptId());
+                        }
+                        userTenantService.updateById(one);
+                    }
+                }
             }
         } else {
             // 校验是否可自动注册
@@ -126,8 +135,7 @@ public class OtherLoginUserInfoComponent {
             userService.saveUser(user, userTenant);
         }
 
-        UserExtension userExtension = new UserExtension()
-                .setType(otherUser.getLoginType())
+        userExtension.setType(otherUser.getLoginType())
                 .setUserId(user.getId())
                 .setOpenId(otherUser.getOpenId())
                 .setNickname(user.getRealName())
@@ -140,7 +148,7 @@ public class OtherLoginUserInfoComponent {
             // 用户扩展信息
             userExtensionService.updateById(userExtension);
         } else {
-            userExtensionService.save(userExtension);
+            userExtensionService.saveOrUpdate(userExtension);
             // 默认为游客角色
             userRoleComponent.grandDefaultSysRole(user.getId());
         }

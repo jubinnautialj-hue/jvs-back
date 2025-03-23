@@ -6,7 +6,7 @@ import cn.bctools.design.rule.RuleRunService;
 import cn.bctools.design.workflow.entity.FlowTask;
 import cn.bctools.design.workflow.entity.dto.FlowExtendDto;
 import cn.bctools.design.workflow.entity.dto.TaskEndTriggerEventDto;
-import cn.bctools.design.workflow.entity.dto.TaskEndTriggerEventSetting;
+import cn.bctools.design.workflow.entity.dto.TaskTriggerEventSetting;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,7 +53,7 @@ public class TaskEndListener {
 
         // 得到启用的逻辑引擎key
         String enableRuleKey = null;
-        Function<TaskEndTriggerEventSetting, String> getKeyFunction = setting -> {
+        Function<TaskTriggerEventSetting, String> getKeyFunction = setting -> {
             if (ObjectNull.isNull(setting)) {
                 return null;
             }

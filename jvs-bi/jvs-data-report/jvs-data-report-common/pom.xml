@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>cn.bctools</groupId>
+        <artifactId>jvs-data-report</artifactId>
+        <version>2.3</version>
+    </parent>
+
+    <groupId>cn.bctools</groupId>
+    <artifactId>jvs-data-report-common</artifactId>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-redis</artifactId>
+        </dependency>
+
+        <!-- 用户信息 -->
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-oauth2</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-data-factory-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-database</artifactId>
+        </dependency>
+
+        <!--定时任务 xxljob-->
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-job</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-rabbit</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-data-factory-data-dispose</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-permission</artifactId>
+            <version>${jvs.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>com.itextpdf</groupId>
+            <artifactId>itextpdf</artifactId>
+            <version>5.5.13.3</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

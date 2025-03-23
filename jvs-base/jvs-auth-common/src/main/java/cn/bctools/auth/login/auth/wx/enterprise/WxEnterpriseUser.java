@@ -26,7 +26,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * @author zhuxiaokang
@@ -57,7 +59,7 @@ public class WxEnterpriseUser extends BaseWxEnterprise {
     public SyncUserDto getDeptUserAll(String accessToken, List<Dept> depts) {
         SyncUserDto syncUserDto = new SyncUserDto();
         if (CollectionUtils.isNotEmpty(depts)) {
-            depts.parallelStream().forEach(dept -> {
+            depts.forEach(dept -> {
                 JSONArray deptUsers = getDeptUsers(accessToken, dept.getId());
                 convertUser(syncUserDto, accessToken, dept, deptUsers);
             });
@@ -109,40 +111,62 @@ public class WxEnterpriseUser extends BaseWxEnterprise {
             String deptUserId = deptUser.getString(USER_ID);
             String openId = getOpenId(accessToken, deptUserId);
             if (StringUtils.isNotBlank(openId)) {
+                // 用户
                 String nickname = deptUser.getString(USER_NAME);
-                User user = new User()
-                        .setId(openId)
-                        .setRealName(nickname)
-                        .setAccountName(IdGenerator.getIdStr(36))
-                        .setCancelFlag(false)
-                        .setUserType(UserTypeEnum.OTHER_USER);
-                UserTenant userTenant = new UserTenant()
-                        .setUserId(user.getId())
-                        .setRealName(nickname)
-                        .setCancelFlag(false);
-                if (ObjectNull.isNotNull(dept)) {
-                    userTenant.setDeptId(SyncOrgUtils.buildDeptId(tenantId, dept.getId())).setDeptName(dept.getName());
-                }
-                AuthUser authUser = AuthUser.builder()
-                        .rawUserInfo(deptUser)
-                        .username(deptUser.getString("name"))
-                        .nickname(deptUser.getString("alias"))
-                        .avatar(deptUser.getString("avatar"))
-                        .location(deptUser.getString("address"))
-                        .email(deptUser.getString("email"))
-                        .uuid(deptUserId)
-                        .gender(AuthUserGender.getWechatRealGender(deptUser.getString("gender")))
-                        .build();
-                UserExtension userExtension = new UserExtension()
-                        .setExtension(BeanToMapUtils.beanToMap(authUser))
-                        .setOpenId(openId)
-                        .setNickname(nickname)
-                        .setType(LOGIN_TYPE)
-                        .setUserId(user.getId());
+                Optional<User> optionalDeptUser = syncUserDto.getUsers().stream()
+                        .filter(user -> user.getId().equals(openId))
+                        .findFirst();
+                User user = null;
+                if (optionalDeptUser.isPresent()) {
+                    user = optionalDeptUser.get();
+                } else {
+                    user = new User()
+                            .setId(openId)
+                            .setRealName(nickname)
+                            .setAccountName(IdGenerator.getIdStr(36))
+                            .setCancelFlag(false)
+                            .setUserType(UserTypeEnum.OTHER_USER);
 
-                syncUserDto.getUsers().add(user);
-                syncUserDto.getUserTenants().add(userTenant);
-                syncUserDto.getUserExtensions().add(userExtension);
+                    AuthUser authUser = AuthUser.builder()
+                            .rawUserInfo(deptUser)
+                            .username(deptUser.getString("name"))
+                            .nickname(deptUser.getString("alias"))
+                            .avatar(deptUser.getString("avatar"))
+                            .location(deptUser.getString("address"))
+                            .email(deptUser.getString("email"))
+                            .uuid(deptUserId)
+                            .gender(AuthUserGender.getWechatRealGender(deptUser.getString("gender")))
+                            .build();
+                    UserExtension userExtension = new UserExtension()
+                            .setExtension(BeanToMapUtils.beanToMap(authUser))
+                            .setOpenId(openId)
+                            .setNickname(nickname)
+                            .setType(LOGIN_TYPE)
+                            .setUserId(user.getId());
+
+                    syncUserDto.getUsers().add(user);
+                    syncUserDto.getUserExtensions().add(userExtension);
+                }
+
+                // 用户租户
+                Optional<UserTenant> optionalUserTenant = syncUserDto.getUserTenants().stream()
+                        .filter(userTenant -> userTenant.getUserId().equals(openId))
+                        .findFirst();
+                UserTenant userTenant = null;
+                if (optionalUserTenant.isPresent()) {
+                    userTenant = optionalUserTenant.get();
+                } else {
+                    userTenant = new UserTenant()
+                            .setUserId(user.getId())
+                            .setRealName(nickname)
+                            .setCancelFlag(false);
+                    syncUserDto.getUserTenants().add(userTenant);
+                }
+                if (ObjectNull.isNotNull(dept)) {
+                    List<String> userDeptIdsList = Optional.ofNullable(userTenant.getDeptId()).orElseGet(ArrayList::new);
+                    userDeptIdsList.add(SyncOrgUtils.buildDeptId(tenantId, dept.getId()));
+                    userTenant.setDeptId(userDeptIdsList);
+                }
             }
         });
 

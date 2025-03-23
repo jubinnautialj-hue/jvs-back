@@ -50,7 +50,7 @@ public @interface ParameterValue {
     /**
      * 类型
      */
-    InputType type() default InputType.text;
+    InputType type() default InputType.input;
 
     /**
      * 子类型,主要用于存在list map  listMap 三个类型的扩展
@@ -63,7 +63,7 @@ public @interface ParameterValue {
      * 获取这个类型的值可选项，进行自定义操作, 这个属性，只针对 Type为  selected 的时候使用
      *
      * @author: guojing
-     * @return: {@linkplain java.lang.Class<? extends  ParameterSelected > }
+     * @return: {@linkplain Class<? extends  ParameterSelected > }
      */
     Class<? extends ParameterSelected> cls() default ParameterSelected.class;
 

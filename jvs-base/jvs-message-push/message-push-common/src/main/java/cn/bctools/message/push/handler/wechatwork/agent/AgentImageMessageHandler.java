@@ -49,6 +49,7 @@ public class AgentImageMessageHandler extends BaseMessageHandler<MediaMessageDTO
         }
         WxCpServiceImpl wxCpService = SingletonUtil.get(config.getAppId() + config.getAppSecret() + config.getAgentId(), () -> {
             WxCpDefaultConfigImpl cpConfig = new WxCpDefaultConfigImpl();
+            cpConfig.setBaseApiUrl(config.getBaseApiUrl());
             cpConfig.setCorpId(config.getAppId());
             cpConfig.setCorpSecret(config.getAppSecret());
             cpConfig.setAgentId(config.getAgentId());

@@ -66,6 +66,6 @@ public class BaseFunctionPo implements Serializable {
 
     @TableField(typeHandler = Fastjson2TypeHandler.class)
     @ApiModelProperty("入参类型")
-    private List<JvsParamType> inParamTypes;
+    private List inParamTypes;
 
 }

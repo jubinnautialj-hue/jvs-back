@@ -1,8 +1,6 @@
 package cn.bctools.rule.tools.ftp;
 
-import cn.bctools.rule.annotations.SelectOption;
 import cn.bctools.rule.annotations.SelectOptionField;
-import cn.bctools.rule.constant.RuleConstant;
 import cn.bctools.rule.entity.enums.InputType;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -12,7 +10,6 @@ import lombok.experimental.Accessors;
  */
 @Data
 @Accessors(chain = true)
-@SelectOption(RuleConstant.FTP_OPTION)
 public class FtpSelectedOption {
 
     @SelectOptionField("名称")

@@ -29,11 +29,11 @@ public class TextFieldHandler implements IDataFieldHandler<FieldBasicsHtml> {
     @Override
     public List<DataQueryType> getEnabledQueryTypes(FieldBasicsHtml fieldJson) {
         if (Objects.isNull(this.types)) {
-            List<DataQueryType> types = new ArrayList<>();
-            types.add(DataQueryType.ne);
-            types.add(DataQueryType.eq);
-            types.add(DataQueryType.like);
-            this.types = types;
+            List<DataQueryType> list = new ArrayList<>();
+            list.add(DataQueryType.ne);
+            list.add(DataQueryType.eq);
+            list.add(DataQueryType.like);
+            this.types = list;
         }
         return this.types;
     }

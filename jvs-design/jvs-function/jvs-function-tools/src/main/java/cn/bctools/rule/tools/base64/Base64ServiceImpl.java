@@ -1,7 +1,6 @@
 package cn.bctools.rule.tools.base64;
 
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.database.util.IdGenerator;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.oss.cons.OssSystemCons;
 import cn.bctools.oss.dto.BaseFile;
@@ -19,6 +18,7 @@ import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -68,10 +68,11 @@ public class Base64ServiceImpl implements BaseCustomFunctionInterface<Base64Dto>
                 Base64.decodeToStream(string, out, true);
                 ByteArrayInputStream byteInputStream = new ByteArrayInputStream(out.toByteArray());
                 BaseFile baseFile = ossTemplate.put(OssSystemCons.OSS_BUCKET_NAME, RuleConstant.OSS_BUCKET_NAME_PATH + "base64", byteInputStream,
-                        IdGenerator.getIdStr() + dto.getFileName(), true);
+                        IdWorker.getIdStr() + dto.getFileName(), true);
                 String fileUrl = ossTemplate.fileLink(baseFile.getFileName(), OssSystemCons.OSS_BUCKET_NAME);
                 //返回文件对象
                 return new RuleFile().setBucketName(OssSystemCons.OSS_BUCKET_NAME)
+                        .setSize(baseFile.getSize())
                         .setFileName(baseFile.getFileName())
                         .setName(baseFile.getName())
                         .setOutputType(OutputType.preview)
@@ -86,8 +87,7 @@ public class Base64ServiceImpl implements BaseCustomFunctionInterface<Base64Dto>
                 //如果为文件，加密
                 String fileUrl = ossTemplate.fileLink(((RuleFile) dto.getBody()).getFileName(), ((RuleFile) dto.getBody()).getBucketName());
                 //将文件内容进行加密，返回 base64字符串
-                String encode = Base64.encode(HttpUtil.downloadBytes(fileUrl));
-                return encode;
+                return Base64.encode(HttpUtil.downloadBytes(fileUrl));
             } else {
                 throw new BusinessException("不支持文件对象解密数据参数异常");
             }

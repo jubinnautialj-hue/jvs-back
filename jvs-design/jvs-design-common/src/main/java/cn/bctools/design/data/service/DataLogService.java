@@ -47,7 +47,7 @@ public interface DataLogService {
      * @param dataModelId 模型ID
      * @return 当前数据版本
      */
-    String saveLog(String dataModelId, String dataId, Map<String, Object> data, List dataChange, DataEventType eventType);
+    String saveLog(String dataModelId, String dataId, Map<String, Object> data, List<Object> dataChange, DataEventType eventType);
 
     /**
      * 保存数据变更记录
@@ -60,7 +60,7 @@ public interface DataLogService {
      * @param dataModelId 模型ID
      * @return 当前数据版本
      */
-    String saveLog(String dataModelId, String dataId, Map<String, Object> data, List dataChange, DataEventType eventType, UserDto userDto);
+    String saveLog(String dataModelId, String dataId, Map<String, Object> data, List<Object> dataChange, DataEventType eventType, UserDto userDto);
 
     /**
      * 记录跟进记录

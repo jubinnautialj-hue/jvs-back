@@ -30,6 +30,11 @@ public class JvsSystemConfig {
     String domain;
 
     /**
+     * 轻应用的标识域名，如果用户在访问登录时，使用此域名。则直接将其匹配到后，将只返回对应的应用数据
+     */
+    List<String> identificationDomain;
+
+    /**
      * 多租户模式,默认为false,
      */
     Boolean multiTenantMode = false;

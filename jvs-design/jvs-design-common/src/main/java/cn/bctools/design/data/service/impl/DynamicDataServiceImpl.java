@@ -11,6 +11,7 @@ import cn.bctools.database.util.IdGenerator;
 import cn.bctools.design.common.OrderFormat;
 import cn.bctools.design.constant.DynamicDataConstant;
 import cn.bctools.design.crud.entity.FormPo;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.design.crud.mapper.FormMapper;
 import cn.bctools.design.crud.utils.DesignUtils;
 import cn.bctools.design.data.component.DataModelHandler;
@@ -47,6 +48,7 @@ import cn.bctools.design.workflow.enums.FlowDataFieldEnum;
 import cn.bctools.design.workflow.service.FlowTaskService;
 import cn.bctools.function.entity.dto.ExecDto;
 import cn.bctools.function.entity.dto.TableType;
+import cn.bctools.function.entity.po.FunctionBusinessPo;
 import cn.bctools.function.handler.ExpressionAfterHandler;
 import cn.bctools.function.handler.ExpressionHandler;
 import cn.bctools.function.utils.ExpressionParam;
@@ -78,6 +80,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.bson.types.Decimal128;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
@@ -89,6 +92,7 @@ import org.springframework.data.util.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Function;
@@ -375,7 +379,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         }
         if (DataEventType.DATA_UPDATE.equals(dataEventType)) {
             MapDifference<String, Object> difference = Maps.difference(oldData, data);
-            List dataChange = null;
+            List<Object> dataChange = null;
             if (!difference.areEqual()) {
                 dataChange = saveDataChange(appId, modelId, oldData, difference, data);
             }
@@ -699,8 +703,12 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             return 0;
         }
         for (Map.Entry<String, Object> entry : setData.entrySet()) {
-            //可以修改值为空
-            update.set(entry.getKey(), entry.getValue());
+            if (entry.getValue() instanceof BigDecimal) {
+                //todo  这里可能有子项
+                update.set(entry.getKey(), new Decimal128((BigDecimal) entry.getValue()));
+            } else {
+                update.set(entry.getKey(), entry.getValue());
+            }
         }
         return dataModelHandler.updateMulti(query, update, modelId).getMatchedCount();
     }
@@ -859,10 +867,10 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      * @param difference 修改数据
      * @param data       修改后的数据
      */
-    private List saveDataChange(String appId, String modelId, Map<String, Object> jsonData, MapDifference<String, Object> difference, Map<String, Object> data) {
+    private List<Object> saveDataChange(String appId, String modelId, Map<String, Object> jsonData, MapDifference<String, Object> difference, Map<String, Object> data) {
         Map<String, FieldBasicsHtml> map = dataFieldService.getFields(appId, modelId, true, false).stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity()));
         //记录内容变化到一个字段中去
-        List dataChange = new ArrayList();
+        List<Object> dataChange = new ArrayList<Object>();
         DataChangePo dataChangePo = new DataChangePo();
         UserDto userDto = UserCurrentUtils.getNullableUser();
         if (ObjectNull.isNotNull(userDto)) {
@@ -933,17 +941,17 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
     }
 
     @Override
-    public Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, String> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts, List<String> fieldKeyList, boolean addButtonInfo, boolean echo, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls) {
+    public Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts, List<String> fieldKeyList, boolean addButtonInfo, boolean echo, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls) {
         return queryPage(appId, page, modelId, combiningFieldFormulaContentMap, conditions, sorts, fieldKeyList, addButtonInfo, echo, andOr, fieldBasicsHtmls, new HashSet<>());
     }
 
     @Override
-    public Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, String> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts, List<String> fieldKeyList, boolean addButtonInfo, boolean echo, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet) {
+    public Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts, List<String> fieldKeyList, boolean addButtonInfo, boolean echo, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet) {
         return queryPage(appId, page, modelId, combiningFieldFormulaContentMap, conditions, sorts, fieldKeyList, addButtonInfo, echo, andOr, fieldBasicsHtmls, new HashSet<>(), true);
     }
 
     @Override
-    public Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, String> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts, List<String> fieldKeyList, boolean addButtonInfo, boolean echo, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet, Boolean encryptionData) {
+    public Page<Map<String, Object>> queryPage(String appId, Page<DynamicDataPo> page, String modelId, Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap, List<List<QueryConditionDto>> conditions, List<QueryOrderDto> sorts, List<String> fieldKeyList, boolean addButtonInfo, boolean echo, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet, Boolean encryptionData) {
         if (ObjectNull.isNotNull(fieldBasicsHtmls)) {
             //这里会发布应用到模板中心。字段可能为空
             Set<String> baseField = fieldBasicsHtmls.stream().map(FieldPublicHtml::getFieldKey).collect(Collectors.toSet());
@@ -964,6 +972,10 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 fieldKeyList.addAll(dynamicFiled);
             }
         }
+        if (ObjectNull.isNotNull(combiningFieldFormulaContentMap)) {
+            //添加公式中使用到的字段
+            combiningFieldFormulaContentMap.values().forEach(e -> fieldKeyList.addAll(e.getRelatedIds()));
+        }
         long size = page.getSize();
         long current = page.getCurrent();
         Page<Map<String, Object>> mapPage = new Page<>(current, size);
@@ -977,9 +989,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             if (ObjectNull.isNotNull(collect)) {
                 //将列表过滤和数据权限添加上组合查询
                 List<Criteria> crud = buildDynamicCriteriaList(collect);
-                if (ObjectNull.isNotNull(criteriaList)) {
+                if (ObjectNull.isNotNull(criteriaList, crud)) {
                     authCriteria = DynamicDataUtils.trueCriteria().andOperator(crud).orOperator(criteriaList);
-                } else {
+                } else if (ObjectNull.isNotNull(criteriaList)) {
+                    authCriteria = DynamicDataUtils.trueCriteria().andOperator(criteriaList);
+                } else if (ObjectNull.isNotNull(crud)) {
                     authCriteria = DynamicDataUtils.trueCriteria().andOperator(crud);
                 }
             } else if (ObjectNull.isNotNull(criteriaList)) {
@@ -990,6 +1004,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 }
             }
             conditions = conditions.stream().map(e -> e.stream().filter(s -> !s.getCrud()).collect(Collectors.toList())).collect(Collectors.toList());
+        } else if (ObjectNull.isNotNull(criteriaList)) {
+            authCriteria = DynamicDataUtils.trueCriteria().orOperator(criteriaList);
         }
 
         List<Criteria> list = new ArrayList<>();
@@ -998,8 +1014,12 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             list = DynamicDataUtils.buildDynamicCriteriaList(Optional.ofNullable(conditions).map(c -> c.get(0)).orElse(null));
         }
         Boolean isFree = SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_FREE);
-
-        Query query = DynamicDataUtils.andOr(list, authCriteria, andOr);
+        Query query;
+        if (ObjectNull.isNotNull(list)) {
+            query = DynamicDataUtils.andOr(list, authCriteria, andOr);
+        } else {
+            query = new Query(authCriteria);
+        }
         //限制查询字段
         query.fields().exclude(MONGO_ID);
         if (ObjectUtils.isNotEmpty(fieldKeyList)) {
@@ -1054,7 +1074,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         }
         //数据脱敏操作
         if (encryptionData) {
-            dataList.forEach(e -> encryptionData(e, byId));
+            dataList.forEach(e -> encryptionData(e, byId, true));
         }
         if (ObjectNull.isNotNull(combiningFieldFormulaContentMap)) {
             dataList.forEach(e -> combiningFieldFormulaContent(e, combiningFieldFormulaContentMap));
@@ -1070,7 +1090,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      * @param line                            某一行的数据
      * @param combiningFieldFormulaContentMap 可能需要进行转换的数据
      */
-    private void combiningFieldFormulaContent(Map<String, Object> line, Map<String, String> combiningFieldFormulaContentMap) {
+    private void combiningFieldFormulaContent(Map<String, Object> line, Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap) {
         for (String key : combiningFieldFormulaContentMap.keySet()) {
             Object o = designHandler.runFormula(combiningFieldFormulaContentMap.get(key), line, EnvConstant.PAGE_BUTTON_DISPLAY);
             line.put(key + DynamicDataUtils.SUFFIX_ECHO, o);
@@ -1222,9 +1242,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         if (addButtonInfo) {
             designHandler.handleButtonInfo(dataMap, EnvConstant.FORM_BUTTON_DISPLAY);
         }
-        DataModelPo byId = dataModelService.getById(modelId);
-        //处理表单中的脱敏
-        encryptionData(dataMap, byId);
+
         return dataMap;
     }
 
@@ -1395,7 +1413,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             oldData = newData;
         }
         // 更新至MongoDB
-        oldData = this.updateFill(modelId, dataId, oldData);
+        newData = this.updateFill(modelId, dataId, newData);
         // 构建更新条件
         Criteria criteria = DynamicDataUtils.initCriteria(null).and(Get.name(DynamicDataPo::getId)).is(dataId);
         Query query = this.getPermitQuery(criteria);
@@ -1403,14 +1421,23 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         Update update = new Update();
         for (Map.Entry<String, Object> entry : newData.entrySet()) {
             if (entry.getValue() != null) {
-                update.set(entry.getKey(), entry.getValue());
+                if (entry.getValue() instanceof BigDecimal) {
+                    //todo  这里可能有子项
+                    update.set(entry.getKey(), new Decimal128((BigDecimal) entry.getValue()));
+                } else {
+                    update.set(entry.getKey(), entry.getValue());
+                }
             }
             if (ObjectNull.isNotNull(entry.getValue()) || "".equals(entry.getValue())) {
                 if (entry.getValue().equals(DATA_EMPTY)) {
                     entry.setValue(null);
                     update.set(entry.getKey(), null);
                 } else {
-                    update.set(entry.getKey(), entry.getValue());
+                    if (entry.getValue() instanceof BigDecimal) {
+                        update.set(entry.getKey(), new Decimal128((BigDecimal) entry.getValue()));
+                    } else {
+                        update.set(entry.getKey(), entry.getValue());
+                    }
                 }
             }
         }
@@ -1428,6 +1455,13 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      * @return 填充后的数据内容
      */
     private Map<String, Object> insertFill(String modelId, String dataId, Map<String, Object> data) {
+        for (Map.Entry<String, Object> entry : data.entrySet()) {
+            if (entry.getValue() instanceof BigDecimal) {
+                entry.setValue(new Decimal128((BigDecimal) entry.getValue()));
+            } else {
+                entry.setValue(entry.getValue());
+            }
+        }
         LocalDateTime now = LocalDateTime.now();
         UserDto user = UserCurrentUtils.getNullableUser();
         if (StringUtils.isBlank(dataId)) {
@@ -1441,7 +1475,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         // BasePo
         if (ObjectNull.isNotNull(user)) {
             data.put(Get.name(DynamicDataPo::getJobId), user.getJobId());
-            data.put(Get.name(DynamicDataPo::getDeptId), user.getDeptId());
+            data.put(Get.name(DynamicDataPo::getDeptId), user.getDept().stream().map(DeptDto::getDeptId).collect(Collectors.toSet()));
             data.put(Get.name(DynamicDataPo::getCreateById), user.getId());
             data.put(Get.name(DynamicDataPo::getCreateBy), user.getRealName());
         }
@@ -1530,7 +1564,14 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      * @param data
      * @param byId
      */
-    private void encryptionData(Map<String, Object> data, DataModelPo byId) {
+    @Override
+    public void encryptionData(Map<String, Object> data, DataModelPo byId) {
+        if (ObjectNull.isNotNull(byId)) {
+            encryptionData(data, byId, false);
+        }
+    }
+
+    public void encryptionData(Map<String, Object> data, DataModelPo byId, Boolean page) {
         if (ObjectNull.isNotNull(byId, byId.getSetting())) {
             if (ObjectNull.isNull(byId.getSetting().getEncryptionFields())) {
                 return;
@@ -1541,16 +1582,26 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 return;
             }
             if (ObjectNull.isNotNull(userList)) {
+                if (!byId.getSetting().getEncryption()) {
+                    return;
+                }
                 List<EncryptionFieldsPo> encryptionFields = byId.getSetting().getEncryptionFields();
                 encryptionFields.forEach(e -> {
                     try {
-                        String o = String.valueOf(data.getOrDefault(e.getFieldKey(), ""));
-                        String desensitized = SensitiveInfoUtils.getSensitiveKey().get(e.getEncryptionExpress()).apply(o);
-                        //支持下拉转换后的脱敏
-                        if (data.containsKey(e.getFieldKey() + "_1")) {
-                            data.put(e.getFieldKey() + "_1", desensitized);
-                        } else {
-                            data.put(e.getFieldKey(), desensitized);
+                        if (data.containsKey(e.getFieldKey())) {
+                            Object orDefault = data.getOrDefault(e.getFieldKey(), "");
+                            if (!page && orDefault instanceof Number) {
+                                data.remove(e.getFieldKey());
+                            } else {
+                                String o = String.valueOf(orDefault);
+                                String desensitized = SensitiveInfoUtils.getSensitiveKey().get(e.getEncryptionExpress()).apply(o);
+                                //支持下拉转换后的脱敏
+                                if (data.containsKey(e.getFieldKey() + "_1")) {
+                                    data.put(e.getFieldKey() + "_1", desensitized);
+                                } else {
+                                    data.put(e.getFieldKey(), desensitized);
+                                }
+                            }
                         }
                     } catch (Exception exception) {
                         log.error("脱敏失败", exception);
@@ -1558,6 +1609,33 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 });
             }
         }
+    }
+
+    @Override
+    public List<String> encryptionData(String byId) {
+        DataModelPo byId1 = dataModelService.getById(byId);
+        return encryptionData(byId1);
+    }
+
+    @Override
+    public List<String> encryptionData(DataModelPo byId) {
+        List<String> list = new ArrayList<>();
+        if (ObjectNull.isNotNull(byId, byId.getSetting())) {
+            if (ObjectNull.isNull(byId.getSetting().getEncryptionFields())) {
+                return list;
+            }
+            List<PersonnelDto> userList = byId.getSetting().getUserList();
+            if (!RoleUtils.checkPersonnels(userList)) {
+                //放行。不处理
+                return list;
+            }
+            if (ObjectNull.isNotNull(userList)) {
+                List<EncryptionFieldsPo> encryptionFields = byId.getSetting().getEncryptionFields();
+                List<String> field = encryptionFields.stream().map(EncryptionFieldsPo::getFieldKey).collect(Collectors.toList());
+                return field;
+            }
+        }
+        return list;
     }
 
     /**
@@ -1593,22 +1671,26 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 }).forEach(e -> {
                     //将数据脱离的 key ， 组装为对象属性值
                     TabItemHtml html = (TabItemHtml) iDataFieldHandler.get(DataFieldType.tab.getDesc()).toHtml(e);
-                    //判断是否配置了选项的 key名
-                    for (FormValueHtml dicDatum : html.getDicData()) {
-                        //获取 key名
-                        String prop = dicDatum.getProp();
-                        List<FieldBasicsHtml> fieldBasicsHtmls = html.getColumn().get(dicDatum.getName());
-                        if (ObjectNull.isNull(fieldBasicsHtmls)) {
-                            continue;
-                        }
-                        if (ObjectNull.isNull(prop)) {
-                            //将这一级的所有字段类型匹配放入外层
-                            fieldBasicsHtmls.forEach(s -> fieldMap.put(s.getProp(), s));
-                        } else {
-                            //这里需要创建一个生成组件，用于解析。
-                            TabGenerateItemHtml tabGenerateItemHtml = new TabGenerateItemHtml(prop).setColumn(fieldBasicsHtmls);
-                            //将组件解析器处理到map中在下级回显进行处理
-                            fieldMap.put(prop, tabGenerateItemHtml);
+                    if (ObjectNull.isNotNull(html)) {
+                        if (ObjectNull.isNotNull(html.getDicData())) {
+                            //判断是否配置了选项的 key名
+                            for (FormValueHtml dicDatum : html.getDicData()) {
+                                //获取 key名
+                                String prop = dicDatum.getProp();
+                                List<FieldBasicsHtml> fieldBasicsHtmls = html.getColumn().get(dicDatum.getName());
+                                if (ObjectNull.isNull(fieldBasicsHtmls)) {
+                                    continue;
+                                }
+                                if (ObjectNull.isNull(prop)) {
+                                    //将这一级的所有字段类型匹配放入外层
+                                    fieldBasicsHtmls.forEach(s -> fieldMap.put(s.getProp(), s));
+                                } else {
+                                    //这里需要创建一个生成组件，用于解析。
+                                    TabGenerateItemHtml tabGenerateItemHtml = new TabGenerateItemHtml(prop).setColumn(fieldBasicsHtmls);
+                                    //将组件解析器处理到map中在下级回显进行处理
+                                    fieldMap.put(prop, tabGenerateItemHtml);
+                                }
+                            }
                         }
                     }
                 });
@@ -1641,10 +1723,14 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                 fieldHandler.setDataOverride(data, fieldKey, html, path, override, echoValue);
                             }
                         }
+                    } catch (BusinessException be) {
+                        log.error("格式转换异常{}", JSONObject.toJSONString(entry), be);
+                        throw new RuntimeException("格式转换异常" + be.getMessage());
                     } catch (Exception e) {
                         log.error("格式转换异常{}", JSONObject.toJSONString(entry), e);
                         throw new RuntimeException("格式转换异常:" + entry.getKey() + " : " + entry.getValue());
                     }
+
                 });
         return data;
     }
@@ -2275,7 +2361,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         .map(ModelDisplayLinkageFieldHtml::getProp)
                         .collect(Collectors.toList());
                 // 替换条件值，并查询关联模型数据
-                List<QueryConditionExtendDto> dataLinkageList = BeanCopyUtil.copys(modelDisplay.getDataLinkageList(), QueryConditionExtendDto.class);
+                List<QueryConditionDto> dataLinkageList = BeanCopyUtil.copys(modelDisplay.getDataLinkageList(), QueryConditionDto.class);
                 QueryConditionUtils.replaceConditionValue(dataLinkageList, data);
                 List<Map<String, Object>> linkageDataList = queryList(modelDisplay.getDataLinkageModelId(), linkageQueryFieldKeys, dataLinkageList.toArray(new QueryConditionDto[0]));
                 if (ObjectNull.isNull(linkageDataList)) {

@@ -1,15 +1,16 @@
 package cn.bctools.rule.ess.byfile;
 
-import cn.bctools.rule.ess.api.fileuploaddownload.DescribeFileUrlsApi;
 import cn.bctools.rule.ess.api.CreateFlowByFileDirectlyApi;
+import cn.bctools.rule.ess.api.fileuploaddownload.DescribeFileUrlsApi;
 import cn.bctools.rule.ess.config.Config;
 import com.tencentcloudapi.ess.v20201111.models.ApproverInfo;
 import com.tencentcloudapi.ess.v20201111.models.Component;
 import lombok.extern.slf4j.Slf4j;
 
 /**
- * @author jvs
- * 使用文件发起合同QuickStart
+ * The type By file quick start.
+ *
+ * @author jvs  使用文件发起合同QuickStart
  */
 @Slf4j
 
@@ -17,6 +18,9 @@ public class ByFileQuickStart {
 
     /**
      * ByFileQuickStart
+     *
+     * @param args the input arguments
+     * @throws Exception the exception
      */
     public static void main(String[] args) throws Exception {
 
@@ -172,6 +176,16 @@ public class ByFileQuickStart {
 
     /**
      * 构建控件信息
+     *
+     * @param componentType   the component type
+     * @param componentValue  the component value
+     * @param componentPosX   the component pos x
+     * @param componentPosY   the component pos y
+     * @param componentWidth  the component width
+     * @param componentHeight the component height
+     * @param fileIndex       the file index
+     * @param componentPage   the component page
+     * @return the component
      */
     public static Component buildComponent(String componentType, String componentValue,
                                            float componentPosX, float componentPosY, float componentWidth, float componentHeight, long fileIndex, long componentPage) {

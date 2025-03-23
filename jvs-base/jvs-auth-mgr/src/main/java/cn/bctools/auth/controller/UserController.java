@@ -5,6 +5,7 @@ import cn.bctools.auth.api.dto.SearchDto;
 import cn.bctools.auth.api.dto.UserSelectedDto;
 import cn.bctools.auth.component.SmsEmailComponent;
 import cn.bctools.auth.component.UserRoleComponent;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.enums.AutoCreateUserHeadImgConfig;
 import cn.bctools.common.enums.ConfigsTypeEnum;
 import cn.bctools.common.utils.jvs.JvsSystemConfig;
@@ -29,11 +30,16 @@ import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.excel.util.DateUtils;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.plugins.pagination.PageDTO;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiImplicitParam;
 import io.swagger.annotations.ApiImplicitParams;
@@ -51,6 +57,7 @@ import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -160,14 +167,19 @@ public class UserController {
             return R.ok();
         }
         // 查询用户租户信息
-        List<UserTenant> userTenants = userTenantService.list(new LambdaQueryWrapper<UserTenant>().in(UserTenant::getUserId, ids));
-        if (ObjectUtil.isEmpty(userTenants)) {
+        Map<String, UserTenant> userTenantMap = userTenantService.list(new LambdaQueryWrapper<UserTenant>().in(UserTenant::getUserId, ids))
+                .stream()
+                .collect(Collectors.toMap(UserTenant::getUserId, Function.identity()));
+        if (ObjectUtil.isEmpty(userTenantMap)) {
             return R.ok(Collections.emptyList());
         }
         // 查询用户基本信息
         Map<String, User> userMap = userService.list(new LambdaQueryWrapper<User>().in(User::getId, ids)).stream().collect(Collectors.toMap(User::getId, Function.identity()));
         // User与UserTenant都有cancel_flag字段, 需要以UserTenant的为准, 需要注意这里copy的顺序
-        List<UserVo> list = userTenants.stream().map(e -> BeanCopyUtil.copy(UserVo.class, userMap.get(e.getUserId()), e).setId(e.getUserId())).collect(Collectors.toList());
+        List<UserVo> list = ids.stream().map(userTenantMap::get)
+                .filter(ObjectNull::isNotNull)
+                .map(userTenant -> BeanCopyUtil.copy(UserVo.class, userMap.get(userTenant.getUserId()), userTenant).setId(userTenant.getUserId()).setUserId(userTenant.getUserId()))
+                .collect(Collectors.toList());
         return R.ok(list);
     }
 
@@ -187,18 +199,31 @@ public class UserController {
         List<String> allChildId = null;
         if (ObjectNull.isNotNull(userTenant.getDeptId())) {
             allChildId = deptService.getAllChildId(userTenant.getDeptId());
-            allChildId.add(userTenant.getDeptId());
         }
-        QueryWrapper queryWrapper = Wrappers.query()
-                .in(ObjectNull.isNotNull(allChildId), UserTenantMapper.SYS_USER_TENANT_ALIAS + ".dept_id", allChildId)
-                .eq(ObjectNull.isNotNull(userTenant.getSex()), UserTenantMapper.SYS_USER_ALIAS + ".sex", userTenant.getSex())
-                .eq(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".cancel_flag", userTenant.getCancelFlag())
-//                .ne(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".user_id", currentUser.getId())
-                .and(ObjectNull.isNotNull(userTenant.getKeywords()), wrapper -> wrapper
-                        .like(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".real_name", userTenant.getKeywords())
-                        .or().like(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".phone", userTenant.getKeywords())
-                        .or().like(UserTenantMapper.SYS_USER_ALIAS + ".account_name", userTenant.getKeywords())
-                );
+        QueryWrapper<Object> queryWrapper = Wrappers.query();
+        if (ObjectNull.isNotNull(allChildId)) {
+            for (int i = 0; i < allChildId.size(); i++) {
+                String trim = allChildId.get(i).trim();
+                queryWrapper.or(objectQueryWrapper -> {
+                    objectQueryWrapper.like(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".dept_id", trim)
+                            .eq(ObjectNull.isNotNull(userTenant.getSex()), UserTenantMapper.SYS_USER_ALIAS + ".sex", userTenant.getSex())
+                            .eq(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".cancel_flag", userTenant.getCancelFlag())
+                            .and(ObjectNull.isNotNull(userTenant.getKeywords()), wrapper -> wrapper
+                                    .like(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".real_name", userTenant.getKeywords())
+                                    .or().like(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".phone", userTenant.getKeywords())
+                                    .or().like(UserTenantMapper.SYS_USER_ALIAS + ".account_name", userTenant.getKeywords())
+                            );
+                });
+            }
+        } else {
+            queryWrapper.eq(ObjectNull.isNotNull(userTenant.getSex()), UserTenantMapper.SYS_USER_ALIAS + ".sex", userTenant.getSex())
+                    .eq(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".cancel_flag", userTenant.getCancelFlag())
+                    .and(ObjectNull.isNotNull(userTenant.getKeywords()), wrapper -> wrapper
+                            .like(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".real_name", userTenant.getKeywords())
+                            .or().like(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".phone", userTenant.getKeywords())
+                            .or().like(UserTenantMapper.SYS_USER_ALIAS + ".account_name", userTenant.getKeywords())
+                    );
+        }
         userTenantService.tenantUsers(page, queryWrapper);
         if (ObjectUtil.isEmpty(page.getRecords())) {
             return R.ok(userVoPage);
@@ -214,7 +239,10 @@ public class UserController {
         Map<String, List<Role>> roleByUserId = userRoleComponent.getUserRoleIds(map.keySet());
         List list = new ArrayList();
         for (String s : map.keySet()) {
-            UserVo userVo = map.get(s).setRoleNames(roleByUserId.get(s).stream().map(Role::getRoleName).collect(Collectors.toList()));
+            UserVo userVo = map.get(s).setRoleNames(roleByUserId.get(s).stream().map(Role::getRoleName).distinct().collect(Collectors.toList()));
+            if (ObjectNull.isNotNull(userVo.getDeptId())) {
+                userVo.setDeptName(deptService.listByIds(userVo.getDeptId()).stream().map(Dept::getName).collect(Collectors.toList()));
+            }
             list.add(userVo);
         }
         userVoPage.setRecords(list);
@@ -361,16 +389,19 @@ public class UserController {
                             .map(UserRole::getUserId).collect(Collectors.toList());
                     break;
                 case currentDept:
-                    depts = deptService.getAllChildId(UserCurrentUtils.getDeptId());
+                    depts = deptService.getAllChildId(UserCurrentUtils.getDept().stream().map(DeptDto::getDeptId).filter(ObjectNull::isNotNull).collect(Collectors.toList()));
             }
         }
 
-        page = userTenantService.page(page, new LambdaQueryWrapper<UserTenant>()
+        LambdaQueryWrapper<UserTenant> in = new LambdaQueryWrapper<UserTenant>()
                 .select(UserTenant::getId, UserTenant::getUserId, UserTenant::getPhone, UserTenant::getRealName)
-                .eq(ObjectNull.isNotNull(deptId), UserTenant::getDeptId, deptId)
+                .like(ObjectNull.isNotNull(deptId), UserTenant::getDeptId, deptId)
                 .eq(ObjectNull.isNotNull(jobId), UserTenant::getJobId, jobId)
-                .in(ObjectNull.isNotNull(userIds), UserTenant::getUserId, userIds)
-                .in(ObjectNull.isNotNull(depts), UserTenant::getDeptId, depts)
+                .in(ObjectNull.isNotNull(userIds), UserTenant::getUserId, userIds);
+        if (ObjectNull.isNotNull(depts)) {
+            in.apply(ObjectNull.isNotNull(depts), "(" + depts.stream().map(e -> String.format("JSON_CONTAINS(dept_id,'\"%s\"')", e)).collect(Collectors.joining(" or ")) + ")");
+        }
+        page = userTenantService.page(page, in
                 .in(ObjectNull.isNotNull(jobs), UserTenant::getJobId, jobs)
                 // 默认查询未删除的用户
                 .eq(ObjectNull.isNull(all) || Boolean.FALSE.equals(all), UserTenant::getCancelFlag, false)
@@ -381,7 +412,7 @@ public class UserController {
             return R.ok(page);
         }
         Map<String, UserTenant> ids = page.getRecords().stream().collect(Collectors.toMap(UserTenant::getUserId, Function.identity()));
-        List<User> users = userService.list(new LambdaQueryWrapper<User>().select(User::getId,User::getHeadImg,User::getRealName).in(User::getId,ids.keySet()));
+        List<User> users = userService.list(new LambdaQueryWrapper<User>().select(User::getId, User::getHeadImg, User::getRealName).in(User::getId, ids.keySet()));
         Page<User> userPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal());
         userPage.setRecords(users);
         return R.ok(userPage);
@@ -427,7 +458,7 @@ public class UserController {
     @Log
     @ApiOperation(value = "获取用户详情", notes = "组织机构管理，点击用户详情操作")
     @GetMapping("/user/{userId}")
-    public R<UserVo> user(@PathVariable String userId) {
+    public R<UserVo> user(@PathVariable String userId) throws JsonProcessingException {
         User user = userService.getById(userId);
         if (Objects.isNull(user)) {
             return R.ok();
@@ -436,7 +467,11 @@ public class UserController {
         if (Objects.isNull(userTenant)) {
             return R.failed("用户未加入当前组织");
         }
-        UserVo userVo = BeanCopyUtil.copy(UserVo.class, user, userTenant);
+        ObjectMapper o = new ObjectMapper();
+        Object v = o.readTree(JSONObject.toJSONString(user));
+        ((ObjectNode) (v)).setAll((ObjectNode) o.readTree(JSONObject.toJSONString(userTenant)));
+        String result = o.writerWithDefaultPrettyPrinter().writeValueAsString(v);
+        UserVo userVo = com.alibaba.fastjson2.JSONObject.parseObject(result, UserVo.class);
         return R.ok(userVo);
     }
 
@@ -596,6 +631,9 @@ public class UserController {
         }
         String tenantId = TenantContextHolder.getTenantId();
         User user = BeanCopyUtil.copy(vo, User.class);
+        if (ObjectNull.isNotNull(vo.getUserId())) {
+            user.setId(vo.getUserId());
+        }
         // 手机号校验
         String phone = user.getPhone();
         if (StringUtils.isNotBlank(phone)) {
@@ -612,17 +650,6 @@ public class UserController {
             }
         }
         UserTenant userTenant = BeanCopyUtil.copy(vo, UserTenant.class);
-        String deptId = userTenant.getDeptId();
-        if (ObjectUtil.isNotEmpty(deptId)) {
-            Dept dept = deptService.getById(deptId);
-            if (Objects.isNull(dept)) {
-                log.error("该部门不存在, 部门id: {}", deptId);
-                return R.failed("该部门不存在");
-            }
-            userTenant.setDeptName(dept.getName());
-        } else {
-            userTenant.setDeptName(null);
-        }
 
         String jobId = userTenant.getJobId();
         if (ObjectUtil.isNotEmpty(jobId)) {

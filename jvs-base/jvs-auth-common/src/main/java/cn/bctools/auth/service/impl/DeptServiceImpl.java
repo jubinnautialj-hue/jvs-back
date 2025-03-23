@@ -6,6 +6,7 @@ import cn.bctools.auth.mapper.DeptMapper;
 import cn.bctools.auth.service.DeptService;
 import cn.bctools.auth.service.UserTenantService;
 import cn.bctools.auth.util.SyncOrgUtils;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.TreeUtils;
@@ -20,6 +21,7 @@ import org.springframework.stereotype.Service;
 
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -131,8 +133,11 @@ public class DeptServiceImpl extends ServiceImpl<DeptMapper, Dept> implements De
         // 移除该部门下的用户
         userTenantService.update(Wrappers.<UserTenant>lambdaUpdate()
                 .set(UserTenant::getDeptId, null)
-                .set(UserTenant::getDeptName, null)
                 .in(UserTenant::getDeptId, deptIds));
     }
 
+    @Override
+    public List<String> getAllChildId(List<String> deptId) {
+        return deptId.stream().flatMap(e -> getAllChildId(e).stream()).collect(Collectors.toList());
+    }
 }

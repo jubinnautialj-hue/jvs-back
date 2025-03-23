@@ -1,10 +1,14 @@
 package cn.bctools.design.data.fields.dto;
 
+import cn.bctools.design.data.fields.dto.form.FormRuleHtml;
+import cn.bctools.design.data.fields.dto.form.FormValueHtml;
 import cn.bctools.design.data.fields.dto.form.item.FilterHtml;
 import cn.bctools.design.data.fields.enums.DataFieldType;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
@@ -59,8 +63,6 @@ public class FieldPublicHtml extends FieldJsonHtml {
     private List<FilterHtml> dataFilterList;
     @ApiModelProperty(value = "数据筛选", notes = "与/或")
     private List<List<FilterHtml>> dataFilterGroupList;
-    @ApiModelProperty(value = "模型关联的id")
-    private String dataModelId;
     @ApiModelProperty(value = "是否开启了关联模型筛选")
     private Boolean dataFilterEnable = false;
 
@@ -69,9 +71,69 @@ public class FieldPublicHtml extends FieldJsonHtml {
 
     @ApiModelProperty("数据联动显示的字段值")
     private String linkageFieldKey;
+    @ApiModelProperty("上级 key")
+    private String parentKey;
+    @ApiModelProperty("上级 类型")
+    private String parentType;
+    private String formId;
+    private Integer width;
+    private Boolean disabled;
+    private Object status;
+    private String prop;
+    private int span;
+    private boolean display;
+    @ApiModelProperty("[仅前端使用]该组件所用到的字段名")
+    private List<String> showFrom;
+    @ApiModelProperty("接口数据-显示值与传递值")
+    private FormValueHtml props;
+    private Object linkbind;
+    private int minlength;
+    private int maxlength;
+    private boolean showwordlimit;
+    private String placeholder;
+    private boolean clearable;
+    private boolean showpassword;
+    private Object prefixicon;
+    private Object suffixicon;
+    private Object prepend;
+    private Object append;
+    private Object regularExpression;
+    private Object regularMessage;
+    private Object defaultUrl;
+    private Object sqlType;
+    private Object defaultOrigin;
+    private boolean searchable;
+    @ApiModelProperty("校验设置")
+    private List<FormRuleHtml> rules;
+    private boolean editable;
+    private int searchPopupWidth;
+    private List othersQuery;
+    private boolean dataFilterable;
+    private List datafilterlist;
+    /**
+     * 关联表单的属性
+     */
+    @Getter
+    @Setter
+    @ApiModelProperty("数据模型id")
+    private String dataModelId;
+    /**
+     * 案例: /mgr/jvs-design/dynamic/data/query/list/{数据模型id}?fieldKey={字段key}
+     */
+    @ApiModelProperty("前端请求数据的地址")
+    @Getter
+    @Setter
+    private String url;
+
+
+    @Getter
+    @Setter
+    @ApiModelProperty("关联表单扩展显示字段key")
+    private List<String> others;
 
     @ApiModelProperty(value = "允许为空", notes = "默认都可以为空")
     private Boolean emptyEnable = true;
+
 
     @Override
     public String getDataModelId() {

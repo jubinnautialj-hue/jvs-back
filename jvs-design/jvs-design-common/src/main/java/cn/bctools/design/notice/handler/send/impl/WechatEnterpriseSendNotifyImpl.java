@@ -29,7 +29,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @AllArgsConstructor
-public class WechatEnterpriseSendNotifyImpl implements SendNotifyHandler{
+public class WechatEnterpriseSendNotifyImpl implements SendNotifyHandler {
 
     private final WechatWorkAgentApi api;
     private final UserExtensionServiceApi userExtensionServiceApi;
@@ -43,10 +43,10 @@ public class WechatEnterpriseSendNotifyImpl implements SendNotifyHandler{
     public void send(DataNotifyDto dto) {
         //根据用户ID获取扩展ID
         List<String> userIds = dto.getUsers().stream().map(UserDto::getId).collect(Collectors.toList());
-        List<ReceiversDto> definedReceivers =  Optional.ofNullable(userExtensionServiceApi.query(userIds, OtherLoginTypeEnum.WX_ENTERPRISE.name()).getData()).orElse(new ArrayList<>())
+        List<ReceiversDto> definedReceivers = Optional.ofNullable(userExtensionServiceApi.query(userIds, OtherLoginTypeEnum.WX_ENTERPRISE.name()).getData()).orElse(new ArrayList<>())
                 .stream()
-                .map(s -> new ReceiversDto().setUserId(s.getUserId()).setReceiverConfig(String.valueOf(s.getExtension().get("uuid"))).setUserName(s.getNickname()))
-                .collect(Collectors.toList());
+                .map(s -> new ReceiversDto().setUserId(s.getUserId()).setReceiverConfig(String.valueOf(s.getOpenId())).setUserName(s.getNickname()))
+                        .collect(Collectors.toList());
         if (CollectionUtils.isEmpty(definedReceivers)) {
             log.warn("发送企业微信消息失败: 未找到用户");
             return;

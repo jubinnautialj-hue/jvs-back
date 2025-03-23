@@ -3,7 +3,6 @@ package cn.bctools.design.workflow.entity;
 import cn.bctools.database.handler.Fastjson2TypeHandler;
 import cn.bctools.design.workflow.entity.dto.FlowPathNodeDto;
 import com.baomidou.mybatisplus.annotation.*;
-import com.baomidou.mybatisplus.extension.handlers.JacksonTypeHandler;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;

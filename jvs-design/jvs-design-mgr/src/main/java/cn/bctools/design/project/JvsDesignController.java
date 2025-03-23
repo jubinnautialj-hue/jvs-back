@@ -12,13 +12,11 @@ import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.crud.utils.DesignUtils;
 import cn.bctools.design.data.fields.dto.FormSelectItemDto;
 import cn.bctools.design.data.fields.enums.DesignType;
-import cn.bctools.design.h5.service.H5DesignService;
 import cn.bctools.design.menu.component.AppMenuHandler;
 import cn.bctools.design.menu.service.AppMenuService;
 import cn.bctools.design.project.dto.*;
 import cn.bctools.design.project.handler.DesignHandler;
 import cn.bctools.design.project.service.JvsAppService;
-import cn.bctools.design.screen.service.ScreenService;
 import cn.bctools.log.annotation.Log;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -53,9 +51,7 @@ public class JvsDesignController {
     DesignHandler designHandler;
     CrudPageService pageService;
     FormService formService;
-    ScreenService screenService;
     AppUrlService appUrlService;
-    H5DesignService h5DesignService;
     AppMenuService appMenuService;
     AppMenuHandler appMenuHandler;
 

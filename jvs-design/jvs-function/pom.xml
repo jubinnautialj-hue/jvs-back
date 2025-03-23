@@ -6,7 +6,7 @@
     <parent>
         <groupId>cn.bctools</groupId>
         <artifactId>jvs-design</artifactId>
-        <version>2.2</version>
+        <version>2.3</version>
     </parent>
 
     <groupId>cn.bctools</groupId>
@@ -19,7 +19,6 @@
         <module>jvs-function-data</module>
         <module>jvs-function-tools</module>
         <module>jvs-function-encryption</module>
-<!--        <module>jvs-function-service</module>-->
         <module>jvs-function-discriminate</module>
         <module>jvs-function-api-open-platform</module>
         <module>jvs-function-dingding-plug</module>

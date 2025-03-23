@@ -9,7 +9,7 @@ import java.lang.annotation.*;
  * <p>
  * 注解添加在po对象的属性上(该属性必须是枚举类, 而且是{@link DataEnum}的实现类)。可对属性进行数据权限自定义控制
  *
- * @author guojing
+ * @author jvs
  */
 @Target({ElementType.ANNOTATION_TYPE, ElementType.FIELD})
 @Retention(RetentionPolicy.RUNTIME)

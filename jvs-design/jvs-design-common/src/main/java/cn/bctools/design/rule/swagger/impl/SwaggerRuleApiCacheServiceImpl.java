@@ -34,7 +34,6 @@ import org.springframework.amqp.core.Message;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.MediaType;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import springfox.documentation.builders.ModelSpecificationBuilder;
 import springfox.documentation.builders.PropertySpecificationBuilder;
@@ -99,8 +98,7 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
     @AllArgsConstructor
     public enum ParamTypeEnum {
         REQ("请求参数"),
-        RES("响应参数")
-        ;
+        RES("响应参数");
         private final String name;
     }
 
@@ -326,10 +324,10 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
         // 以逻辑id作为接口模型id
         String apiModelId = rule.getId();
         // 入参模型
-        Map<String, ModelSpecification>  modelSpecificationReqMap = iteratorParseBody(apiModelId, ParamTypeEnum.REQ, rule.getParameterIn());
+        Map<String, ModelSpecification> modelSpecificationReqMap = iteratorParseBody(apiModelId, ParamTypeEnum.REQ, rule.getParameterIn());
         // 出参模型
-        Map<String, ModelSpecification>  modelSpecificationRespMap = iteratorParseBody(apiModelId, ParamTypeEnum.RES, rule.getParameterOut());
-        Map<String, ModelSpecification>  modelSpecificationMap = new HashMap<>();
+        Map<String, ModelSpecification> modelSpecificationRespMap = iteratorParseBody(apiModelId, ParamTypeEnum.RES, rule.getParameterOut());
+        Map<String, ModelSpecification> modelSpecificationMap = new HashMap<>();
         modelSpecificationMap.putAll(modelSpecificationReqMap);
         modelSpecificationMap.putAll(modelSpecificationRespMap);
         buildResponseModel(apiModelId, modelSpecificationMap);
@@ -364,12 +362,12 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
     /**
      * 本地缓存中没有目标应用的API时进行初始化操作
      *
-     * @param tag            组
-     * @param apiDescription api
-     * @param documentation  本地缓存
+     * @param tag                   组
+     * @param apiDescription        api
+     * @param documentation         本地缓存
      * @param modelSpecificationMap 模型
      */
-    private void initApi(Tag tag, ApiDescription apiDescription, Documentation documentation, Map<String, ModelSpecification>  modelSpecificationMap) {
+    private void initApi(Tag tag, ApiDescription apiDescription, Documentation documentation, Map<String, ModelSpecification> modelSpecificationMap) {
         String version = SpringContextUtil.getVersion();
         String basesPath = "/";
         String resourcePath = "/";
@@ -409,7 +407,7 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
      * @param apiDescription   api
      * @param apiListingCaches 应用下所有API缓存
      */
-    private void updateApi(String apiId, Tag tag, ApiDescription apiDescription, Map<String, ModelSpecification>  modelSpecificationMap, List<ApiListing> apiListingCaches, Documentation documentation) {
+    private void updateApi(String apiId, Tag tag, ApiDescription apiDescription, Map<String, ModelSpecification> modelSpecificationMap, List<ApiListing> apiListingCaches, Documentation documentation) {
         ApiListing api = apiListingCaches.get(0);
         List<ApiDescription> apiDescriptionCaches = api.getApis();
         OptionalInt optional = IntStream.range(0, api.getApis().size())
@@ -423,7 +421,7 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
             apiDescriptionCaches.add(apiDescription);
         }
 
-        Map<String, ModelSpecification>  modelSpecifications  = api.getModelSpecifications();
+        Map<String, ModelSpecification> modelSpecifications = api.getModelSpecifications();
         List<String> removeKeys = modelSpecifications.keySet().stream().filter(key -> key.contains(apiId)).collect(Collectors.toList());
         removeKeys.forEach(key -> api.getModelSpecifications().remove(key));
         api.getModelSpecifications().putAll(modelSpecificationMap);
@@ -486,8 +484,8 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
                 rule.getId(),
                 0,
                 tagNames,
-                SwaggerRuleApiConfig.PRODUCES,
-                SwaggerRuleApiConfig.CONSUMES,
+                SwaggerRuleApiConfig.getPRODUCES(),
+                SwaggerRuleApiConfig.getCONSUMES(),
                 Collections.emptySet(),
                 Collections.emptyList(),
                 Collections.emptyList(),
@@ -512,8 +510,8 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
         Set<Response> responses = new HashSet<>();
         Set<Representation> representations = new HashSet<>();
         if (ObjectNull.isNotNull(parameterOut) && ObjectNull.isNotNull(parameterOut.getBodyList())) {
-            String modelName = buildResponseModelName(ParamTypeEnum.RES.getName() + "[" + modelId +"]");
-            ModelSpecification modelSpecification =  new ModelSpecificationBuilder()
+            String modelName = buildResponseModelName(ParamTypeEnum.RES.getName() + "[" + modelId + "]");
+            ModelSpecification modelSpecification = new ModelSpecificationBuilder()
                     // 引用其它模型是对象时，设置引用
                     .referenceModel(ref -> ref
                             .key(modelKey -> {
@@ -525,7 +523,7 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
         }
         responses.add(new Response("0", "成功", false, Collections.emptyList(), representations, Collections.emptyList(), Collections.emptyList()));
         Arrays.stream(RuleExceptionEnum.values())
-                .forEach(e-> responses.add(new Response(String.valueOf(e.getCode()), e.getMsg(), false, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList())));
+                .forEach(e -> responses.add(new Response(String.valueOf(e.getCode()), e.getMsg(), false, Collections.emptyList(), Collections.emptyList(), Collections.emptyList(), Collections.emptyList())));
         return responses;
     }
 
@@ -570,8 +568,8 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
         }
 
         if (ObjectNull.isNotNull(parameterIn.getBodyList())) {
-            String modelName = ParamTypeEnum.REQ.getName() + "[" + modelId +"]" ;
-            ModelSpecification modelSpecification =  new ModelSpecificationBuilder()
+            String modelName = ParamTypeEnum.REQ.getName() + "[" + modelId + "]";
+            ModelSpecification modelSpecification = new ModelSpecificationBuilder()
                     // 引用其它模型是对象时，设置引用
                     .referenceModel(ref -> ref
                             .key(modelKey -> {
@@ -593,14 +591,12 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
     }
 
 
-
-
     /**
      * 构造响应参数
      * <p>
-     *     默认响应正常返回的响应参数数据结构为{"code":0, "msg":"", "timestamp":null, data: 引用具体的参数模型}
+     * 默认响应正常返回的响应参数数据结构为{"code":0, "msg":"", "timestamp":null, data: 引用具体的参数模型}
      *
-     * @param modelId 参数模型id
+     * @param modelId               参数模型id
      * @param modelSpecificationMap 接口参数模型集合
      */
     private void buildResponseModel(String modelId, Map<String, ModelSpecification> modelSpecificationMap) {
@@ -622,7 +618,7 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
                 .type(timestampModel)
                 .build();
 
-        String refModelName = ParamTypeEnum.RES.getName() + "[" + modelId +"]" ;
+        String refModelName = ParamTypeEnum.RES.getName() + "[" + modelId + "]";
         ModelSpecification dataModel = new ModelSpecificationBuilder()
                 .referenceModel(ref -> ref
                         .key(modelKey -> {
@@ -636,7 +632,7 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
                 .build();
 
         String modelName = buildResponseModelName(refModelName);
-        ModelSpecification res = buildModelSpecification(modelName, buildNamespace(modelName), Stream.of(codeProperty, msgProperty, timestampProperty,dataProperty).collect(Collectors.toList()));
+        ModelSpecification res = buildModelSpecification(modelName, buildNamespace(modelName), Stream.of(codeProperty, msgProperty, timestampProperty, dataProperty).collect(Collectors.toList()));
         modelSpecificationMap.put(modelName, res);
     }
 
@@ -644,20 +640,20 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
     /**
      * 解析body每层参数,构造模型集合
      *
-     * @param modelId 模型id
+     * @param modelId   模型id
      * @param paramType 参数类型
-     * @param bodyList 入参/出参
+     * @param parameter 入参/出参
      * @return 当前层body转swagger的PropertySpecification
      */
     private Map<String, ModelSpecification> iteratorParseBody(String modelId, ParamTypeEnum paramType, RuleParameterInDto parameter) {
-        if(ObjectNull.isNull(parameter) || ObjectNull.isNull(parameter.getBodyList())){
+        if (ObjectNull.isNull(parameter) || ObjectNull.isNull(parameter.getBodyList())) {
             return Collections.emptyMap();
         }
 
         String suffix = paramType.getName();
         Map<String, ModelSpecification> modelSpecificationMap = new HashMap<>();
         ModelProperty modelProperty = new ModelProperty();
-        modelProperty.setModelName(paramType.getName()+"[" + modelId +"]");
+        modelProperty.setModelName(paramType.getName() + "[" + modelId + "]");
         modelProperty.setBodyList(parameter.getBodyList());
 
         Queue<ModelProperty> queue = new ArrayDeque<>();
@@ -681,7 +677,7 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
                             if ("Items".equals(bodyInDto.getKey())) {
                                 // 不能有"."，否则不能显示多层级参数
                                 String path = bodyInDto.getPath().replace(".", "-");
-                                String refModelName = path+ "[" + modelId + "]"  + suffix;
+                                String refModelName = path + "[" + modelId + "]" + suffix;
                                 modelSpecification = new ModelSpecificationBuilder()
                                         .collectionModel(collectionSpecificationBuilder ->
                                                 collectionSpecificationBuilder
@@ -703,7 +699,7 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
                         } else if (ScalarType.OBJECT.equals(scalarType)) {
                             // 不能有"."，否则不能显示多层级参数
                             String path = body.getPath().replace(".", "-");
-                            String refModelName = path + "[" + modelId+ "]"  + suffix;
+                            String refModelName = path + "[" + modelId + "]" + suffix;
                             modelSpecification = new ModelSpecificationBuilder()
                                     // 引用其它模型是对象时，设置引用
                                     .referenceModel(ref -> ref
@@ -740,8 +736,8 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
     /**
      * 构造模型（就是接口的入参、出参对象）
      *
-     * @param modeName  对象名，作为map的key，唯一
-     * @param namespace 对象所在命名空间，唯一
+     * @param modeName   对象名，作为map的key，唯一
+     * @param namespace  对象所在命名空间，唯一
      * @param properties 该对象的参数
      * @return 模型
      */

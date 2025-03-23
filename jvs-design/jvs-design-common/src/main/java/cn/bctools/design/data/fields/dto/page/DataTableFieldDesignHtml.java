@@ -35,7 +35,7 @@ public class DataTableFieldDesignHtml {
     private List<DataQueryType> enabledQueryTypes;
     @ApiModelProperty(value = "是否显示为行数据字段")
     private Boolean show;
-    @ApiModelProperty(value = "快速查询")
+    @ApiModelProperty(value = "快速查询,快速检索")
     private Boolean enableRetrieval;
     @ApiModelProperty("是否显示统计")
     private Boolean enableStatistics;

@@ -1,15 +1,14 @@
 package cn.bctools.auth.mapper;
 
 import cn.bctools.auth.entity.UserTenant;
+import cn.bctools.auth.entity.handler.DeptJsonTypeHandler;
 import cn.bctools.auth.entity.po.TenantUserData;
 import cn.bctools.database.interceptor.cache.JvsRedisCache;
 import com.baomidou.mybatisplus.core.conditions.Wrapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import org.apache.ibatis.annotations.CacheNamespace;
-import org.apache.ibatis.annotations.Param;
-import org.apache.ibatis.annotations.Select;
+import org.apache.ibatis.annotations.*;
 
 /**
  * @author
@@ -34,10 +33,14 @@ public interface UserTenantMapper extends BaseMapper<UserTenant> {
      * @return
      */
     @Select(" SELECT " +
-            " sysUserTenant.*, " +
+            " sysUserTenant.dept_id as deptId,sysUserTenant.*, " +
             " sysUser.email, sysUser.sex, sysUser.account_name, sysUser.head_img, sysUser.invite, sysUser.user_type, sysUser.birthday  " +
             " FROM sys_user_tenant sysUserTenant LEFT JOIN sys_user_info sysUser ON sysUserTenant.user_id = sysUser.id " +
             " ${ew.customSqlSegment} " +
             " ORDER BY sysUserTenant.create_time desc")
+    @Results({
+            @Result(property = "deptId", column = "deptId", typeHandler = DeptJsonTypeHandler.class),
+            // 其他字段的映射
+    })
     IPage<TenantUserData> tenantUsers(Page page, @Param("ew") Wrapper wrapper);
 }

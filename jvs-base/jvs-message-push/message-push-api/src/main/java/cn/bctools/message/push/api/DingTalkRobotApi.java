@@ -1,4 +1,4 @@
-//package cn.bctools.message.push.api;
+package cn.bctools.message.push.api;//package cn.bctools.message.push.api;
 //
 //import cn.bctools.common.utils.R;
 //import cn.bctools.message.push.dto.messagepush.dingtalk.robot.*;

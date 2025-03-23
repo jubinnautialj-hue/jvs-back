@@ -1,5 +1,6 @@
 package cn.bctools.design.util;
 
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.entity.dto.UserInfoDto;
 import cn.bctools.common.enums.DataScopeType;
@@ -269,7 +270,7 @@ public class DynamicDataUtils {
                     break;
                 case notIn:
                     if (queryValue instanceof List) {
-                        criteria.nin(queryValue);
+                        criteria.nin((Collection) queryValue);
                     } else {
                         Pattern compile = Pattern.compile("^((?!" + queryValue.toString() + ").)*$", Pattern.CASE_INSENSITIVE);
                         criteria.regex(compile);
@@ -278,9 +279,11 @@ public class DynamicDataUtils {
                 case like:
                     if (queryValue instanceof List) {
                         List<String> list = (List<String>) queryValue;
+                        List<Criteria> criteriaLikes = new ArrayList<>();
                         for (String e : list) {
-                            criteria.regex(parseRegular(e.toString()));
+                            criteriaLikes.add(Criteria.where(fieldId).regex(parseRegular(e)));
                         }
+                        criteria = new Criteria().orOperator(criteriaLikes);
                         break;
                     }
                     // 模糊查询, mongoTemplate只支持正则匹配
@@ -586,7 +589,7 @@ public class DynamicDataUtils {
                 );
                 return criteria;
             case curr_dept:
-                return Criteria.where(Get.name(DynamicDataPo::getDeptId)).is(user.getDeptId());
+                return Criteria.where(Get.name(DynamicDataPo::getDeptId)).in(user.getDept().stream().map(DeptDto::getDeptId).collect(Collectors.toSet()));
             case self:
                 return Criteria.where(Get.name(DynamicDataPo::getCreateById)).is(user.getId());
             case curr_dept_tree:
@@ -620,8 +623,29 @@ public class DynamicDataUtils {
             String key = conditionDto.getKey();
             //目前已经支持了日期查询条件。区间
             Object value = conditionDto.getValue().get(0);
+            Object o = null;
             //替换规则的值
-            Object o = DataConditionType.get(value);
+            List<Object> collect = conditionDto.getValue().stream().flatMap(e -> {
+                Object obj = DataConditionType.get(e);
+                if (obj instanceof Collection) {
+                    return ((Collection<?>) obj).stream();
+                } else {
+                    return Collections.singletonList(obj).stream();
+                }
+            }).collect(Collectors.toList());
+            if (collect.size() == 1) {
+                //如果转换失败表示不是范围的数据筛选，否则需要替换 o
+                Object val = collect.get(0);
+                if (val.equals(value)) {
+                    o = val;
+                } else {
+                    o = collect;
+                }
+            } else {
+                o = collect;
+            }
+
+
             if ((!conditionDto.getOperator().equals(DataQueryType.in)) && (!conditionDto.getOperator().equals(DataQueryType.notIn))) {
                 if (!value.equals(o)) {
                     if (o instanceof List) {
@@ -644,7 +668,11 @@ public class DynamicDataUtils {
                     criteria = ne(criteria, key, value);
                     break;
                 case in:
-                    criteria = Criteria.where(key).in((Collection<?>) value);
+                    if (value instanceof Collection) {
+                        criteria = Criteria.where(key).in((Collection<?>) value);
+                    } else {
+                        criteria = Criteria.where(key).is(value);
+                    }
                     break;
                 case notIn:
                     if (value instanceof List) {

@@ -26,7 +26,8 @@ import java.util.Map;
         returnType = ClassType.文本,
         testShowEnum = TestShowEnum.TEXT,
         order = 43,
-        explain = "给选择的用户授权对应的角色信息"
+        explain = "给选择的用户授权对应的角色信息",
+        demoDisabled = true
 )
 public class UserRoleServiceImpl implements BaseCustomFunctionInterface<UserRoleDto> {
 
@@ -36,9 +37,6 @@ public class UserRoleServiceImpl implements BaseCustomFunctionInterface<UserRole
     @SneakyThrows
     @Override
     public Object execute(UserRoleDto dto, Map<String, Object> params) {
-        if ("bctools.cn".equals(jvsSystemConfig.getDomain())) {
-            throw new BusinessException("不支持操作");
-        }
         roleServiceApi.setUser(dto.getRoleId(), dto.getUserIds());
         return true;
     }

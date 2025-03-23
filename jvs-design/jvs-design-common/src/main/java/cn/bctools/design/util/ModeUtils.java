@@ -5,13 +5,13 @@ import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;
-import cn.bctools.common.utils.SystemThreadLocal;
 import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.oauth2.dto.CustomUser;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.redis.utils.RedisUtils;
+import com.alibaba.ttl.TransmittableThreadLocal;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -25,6 +25,7 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.time.Duration;
 import java.util.Collections;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -35,6 +36,8 @@ public class ModeUtils {
 
     private ModeUtils() {
     }
+
+    private static ThreadLocal<SwitchModeDto> mode_thread = new TransmittableThreadLocal<SwitchModeDto>();
 
     private static final String MODE_CACHE_KEY = "mode:user";
 
@@ -142,17 +145,18 @@ public class ModeUtils {
         CustomUser customUser = new CustomUser();
         customUser.setUserDto(analogUser);
         customUser.setRoles(analogUser.getRoleIds());
+        customUser.setChildDeptIds(analogUser.getChildDeptIds());
         UsernamePasswordAuthenticationToken currentAuthentication = new UsernamePasswordAuthenticationToken(customUser, "", Collections.emptyList());
         securityContext.setAuthentication(currentAuthentication);
     }
 
 
     public static void setSwitchModel(SwitchModeDto mode) {
-        SystemThreadLocal.set(KEY_MODE, mode);
+        mode_thread.set(mode);
     }
 
     public static SwitchModeDto getSwitchMode() {
-        return Optional.ofNullable((SwitchModeDto) SystemThreadLocal.get(KEY_MODE)).orElseGet(SwitchModeDto::new);
+        return Optional.ofNullable(mode_thread.get()).orElseGet(SwitchModeDto::new);
     }
 
     /**

@@ -12,14 +12,14 @@ import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.entity.enums.type.OutputType;
 import cn.bctools.rule.entity.enums.type.RuleFile;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
-import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ZipUtil;
 import cn.hutool.http.HttpUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.io.*;
-import java.util.ArrayList;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -66,6 +66,7 @@ public class ZipFileServiceImpl implements BaseCustomFunctionInterface<ZipFileDt
         String url = ossTemplate.fileJvsPublicLink(baseFile.getFileName());
         String s = ossTemplate.fileLink(baseFile.getFileName(), OssSystemCons.OSS_BUCKET_NAME);
         return new RuleFile().setBucketName(OssSystemCons.OSS_BUCKET_NAME)
+                .setSize(baseFile.getSize())
                 .setFileName(baseFile.getFileName())
                 .setOutputType(OutputType.download)
                 .setModule(module)

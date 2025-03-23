@@ -1,13 +1,18 @@
 package cn.bctools.auth.entity;
 
+import cn.bctools.auth.entity.handler.DeptJsonTypeHandler;
+import cn.bctools.common.entity.dto.DeptDto;
+import cn.bctools.database.handler.Fastjson2TypeHandler;
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import org.apache.ibatis.type.ArrayTypeHandler;
 
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * 用户表
@@ -45,16 +50,13 @@ public class UserTenant implements Serializable {
     @ApiModelProperty(value = "岗位名称")
     @TableField(updateStrategy = FieldStrategy.IGNORED)
     String jobName;
-    @ApiModelProperty(value = "部门ID")
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
-    String deptId;
-    @ApiModelProperty(value = "部门名称")
-    @TableField(updateStrategy = FieldStrategy.IGNORED)
-    String deptName;
+    @ApiModelProperty(value = "部门对象")
+    @TableField(updateStrategy = FieldStrategy.IGNORED, typeHandler = DeptJsonTypeHandler.class)
+    List<String> deptId;
     @ApiModelProperty(value = "租户ID")
     String tenantId;
     @ApiModelProperty(value = "0-正常，1-注销  不要逻辑删除，删除后，业务找不到数据")
-    private Boolean cancelFlag;
+    Boolean cancelFlag;
     @ApiModelProperty(value = "创建时间")
     @JsonFormat(timezone = "GMT+8", pattern = "yyyy-MM-dd HH:mm:ss")
     LocalDateTime createTime;

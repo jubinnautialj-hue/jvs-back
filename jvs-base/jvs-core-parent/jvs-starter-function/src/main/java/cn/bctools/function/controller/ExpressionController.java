@@ -14,10 +14,7 @@ import cn.bctools.function.entity.vo.ElementVo;
 import cn.bctools.function.entity.vo.FunctionBusinessTestVo;
 import cn.bctools.function.enums.JvsParamType;
 import cn.bctools.function.enums.SysParamEnums;
-import cn.bctools.function.handler.ExpressionAfterHandler;
-import cn.bctools.function.handler.ExpressionHandler;
-import cn.bctools.function.handler.IJvsFunction;
-import cn.bctools.function.handler.IJvsParam;
+import cn.bctools.function.handler.*;
 import cn.bctools.function.handler.impl.SysParamImpl;
 import cn.bctools.function.service.FunctionBusinessService;
 import cn.bctools.function.service.SysFunctionService;
@@ -39,6 +36,7 @@ import io.swagger.annotations.ApiOperation;
 import io.swagger.annotations.ApiParam;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.ss.formula.functions.T;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 import zipkin2.Call;
@@ -62,6 +60,7 @@ public class ExpressionController {
     ExpressionAfterHandler expressionAfterHandler;
     SysFunctionService functionService;
     RedisUtils redisUtils;
+    ExpressionBeforeHandler expressionBeforeHandler;
 
     @Log
     @GetMapping("/functions")
@@ -251,7 +250,7 @@ public class ExpressionController {
                                           @RequestBody(required = false) ExecDto body) {
         //跳过模拟用户操作,让公式可以自己进行一次更新。
         SystemThreadLocal.set("designSkip", init);
-
+        ExecDto copy = BeanCopyUtil.copy(body, ExecDto.class);
         // 记录设计id
         SystemThreadLocal.set(IJvsFunction.KEY_DESIGN_ID, designId);
         Integer index = body.getIndex();
@@ -261,10 +260,11 @@ public class ExpressionController {
             //表格的操作类型， 如果是表可的操作， 有行级操作，或新增，或删除
             SystemThreadLocal.set("tableType", TableType.line);
         }
+        body = expressionBeforeHandler.handler(designId, useCase, init, body);
         expressionComponent.getExpression(designId, useCase, body);
-        body.setIndex(index);
+        copy.setParams(body.getParams());
         //低代码中如果默认为第一次初始化时，需要进行数据转换优化展示速度
-        Map<String, Object> params = expressionAfterHandler.handler(designId, init, body);
+        Map<String, Object> params = expressionAfterHandler.handler(designId, init, copy);
         return R.ok(params);
     }
 

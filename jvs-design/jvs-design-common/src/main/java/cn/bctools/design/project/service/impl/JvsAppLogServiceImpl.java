@@ -1,5 +1,6 @@
 package cn.bctools.design.project.service.impl;
 
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.data.entity.DataModelPo;
@@ -53,8 +54,8 @@ public class JvsAppLogServiceImpl extends ServiceImpl<JvsAppLogMapper, JvsAppLog
             save(new JvsAppLog().setJvsAppId(o.getId()).setJvsAppName(o.getName())
                     .setAccount(currentUser.getAccountName())
                     .setUserName(currentUser.getRealName())
-                    .setDeptId(currentUser.getDeptId())
-                    .setDeptName(currentUser.getDeptName())
+                    .setDeptId(currentUser.getDept().stream().map(DeptDto::getDeptId).collect(Collectors.joining(",")))
+                    .setDeptName(currentUser.getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(",")))
                     .setType(type)
                     .setRoles(roleIds)
                     .setButtonName(DynamicDataUtils.getOperator())

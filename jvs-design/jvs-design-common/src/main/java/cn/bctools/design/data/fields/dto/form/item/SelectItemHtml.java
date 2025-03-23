@@ -32,8 +32,7 @@ public class SelectItemHtml extends BaseItemHtml {
     private String url;
     @ApiModelProperty("逻辑引擎的key")
     private String optionHttp;
-    @ApiModelProperty("接口数据-显示值与传递值")
-    private FormValueHtml props;
+
 
     @ApiModelProperty("系统字典-字典id")
     private String systemDict;

@@ -7,7 +7,6 @@ import cn.bctools.common.utils.R;
 import cn.bctools.design.crud.service.AppUrlService;
 import cn.bctools.design.crud.service.CrudPageService;
 import cn.bctools.design.crud.service.FormService;
-import cn.bctools.design.h5.service.H5DesignService;
 import cn.bctools.design.jvslog.entity.JvsLog;
 import cn.bctools.design.jvslog.service.JvsLogService;
 import cn.bctools.design.jvslog.service.impl.JvsLogServiceImpl;
@@ -23,7 +22,6 @@ import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.project.service.JvsAppTemplateService;
 import cn.bctools.design.project.service.JvsAppVersionService;
 import cn.bctools.design.rule.swagger.SwaggerRuleApiCacheService;
-import cn.bctools.design.screen.service.ScreenService;
 import cn.bctools.design.util.CurrentAppUtils;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.log.annotation.Log;
@@ -62,9 +60,7 @@ public class JvsAppController {
     RedisUtils redisUtils;
     CrudPageService pageService;
     FormService formService;
-    ScreenService screenService;
     AppUrlService appUrlService;
-    H5DesignService h5DesignService;
     AppMenuTypeService appMenuTypeService;
     AppMenuService appMenuService;
     UpgradeFeatureVersionHandler upgradeFeatureVersionHandler;
@@ -134,7 +130,7 @@ public class JvsAppController {
         jvsApp.setId(appId);
         // 主应用管理员至少有一个
         if (ObjectNull.isNotNull(jvsApp.getRole()) && Optional.ofNullable(jvsApp.getRole().getAdminMember()).orElseGet(ArrayList::new).size() == 0) {
-            jvsApp.setRole(null);
+            throw new BusinessException("至少保留一个应用主管理员");
         }
         service.updateById(jvsApp);
         DynamicDataUtils.setDto(new DesignRoleSettingDto().setJvsAppId(jvsApp.getId()).setJvsAppName(jvsApp.getName()));

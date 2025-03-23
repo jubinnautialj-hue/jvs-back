@@ -1,6 +1,5 @@
 package cn.bctools.rule.plate;
 
-import cn.bctools.common.exception.BusinessException;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;

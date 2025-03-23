@@ -170,19 +170,19 @@ public class AuthorityManagementUtils {
         return validResult(result, null);
     }
 
-    /**
-     * 查询当前登录用户所在部门的负责人
-     *
-     * @return 用户信息
-     */
-    public static UserDto getCurrentDeptLeader() {
-        String deptId = UserCurrentUtils.getDeptId();
-        if (Objects.isNull(deptId)) {
-            log.warn("当前用户没有所属部门");
-            return null;
-        }
-        return getDeptLeader(deptId);
-    }
+//    /**
+//     * 查询当前登录用户所在部门的负责人
+//     *
+//     * @return 用户信息
+//     */
+//    public static UserDto getCurrentDeptLeader() {
+//        String deptId = UserCurrentUtils.getDeptId();
+//        if (Objects.isNull(deptId)) {
+//            log.warn("当前用户没有所属部门");
+//            return null;
+//        }
+//        return getDeptLeader(deptId);
+//    }
 
     /**
      * 根据部门id查询部门信息

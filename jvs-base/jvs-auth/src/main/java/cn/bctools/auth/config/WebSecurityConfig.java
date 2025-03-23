@@ -3,7 +3,9 @@ package cn.bctools.auth.config;
 import cn.bctools.auth.component.UserInfoComponent;
 import cn.bctools.auth.component.other.Oauth2OtherAuthenticationConverter;
 import cn.bctools.auth.component.other.OtherAuthenticationProvider;
+import cn.bctools.auth.mapper.LoginRulesMapper;
 import cn.bctools.auth.service.UserDetailsServiceImpl;
+import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.R;
 import cn.bctools.oauth2.config.JvsOAuth2AuthorizationServiceImpl;
 import cn.bctools.redis.utils.RedisUtils;
@@ -40,6 +42,7 @@ public class WebSecurityConfig {
     UserInfoComponent userInfoComponent;
     RedisUtils redisUtils;
     PasswordEncoder passwordEncoder;
+    LoginRulesMapper loginRulesMapper;
 
 
     @Bean
@@ -57,17 +60,23 @@ public class WebSecurityConfig {
                 .tokenEndpoint((tokenEndpoint) -> tokenEndpoint.accessTokenRequestConverter(new Oauth2OtherAuthenticationConverter())
                         .accessTokenResponseHandler(authenticationSuccessHandler)
                         .errorResponseHandler(authenticationFailureHandler)));
-        http.exceptionHandling().authenticationEntryPoint((request, response, authException) -> WebUtils.write(R.failed(authException.getMessage()), response));
+        http.exceptionHandling().authenticationEntryPoint((request, response, authException) -> {
+            if (authException.getCause() instanceof BusinessException) {
+                WebUtils.write(R.failed(authException.getCause().getMessage(), ((BusinessException) authException.getCause()).getCode()), response);
+            } else {
+                WebUtils.write(R.failed(authException.getMessage()), response);
+            }
+        });
         DefaultSecurityFilterChain build = http.authorizeHttpRequests(authorizeRequests -> {
-            // 自定义接口、端点暴露
-            authorizeRequests.antMatchers("/wx/portal/**", "/oauth2/**", "/actuator/**", "/phone/**", "/just/**", "/wx/**", "/v3/**").permitAll();
-            authorizeRequests.anyRequest().authenticated();
-        }).apply(authorizationServerConfigurer
-                // redis存储token的实现
-                .authorizationService(oAuth2AuthorizationService)
-                .authorizationServerSettings(AuthorizationServerSettings.builder().build()))
+                    // 自定义接口、端点暴露
+                    authorizeRequests.antMatchers("/wx/portal/**", "/oauth2/**", "/actuator/**", "/phone/**", "/just/**", "/wx/**", "/v3/**").permitAll();
+                    authorizeRequests.anyRequest().authenticated();
+                }).apply(authorizationServerConfigurer
+                        // redis存储token的实现
+                        .authorizationService(oAuth2AuthorizationService)
+                        .authorizationServerSettings(AuthorizationServerSettings.builder().build()))
                 .and().build();
-        http.authenticationProvider(new OtherAuthenticationProvider(oAuth2AuthorizationService, userDetailsService, registeredClientRepository, redisUtils, passwordEncoder));
+        http.authenticationProvider(new OtherAuthenticationProvider(oAuth2AuthorizationService, userDetailsService, registeredClientRepository, redisUtils, passwordEncoder, loginRulesMapper));
         return build;
     }
 

@@ -3,7 +3,9 @@ package cn.bctools.rule.ess.api.flowmanage;
 import cn.bctools.rule.ess.common.Client;
 import cn.bctools.rule.ess.config.Config;
 import com.tencentcloudapi.ess.v20201111.EssClient;
-import com.tencentcloudapi.ess.v20201111.models.*;
+import com.tencentcloudapi.ess.v20201111.models.CreateFlowSignReviewRequest;
+import com.tencentcloudapi.ess.v20201111.models.CreateFlowSignReviewResponse;
+import com.tencentcloudapi.ess.v20201111.models.UserInfo;
 import lombok.extern.slf4j.Slf4j;
 
 /**

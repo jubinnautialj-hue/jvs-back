@@ -6,7 +6,6 @@ import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
-import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 

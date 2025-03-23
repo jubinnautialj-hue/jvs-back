@@ -46,7 +46,7 @@ public class XxlJobComponent {
      * @param ruleName 逻辑名称
      * @param secret
      */
-    public void saveOrUpdateJob(TaskCronDto task, Boolean onTask, String appName, String ruleName, String secret) {
+    public void saveOrUpdateJob(TaskCronDto task, boolean onTask, String appName, String ruleName, String secret) {
         if (ObjectNull.isNull(task)) {
             return;
         }
@@ -78,16 +78,17 @@ public class XxlJobComponent {
         log.info("执行定时任务的参数为,{}", JSONObject.toJSONString(xxlJobInfoDto));
         //启动定时任务
         Integer integerR = null;
+        String errorMsg = "启动定时任务失败";
         try {
             R r = xxlAdminApi.saveOrUpdate(xxlJobInfoDto, token, SpringContextUtil.getApplicationContextName());
             if (r.is()) {
                 integerR = Integer.valueOf(r.getData().toString());
             } else {
-                throw new BusinessException("启动定时任务失败", r.getMsg());
+                throw new BusinessException(errorMsg, r.getMsg());
             }
         } catch (Exception exception) {
-            log.error("启动定时任务失败", exception);
-            throw new BusinessException("启动定时任务失败");
+            log.error(errorMsg, exception);
+            throw new BusinessException(errorMsg);
         }
         log.info("定时任务返回定时ID为:{}", integerR);
         ///回填写定时任务的ID值,用做更新和修改操作
@@ -136,7 +137,7 @@ public class XxlJobComponent {
     public void checkCorn(String cron) {
         // 定义一个 Cron 表达式
         CronExpression cronExpression = new CronExpression(cron);
-        //导包import org.quartz.CronExpression;
+        //导包
         Date date = cronExpression.getTimeAfter(new Date());
         Date date1 = cronExpression.getTimeAfter(date);
         long between = DateUtil.between(date, date1, DateUnit.SECOND);

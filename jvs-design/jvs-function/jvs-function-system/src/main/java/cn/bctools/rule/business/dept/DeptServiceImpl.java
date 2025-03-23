@@ -1,6 +1,7 @@
 package cn.bctools.rule.business.dept;
 
 
+import cn.bctools.auth.api.api.AuthDeptServiceApi;
 import cn.bctools.auth.api.dto.SysDeptDto;
 import cn.bctools.auth.api.enums.DeptEnum;
 import cn.bctools.common.exception.BusinessException;
@@ -34,6 +35,7 @@ import java.util.stream.Collectors;
 )
 public class DeptServiceImpl implements BaseCustomFunctionInterface<DeptDto> {
 
+    AuthDeptServiceApi deptServiceApi;
     @Override
     public Object execute(DeptDto userDto, Map<String, Object> params) {
         if (ObjectNull.isNull(userDto.getDept())) {
@@ -60,6 +62,10 @@ public class DeptServiceImpl implements BaseCustomFunctionInterface<DeptDto> {
                 return AuthorityManagementUtils.getChildDepts(deptById.getParentId())
                         .stream()
                         .map(SysDeptDto::getId).collect(Collectors.toList());
+            case 部门名称:
+                return deptServiceApi.search(new SysDeptDto().setName(userDto.getDept())).getData();
+            case 部门代码:
+                return deptServiceApi.search(new SysDeptDto().setDeptCode(userDto.getDept())).getData();
             default:
 
         }

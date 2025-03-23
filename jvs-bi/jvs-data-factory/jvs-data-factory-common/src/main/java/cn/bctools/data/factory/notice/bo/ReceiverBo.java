@@ -1,0 +1,26 @@
+package cn.bctools.data.factory.notice.bo;
+
+import cn.bctools.data.factory.notice.enums.ReceiverTypeEnum;
+import io.swagger.annotations.ApiModel;
+import io.swagger.annotations.ApiModelProperty;
+import lombok.Data;
+import lombok.experimental.Accessors;
+
+import java.io.Serializable;
+
+
+@Data
+@Accessors(chain = true)
+@ApiModel("接收人员")
+public class ReceiverBo implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    @ApiModelProperty(value = "id")
+    private String id;
+
+    @ApiModelProperty(value = "名称")
+    private String name;
+
+    @ApiModelProperty(value = "类型")
+    private ReceiverTypeEnum type;
+}

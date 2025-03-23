@@ -20,8 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import static cn.bctools.design.data.fields.impl.basic.DatePickerFieldHandler.DateType.dates;
-import static cn.bctools.design.data.fields.impl.basic.DatePickerFieldHandler.DateType.datetime;
+import static cn.bctools.design.data.fields.impl.basic.DatePickerFieldHandler.DateType.*;
 import static cn.hutool.core.date.DatePattern.NORM_DATE_PATTERN;
 
 /**
@@ -153,6 +152,9 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
         switch (dateType) {
             case date:
                 return DateUtil.parseDate(o.toString()).toDateStr();
+            case month:
+                DatePattern.createFormatter("yyyy-MM").parse(o.toString()).toString();
+                return o.toString();
             case datetime:
                 return DateUtil.parseDateTime(o.toString());
             case daterange:

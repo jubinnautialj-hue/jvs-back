@@ -1,7 +1,7 @@
 package cn.bctools.design.workflow.dto.permission;
 
+import cn.bctools.design.workflow.dto.ApproveNodeDto;
 import cn.bctools.design.workflow.entity.FlowDesign;
-import cn.bctools.design.workflow.model.Node;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -21,7 +21,7 @@ import java.util.List;
 public class PermissionDesignDto extends FlowDesign {
 
     @ApiModelProperty("人工节点集合")
-    private List<Node> manualNodes;
+    private List<ApproveNodeDto> manualNodes;
 
     @ApiModelProperty("true-可以增加节点，false-不能增加节点")
     private Boolean canDynamicAddNode;

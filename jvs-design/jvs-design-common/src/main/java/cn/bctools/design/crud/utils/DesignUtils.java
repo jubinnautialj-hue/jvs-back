@@ -25,6 +25,7 @@ import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONPath;
+import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
@@ -40,6 +41,7 @@ import java.util.stream.Stream;
  *
  * @Author: GuoZi
  */
+@UtilityClass
 public class DesignUtils {
 
     public static final Pattern COMPILE = Pattern.compile("^[a-zA-Z][a-zA-Z0-9_]*$");
@@ -70,7 +72,7 @@ public class DesignUtils {
         if (buttons.size() != buttonNames.size()) {
             throw new BusinessException("按钮名称重复");
         }
-        StringBuffer str = new StringBuffer();
+        StringBuilder str= new StringBuilder();
         buttons.stream()
                 .filter(e -> e.getType().equals(ButtonTypeEnum.btn_page))
                 // 筛选出有配置按钮的

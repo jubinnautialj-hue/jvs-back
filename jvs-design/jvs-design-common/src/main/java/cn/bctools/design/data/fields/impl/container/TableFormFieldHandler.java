@@ -5,10 +5,7 @@ import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.function.Get;
 import cn.bctools.design.data.fields.DesignField;
 import cn.bctools.design.data.fields.IDataFieldHandler;
-import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
-import cn.bctools.design.data.fields.dto.FieldPublicHtml;
-import cn.bctools.design.data.fields.dto.QueryConditionDto;
-import cn.bctools.design.data.fields.dto.QueryListDto;
+import cn.bctools.design.data.fields.dto.*;
 import cn.bctools.design.data.fields.dto.form.html.TableFormItemHtml;
 import cn.bctools.design.data.fields.dto.form.item.FilterHtml;
 import cn.bctools.design.data.fields.dto.form.item.TypeHtml;
@@ -28,9 +25,9 @@ import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONPath;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -45,11 +42,17 @@ import java.util.stream.Collectors;
 @Slf4j
 @Component
 @DesignField(value = "表格", type = DataFieldType.tableForm)
+@AllArgsConstructor
 public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtml> {
 
-    @Autowired
+    /**
+     * The Data field service.
+     */
     DataFieldService dataFieldService;
 
+    /**
+     * The Table type.
+     */
     static final String TABLE_TYPE = "tableType";
 
 
@@ -64,19 +67,18 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
                 IDataFieldHandler iDataFieldHandler = beansOfType.get(html.getTableColumn().get(i).getType().getDesc());
                 Class<? extends FieldBasicsHtml> aClass = getCls(iDataFieldHandler);
 
-                List<Map> o = (List<Map>) html.getDesignJson().get(Get.name(TableFormItemHtml::getTableColumn));
-                Map linkedHashMap = o.get(i);
+                List<Map<String, Object>> o = (List<Map<String, Object>>) html.getDesignJson().get(Get.name(TableFormItemHtml::getTableColumn));
+                Map<String, Object> linkedHashMap = o.get(i);
                 FieldBasicsHtml t = BeanCopyUtil.copy(aClass, linkedHashMap);
                 List<FieldBasicsHtml> tableColumn = html.getTableColumn();
 
                 //判断同级是否有key重复
                 Map<String, Integer> listMap = tableColumn.stream().map(e -> e.getProp()).collect(Collectors.toMap(qe -> qe, qe -> 1, Integer::sum));
-                for (String key : listMap.keySet()) {
-                    if (listMap.get(key) > 1) {
-                        throw new BusinessException(html.getLabel() + "下有重复的字段命名,请修改:" + key);
+                for (Map.Entry<String, Integer> entry : listMap.entrySet()) {
+                    if (listMap.get(entry.getKey()) > 1) {
+                        throw new BusinessException(html.getLabel() + "下有重复的字段命名,请修改:" + entry.getKey());
                     }
                 }
-
                 t.setDesignJson(linkedHashMap);
                 tableColumn.set(i, t);
             }
@@ -85,7 +87,7 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
 
     @Override
     public void addFields(List<String> fields, TableFormItemHtml v) {
-        List<String> collect = v.getTableColumn().stream().map(e -> e.getProp()).collect(Collectors.toList());
+        List<String> collect = v.getTableColumn().stream().map(FieldHtml::getProp).collect(Collectors.toList());
         fields.addAll(collect);
     }
 
@@ -208,6 +210,19 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
         }
     }
 
+    /**
+     * @param appId
+     * @param key
+     * @param html
+     * @param map
+     * @param index
+     * @param fieldHandlerMap
+     * @param tableColumn
+     * @param bean
+     * @param designId
+     * @param publicHtmlMap
+     * @param parentPath
+     */
     private void forEachTableColumn(String appId, String key, TableFormItemHtml html, Map<String, Object> map, Integer index, Map<String, IDataFieldHandler> fieldHandlerMap, List<FieldBasicsHtml> tableColumn, ExpressionComponent bean, String designId, Map<String, FieldPublicHtml> publicHtmlMap, String[] parentPath) {
         for (int i = 0; i < tableColumn.size(); i++) {
             //获取表格的列，然后依次执行公式
@@ -215,7 +230,7 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
             IDataFieldHandler iDataFieldHandler = fieldHandlerMap.get(e.getType().getDesc());
             FieldBasicsHtml publicHtml = iDataFieldHandler.toHtml(BeanToMapUtils.beanToMap(e));
             //拼凑表格的数据获取路径
-            List<String> strings = new ArrayList<String>(Arrays.asList(parentPath));
+            List<String> strings = new ArrayList<>(Arrays.asList(parentPath));
             String path = strings.stream().collect(Collectors.joining(StrUtil.DOT));
             //如果触发条件不匹配直接退出
             if (ObjectNull.isNotNull(key) && key.contains(",")) {
@@ -255,7 +270,7 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
             if (html.getProp().equals(key) || tableTypeBoolean) {
                 if (ObjectNull.isNotNull(key, html.getProp())) {
                     HashMap<String, Object> params = new HashMap<>(map);
-                    ExecDto execDto = new ExecDto().setIndex(index).setModifiedField(publicHtml.getProp()).setParams(params).setParentKey(new ArrayList<String>(collect));
+                    ExecDto execDto = new ExecDto().setIndex(index).setModifiedField(publicHtml.getProp()).setParams(params).setParentKey(new ArrayList<>(collect));
                     bean.getExpression(designId, "formItemValue", execDto);
                     map.putAll(params);
                 }
@@ -271,8 +286,10 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
         if (!collect.contains(html.getProp())) {
             collect.add(html.getProp());
         }
-        ExecDto execDto = new ExecDto().setIndex(index).setModifiedField(html.getProp()).setParams(map).setParentKey(collect);
-        bean.getExpression(designId, "formItemValue", execDto);
+        if (map.containsKey(html.getProp())) {
+            ExecDto execDto = new ExecDto().setIndex(index).setModifiedField(html.getProp()).setParams(map).setParentKey(collect);
+            bean.getExpression(designId, "formItemValue", execDto);
+        }
     }
 
     @Override
@@ -335,10 +352,10 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
             Map<String, IDataFieldHandler> iDataFieldHandlerMap = SpringContextUtil.getApplicationContext().getBeansOfType(IDataFieldHandler.class);
             //将数据转换为数组,需要使用一个新的对象，在转换数据时需要行级数据
             List<Map<String, Object>> list = (List<Map<String, Object>>) data;
-
             //遍历设计结构
-            for (String filedKey : tableFieldMap.keySet()) {
-                FieldBasicsHtml fieldPublicHtml = tableFieldMap.get(filedKey);
+            for (Map.Entry<String, FieldBasicsHtml> map : tableFieldMap.entrySet()) {
+                String filedKey = map.getKey();
+                FieldBasicsHtml fieldPublicHtml = map.getValue();
                 //解析结构
                 IDataFieldHandler handler = iDataFieldHandlerMap.get(fieldPublicHtml.getType().getDesc());
                 if (ObjectNull.isNotNull(handler, fieldPublicHtml.getDesignJson())) {

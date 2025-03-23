@@ -1,7 +1,6 @@
 package cn.bctools.rule.signature;
 
 import cn.bctools.rule.annotations.Rule;
-import cn.bctools.rule.dto.GentlemanSignatureapplySignDto;
 import cn.bctools.rule.dto.SendSigningReminderDto;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;

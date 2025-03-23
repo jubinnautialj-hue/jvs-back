@@ -10,10 +10,12 @@ import cn.bctools.design.menu.entity.AppMenuType;
 import cn.bctools.design.menu.service.AppMenuTypeService;
 import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.entity.JvsApp;
+import cn.bctools.design.project.entity.dto.AppRoleDto;
 import cn.bctools.design.project.mapper.JvsAppMapper;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.sqlInjector.MapperMethodHandler;
 import cn.bctools.design.util.DynamicDataUtils;
+import cn.bctools.oauth2.utils.UserCurrentUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import org.apache.commons.lang3.StringUtils;
@@ -170,5 +172,14 @@ public class JvsAppServiceImpl extends ServiceImpl<JvsAppMapper, JvsApp> impleme
     public boolean removeById(Serializable id) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<JvsApp>lambdaQuery().eq(JvsApp::getId, id));
         return true;
+    }
+
+    @Override
+    public Boolean userIsAppAdmin(String appId) {
+        JvsApp app = getById(appId);
+        AppRoleDto appRole = Optional.ofNullable(app.getRole()).orElseGet(AppRoleDto::new);
+        return UserCurrentUtils.getCurrentUser().getAdminFlag()
+                || checkRole(appRole.getAdminMember(), UserCurrentUtils.getCurrentUser())
+                || checkRole(appRole.getDevMember(), UserCurrentUtils.getCurrentUser());
     }
 }

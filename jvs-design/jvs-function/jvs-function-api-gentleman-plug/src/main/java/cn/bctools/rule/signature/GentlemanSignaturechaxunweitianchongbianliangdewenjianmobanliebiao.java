@@ -1,7 +1,6 @@
 package cn.bctools.rule.signature;
 
 import cn.bctools.common.utils.BeanCopyUtil;
-import cn.bctools.common.utils.PasswordUtil;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.function.enums.JvsParamType;
 import cn.bctools.rule.annotations.Rule;
@@ -14,6 +13,7 @@ import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.exception.RuleException;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.bctools.rule.service.ModelInterface;
 import com.alibaba.fastjson2.JSONObject;
 import com.junziqian.sdk.bean.ResultInfo;
 import com.junziqian.sdk.util.RequestUtils;
@@ -39,9 +39,12 @@ import java.util.Map;
 @AllArgsConstructor
 public class GentlemanSignaturechaxunweitianchongbianliangdewenjianmobanliebiao implements BaseCustomFunctionInterface<GentlemanSignaturechaxunweitianchongbianliangdewenjianmobanliebiaoDto> {
 
+    ModelInterface modelInterface;
+
     @Override
     public Object execute(GentlemanSignaturechaxunweitianchongbianliangdewenjianmobanliebiaoDto dto, Map<String, Object> params) {
-        JunZiQianOption option = JSONObject.parseObject(PasswordUtil.decodedPassword(dto.getOptions(), SpringContextUtil.getKey()), JunZiQianOption.class);
+        Object byKey = modelInterface.getByKey(dto.getOptions());
+        JunZiQianOption option = BeanCopyUtil.copy(JunZiQianOption.class, byKey);
         Map<String, Object> reqBody = BeanCopyUtil.beanToMap(dto);
         reqBody.remove("options");
         ResultInfo<Object> objectResultInfo = RequestUtils.init(option.getServiceUrl(), option.getAppKey(), option.getAppSecret()).doPost("/v2/tmpl/pdfTpl/list", reqBody);

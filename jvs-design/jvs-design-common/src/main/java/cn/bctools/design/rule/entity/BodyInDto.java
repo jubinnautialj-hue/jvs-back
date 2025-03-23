@@ -16,10 +16,7 @@ import java.util.List;
 @Accessors(chain = true)
 public class BodyInDto extends ParameterMap implements Serializable {
 
-    @ApiModelProperty("路径")
-    String path;
-
     @ApiModelProperty("下级")
-    List<BodyInDto> children;
+    private List<BodyInDto> children;
 
 }

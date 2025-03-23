@@ -1,9 +1,12 @@
 package cn.bctools.word.utils;
 
 import cn.bctools.common.utils.ObjectNull;
+import cn.hutool.core.img.Img;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.collections4.CollectionUtils;
 import org.docx4j.dml.wordprocessingDrawing.Inline;
@@ -12,6 +15,8 @@ import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
 import org.docx4j.openpackaging.parts.WordprocessingML.BinaryPartAbstractImage;
 import org.docx4j.wml.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -39,6 +44,23 @@ public class WordImageUtil {
      * @return 包含图片元素的R元素集合
      */
     public static List<R> createImageRs(WordprocessingMLPackage mlPackage, Object imageData) {
+       return createImageRs(mlPackage, imageData, new ImgParam());
+    }
+
+    /**
+     * 创建图片元素集合
+     * <p>
+     *   imageData图片数据支持格式：
+     *   - 对象中包含url绝对路径
+     *   - 对象数组中包含url绝对路径
+     *   - url绝对路径
+     *
+     * @param mlPackage
+     * @param imageData 图片数据
+     * @param imgParam  自定义图片参数
+     * @return 包含图片元素的R元素集合
+     */
+    public static List<R> createImageRs(WordprocessingMLPackage mlPackage, Object imageData, ImgParam imgParam) {
         if (ObjectNull.isNull(imageData)) {
             return Collections.emptyList();
         }
@@ -62,13 +84,35 @@ public class WordImageUtil {
                 continue;
             }
             if (HttpUtil.isHttp(image) || HttpUtil.isHttps(image)) {
-                byte[] imageBytes = HttpUtil.downloadBytes(image);
+                byte[] imageBytes = scale(image, imgParam.getW(), imgParam.getH());
                 R r = WordImageUtil.newImageR(mlPackage, imageBytes);
                 imageRs.add(r);
             }
         }
         return imageRs;
     }
+
+    /**
+     * 图片缩放
+     *
+     * @param imgUrl 图片地址
+     * @param width  宽
+     * @param height 高
+     * @return 缩放后的图片byte[]
+     */
+    private static byte[] scale(String imgUrl, Integer width, Integer height) {
+        byte[] bytes = HttpUtil.downloadBytes(imgUrl);
+        if (ObjectNull.isNull(width) || ObjectNull.isNull(height)) {
+            return bytes;
+        }
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        Img.from(new ByteArrayInputStream(bytes))
+                .setTargetImageType("jpg")
+                .scale(width, height, java.awt.Color.WHITE)
+                .write(byteArrayOutputStream);
+        return byteArrayOutputStream.toByteArray();
+    }
+
 
     /**
      * 变量替换图片
@@ -156,5 +200,21 @@ public class WordImageUtil {
         run.getContent().add(drawing);
         drawing.getAnchorOrInline().add(inline);
         return run;
+    }
+
+    /**
+     * 图片参数
+     */
+    @Getter
+    @Setter
+    public static class ImgParam {
+        /**
+         * 宽
+         */
+        private Integer w;
+        /**
+         * 高
+         */
+        private Integer h;
     }
 }

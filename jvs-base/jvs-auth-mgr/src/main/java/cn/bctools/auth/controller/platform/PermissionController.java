@@ -3,6 +3,7 @@ package cn.bctools.auth.controller.platform;
 import cn.bctools.auth.service.PermissionService;
 import cn.bctools.auth.service.RoleService;
 import cn.bctools.auth.service.TenantService;
+import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.function.Get;
@@ -12,6 +13,7 @@ import cn.bctools.gateway.entity.TypeEnum;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.hutool.core.lang.tree.Tree;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
@@ -20,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.nio.file.Watchable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -99,6 +102,11 @@ public class PermissionController {
     @PostMapping
     @ApiOperation("添加资源")
     public R<Boolean> permission(@RequestBody @Validated Permission permission) {
+        //判断是否存在
+        long count = permissionService.count(Wrappers.query(new Permission().setPermission(permission.getPermission())));
+        if (count > 0) {
+            throw new BusinessException("标识已经存在");
+        }
         permissionService.save(permission);
         return R.ok();
 

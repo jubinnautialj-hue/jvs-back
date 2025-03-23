@@ -12,6 +12,7 @@ import cn.bctools.gateway.utils.IpUtils;
 import cn.bctools.oauth2.config.JvsDefaultBearerTokenResolver;
 import cn.bctools.oauth2.config.JvsOAuth2AuthorizationServiceImpl;
 import cn.bctools.oauth2.dto.CustomUser;
+import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.util.ObjectUtil;
 import com.alibaba.fastjson2.JSON;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -22,6 +23,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.server.reactive.ServerHttpRequest;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.oauth2.core.OAuth2AuthenticationException;
+import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.security.oauth2.server.resource.BearerTokenAuthenticationToken;
 import org.springframework.security.oauth2.server.resource.BearerTokenError;
@@ -39,7 +41,6 @@ import javax.annotation.Resource;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -52,6 +53,8 @@ import java.util.stream.Collectors;
 @Component
 public class JvsServerBearerTokenAuthenticationConverter implements ServerAuthenticationConverter {
 
+    @Resource
+    RedisUtils redisUtils;
     @Resource
     GatewayIgnorePathMapper ignorePathMapper;
     @Resource
@@ -76,9 +79,20 @@ public class JvsServerBearerTokenAuthenticationConverter implements ServerAuthen
         String ip = IpUtils.getIp(request);
         //取请求头信息，进行判断
         String referer = request.getHeaders().getFirst("user-agent");
+        //处理浏览器标识上有多余空格
+        referer = referer.replaceAll("\\s+", " ");
+        //去掉代理信息
+        for (String key : request.getHeaders().keySet()) {
+            if (key.toLowerCase().contains("proxy")) {
+                String first = request.getHeaders().getFirst(key);
+                referer = referer.replace(first, "").trim();
+            }
+        }
+
         HttpMethod method = request.getMethod();
         String url = request.getPath().toString();
-        String token = token(exchange.getRequest());
+        String token = token(exchange.getRequest(), referer);
+        log.info("token:{}", token);
         if (ObjectNull.isNotNull(token)) {
             //url匹配地址, 如果没有匹配到,表示接口直接放开没有配置资源地址,如果配置了,这里每一次都需要匹配一下, 因为存在/{变量}/地址
             List<String> permissionList = CacheUtils.pathCache.get(url + method.toString(), () -> matchStart(url, method));
@@ -97,7 +111,7 @@ public class JvsServerBearerTokenAuthenticationConverter implements ServerAuthen
     }
 
 
-    private String token(ServerHttpRequest request) {
+    private String token(ServerHttpRequest request, String referer) {
         String authorizationHeaderToken = resolveFromAuthorizationHeader(request.getHeaders());
         String parameterToken = resolveAccessTokenFromRequest(request);
 
@@ -119,13 +133,28 @@ public class JvsServerBearerTokenAuthenticationConverter implements ServerAuthen
         if (b) {
             HttpCookie jvsSessionUid = cookies.getFirst(SysConstant.JVS);
             String value = jvsSessionUid.getValue();
-            return Optional.ofNullable(value)
-                    .map(s -> jvsOAuth2AuthorizationService.keys(s, OAuth2TokenType.ACCESS_TOKEN))
+            Optional<List<OAuth2Authorization>> oAuth2Authorizations = Optional.ofNullable(value)
+                    .map(s -> jvsOAuth2AuthorizationService.keys(s, OAuth2TokenType.ACCESS_TOKEN));
+            String string = oAuth2Authorizations
                     .filter(ObjectNull::isNotNull)
                     .map(e -> e.get(0))
-                    .filter(e -> ((CustomUser) e.getAttribute("user")).getUserDto().getIp().equals(IpUtils.getIp(request)))
+                    .filter(e -> ((CustomUser) e.getAttribute("user")).getUserDto().getIp().contains(IpUtils.getIp(request)))
+                    .filter(e -> ((CustomUser) e.getAttribute("user")).getUserDto().getUserAgent().equals(referer))
                     .map(e -> e.getAccessToken().getToken().getTokenValue())
                     .orElseGet(() -> "");
+            if (ObjectNull.isNull(string)) {
+                if (!redisUtils.hasKey("jvs:token:" + value)) {
+
+//                    try {
+//                        //删除过期的信息
+//                        oAuth2Authorizations.get().forEach(e -> {
+//                            jvsOAuth2AuthorizationService.remove(e);
+//                        });
+//                    } catch (Exception e) {
+//                    }
+                }
+            }
+            return string;
         }
         return "";
     }

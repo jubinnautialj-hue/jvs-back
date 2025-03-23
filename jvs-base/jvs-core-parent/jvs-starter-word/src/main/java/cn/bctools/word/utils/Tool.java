@@ -1,5 +1,6 @@
 package cn.bctools.word.utils;
 
+import cn.bctools.common.utils.ObjectNull;
 import lombok.extern.slf4j.Slf4j;
 import org.docx4j.Docx4J;
 import org.docx4j.XmlUtils;
@@ -19,10 +20,7 @@ import org.docx4j.wml.*;
 
 import javax.xml.bind.JAXBElement;
 import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 /**
@@ -226,6 +224,9 @@ public class Tool {
      * @return
      */
     public static List<Object> getAllElementFromObject(Object obj, Class<?> toSearch) {
+        if (ObjectNull.isNull(obj)) {
+            return Collections.emptyList();
+        }
         List<Object> result = new ArrayList<>();
         if (obj instanceof JAXBElement) {
             obj = ((JAXBElement<?>) obj).getValue();
@@ -258,7 +259,7 @@ public class Tool {
             fontMapper.put("隶书", PhysicalFonts.get("LiSu"));
             mlPackage.setFontMapper(fontMapper);
 
-            os = new java.io.FileOutputStream(pdfPath);
+            os = new FileOutputStream(pdfPath);
 
             FOSettings foSettings = Docx4J.createFOSettings();
             foSettings.setWmlPackage(mlPackage);
@@ -297,7 +298,7 @@ public class Tool {
             f.getParentFile().mkdirs();
         }
         File file = new File(directory + "/" + fileName);
-        OutputStream os34 = new java.io.FileOutputStream(file);
+        OutputStream os34 = new FileOutputStream(file);
         Docx4J.toPDF(mlPackage, os34);
         os.flush();
         os.close();

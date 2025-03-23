@@ -70,7 +70,7 @@ public class JustAuthController {
         if (ObjectNull.isNull(callbackUrl)) {
             callbackUrl = Optional.ofNullable(request.getHeader("Referer")).orElse(callbackUrl);
         }
-        String key = status + "_" + IdGenerator.getIdStr();
+        String key = status + "__" + IdGenerator.getIdStr();
         redisUtils.set(SysConstant.redisKey("just", key), callbackUrl, Duration.ofMinutes(2));
         response.sendRedirect(otherLoginHandler.getAuthDefaultRequest(status).authorize(key));
     }
@@ -99,8 +99,10 @@ public class JustAuthController {
                 dict.set("domain", "http://" + jvsSystemConfig.getDomain() + ":" + domain);
             }
             dict.set("type", oauthOther.getType());
+            return R.ok(dict);
+        } else {
+            return R.ok();
         }
-        return R.ok(dict);
     }
 
     /**
@@ -111,7 +113,13 @@ public class JustAuthController {
      * @return 登录类型集合
      */
     @GetMapping
-    public R<List<String>> index() {
+    public R<List<String>> index(HttpServletRequest request) {
+        String userAgent = request.getHeader("user-agent");
+        //todo 定制需求
+        if (userAgent != null && userAgent.toLowerCase().contains("wxwork")) {
+            List<String> list = oauthOtherService.list().stream().map(e -> e.getType()).collect(Collectors.toList());
+            return R.ok(list);
+        }
         List<OAuthTypeEnum> loginTypes = new ArrayList<>();
         // 密码登录
         loginTypes.add(OAuthTypeEnum.password);
@@ -146,12 +154,12 @@ public class JustAuthController {
                 }
             }
         });
-        List<String> collect = loginTypes.stream().map(Enum::toString).collect(Collectors.toList());
+        List<String> collect = loginTypes.stream().map(Enum::toString).distinct().collect(Collectors.toList());
 
         oauthOtherService.list(new LambdaQueryWrapper<OauthOther>().select(OauthOther::getType).isNotNull(OauthOther::getType)).stream().map(OauthOther::getType).forEach(collect::add);
-
         return R.ok(collect);
     }
+
 
     /**
      * 获取钉钉的配置信息
@@ -195,7 +203,7 @@ public class JustAuthController {
     @RequestMapping("/callback")
     public void callback(@RequestParam("code") String code, @RequestParam(value = "state", required = false) String state, HttpServletRequest request, HttpServletResponse response) throws IOException {
         //根据类型查询返回的首页地址
-        OauthOther one = oauthOtherService.getOne(Wrappers.query(new OauthOther().setType(state.split("_")[0])));
+        OauthOther one = oauthOtherService.getOne(Wrappers.query(new OauthOther().setType(state.split("__")[0])));
         if (ObjectNull.isNull(one)) {
             //兼容老版本响应处理
             String decodedPassword = PasswordUtil.decodedPassword(state, SpringContextUtil.getKey());

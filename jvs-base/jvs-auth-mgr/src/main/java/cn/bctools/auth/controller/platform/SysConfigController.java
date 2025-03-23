@@ -162,6 +162,7 @@ public class SysConfigController {
                     SysConfigEnterriseWeChat enterriseWeChat = (SysConfigEnterriseWeChat) JSONObject.parseObject(sysConfigs.getContent(), ConfigsTypeEnum.ENTERPRISE_WECHAT_APPLICATION_CONFIGURATION.cls);
                     WxCpServiceImpl wxCpService = SingletonUtil.get(enterriseWeChat.getAppId() + enterriseWeChat.getAppSecret() + enterriseWeChat.getAgentId(), () -> {
                         WxCpDefaultConfigImpl cpConfig = new WxCpDefaultConfigImpl();
+                        cpConfig.setBaseApiUrl(enterriseWeChat.getBaseApiUrl());
                         cpConfig.setCorpId(enterriseWeChat.getAppId());
                         cpConfig.setCorpSecret(enterriseWeChat.getAppSecret());
                         cpConfig.setAgentId(enterriseWeChat.getAgentId());

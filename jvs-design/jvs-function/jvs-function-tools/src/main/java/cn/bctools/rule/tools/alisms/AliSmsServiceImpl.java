@@ -16,9 +16,6 @@ import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
 import cn.bctools.sms.config.AliSmsConfig;
 import cn.bctools.sms.utils.SmsSendUtils;
-
-import cn.hutool.core.bean.copier.CopyOptions;
-import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
@@ -27,7 +24,6 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 /**
  * @author guojing
@@ -56,7 +52,7 @@ public class AliSmsServiceImpl implements BaseCustomFunctionInterface<SmsFunctio
         //当前这个租户的配置信息
         R<String> key = configServiceApi.key(ConfigsTypeEnum.SMS_CONFIGURATION, TenantContextHolder.getTenantId());
         SysConfigSms config = configServiceApi.convertKey(ConfigsTypeEnum.SMS_CONFIGURATION, key.getData());
-        if (!config.getEnable()) {
+        if (Boolean.FALSE.equals(config.getEnable())) {
             throw new IllegalArgumentException("未找到短信配置，请核实!");
         }
         List<String> phones = new ArrayList<>();

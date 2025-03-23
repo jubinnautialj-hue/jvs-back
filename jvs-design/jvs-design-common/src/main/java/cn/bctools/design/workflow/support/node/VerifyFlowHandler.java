@@ -1,8 +1,10 @@
 package cn.bctools.design.workflow.support.node;
 
 import cn.bctools.common.entity.dto.UserDto;
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.workflow.dto.FlowReqDto;
+import cn.bctools.design.workflow.dto.FlowApprovalUserDTO;
 import cn.bctools.design.workflow.entity.FlowTaskNode;
 import cn.bctools.design.workflow.entity.dto.AppendApprovalDetailDto;
 import cn.bctools.design.workflow.entity.dto.AppendApprovalDto;
@@ -62,6 +64,7 @@ public class VerifyFlowHandler extends AbstractFlowHandler {
     private final TransferFunction transferFunction;
     private final BackFunction backFunction;
     private final RemoveSignerFunction removeSignerFunction;
+    private final TaskPersonFunction taskPersonFunction;
 
     @Override
     public NodeTypeEnum getType() {
@@ -71,7 +74,7 @@ public class VerifyFlowHandler extends AbstractFlowHandler {
     @Override
     protected void handle(Node node, RuntimeData runtimeData) {
         // TRUE-触发事件，FALSE-不触发事件
-        boolean trigger = Boolean.FALSE;
+        boolean trigger;
         NodeOperationTypeEnum nodeOperationType = runtimeData.getFlowDto().getNodeOperationType();
         FlowResult flowResult = new FlowResult();
         flowResult.setFlowNextTypeEnum(FlowNextTypeEnum.PENDING);
@@ -168,6 +171,7 @@ public class VerifyFlowHandler extends AbstractFlowHandler {
             // 有后加签
             if (ObjectNull.isNotNull(appendApproval) && AppendApprovalPointEnum.AFTER.equals(appendApproval.getAppendApprovalPoint())) {
                 // 设置加签审批人为审批用户，审批节点依然是当前节点
+
                 taskPersonService.saveTaskPerson(node, runtimeData, convertUsers(currentDetailDto));
                 // 设置当前节点审批类型为“加签审批”，并修改加签配置
                 updateNodeApprove(flowTaskNode, FlowTaskNodeApprovalTypeEnum.APPEND_APPROVAL, currentDetailDto.getId(), null);
@@ -202,7 +206,8 @@ public class VerifyFlowHandler extends AbstractFlowHandler {
                     // 若无后续加签, 且是前加签审批
                     if (AppendApprovalPointEnum.BEFORE.equals(appendApproval.getAppendApprovalPoint())) {
                         // 设置当前审批节点审批人
-                        taskPersonService.saveTaskPerson(node, runtimeData, runtimeData.getFlowTaskNode().getApprovalPersons());
+                        List<FlowApprovalUserDTO> userList = taskPersonFunction.invoke(node, runtimeData);
+                        taskPersonService.saveTaskPerson(node, runtimeData, userList);
                         // 设置当前节点审批类型为“审批”，并修改加签配置
                         updateNodeApprove(flowTaskNode, FlowTaskNodeApprovalTypeEnum.APPROVAL, null, null);
                         runtimeData.setChangePersonProcessStatus(Boolean.FALSE);
@@ -308,9 +313,10 @@ public class VerifyFlowHandler extends AbstractFlowHandler {
      * @param detailDto 加签信息
      * @return 加签用户
      */
-    private List<UserDto> convertUsers(AppendApprovalDetailDto detailDto) {
+    private List<FlowApprovalUserDTO> convertUsers(AppendApprovalDetailDto detailDto) {
         return detailDto.getPersonnels().stream()
                 .map(personnel -> new UserDto().setId(personnel.getId()).setRealName(personnel.getName()))
+                .map(personal -> BeanCopyUtil.copy(personal, FlowApprovalUserDTO.class))
                 .collect(Collectors.toList());
     }
 

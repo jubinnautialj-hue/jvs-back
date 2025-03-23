@@ -7,7 +7,7 @@ import java.lang.annotation.*;
  * 主要给数据表明声明数据描述
  * 目前不可用
  *
- * @author guojing
+ * @author jvs
  */
 @Target({ElementType.ANNOTATION_TYPE, ElementType.TYPE})
 @Retention(RetentionPolicy.RUNTIME)

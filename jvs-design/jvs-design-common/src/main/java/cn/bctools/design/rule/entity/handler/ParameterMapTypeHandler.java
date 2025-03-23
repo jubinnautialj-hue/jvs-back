@@ -1,7 +1,6 @@
 package cn.bctools.design.rule.entity.handler;
 
 import cn.bctools.design.rule.entity.ParameterMap;
-import cn.bctools.design.workflow.entity.dto.CourseDto;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import com.baomidou.mybatisplus.extension.handlers.AbstractJsonTypeHandler;

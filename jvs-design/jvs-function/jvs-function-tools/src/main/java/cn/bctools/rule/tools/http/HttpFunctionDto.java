@@ -20,7 +20,7 @@ import java.util.Map;
 @Data
 public class HttpFunctionDto {
 
-    @ParameterValue(info = "请求地址", type = InputType.http, necessity = false, explain = "支持http://xxx/xxx或lb:demo/xx/xx", defaultValue = "http://www.bctools.cn")
+    @ParameterValue(info = "请求地址", type = InputType.http, necessity = false, explain = "支持http://xxx/xxx或lb://demo/xx/xx", defaultValue = "http://www.bctools.cn")
     @NotNull(message = "请求地址不能为空")
     public String url;
 
@@ -40,6 +40,9 @@ public class HttpFunctionDto {
 
     @ParameterValue(info = "body请求参数，或Param", necessity = false, type = InputType.map)
     public Object body;
+
+    @ParameterValue(info = "超时时间(毫秒)", defaultValue = "60000", necessity = false, type = InputType.number)
+    public int milliseconds;
 
     @ParameterValue(info = "不填写地址时默认返回mock", necessity = false, type = InputType.json)
     public String json;

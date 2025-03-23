@@ -29,13 +29,12 @@ public class AliSmsSelected implements ParameterSelected<String> {
 
         String key = "message:push:SMS" + TenantContextHolder.getTenantId();
         //如果是不是最新的，则直接返回缓存数据
-        if (redisUtils.hasKey(key)) {
+        if (Boolean.TRUE.equals(redisUtils.hasKey(key))) {
             List<AliSmsTemplateVo> allPrivateTemplate = (List<AliSmsTemplateVo>) redisUtils.get(key);
-            List<ParameterOption<String>> collect = allPrivateTemplate.stream()
+            return allPrivateTemplate.stream()
                     .filter(e -> "AUDIT_STATE_PASS".equals(e.getAuditStatus()))
                     .map(e -> new ParameterOption<String>().setLabel(e.getTemplateName()).setValue(e.getTemplateCode()))
                     .collect(Collectors.toList());
-            return collect;
         } else {
             return new ArrayList<>();
         }

@@ -70,7 +70,7 @@ public class PendingProcess implements ProcessInterface {
                 .eq(FlowTaskPerson::getFlowTaskId, runtimeData.getFlowTask().getId())
                 .eq(FlowTaskPerson::getNodeId, runtimeData.getNodeId())
                 .eq(FlowTaskPerson::getUserId, runtimeData.getUser().getId())
-                .ne(FlowTaskPerson::getProcessStatus, ProcessStatusEnum.PROCESSED));
+                .eq(FlowTaskPerson::getProcessStatus, ProcessStatusEnum.PENDING));
         if (CollectionUtils.isEmpty(flowTaskPersons)) {
             return;
         }

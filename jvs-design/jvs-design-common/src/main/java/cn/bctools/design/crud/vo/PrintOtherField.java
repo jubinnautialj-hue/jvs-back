@@ -54,6 +54,10 @@ public class PrintOtherField {
          * 审批时间
          */
         TIME(Get.name(ProgressPrintResDto::getTime), "审批时间", ""),
+        /**
+         * 手写签名
+         */
+        SIGN(Get.name(ProgressPrintResDto::getOpinionSign), "手写签名", ""),
         ;
 
         private String key;

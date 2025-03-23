@@ -2,8 +2,11 @@ package cn.bctools.design.index;
 
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.data.entity.DataModelPo;
+import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
+import cn.bctools.design.data.fields.dto.FieldPublicHtml;
 import cn.bctools.design.data.fields.dto.QueryConditionDto;
 import cn.bctools.design.data.fields.enums.AggregateEnumType;
+import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
@@ -12,6 +15,7 @@ import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.project.service.JvsAppVersionService;
 import cn.bctools.design.util.DynamicDataUtils;
+import cn.bctools.design.util.ModeUtils;
 import cn.bctools.index.annotation.FormFormQuery;
 import cn.bctools.index.design.SelectedAttribute;
 import cn.bctools.index.design.component.service.ComponentChartHistogramService;
@@ -28,7 +32,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
@@ -48,6 +56,8 @@ public class ComponentChartHistogramServiceImpl extends DataModelIndexFieldOrLin
     DataFieldService fieldService;
     DataModelService dataModelService;
     DynamicDataService dynamicDataService;
+    DataFieldService dataFieldService;
+
 
     /**
      * 定义实体类对象，用于传递值的对象数据
@@ -76,6 +86,7 @@ public class ComponentChartHistogramServiceImpl extends DataModelIndexFieldOrLin
         if (ObjectNull.isNull(body.getModelIdentifier(), body.getAggregationType())) {
             return null;
         } else {
+            ModeUtils.setMode();
             String modelId = identificationService.getIdentificationModel(body.getModelIdentifier()).stream().findFirst().map(Identification::getDesignId).orElse(null);
             if (ObjectNull.isNotNull(modelId)) {
                 DataModelPo model = dataModelService.getModel(modelId);
@@ -108,6 +119,15 @@ public class ComponentChartHistogramServiceImpl extends DataModelIndexFieldOrLin
                         .sorted()
                         .distinct()
                         .collect(Collectors.toList());
+                //判断是否需要转换
+                Map<String, FieldBasicsHtml> allField = dataFieldService.getAllField(model.getAppId(), model.getId(), true, false)
+                        .stream()
+                        .collect(Collectors.toMap(FieldPublicHtml::getFieldKey, Function.identity()));
+                //对其数据进行转换处理
+                for (Map<String, Object> map : maps) {
+                    map = dynamicDataService.echo(map, allField, true);
+                }
+
                 //根据字段分组
                 Map<String, Map<String, List<Map<String, Object>>>> fieldMap = maps.stream()
                         .filter(e -> ObjectNull.isNotNull(e.get(body.getGroupField())))

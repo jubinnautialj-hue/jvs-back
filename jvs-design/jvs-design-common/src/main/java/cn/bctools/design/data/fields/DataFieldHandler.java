@@ -4,16 +4,11 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.TreeUtils;
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
-import cn.bctools.design.data.fields.dto.FieldPublicHtml;
 import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.fields.enums.DataQueryType;
-import cn.bctools.design.data.fields.impl.IMultipleTypeHandler;
-import cn.bctools.design.data.fields.impl.container.TabFieldHandler;
-import cn.bctools.design.data.fields.impl.container.TableFormFieldHandler;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
-import org.apache.poi.ss.formula.functions.T;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import javax.validation.constraints.NotNull;
@@ -30,9 +25,9 @@ import java.util.stream.Collectors;
  */
 @Slf4j
 @Component
+@AllArgsConstructor
 public class DataFieldHandler {
 
-    @Autowired
     Map<String, IDataFieldHandler> handlerMap;
 
     public static final String LINK_MULTI = "~";
@@ -211,7 +206,7 @@ public class DataFieldHandler {
                                    @NotNull Function<T, String> getParentKey) {
         List<Object> result;
         if (data instanceof List) {
-            result = (List<Object>) data;
+            result = new ArrayList<>(Arrays.asList((Collection) data));
         } else {
             result = new ArrayList<>(1);
             result.add(data);

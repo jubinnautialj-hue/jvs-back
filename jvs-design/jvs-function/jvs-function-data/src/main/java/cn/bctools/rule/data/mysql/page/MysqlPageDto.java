@@ -2,8 +2,8 @@ package cn.bctools.rule.data.mysql.page;
 
 import cn.bctools.rule.annotations.Inspect;
 import cn.bctools.rule.annotations.ParameterValue;
-import cn.bctools.rule.entity.enums.InputType;
 import cn.bctools.rule.data.mysql.DatasourceSelected;
+import cn.bctools.rule.entity.enums.InputType;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

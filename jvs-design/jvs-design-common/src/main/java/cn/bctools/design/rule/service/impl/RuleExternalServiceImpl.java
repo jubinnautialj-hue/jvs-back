@@ -1,25 +1,28 @@
 package cn.bctools.design.rule.service.impl;
 
+import cn.bctools.auth.api.api.EnvironmentVariableApi;
+import cn.bctools.auth.api.dto.EnvironmentVariableDto;
+import cn.bctools.auth.api.enums.ModeTypeEnum;
 import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
 import cn.bctools.design.rule.entity.ParameterMap;
 import cn.bctools.design.rule.entity.RuleExternalPo;
 import cn.bctools.design.rule.mapper.RuleExternalMapper;
+import cn.bctools.design.rule.service.RuleExternalService;
+import cn.bctools.design.util.ModeUtils;
 import cn.bctools.design.util.WebServiceUtils;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.bctools.rule.config.SystemInit;
-import cn.bctools.rule.entity.enums.InputType;
-import cn.bctools.rule.function.RuleExternalHandler;
-import cn.bctools.design.rule.service.RuleExternalService;
 import cn.bctools.rule.dto.RuleFunctionDto;
 import cn.bctools.rule.dto.RuleFunctionDtoParameter;
+import cn.bctools.rule.entity.enums.InputType;
 import cn.bctools.rule.entity.enums.RuleGroup;
+import cn.bctools.rule.function.RuleExternalHandler;
 import cn.bctools.web.utils.HttpRequestUtils;
 import cn.hutool.core.convert.Convert;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.MD5;
-import cn.hutool.http.Method;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -35,6 +38,8 @@ import springfox.documentation.service.ParameterType;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 /**
@@ -46,26 +51,28 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 public class RuleExternalServiceImpl extends ServiceImpl<RuleExternalMapper, RuleExternalPo> implements RuleExternalService {
-    static final String webservice = "webservice";
+    private static final String webservice = "webservice";
 
     /**
      * The External handler.
      */
-    Map<String, RuleExternalHandler> externalHandler;
+    private final Map<String, RuleExternalHandler> externalHandler;
 
     /**
      * The Rest template.
      */
-    RestTemplate restTemplate;
+    private final RestTemplate restTemplate;
 
     /**
      * The Redis utils.
      */
-    RedisUtils redisUtils;
+    private final RedisUtils redisUtils;
 
     private final RedisTemplate<String, Object> redisTemplate;
+    private final EnvironmentVariableApi environmentVariableApi;
 
     private static final String RULE_EXTERNAL = "RULE_EXTERNAL_CACHE:";
+    private static Pattern namePattern = Pattern.compile("\\{\\{(.*?)\\}\\}");
 
     @Override
     public Object execute(String functionName, String group, Map<String, Object> variableMap, Function<String, Object> expressionExecFunction) {
@@ -150,12 +157,50 @@ public class RuleExternalServiceImpl extends ServiceImpl<RuleExternalMapper, Rul
         return externalBody;
     }
 
+    /**
+     * 匹配URL中的变量，并根据环境变量替换这些变量的值。
+     *
+     * @param url 需要匹配和替换变量的URL字符串
+     * @return 替换变量后的URL字符串
+     */
+    private String matcher(String url) {
+        // 存储匹配到的变量名
+        List<String> list = new ArrayList<>();
+        Matcher matcher = namePattern.matcher(url);
+        // 使用正则表达式模式匹配URL中的变量
+        while (matcher.find()) {
+            // 将匹配到的变量名添加到列表中
+            list.add(matcher.group(1));
+        }
+        // 如果列表不为空，即存在变量
+        if (ObjectNull.isNotNull(list)) {
+            // 获取所有环境变量
+            List<EnvironmentVariableDto> data = environmentVariableApi.getAll(ModeTypeEnum.getType(ModeUtils.getMode().getValue())).getData();
+            // 如果获取到了环境变量
+            if (ObjectNull.isNotNull(data)) {
+                // 将环境变量转换为Map，方便后续查找和替换
+                Map<String, String> map = data.stream().collect(Collectors.toMap(EnvironmentVariableDto::getLabel, e -> e.getValue().toString()));
+                // 遍历匹配到的变量名列表
+                for (String key : list) {
+                    // 根据环境变量替换url地址，这里缺少替换逻辑，应该添加相应的代码
+                    url = url.replace("{{" + key + "}}", map.get(key));
+                }
+            } else {
+                // 如果没有找到环境变量，抛出异常
+                throw new BusinessException("没有找到环境变量");
+            }
+        }
+        // 返回处理后的URL
+        return url;
+    }
+
     @Override
     public Object execute(RuleExternalPo externalPo, Map<String, Object> variableMap, Function<String, Object> expressionExecFunction, Boolean test) {
         if (ObjectNull.isNull(externalPo)) {
             throw new BusinessException("没有找到扩展方法");
         }
-        String url = externalPo.getUrl();
+        String url = matcher(externalPo.getUrl());
+
         //是否是测试执行
         if (!test) {
             //如果启用了 mock数据则返回 mock

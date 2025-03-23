@@ -1,15 +1,15 @@
 package cn.bctools.design.crud.entity;
 
 import cn.bctools.database.entity.po.BasePo;
+import cn.bctools.database.handler.Fastjson2TypeHandler;
 import cn.bctools.design.crud.entity.enums.DataRoleTypeEnum;
 import cn.bctools.design.data.fields.dto.page.LayoutEnum;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.menu.entity.AppMenu;
 import cn.bctools.design.project.handler.Design;
-import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONArray;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.annotation.*;
-import cn.bctools.database.handler.Fastjson2TypeHandler;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.EqualsAndHashCode;

@@ -1,7 +1,6 @@
 package cn.bctools.design.data.fields.dto.form.item;
 
 import cn.bctools.design.data.fields.dto.form.MultipleHtml;
-import com.alibaba.fastjson.JSONObject;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

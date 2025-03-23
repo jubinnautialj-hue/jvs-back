@@ -12,6 +12,8 @@ import cn.bctools.design.workflow.model.enums.NodeTypeEnum;
 import cn.bctools.design.workflow.model.enums.TargetObjectTypeEnum;
 import cn.bctools.design.workflow.model.properties.AppendApprovalProperties;
 import cn.bctools.design.workflow.model.properties.FlowButton;
+import cn.bctools.design.workflow.model.properties.Leader;
+import cn.bctools.design.workflow.utils.FlowUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -80,29 +82,31 @@ public class SpNodeValidated {
         boolean checkType = NodePropertiesTypeEnum.ASSIGN_USER.equals(props.getType()) ||
                 NodePropertiesTypeEnum.ROLE.equals(props.getType()) ||
                 NodePropertiesTypeEnum.JOB.equals(props.getType()) ||
-                NodePropertiesTypeEnum.USER_FIELD.equals(props.getType());
+                NodePropertiesTypeEnum.USER_FIELD.equals(props.getType()) ||
+                NodePropertiesTypeEnum.LEADER.equals(props.getType()) ||
+                NodePropertiesTypeEnum.LEADER_TOP.equals(props.getType())
+                ;
         if (Boolean.FALSE.equals(checkType)) {
             return;
         }
 
-        if (NodePropertiesTypeEnum.USER_FIELD.equals(props.getType())) {
-            checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.user_field);
-        }
-
-        // 允许动态选择审批人，在发布时不需要校验审批人必填
-        if (extend.getEnableDynamicApprover()) {
-            return;
-        }
         switch (props.getType()) {
             case ASSIGN_USER:
                 // 指定人员，可选“人员”|"部门"，所以只要其中一个类型有数据就通过校验
-                checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.user);
+                checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.user, extend);
                 break;
             case ROLE:
-                checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.role);
+                checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.role, extend);
                 break;
             case JOB:
-                checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.job);
+                checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.job, extend);
+                break;
+            case USER_FIELD:
+                checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.user_field);
+                break;
+            case LEADER:
+            case LEADER_TOP:
+                checkLeaderUserSp(nodeName, props);
                 break;
             default:
                 // 其它类型不需要发布时校验
@@ -125,6 +129,49 @@ public class SpNodeValidated {
     }
 
     /**
+     * 校验审批节点审批人
+     *
+     * @param nodeName 节点名称
+     * @param props    节点配置
+     * @param type     人员对象类型
+     * @param extend   高级设置
+     */
+    private static void checkPendingUserSp(String nodeName, NodeProperties props, TargetObjectTypeEnum type, FlowExtendDto extend) {
+        // 允许动态选择审批人，且节点未禁止动态选择审批人，则在发布时不需要校验审批人必填
+        if (extend.getEnableDynamicApprover() && !FlowUtil.getDisableDynamicApprover(props)) {
+            return;
+        }
+        // 校验审批节点审批人
+        checkPendingUserSp(nodeName, props, type);
+    }
+
+
+    /**
+     * 校验审批节点审批人类型为直接主管、连续多级主管的审批人配置
+     *
+     * @param nodeName 节点名称
+     * @param props 节点配置
+     */
+    private static void checkLeaderUserSp(String nodeName, NodeProperties props) {
+        Leader leader = props.getLeader();
+        switch (leader.getLeaderSource()) {
+            case USER_FIELD:
+                if (ObjectNull.isNull(leader.getUserFieldConfig().getPersonnels())) {
+                    throw new BusinessException("环节未设置成员字段请检查设计", nodeName);
+                }
+                break;
+            case FLOW_NODE:
+                if (ObjectNull.isNull(leader.getFlowNodeConfig().getNodeIds())) {
+                    throw new BusinessException("环节未设置审批节点请检查设计", nodeName);
+                }
+                break;
+            case SEND_USER:
+            default:
+                break;
+        }
+    }
+
+    /**
      * 校验抄送节点抄送人
      *
      * @param nodeName 节点名称
@@ -134,8 +181,13 @@ public class SpNodeValidated {
         if (ObjectNull.isNull(props.getType())) {
             return;
         }
+        boolean pass = true;
         if (NodePropertiesTypeEnum.USER_FIELD.equals(props.getType())) {
-            checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.user_field);
+            try {
+                checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.user_field);
+            } catch (Exception e) {
+                pass = false;
+            }
         }
 
         if (NodePropertiesTypeEnum.ASSIGN_CARBON_COPY.equals(props.getType())) {
@@ -145,9 +197,22 @@ public class SpNodeValidated {
                     .filter(StringUtils::isNotBlank)
                     .collect(Collectors.toList());
             if (CollectionUtils.isEmpty(ids)) {
-                throw new BusinessException("环节未设置抄送人请检查设计", nodeName);
+                pass = false;
             }
         }
+
+        if (NodePropertiesTypeEnum.LEADER.equals(props.getType())) {
+            try {
+                checkLeaderUserSp(nodeName, props);
+            } catch (Exception e) {
+                pass = false;
+            }
+        }
+
+        if (!pass) {
+            throw new BusinessException("环节未设置抄送人请检查设计", nodeName);
+        }
+
     }
 
     /**

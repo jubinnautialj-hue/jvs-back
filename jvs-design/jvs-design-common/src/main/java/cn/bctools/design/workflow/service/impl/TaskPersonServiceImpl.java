@@ -2,6 +2,7 @@ package cn.bctools.design.workflow.service.impl;
 
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.design.workflow.dto.FlowApprovalUserDTO;
 import cn.bctools.design.workflow.entity.FlowTaskPerson;
 import cn.bctools.design.workflow.entity.dto.ProxyDto;
 import cn.bctools.design.workflow.entity.dto.TransferDto;
@@ -44,9 +45,9 @@ public class TaskPersonServiceImpl implements TaskPersonService {
     private final ApplicationEventPublisher applicationEventPublisher;
 
     @Override
-    public void saveTaskPerson(Node nextNode, RuntimeData runtimeData, List<UserDto> users) {
+    public void saveTaskPerson(Node nextNode, RuntimeData runtimeData, List<FlowApprovalUserDTO> users) {
         // 获取下一节点审批人集合
-        List<UserDto> userDtos = CollectionUtils.isNotEmpty(users) ? users : taskPersonFunction.invoke(nextNode, runtimeData);
+        List<FlowApprovalUserDTO> userDtos = ObjectNull.isNotNull(users) ? users : taskPersonFunction.invoke(nextNode, runtimeData);
         // 下一节点审批人为空时处理
         userDtos = compositeApproverEmptyHandler.execute(userDtos, nextNode, runtimeData);
         if (CollectionUtils.isEmpty(userDtos)) {
@@ -57,12 +58,12 @@ public class TaskPersonServiceImpl implements TaskPersonService {
         userDtos = userDtos.stream().distinct().collect(Collectors.toList());
         // 获取代理
         List<String> transferUserIds = userDtos.stream().map(UserDto::getId).collect(Collectors.toList());
-        TransferRuntimeDto transfer = new TransferRuntimeDto(runtimeData.getUser(), runtimeData.getFlowTask(), null, transferUserIds);;
+        TransferRuntimeDto transfer = new TransferRuntimeDto(runtimeData.getUser(), runtimeData.getFlowTask(), null, transferUserIds);
         List<ProxyDto> transfers = transferFunction.invoke(nextNode, transfer);
         // 保存下级节点待审批人
         List<FlowTaskPerson> flowTaskPersons = new ArrayList<>();
         int i = 0;
-        for (UserDto user : userDtos) {
+        for (FlowApprovalUserDTO user : userDtos) {
             FlowTaskPerson person = new FlowTaskPerson();
             person.setNodeId(nextNode.getId());
             person.setFlowTaskId(runtimeData.getFlowTask().getId());
@@ -70,11 +71,22 @@ public class TaskPersonServiceImpl implements TaskPersonService {
             person.setUserName(user.getRealName());
             person.setProcessStatus(ProcessStatusEnum.PENDING);
             person.setTest(runtimeData.getFlowTask().getTest());
-            // 依次审批，则第一个用户设为待处理状态，其它用户设为准备中状态
-            if (NodePropertiesModeEnum.NEXT.equals(nextNode.getProps().getMode()) && i != 0) {
-                person.setProcessStatus(ProcessStatusEnum.PREPARE);
+            // 依次审批
+            if (NodePropertiesModeEnum.NEXT.equals(nextNode.getProps().getMode())) {
+                if (ObjectNull.isNull(user.getApprovalSequence())) {
+                    // 无审批顺序, 第一个用户设为待处理状态，其它用户设为准备中状态
+                    if (i != 0) {
+                        person.setProcessStatus(ProcessStatusEnum.PREPARE);
+                    }
+                    person.setNumber(i++);
+                } else {
+                    // 有审批顺序，则设置审批顺序不等于1的用户为准备中
+                    if (user.getApprovalSequence() != 1) {
+                        person.setProcessStatus(ProcessStatusEnum.PREPARE);
+                    }
+                    person.setNumber(user.getApprovalSequence());
+                }
             }
-            person.setNumber(i++);
             person.setJvsAppId(runtimeData.getFlowTask().getJvsAppId());
             // 转交
             transfers(person, transfers);

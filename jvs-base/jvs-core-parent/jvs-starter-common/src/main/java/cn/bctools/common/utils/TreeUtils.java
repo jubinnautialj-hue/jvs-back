@@ -58,7 +58,7 @@ public class TreeUtils {
      */
     public static List<Tree<Object>> tree(List<Map<String, Object>> list, String rootId, String parentKey, String rootKey, String nameKey, String sortKey) {
         return TreeUtil.build(list, rootId, new TreeNodeConfig(), (treeNode, tree) -> {
-            tree.setId(treeNode.get("id").toString());
+            tree.setId(treeNode.getOrDefault(rootKey, "id").toString());
             tree.setParentId(treeNode.getOrDefault(parentKey, "-1"));
             tree.setName(treeNode.getOrDefault(nameKey, "").toString());
             tree.setWeight(treeNode.getOrDefault(sortKey, "").toString());

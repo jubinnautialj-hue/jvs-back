@@ -4,19 +4,9 @@ import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
-import cn.hutool.core.codec.Base64;
-import cn.hutool.crypto.KeyUtil;
-import cn.hutool.crypto.SmUtil;
-import cn.hutool.crypto.symmetric.SM4;
 import cn.hutool.crypto.symmetric.SymmetricCrypto;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
-import javax.crypto.SecretKey;
-import java.io.File;
-import java.io.FileInputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.Map;
 
 /**

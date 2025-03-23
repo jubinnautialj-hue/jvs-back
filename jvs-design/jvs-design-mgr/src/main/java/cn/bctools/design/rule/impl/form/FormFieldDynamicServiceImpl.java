@@ -7,7 +7,6 @@ import cn.bctools.design.crud.entity.FormPo;
 import cn.bctools.design.crud.service.CrudPageService;
 import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.data.entity.DataFieldDynamicPo;
-import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.service.DataFieldDynamicService;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
@@ -18,7 +17,9 @@ import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -42,7 +43,6 @@ public class FormFieldDynamicServiceImpl implements BaseCustomFunctionInterface<
     DataFieldDynamicService dataFieldDynamicService;
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public Object execute(FormFieldDynamicDto dto, Map<String, Object> params) {
         if (ObjectNull.isNull(dto.getList())) {
             return "";

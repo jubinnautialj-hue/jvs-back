@@ -1,10 +1,10 @@
 package cn.bctools.design.rule.entity;
 
+import cn.bctools.database.handler.Fastjson2TypeHandler;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.project.handler.Design;
 import cn.hutool.core.date.DatePattern;
 import com.baomidou.mybatisplus.annotation.*;
-import cn.bctools.database.handler.Fastjson2TypeHandler;
 import com.baomidou.mybatisplus.extension.handlers.FastjsonTypeHandler;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModelProperty;

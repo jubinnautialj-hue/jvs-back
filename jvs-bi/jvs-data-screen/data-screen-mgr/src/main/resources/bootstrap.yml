@@ -1,0 +1,35 @@
+server:
+  port: ${random.int[50001,50099]}
+version: @project.version@
+spring:
+  application:
+    name: @project.artifactId@
+  main:
+    allow-bean-definition-overriding: true
+    allow-circular-references: true
+  cloud:
+    nacos:
+      discovery:
+        server-addr: http://jvs-nacos:8848
+        group: jvs
+        namespace: ${spring.cloud.nacos.discovery.group}
+      config:
+        server-addr: ${spring.cloud.nacos.discovery.server-addr}
+        group: ${spring.cloud.nacos.discovery.group}
+        namespace: ${spring.cloud.nacos.discovery.group}
+  config:
+    import:
+      #公共配置
+      - optional:nacos:application.yml
+      #公共配置项目配置
+      - optional:nacos:${spring.application.name}.yml
+      #父级配置
+      - optional:nacos:${project.parent.artifactId}.yml
+      #授权配置
+      - optional:nacos:license.yml
+    inetutils:
+      #选择使用此网段进行处理
+      preferred-networks: 10.*
+swagger:
+  title: "数据大屏"
+  description: "界面化显示统计数据"

@@ -3,6 +3,7 @@ package cn.bctools.auth.component;
 import cn.bctools.auth.entity.*;
 import cn.bctools.auth.entity.enums.RoleMemberScopeEnum;
 import cn.bctools.auth.service.*;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.TreeUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -64,25 +65,26 @@ public class UserRoleComponent {
             roleIds.addAll(scopeAllRoles);
         }
         // 获取用户所属部门相关的角色
-        String userDeptId = null;
+        List<DeptDto> userDeptId = new ArrayList<>();
         UserTenant one = userTenantService.getOne(Wrappers.<UserTenant>lambdaQuery()
                 .eq(UserTenant::getUserId, userId));
-        if (ObjectNull.isNotNull(one)) {
-            userDeptId = one.getDeptId();
+        if (ObjectNull.isNotNull(one.getDeptId())) {
+            userDeptId = deptService.listByIds(one.getDeptId()).stream().map(e -> new DeptDto().setDeptId(e.getId()).setDeptName(e.getDeptCode()).setDeptName(e.getName())).collect(Collectors.toList());
         }
         if (ObjectNull.isNotNull(userDeptId)) {
             List<Dept> deptList = deptService.list();
             List<DeptRole> deptRoles = deptRoleService.list();
-            String finalUserDeptId = userDeptId;
+            List<String> list = userDeptId.stream().map(DeptDto::getDeptId).collect(Collectors.toList());
+
             List<String> deptRoleIds = deptRoles.stream()
                     .filter(role -> {
                         // 不包括部门的下级部门，判断部门id是否与当前用户部门相同
                         if (Boolean.FALSE.equals(role.getBelow())) {
-                            return role.getDeptId().equals(finalUserDeptId);
+                            return list.contains(role.getDeptId());
                         }
                         // 当前部门及该部门所有下级部门，判断是否包含当前用户部门
                         List<String> childDeptIds = TreeUtils.getListPassingBy(deptList, role.getDeptId(), Dept::getId, Dept::getParentId).stream().map(Dept::getId).collect(Collectors.toList());
-                        return childDeptIds.contains(finalUserDeptId);
+                        return childDeptIds.containsAll(list);
                     })
                     .map(DeptRole::getRoleId)
                     .collect(Collectors.toList());
@@ -114,12 +116,13 @@ public class UserRoleComponent {
         if (ObjectNull.isNull(deptRoles)) {
             return userRoleMap;
         }
-        Map<String, List<UserTenant>> userDeptMap = userTenantService.list(Wrappers.<UserTenant>lambdaQuery()
-                        .select(UserTenant::getDeptId, UserTenant::getUserId)
-                        .in(UserTenant::getUserId, userIds))
-                .stream()
-                .filter(userTenant -> ObjectNull.isNotNull(userTenant.getDeptId()))
-                .collect(Collectors.groupingBy(UserTenant::getDeptId));
+        Map<String, List<UserTenant>> userDeptMap = new HashMap<>();
+//                userTenantService.list(Wrappers.<UserTenant>lambdaQuery()
+//                        .select(UserTenant::getDeptId, UserTenant::getUserId)
+//                        .in(UserTenant::getUserId, userIds))
+//                .stream()
+//                .filter(userTenant -> ObjectNull.isNotNull(userTenant.getDeptId()))
+//                .collect(Collectors.groupingBy(UserTenant::getDeptId));
         if (ObjectNull.isNotNull(userDeptMap)) {
             List<Dept> deptList = deptService.list();
             deptRoles.forEach(deptRole -> {
@@ -163,12 +166,12 @@ public class UserRoleComponent {
     /**
      * 查询指定角色用户
      *
-     * @param roleIds           角色id集合
-     * @param filterScopeRoleUser   true-筛选权限范围包括指定部门的角色用户id, false-不筛选
-     * @param filterScopeDeptId 筛选权限范围的条件
+     * @param roleIds             角色id集合
+     * @param filterScopeRoleUser true-筛选权限范围包括指定部门的角色用户id, false-不筛选
+     * @param filterScopeDeptIds   筛选权限范围的条件
      * @return 用户id集合
      */
-    public List<String> getRoleUserIds(List<String> roleIds, Boolean filterScopeRoleUser, String filterScopeDeptId) {
+    public List<String> getRoleUserIds(List<String> roleIds, Boolean filterScopeRoleUser, List<String> filterScopeDeptIds) {
         if (ObjectNull.isNull(roleIds)) {
             return Collections.emptyList();
         }
@@ -180,7 +183,7 @@ public class UserRoleComponent {
         }
 
         // 查询用户-角色包含的用户id集合
-        List<String> userIds = getUserIdsFromUserRole(roleList, filterScopeRoleUser, filterScopeDeptId);
+        List<String> userIds = getUserIdsFromUserRole(roleList, filterScopeRoleUser, filterScopeDeptIds);
         // 查询部门-角色包含的用户id集合
         List<String> deptRoleIds = roleList.stream()
                 .filter(role -> RoleMemberScopeEnum.DEPT.equals(role.getMemberScope()))
@@ -215,12 +218,12 @@ public class UserRoleComponent {
     /**
      * 从用户角色集合中得到符合条件的用户id
      *
-     * @param roleList          用户角色集合
-     * @param filterScopeRoleUser   true-筛选权限范围包括指定部门的角色用户id, false-不筛选
-     * @param filterScopeDeptId 筛选权限范围的条件
+     * @param roleList            用户角色集合
+     * @param filterScopeRoleUser true-筛选权限范围包括指定部门的角色用户id, false-不筛选
+     * @param filterScopeDeptIds  筛选权限范围的条件
      * @return 用户id集合
      */
-    private List<String> getUserIdsFromUserRole(List<Role> roleList, Boolean filterScopeRoleUser, String filterScopeDeptId) {
+    private List<String> getUserIdsFromUserRole(List<Role> roleList, Boolean filterScopeRoleUser, List<String> filterScopeDeptIds) {
         List<String> userRoleIds = roleList.stream()
                 .filter(role -> RoleMemberScopeEnum.USER.equals(role.getMemberScope()))
                 .map(Role::getId)
@@ -249,7 +252,7 @@ public class UserRoleComponent {
                         return true;
                     }
                     // 筛选权限范围的条件为空，则必然不在管理范围内
-                    if (ObjectNull.isNull(filterScopeDeptId)) {
+                    if (ObjectNull.isNull(filterScopeDeptIds)) {
                         return false;
                     }
                     // 有配置管理范围，则判断部门是否在范围内
@@ -261,9 +264,9 @@ public class UserRoleComponent {
                                             .stream()
                                             .map(Dept::getId)
                                             .collect(Collectors.toList());
-                                    return selfAndChildrenDeptIds.contains(filterScopeDeptId);
+                                    return !Collections.disjoint(selfAndChildrenDeptIds, filterScopeDeptIds);
                                 } else {
-                                    return scope.getDeptId().equals(filterScopeDeptId);
+                                    return filterScopeDeptIds.contains(scope.getDeptId());
                                 }
                             });
                 })

@@ -11,8 +11,8 @@ import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.design.crud.dto.AutoCreateCrudDesignDto;
 import cn.bctools.design.crud.entity.CrudPage;
 import cn.bctools.design.crud.entity.FormPo;
-import cn.bctools.design.crud.service.AutoCreateCrudDesignService;
 import cn.bctools.design.crud.entity.IndexFields;
+import cn.bctools.design.crud.service.AutoCreateCrudDesignService;
 import cn.bctools.design.crud.service.CrudPageService;
 import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.data.component.DataModelHandler;
@@ -32,6 +32,7 @@ import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.util.DynamicDataUtils;
+import cn.bctools.design.workflow.service.FlowTaskService;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -47,7 +48,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
@@ -69,6 +69,7 @@ public class DataModelDesignController {
     DataModelHandler dataModelHandler;
     AutoCreateCrudDesignService autoCreateCrudDesignService;
     IdentificationService identificationService;
+    FlowTaskService flowTaskService;
 
     /**
      * 查询所有模型
@@ -87,11 +88,15 @@ public class DataModelDesignController {
         return R.ok(models);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @ApiOperation("删除模型")
     @DeleteMapping("/{id}")
     public R<List<DataModelPo>> delete(@PathVariable String appId, @PathVariable("id") String id) {
         dataModelService.remove(Wrappers.query(new DataModelPo().setAppId(appId).setId(id)));
         // 逻辑删除模型，不删除数据集，轻应用版本数据模型模式分库，开发模式删除了，测试模式模型不能直接删除可能会影响。
+
+        // 删除模型工作流数据
+        flowTaskService.removeTaskAllByDataModelId(id);
         return R.ok();
     }
 
@@ -433,12 +438,12 @@ public class DataModelDesignController {
                             throw new BusinessException(formPo.getName() + "表单[" + fieldPo.getFieldKey() + "]字段使用中不能删除");
                         }
                         break;
-                    case page:
-                        CrudPage crudPage = crudPageService.getById(fieldPo.getDesignId());
-                        if (ObjectNull.isNotNull(crudPage)) {
-                            throw new BusinessException(crudPage.getName() + "列表字段使用中不能删除");
-                        }
-                        break;
+//                    case page:
+//                        CrudPage crudPage = crudPageService.getById(fieldPo.getDesignId());
+//                        if (ObjectNull.isNotNull(crudPage)) {
+//                            throw new BusinessException(crudPage.getName() + "列表[" + fieldPo.getFieldKey() + "]字段使用中不能删除");
+//                        }
+//                        break;
                 }
             }
 

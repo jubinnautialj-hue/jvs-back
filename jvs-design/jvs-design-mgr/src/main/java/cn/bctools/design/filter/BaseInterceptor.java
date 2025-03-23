@@ -2,8 +2,11 @@ package cn.bctools.design.filter;
 
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.project.entity.JvsApp;
+import cn.bctools.design.project.entity.JvsAppVersion;
 import cn.bctools.design.project.service.JvsAppService;
+import cn.bctools.design.project.service.JvsAppVersionService;
 import cn.bctools.design.util.CurrentAppUtils;
+import cn.bctools.design.util.ModeUtils;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
@@ -16,15 +19,17 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- *  @author jvs
+ * @author jvs
  */
 @Slf4j
 @Accessors(chain = true)
 public class BaseInterceptor implements HandlerInterceptor {
     JvsAppService jvsAppService;
+    JvsAppVersionService appVersionService;
 
-    public BaseInterceptor(JvsAppService jvsAppService) {
+    public BaseInterceptor(JvsAppService jvsAppService, JvsAppVersionService jvsAppVersionService) {
         this.jvsAppService = jvsAppService;
+        this.appVersionService = jvsAppVersionService;
     }
 
     /**
@@ -43,9 +48,22 @@ public class BaseInterceptor implements HandlerInterceptor {
             return Boolean.FALSE;
         }
         if (ObjectNull.isNotNull(appId)) {
-            JvsApp jvsApp = jvsAppService.getAppById(appId);
-            // 将当前应用的版本号设置到上下文(用于sql自动添加应用版本号查询)
-            CurrentAppUtils.setApp(jvsApp);
+            //判断当前模式下是否有这个应用
+            JvsAppVersion useAppVersion = appVersionService.getUseAppVersion(appId);
+            if (ObjectNull.isNull(useAppVersion)) {
+                JvsApp jvsApp = jvsAppService.getAppById(appId);
+                // 将当前应用的版本号设置到上下文(用于sql自动添加应用版本号查询)
+                CurrentAppUtils.setApp(jvsApp);
+                //表示为 1.8版本的轻应用
+                return Boolean.TRUE;
+            } else if (ModeUtils.getMode().equals(useAppVersion.getVersionType())) {
+                JvsApp jvsApp = jvsAppService.getAppById(appId);
+                // 将当前应用的版本号设置到上下文(用于sql自动添加应用版本号查询)
+                CurrentAppUtils.setApp(jvsApp);
+            } else {
+                InterceptorUtil.throwException(response.getOutputStream(), "应用不存在,或未切换模式");
+                return Boolean.FALSE;
+            }
         }
         return Boolean.TRUE;
     }

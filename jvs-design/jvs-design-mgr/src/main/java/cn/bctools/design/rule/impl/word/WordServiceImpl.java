@@ -16,9 +16,9 @@ import cn.bctools.rule.function.BaseCustomFunctionInterface;
 import cn.bctools.word.utils.ExcelVariablesReplaceUtil;
 import cn.bctools.word.utils.WordPdfUtil;
 import cn.bctools.word.utils.WordVariableReplaceUtil;
-import cn.hutool.core.util.StrUtil;
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
 import lombok.AllArgsConstructor;
 import lombok.SneakyThrows;
@@ -40,7 +40,7 @@ import java.util.Map;
         testShowEnum = TestShowEnum.JSON,
         order = 9,
 //        iconUrl = "rule-Messages",
-        explain = "替换模板文件中对应标识的字段，返回转换完成的文件的地址、文件名等数据。支持 xlsx、docx、pdf输出"
+        explain = "替换模板文件中对应标识的字段，返回转换完成的文件的地址、文件名等数据。支持 xlsx、docx、pdf输出。变量名：文字类型 {key1}、{key2} 支持图片自定义宽高。格式：${IMAGE#key1?w=200&h=100}  key1 key2 为变量名"
 )
 @AllArgsConstructor
 public class WordServiceImpl implements BaseCustomFunctionInterface<WordDto> {
@@ -86,12 +86,13 @@ public class WordServiceImpl implements BaseCustomFunctionInterface<WordDto> {
         BaseFile baseFile = ossTemplate.put(OssSystemCons.OSS_BUCKET_NAME, RuleConstant.OSS_BUCKET_NAME_PATH + "word", byteArrayInputStream, wordDto.getFileName() + StrUtil.DOT + wordDto.getFileType(), true);
         String fileLink = ossTemplate.fileLink(baseFile.getFileName(), OssSystemCons.OSS_BUCKET_NAME);
         return new RuleFile().setBucketName(OssSystemCons.OSS_BUCKET_NAME)
+                .setSize(baseFile.getSize())
                 .setFileName(baseFile.getFileName())
                 .setName(wordDto.getFileName())
                 .setOutputType(OutputType.download)
                 .setModule(RuleConstant.OSS_BUCKET_NAME_PATH + wordDto.getFileType())
                 .setFileType(StrUtil.DOT + wordDto.getFileType())
-                .setOriginalName(wordDto.getFileName())
+                .setOriginalName(wordDto.getFileName() + StrUtil.DOT + wordDto.getFileType())
                 .setUrl(fileLink);
     }
 

@@ -7,6 +7,7 @@ import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.common.utils.SystemThreadLocal;
 import cn.bctools.common.utils.TreeUtils;
 import cn.bctools.common.utils.function.Get;
+import cn.bctools.design.constant.AppConstant;
 import cn.bctools.design.crud.entity.JvsTree;
 import cn.bctools.design.crud.service.JvsTreeService;
 import cn.bctools.design.data.fields.DataFieldHandler;
@@ -70,6 +71,9 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
         boolean isMulti = Boolean.TRUE.equals(cascaderItem.getMultiple());
         boolean showPath = Boolean.TRUE.equals(cascaderItem.getShowalllevels());
         DataFieldHandler dataFieldHandler = SpringContextUtil.getBean(DataFieldHandler.class);
+        if (ObjectNull.isNull(cascaderItem.getDatatype())) {
+            return data;
+        }
         switch (cascaderItem.getDatatype()) {
             case option:
 
@@ -128,9 +132,11 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                         return getRuleValue(cascaderItem, optionHttp, lineData, data, showPath);
                     }
                 }
+                break;
             default:
                 return data;
         }
+        return data;
     }
 
     public Object getRuleValue(CascaderItemHtml cascaderItem, String optionHttp, Map<String, Object> lineData, Object data, boolean showPath) {
@@ -196,7 +202,7 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
     private List<FormValueHtml> getFormValueHtml(List<Map> list, String label, String value) {
         List<FormValueHtml> html = new ArrayList<>();
         for (Map jsonObject : list) {
-            List children = (List) jsonObject.get("children");
+            List children = (List) jsonObject.get(AppConstant.children);
             FormValueHtml formValueHtml = new FormValueHtml().setLabel(jsonObject.get(label).toString()).setValue(jsonObject.get(value).toString());
             if (ObjectNull.isNotNull(children)) {
                 //装下一层
@@ -212,8 +218,9 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
     public String getConversionKey(CascaderItemHtml dto, Object o, Map<String, Object> lineData, Map<String, Map<String, String>> cascaderFieldPathIdsMap, Map<String, List<Map<String, Object>>> generateCascaderList) {
 
         //这里需要判断是否是多选，如果是多选，这里的 obj 需要调整为数组
-        if (dto.getMultiple() && o.toString().contains(",")) {
-            Arrays.stream(o.toString().split(",")).forEach(e -> getConversionKey(dto, e.toString().trim(), lineData, cascaderFieldPathIdsMap, generateCascaderList));
+        if (dto.getMultiple() && (o.toString().contains(",") || o.toString().contains("，"))) {
+            String v = o.toString().replace("，", ",");
+            Arrays.stream(v.split(",")).forEach(e -> getConversionKey(dto, e.trim(), lineData, cascaderFieldPathIdsMap, generateCascaderList));
             return null;
         } else {
             Object obj = getConversionKey(dto, o, lineData);
@@ -278,7 +285,7 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
             //根据模型获取字段
             case system:
                 Map<String, Object> byUniqueName = jvsTreeService.getByUniqueName(cascaderItem.getDictName());
-                return getNextSystem(collect, 0, (List<Tree>) byUniqueName.get("children"));
+                return getNextSystem(collect, 0, (List<Tree>) byUniqueName.get(AppConstant.children));
             case rule:
                 //逻辑引擎获取级联数据
                 String optionHttp = cascaderItem.getOptionHttp();
@@ -310,10 +317,11 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                         }
                     }
                 }
-
+                break;
             default:
                 return null;
         }
+        return null;
     }
 
     /**
@@ -324,6 +332,9 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
      */
     public Set<String> childrenId(CascaderItemHtml cascaderItem, String value) {
         String dictName = cascaderItem.getDictName();
+        if (ObjectNull.isNull(cascaderItem.getDatatype())) {
+            return new HashSet<>();
+        }
         switch (cascaderItem.getDatatype()) {
             case dataModel: {
                 DynamicDataService dynamicDataService = SpringContextUtil.getBean(DynamicDataService.class);
@@ -350,7 +361,10 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                 String optionHttp = cascaderItem.getOptionHttp();
                 if (ObjectNull.isNotNull(optionHttp)) {
                     List<Map<String, Object>> ruleValue = getRuleValue(optionHttp);
-                    List<Tree<Object>> tree = TreeUtils.tree(ruleValue, value, cascaderItem.getProps().getSecTitle(), "id", cascaderItem.getProps().getLabel(), "id");
+                    List<Tree<Object>> tree = TreeUtils.tree(ruleValue, value, cascaderItem.getProps().getSecTitle(), cascaderItem.getProps().getValue(), cascaderItem.getProps().getLabel(), "id");
+                    if(ObjectNull.isNull(tree)){
+                       break;
+                    }
                     return tree.stream().flatMap(a -> TreeUtils.tree2List(a, Tree::getChildren).stream()).map(e -> e.getId().toString()).collect(Collectors.toSet());
                 }
                 break;
@@ -361,6 +375,51 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
         return strings;
     }
 
+    public List<String> getByDataModelIds(String formId, FormValueHtml props, Object rootId) {
+        DynamicDataService dynamicDataService = SpringContextUtil.getBean(DynamicDataService.class);
+        //此处直接跳过数据模型
+        List<Map<String, Object>> dictList = dynamicDataService.queryList(formId, props.getLabel(), props.getSecTitle());
+
+        List<String> list = new ArrayList<>();
+        if (rootId instanceof List) {
+            ((List<?>) rootId).forEach(b -> {
+                TreeUtils.getListPassingBy(dictList, b, e -> props.getSecTitle(), e -> props.getLabel())
+                        .stream()
+                        .map(e -> e.get("id").toString()).forEach(a -> {
+                            list.add(a);
+                        });
+            });
+        } else {
+            TreeUtils.getListPassingBy(dictList, rootId, e -> props.getSecTitle(), e -> props.getLabel())
+                    .stream()
+                    .map(e -> e.get("id").toString()).forEach(e -> {
+                        list.add(e);
+                    });
+        }
+        return list;
+    }
+
+    public List<String> getByDataRuleIds(String optionHttp, FormValueHtml props, Object rootId) {
+        //逻辑引擎获取级联数据
+        if (ObjectNull.isNotNull(optionHttp)) {
+            List<Map<String, Object>> ruleValue = getRuleValue(optionHttp);
+            List<String> list = new ArrayList<>();
+            if (rootId instanceof List) {
+                ((List<?>) rootId).forEach(a -> {
+                    TreeUtils.getListPassingBy(ruleValue, a, e -> props.getSecTitle(), e -> props.getLabel())
+                            .stream()
+                            .map(e -> e.get("id").toString()).forEach(c -> list.add(c));
+                });
+            } else {
+                TreeUtils.getListPassingBy(ruleValue, rootId, e -> props.getSecTitle(), e -> props.getLabel())
+                        .stream()
+                        .map(e -> e.get("id").toString()).forEach(c -> list.add(c));
+            }
+            return list;
+        } else {
+            return new ArrayList<>();
+        }
+    }
 
     private Object getNextSystem(List<String> collect, int i, List<Tree> list) {
         String s = collect.get(i);
@@ -398,7 +457,7 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
      * @param dictUniqueName 字典标识
      * @return 字典项集合
      */
-    private List<TreeDictDto> getTreeDict(String dictUniqueName) {
+    public List<TreeDictDto> getTreeDict(String dictUniqueName) {
         List<TreeDictDto> result = new ArrayList<>();
         Map<String, String> idMap = new HashMap<>(64);
         Deque<Map<String, Object>> keyQueue = new ArrayDeque<>(64);
@@ -419,7 +478,7 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
             // 记录节点id与uniqueName的对应关系
             idMap.put(id, uniqueName);
             // 添加子节点
-            List<Map<String, Object>> children = (List<Map<String, Object>>) poll.get("children");
+            List<Map<String, Object>> children = (List<Map<String, Object>>) poll.get(AppConstant.children);
             if (ObjectUtils.isNotEmpty(children)) {
                 keyQueue.addAll(children);
             }
@@ -485,4 +544,5 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                 "}";
         return JSONObject.parseObject(str);
     }
+
 }

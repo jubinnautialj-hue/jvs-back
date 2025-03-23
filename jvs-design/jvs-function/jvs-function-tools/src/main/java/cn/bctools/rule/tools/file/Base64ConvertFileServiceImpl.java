@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.util.Map;
 
 /**
@@ -48,6 +47,7 @@ public class Base64ConvertFileServiceImpl implements BaseCustomFunctionInterface
         String url = ossTemplate.fileJvsPublicLink(baseFile.getFileName());
         String s = ossTemplate.fileLink(baseFile.getFileName(), OssSystemCons.OSS_BUCKET_NAME);
         return new RuleFile().setBucketName(OssSystemCons.OSS_BUCKET_NAME)
+                .setSize(baseFile.getSize())
                 .setFileName(baseFile.getFileName())
                 .setOutputType(OutputType.download)
                 .setModule(module)

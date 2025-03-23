@@ -4,6 +4,7 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanToMapUtils;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.data.entity.DataModelPo;
+import cn.bctools.design.data.fields.IDataFieldHandler;
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
 import cn.bctools.design.data.fields.dto.FieldPublicHtml;
 import cn.bctools.design.data.fields.enums.DataFieldType;
@@ -15,7 +16,6 @@ import cn.bctools.rule.common.ParameterOption;
 import cn.hutool.core.lang.Dict;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.omg.CORBA.OBJECT_NOT_EXIST;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -42,14 +42,15 @@ public class DataModelLinkSelected implements LinkFieldSelected<String> {
      * The Data model service.
      */
     DataModelService dataModelService;
+    Map<String, IDataFieldHandler> handlerMap;
 
     @Override
     public Object link(String id, String body) {
-        fields field = DataModelLinkSelected.fields.valueOf(body);
+        fields field = fields.valueOf(body);
         DataModelPo model = dataModelService.getModel(id);
         //需要排除一下设计的容器字段 ，和设计的样式字段
 
-        Map<String, FieldBasicsHtml> allField = fieldService.getAllField(model.getAppId(), id, false, true, e -> false)
+        Map<String, FieldBasicsHtml> allField = fieldService.getAllField(model.getAppId(), id, true, true, e -> false)
                 .stream()
 //                .filter(e -> !DataFieldType.CONTAINER.contains(e.getFieldType()))
                 .filter(e -> !e.getFieldType().equals(DataFieldType.p))
@@ -74,12 +75,17 @@ public class DataModelLinkSelected implements LinkFieldSelected<String> {
                         .stream()
                         .map(e -> {
                             //如果是单行文本，可以添加包含和不包含规则
-                            if (ObjectNull.isNotNull(e.getType(), e.getEnabledQueryTypes()) && e.getType().equals(DataFieldType.input)) {
-                                List<DataQueryType> enabledQueryTypes = e.getEnabledQueryTypes().stream().collect(Collectors.toList());
-                                enabledQueryTypes.add(DataQueryType.in);
-                                enabledQueryTypes.add(DataQueryType.notIn);
-                                if (!enabledQueryTypes.contains(DataQueryType.ne)) {
-                                    enabledQueryTypes.add(DataQueryType.ne);
+                            IDataFieldHandler handler = handlerMap.get(e.getType().getDesc());
+                            if (ObjectNull.isNotNull(handler)) {
+                                List enabledQueryTypes;
+                                if (ObjectNull.isNull(e.getDesignJson())) {
+                                    Map generate = handler.generate(e.getLabel(), e.getProp(), null);
+                                    enabledQueryTypes = handler.getEnabledQueryTypes(handler.toHtml(generate));
+                                } else {
+                                    enabledQueryTypes = handler.getEnabledQueryTypes(handler.toHtml(e.getDesignJson()));
+                                }
+                                if (!enabledQueryTypes.contains(DataQueryType.isNull)) {
+                                    enabledQueryTypes.add(DataQueryType.isNull);
                                 }
                                 e.setEnabledQueryTypes(enabledQueryTypes);
                             }

@@ -1,6 +1,5 @@
 package cn.bctools.design.crud.service;
 
-import cn.bctools.design.crud.dto.PrintTemplateDto;
 import cn.bctools.design.crud.entity.PrintTemplate;
 import com.baomidou.mybatisplus.extension.service.IService;
 

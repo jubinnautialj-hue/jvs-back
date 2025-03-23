@@ -6,12 +6,14 @@ import cn.bctools.rule.ess.api.flowmanage.CreateSchemeUrlApi;
 import cn.bctools.rule.ess.api.flowmanage.StartFlowApi;
 import com.tencentcloudapi.ess.v20201111.models.CreateSchemeUrlResponse;
 import com.tencentcloudapi.ess.v20201111.models.FlowCreateApprover;
+import lombok.experimental.UtilityClass;
 
 /**
  * 通过模板发起签署流程，并查询签署链接
  *
  * @author jvs
  */
+@UtilityClass
 public class CreateFlowByTemplateIdDirectlyApi {
     /**
      * Create flow by template id directly string [ ].

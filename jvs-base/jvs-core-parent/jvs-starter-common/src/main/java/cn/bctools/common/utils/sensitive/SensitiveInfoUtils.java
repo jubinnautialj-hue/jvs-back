@@ -79,16 +79,15 @@ public class SensitiveInfoUtils {
         sensitiveKey.put("email", (e) -> DesensitizedUtil.email(String.valueOf(e)));
         sensitiveKey.put("all", (e) -> DesensitizedUtil.address(String.valueOf(e), e.length()));
 
-        map.add(Dict.create().set("label", "所有文字").set("value", "all"));
-        map.add(Dict.create().set("label", "身份证").set("value", "idcard"));
-        map.add(Dict.create().set("label", "姓名").set("value", "realname"));
-        map.add(Dict.create().set("label", "银行卡号").set("value", "bankcard"));
-        map.add(Dict.create().set("label", "手机号").set("value", "phone"));
-        map.add(Dict.create().set("label", "地址").set("value", "address"));
-        map.add(Dict.create().set("label", "邮箱").set("value", "email"));
+        map.add(Dict.create().set("label", "所有文字(*****)").set("value", "all"));
+        map.add(Dict.create().set("label", "身份证(2111 **** **** **** 11)").set("value", "idcard"));
+        map.add(Dict.create().set("label", "姓名(张*、王**)").set("value", "realname"));
+        map.add(Dict.create().set("label", "银行卡号(6228*******6789)").set("value", "bankcard"));
+        map.add(Dict.create().set("label", "手机号(138****6666)").set("value", "phone"));
+        map.add(Dict.create().set("label", "地址(北京市朝阳区龙溪街********)").set("value", "address"));
+        map.add(Dict.create().set("label", "邮箱(a***@163.com)").set("value", "email"));
 
     }
-
 
     /**
      * [银行卡号] 前六位，后四位，其他用星号隐藏每位1个星号<例子:6222600**********1234>

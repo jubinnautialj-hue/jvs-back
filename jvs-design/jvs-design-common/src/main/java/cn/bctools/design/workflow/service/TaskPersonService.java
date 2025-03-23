@@ -1,6 +1,6 @@
 package cn.bctools.design.workflow.service;
 
-import cn.bctools.common.entity.dto.UserDto;
+import cn.bctools.design.workflow.dto.FlowApprovalUserDTO;
 import cn.bctools.design.workflow.model.Node;
 import cn.bctools.design.workflow.support.RuntimeData;
 
@@ -19,5 +19,5 @@ public interface TaskPersonService {
      * @param runtimeData 运行时数据
      * @param users       指定用户为下一节点待审批人（若不为空，则以此字段数据为下一节点审批人）
      */
-    void saveTaskPerson(Node nextNode, RuntimeData runtimeData, List<UserDto> users);
+    void saveTaskPerson(Node nextNode, RuntimeData runtimeData, List<FlowApprovalUserDTO> users);
 }

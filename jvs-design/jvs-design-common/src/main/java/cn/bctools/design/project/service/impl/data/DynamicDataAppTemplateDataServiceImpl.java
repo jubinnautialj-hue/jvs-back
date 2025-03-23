@@ -4,6 +4,7 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.function.Get;
+import cn.bctools.design.config.DesignConfig;
 import cn.bctools.design.data.entity.DynamicDataPo;
 import cn.bctools.design.data.fields.dto.QueryOrderDto;
 import cn.bctools.design.data.service.DynamicDataService;
@@ -18,19 +19,18 @@ import cn.bctools.design.project.utils.JvsAppTemplateUtils;
 import cn.bctools.design.util.ModeUtils;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * @author zhuxiaokang
  * 应用模板——动态数据
  */
+@Slf4j
 @Service
 @AllArgsConstructor
 public class DynamicDataAppTemplateDataServiceImpl extends AppTemplateDataBase implements AppTemplateDataService<DynamicDataPo> {
@@ -39,15 +39,12 @@ public class DynamicDataAppTemplateDataServiceImpl extends AppTemplateDataBase i
     /**
      * 可导出最大数据量
      */
-    private static final Integer MAX_DATA_TOTAL = 5000;
+    DesignConfig designConfig;
 
-    /**
-     * 单个模型可导出的最大数据量
-     */
-    private static final Integer MAX_SINGLE_MODEL_DATA_TOTAL = 100;
 
     @Override
     public List<DynamicDataPo> list(List<String> modelIds, List<String> ids) {
+        log.info("待同步模型：" + modelIds);
         if (ObjectNull.isNull(modelIds)) {
             return Collections.emptyList();
         }
@@ -59,20 +56,23 @@ public class DynamicDataAppTemplateDataServiceImpl extends AppTemplateDataBase i
                 .setDirection(Sort.Direction.DESC));
         for (String modelId : modelIds) {
             // 不替换数据id，直接查询数据
-            Page<DynamicDataPo> page = new Page<>(1, MAX_SINGLE_MODEL_DATA_TOTAL);
+            Page<DynamicDataPo> page = new Page<>(1, designConfig.getTemplateMaxSingleModelDataTotal());
+            AppVersionTypeEnum currentMode = Optional.ofNullable(ModeUtils.getMode()).orElse(AppVersionTypeEnum.GA);
+            log.info("同步数据模式：{}", currentMode.getValue());
             Page<Map<String, Object>> mapPage = dynamicDataService.queryPage(null, page, modelId, null, null, orderBys, null, false, false, false, null);
             dynamicDataPos.addAll(mapPage.getRecords().stream().map(dynamicDataService::parseBean).collect(Collectors.toList()));
-            if (dynamicDataPos.size() > MAX_DATA_TOTAL) {
-                throw new BusinessException("模板导出数据总量不能超过条", MAX_DATA_TOTAL.toString());
+            if (dynamicDataPos.size() > designConfig.getTemplateMaxDataTotal()) {
+                throw new BusinessException("模板导出数据总量不能超过条", designConfig.getTemplateMaxDataTotal().toString());
             }
         }
+        log.info("待同步数据量：" + dynamicDataPos.size());
         return dynamicDataPos;
     }
 
     @Override
     public void save(JvsApp jvsApp, JvsAppVersion targetAppVersion, List<String> existsIds, TemplateBo templateBo, TemplateBo targetVersionTemplateBo) {
         if (ObjectNull.isNull(templateBo.getDynamicDataPos())) {
-           return;
+            return;
         }
         // 版本回退不回退数据
         VersionIterationTypeEnum type = JvsAppTemplateUtils.getContextVersionIterationType();

@@ -16,9 +16,9 @@ public class TaskEndTriggerEventDto implements Serializable {
     private static final long serialVersionUID = 1L;
 
     @ApiModelProperty("流程任务撤回触发事件")
-    private TaskEndTriggerEventSetting terminatedEvent;
+    private TaskTriggerEventSetting terminatedEvent;
     @ApiModelProperty("流程任务审批通过触发事件")
-    private TaskEndTriggerEventSetting passedEvent;
+    private TaskTriggerEventSetting passedEvent;
     @ApiModelProperty("流程任务审批不通过触发事件")
-    private TaskEndTriggerEventSetting rejectedEvent;
+    private TaskTriggerEventSetting rejectedEvent;
 }

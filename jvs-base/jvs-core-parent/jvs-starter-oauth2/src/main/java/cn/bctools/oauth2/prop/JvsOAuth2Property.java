@@ -1,4 +1,4 @@
-//package cn.bctools.oauth2.prop;
+package cn.bctools.oauth2.prop;//package cn.bctools.oauth2.prop;
 //
 //import lombok.Data;
 //import org.springframework.boot.context.properties.ConfigurationProperties;

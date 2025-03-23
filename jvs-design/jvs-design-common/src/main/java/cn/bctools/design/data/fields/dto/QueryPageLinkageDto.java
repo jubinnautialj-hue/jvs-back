@@ -7,11 +7,12 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * @author jvs
- *
  */
 @Slf4j
 @Data
@@ -33,4 +34,6 @@ public class QueryPageLinkageDto {
 
     @ApiModelProperty("显示字段")
     private List<ModelDisplayLinkageFieldHtml> linkageFieldKeys;
+    @ApiModelProperty("行级数据")
+    private Map<String, Object> lineData = new HashMap<>();
 }

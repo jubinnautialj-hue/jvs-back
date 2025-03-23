@@ -47,7 +47,7 @@ public class AppInterceptor implements HandlerInterceptor {
         ServletOutputStream outputStream = response.getOutputStream();
         // 超级管理员直接放行
         UserDto userDto = UserCurrentUtils.getNullableUser();
-        if (ObjectNull.isNotNull(userDto) && userDto.getAdminFlag()) {
+        if (ObjectNull.isNotNull(userDto) && Boolean.TRUE.equals(userDto.getAdminFlag())) {
             return Boolean.TRUE;
         }
         JvsApp jvsApp = CurrentAppUtils.getApp();
@@ -70,7 +70,7 @@ public class AppInterceptor implements HandlerInterceptor {
                 }
             }
         } else {
-            InterceptorUtil.throwException(outputStream, "没有权限操作");
+            InterceptorUtil.throwException(outputStream, "模式不正确或没有权限");
             return Boolean.FALSE;
         }
         log.error("请求地址错误,可能需要修改接口:" + requestUri);

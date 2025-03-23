@@ -266,7 +266,7 @@ public class SysLogAspect {
         for (int i = 0; i < point.getArgs().length; i++) {
             Object arg = point.getArgs()[i];
             //增加参数忽略匹配  如果是返回对象不记录
-            if (arg instanceof com.baomidou.mybatisplus.extension.plugins.pagination.Page) {
+            if (arg instanceof Page) {
                 //改造排序参数
                 Page page = (Page) arg;
                 for (Object order : page.getOrders()) {

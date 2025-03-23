@@ -112,6 +112,16 @@ public class AppTemplateTaskProgressHandler {
         }
         // 删除心跳缓存
         AppTemplateTaskUtils.removeHeart(getHeartbeatItemKey(lockey, taskId));
+    }
+
+    /**
+     * 删除心跳
+     *
+     * @param lockey   锁
+     * @param errorMsg 异常消息
+     */
+    public void removeHeartAndCache(String lockey, String errorMsg) {
+        removeHeart(lockey, errorMsg);
         APP_ITERATOR_TASK_HEARTBEAT.remove(lockey);
     }
 

@@ -32,7 +32,7 @@ import java.util.stream.Collectors;
         order = 4,
         test = true,
 //        iconUrl = "rule-jituanOAliuchengxinzengxiudingshangxianshenpiliucheng",
-        explain = "提供逻辑引擎key直接内部相互调用, 做跨应用数据交互和接口交互操作"
+        explain = "提供逻辑引擎key(url  id值)直接内部相互调用, 做跨应用数据交互和接口交互操作"
 )
 @AllArgsConstructor
 public class RuleServiceImpl implements BaseCustomFunctionInterface<RuleDto> {

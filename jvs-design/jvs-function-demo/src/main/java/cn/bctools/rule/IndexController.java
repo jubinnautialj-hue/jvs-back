@@ -4,15 +4,11 @@ package cn.bctools.rule;
 import cn.bctools.common.utils.R;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.RuleGroup;
-import com.google.common.util.concurrent.RateLimiter;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-
-
-import java.time.Duration;
 
 
 /**

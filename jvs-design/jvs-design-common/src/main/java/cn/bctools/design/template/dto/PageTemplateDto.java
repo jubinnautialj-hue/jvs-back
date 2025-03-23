@@ -1,8 +1,5 @@
 package cn.bctools.design.template.dto;
 
-import com.alibaba.fastjson2.JSONObject;
-import com.baomidou.mybatisplus.annotation.TableField;
-import cn.bctools.database.handler.Fastjson2TypeHandler;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 

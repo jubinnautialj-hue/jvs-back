@@ -3,12 +3,14 @@ package cn.bctools.design.workflow.support.function.impl;
 import cn.bctools.auth.api.dto.PersonnelDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.database.util.IdGenerator;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.workflow.constant.SystemConstant;
 import cn.bctools.design.workflow.dto.AppendApprovalOperationDto;
 import cn.bctools.design.workflow.dto.FlowReqDto;
 import cn.bctools.design.workflow.entity.FlowTaskNode;
+import cn.bctools.design.workflow.dto.FlowApprovalUserDTO;
 import cn.bctools.design.workflow.entity.dto.*;
 import cn.bctools.design.workflow.entity.enums.FlowTaskNodeApprovalTypeEnum;
 import cn.bctools.design.workflow.enums.NodeOperationTypeEnum;
@@ -23,6 +25,7 @@ import cn.bctools.design.workflow.utils.FlowApprovalCacheUtil;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.LocalDateTimeUtil;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -78,7 +81,7 @@ public class AppendApprovalFunction extends AbstractFunctionHandler<Boolean, Run
                         .stream()
                         .map(personnel -> new UserDto().setId(personnel.getId()).setRealName(personnel.getName()))
                         .collect(Collectors.toList());
-                taskPersonService.saveTaskPerson(node, runtimeData, userDtos);
+                taskPersonService.saveTaskPerson(node, runtimeData, BeanCopyUtil.copys(userDtos, FlowApprovalUserDTO.class));
             }
         } catch (Exception e) {
             throw new BusinessException(e.getMessage());
@@ -192,7 +195,7 @@ public class AppendApprovalFunction extends AbstractFunctionHandler<Boolean, Run
     private AppendApprovalDto buildAppendApproval(RuntimeData runtimeData, String appendTargetId, AppendApprovalDto oldAppendApproval, AppendApprovalOperationDto appendApproval) {
         AppendApprovalDto newAppendDto = null;
         // 生成加签id
-        String id = IdGenerator.getIdStr();
+        String id = IdWorker.getIdStr();
         // 当前节点没有加签数据
         if (ObjectNull.isNull(oldAppendApproval)) {
             newAppendDto = new AppendApprovalDto();

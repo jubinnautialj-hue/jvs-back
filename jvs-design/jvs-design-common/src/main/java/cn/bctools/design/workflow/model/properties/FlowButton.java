@@ -16,6 +16,11 @@ public class FlowButton {
     private String name;
 
     /**
+     * 按钮显示名称
+     */
+    private String displayName;
+
+    /**
      * 操作类型
      */
     private NodeOperationTypeEnum operation;

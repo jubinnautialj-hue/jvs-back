@@ -10,6 +10,7 @@ import cn.bctools.rule.utils.html.ResultDto;
 import com.alibaba.fastjson2.JSONPath;
 import lombok.Data;
 import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.*;
@@ -20,7 +21,10 @@ import java.util.stream.Collectors;
  *
  * @author guojing
  */
+@Slf4j
 public class RuleSystemThreadLocal extends SystemThreadLocal {
+    public static ThreadLocal<RuleExecDto> ruleThreadLocal = new ThreadLocal<>();
+
     /**
      * The constant PREFIX.
      */
@@ -32,7 +36,7 @@ public class RuleSystemThreadLocal extends SystemThreadLocal {
      * @return the rule
      */
     public static RuleExecDto getRule() {
-        return SystemThreadLocal.get(RuleExecDto.class.getSimpleName());
+        return ruleThreadLocal.get();
     }
 
     /**
@@ -41,7 +45,7 @@ public class RuleSystemThreadLocal extends SystemThreadLocal {
      * @param ruleExecDto the rule exec dto
      */
     public static void set(RuleExecDto ruleExecDto) {
-        SystemThreadLocal.set(RuleExecDto.class.getSimpleName(), ruleExecDto);
+        ruleThreadLocal.set(ruleExecDto);
     }
 
     /**
@@ -198,6 +202,13 @@ public class RuleSystemThreadLocal extends SystemThreadLocal {
     }
 
     /**
+     * Clear ergodic.
+     */
+    public static void clearErgodic() {
+        threadLocal.set(new HashMap<>(8));
+    }
+
+    /**
      * 设置循环画布的索引号
      *
      * @param i 循环索引
@@ -227,12 +238,4 @@ public class RuleSystemThreadLocal extends SystemThreadLocal {
         return (int) o.pop();
     }
 
-    /**
-     * Clear ergodic.
-     *
-     * @param execNodeId the exec node id
-     */
-    public static void clearErgodic(String execNodeId) {
-        SystemThreadLocal.remove("ergodic" + execNodeId);
-    }
 }
