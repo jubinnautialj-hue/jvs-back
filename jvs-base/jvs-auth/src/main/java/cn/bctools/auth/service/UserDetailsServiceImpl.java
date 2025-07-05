@@ -153,6 +153,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         SysConfigs sysConfigs = new SysConfigs();
         HttpServletRequest request = WebUtils.getRequest();
         String tenantId = request.getParameter("switch");
+        //匹配域名
+        if (ObjectNull.isNull(tenantId)) {
+            if (!"1".equals(TenantContextHolder.getTenantId())) {
+                tenantId = TenantContextHolder.getTenantId();
+            }
+        }
         if (ObjectNull.isNull(tenantId)) {
             tenantId = (String) redisUtils.get("tenant:" + userId);
         }

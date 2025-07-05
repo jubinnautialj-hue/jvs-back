@@ -1,12 +1,14 @@
 package cn.bctools.common.utils;
 
 import cn.bctools.common.exception.LicenseException;
+import lombok.extern.slf4j.Slf4j;
 
 /**
  * 此工具默认只使用到
  *
  * @author guojing
  */
+@Slf4j
 public class StackTraceElementUtils {
 
     /**
@@ -42,5 +44,21 @@ public class StackTraceElementUtils {
         }
         String message = throwable.getClass().getName() + ":" + throwable.getMessage() + "\n\t" + stringBuffer.toString();
         return message;
+    }
+
+    /**
+     * 调试插入
+     */
+    public static void printThread() {
+        try {
+            StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+            StringBuffer stringBuffer = new StringBuffer(200);
+            for (StackTraceElement stackTraceElement : stackTrace) {
+                stringBuffer.append(stackTraceElement + "\n");
+            }
+            log.info("打印当前日志信息,{}",stringBuffer);
+        } catch (Exception e) {
+
+        }
     }
 }

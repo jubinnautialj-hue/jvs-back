@@ -22,22 +22,8 @@ public interface UserMapper extends BaseMapper<User> {
      * @param roleIds 角色id集合
      * @return 用户数据集合
      */
-    @Select("SELECT su.*,sur.role_id FROM sys_user_info su LEFT JOIN sys_user_role sur ON su.id = sur.user_id WHERE sur.role_id in ${roleIds} AND su.cancel_flag = 0")
+    @Select("SELECT su.*,sur.role_id FROM sys_user_info su LEFT JOIN sys_user_role sur ON su.id = sur.user_id WHERE sur.role_id in #{roleIds} AND su.cancel_flag = 0")
     List<User> getByRoleIds(@Param("roleIds") String roleIds);
 
-    /**
-     * 通过部门名称获取用户
-     *
-     * @param wrapper 部门全名称
-     * @return 用户信息集合
-     */
-    @Select(" SELECT DISTINCT" +
-            " su.*" +
-            " FROM" +
-            " sys_user_info su" +
-            " LEFT JOIN sys_user_role sur ON sur.user_id = su.id" +
-            " LEFT JOIN sys_role sr ON sr.id = sur.role_id and sr.del_flag = 0" +
-            " where ${ew.sqlSegment} and su.cancel_flag = 0")
-    List<User> getByQueryDto(@Param("ew") Wrapper<User> wrapper);
 
 }

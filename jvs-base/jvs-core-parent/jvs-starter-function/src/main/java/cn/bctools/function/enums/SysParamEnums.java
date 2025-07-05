@@ -27,6 +27,7 @@ public enum SysParamEnums {
     UserRole("UserRole", "用户角色", "当前用户角色", JvsParamType.array),
     DeptName("DeptName", "用户部门名称", "当前用户所在的部门名称", JvsParamType.array),
     DeptCode("DeptCode", "用户部门编码", "当前用户所在的部门编码", JvsParamType.array),
+    JobName("JobName", "用户岗位名称", "当前用户所在的岗位名称", JvsParamType.text),
     TenantCode("TenantCode", "用户登录租户", "当前用户登录租户", JvsParamType.text),
     ;
 

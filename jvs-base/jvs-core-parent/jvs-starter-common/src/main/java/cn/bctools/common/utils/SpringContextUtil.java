@@ -37,6 +37,7 @@ import java.time.LocalDateTime;
 import java.util.*;
 import javax.net.ssl.*;
 import java.security.cert.X509Certificate;
+
 /**
  * 服务上下文工具类，可直接操作此工具类获取版本号，服务名，环境和Spring 管理的Bean对象,在Aop、日志、组件重写等地方频繁使用
  *
@@ -149,7 +150,7 @@ public class SpringContextUtil implements ApplicationContextAware {
      */
     @Override
     public void setApplicationContext(ApplicationContext context) throws BeansException {
-        JSON.config(JSONWriter.Feature.WriteEnumsUsingName);
+        JSON.config(JSONWriter.Feature.WriteEnumsUsingName, JSONWriter.Feature.WriteNulls);
         dateTime = LocalDateTime.now();
         applicationContext = context;
         applicationContextName = context.getEnvironment().getProperty("spring.application.name");
@@ -164,6 +165,7 @@ public class SpringContextUtil implements ApplicationContextAware {
         env = String.format(envformat, mode, applicationContextName, serverPort, namespace);
         disableSSLVerification();
     }
+
     public static void disableSSLVerification() {
         try {
             TrustManager[] trustAllCertificates = new TrustManager[]{
@@ -171,8 +173,12 @@ public class SpringContextUtil implements ApplicationContextAware {
                         public X509Certificate[] getAcceptedIssuers() {
                             return null;
                         }
-                        public void checkClientTrusted(X509Certificate[] certs, String authType) {}
-                        public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                        }
+
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                        }
                     }
             };
 

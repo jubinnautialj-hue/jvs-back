@@ -53,6 +53,15 @@ public class DynamicResourceController {
     OauthOtherService oauthOtherService;
     JvsSystemConfig jvsSystemConfig;
 
+    public static void main(String[] args) {
+        JvsSystemConfig jvsSystemConfig = new JvsSystemConfig();
+        jvsSystemConfig.setMultiTenantMode(true);
+        jvsSystemConfig.setDomain("jvs.m.prd.szunicom.cn");
+        boolean matches = pattern.matcher(jvsSystemConfig.getDomain()).matches();
+        boolean b = jvsSystemConfig.getMultiTenantMode() && matches;
+        System.out.println(b);
+    }
+
     static boolean data = false;
     // 定义域名的正则表达式
     static String DOMAIN_REGEX =
@@ -140,6 +149,13 @@ public class DynamicResourceController {
         if (data) {
             if (UserCurrentUtils.init().getPermissions().contains("jvs_app_add")) {
                 service.add(0, new DynamicResource().setUrl(url.get() + "/#/wel/index?login=isLogin").setName("应用开发").setIconUrl("/jvs-ui-public/img/appdev.png"));
+            }
+        }
+        //判断是否是有 ai
+        if (UserCurrentUtils.init().getPermissions().contains(AuthConstant.jvs_ai_manager)) {
+            if (ObjectNull.isNotNull(jvsSystemConfig.getAidomain())) {
+                //域名
+                service.add(new DynamicResource().setUrl(jvsSystemConfig.getAidomain()).setName("AI控制台").setIconUrl("/jvs-ui-public/img/aiconsole.png"));
             }
         }
         //判断是否是平台用户

@@ -24,7 +24,7 @@ public class DefaultTableFieldGetter implements ITableFieldGetter {
 
     @Override
     public List<String> getFieldNames(String ip, String port, String databaseName, String tableName) {
-        String key = this.getKey(ip, port, databaseName, tableName);
+        String key = this.getKey(ip, port, databaseName, tableName).toLowerCase();
         List<String> fieldNames = tableInfoCache.get(key);
         if (Objects.isNull(fieldNames)) {
             fieldNames = Collections.emptyList();

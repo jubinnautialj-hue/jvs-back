@@ -259,7 +259,7 @@ public class Tool {
             fontMapper.put("隶书", PhysicalFonts.get("LiSu"));
             mlPackage.setFontMapper(fontMapper);
 
-            os = new FileOutputStream(pdfPath);
+            os = new java.io.FileOutputStream(pdfPath);
 
             FOSettings foSettings = Docx4J.createFOSettings();
             foSettings.setWmlPackage(mlPackage);
@@ -298,7 +298,7 @@ public class Tool {
             f.getParentFile().mkdirs();
         }
         File file = new File(directory + "/" + fileName);
-        OutputStream os34 = new FileOutputStream(file);
+        OutputStream os34 = new java.io.FileOutputStream(file);
         Docx4J.toPDF(mlPackage, os34);
         os.flush();
         os.close();

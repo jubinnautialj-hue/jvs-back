@@ -19,11 +19,8 @@ import cn.bctools.web.utils.WebUtils;
 import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
-import com.baomidou.mybatisplus.core.toolkit.Wrappers;
-import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.codec.digest.DigestUtils;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AccountExpiredException;
 import org.springframework.security.authentication.AccountStatusUserDetailsChecker;
 import org.springframework.security.authentication.AuthenticationProvider;
@@ -44,7 +41,6 @@ import org.springframework.security.oauth2.server.authorization.token.OAuth2Toke
 
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
-import java.lang.ref.WeakReference;
 import java.time.Duration;
 import java.util.*;
 import java.util.function.Function;
@@ -113,8 +109,12 @@ public class OtherAuthenticationProvider extends AccountStatusUserDetailsChecker
             //校验密码
             if (!passwordEncoder.matches(password, userDetails.getPassword())) {
                 //添加次数
-                loginTimeIncrease(userName + ":" + ipAddr);
-                throw new AccountExpiredException(SpringContextUtil.msg("用户名或密码错误,5次后将锁定"));
+                int i = loginTimeIncrease(userName + ":" + ipAddr);
+                if (i <= 0) {
+                    checkLockUser(userName + ":" + ipAddr);
+                }
+                String message = "用户名或密码错误," + i + "次后将锁定";
+                throw new AccountExpiredException(SpringContextUtil.msg(message));
             } else {
                 //输对了删除记录
                 redisUtils.del(SysConstant.redisKey("checklogin", userName + ":" + ipAddr));
@@ -207,8 +207,9 @@ public class OtherAuthenticationProvider extends AccountStatusUserDetailsChecker
 
     /**
      * @param userName
+     * @return
      */
-    private void loginTimeIncrease(String userName) {
+    private int loginTimeIncrease(String userName) {
         //如果还未过期则直接返回错误
         String key = SysConstant.redisKey("checklogin", userName);
         Object o = redisUtils.get(key);
@@ -218,13 +219,16 @@ public class OtherAuthenticationProvider extends AccountStatusUserDetailsChecker
             redisUtils.set(key, value, Duration.ofDays(1));
             //如果超过5次,即添加锁定功能
             if (value >= 5) {
-                redisUtils.set(SysConstant.redisKey("lock", userName), value, Duration.ofMinutes(value * 2));
+                //每错一次+5分钟。
+                int i = (value - 5) * 5 + 5;
+                redisUtils.set(SysConstant.redisKey("lock", userName), i, Duration.ofMinutes(i));
             }
-            //todo 是否需要添加直接锁定账号功能
+            return 5 - (Integer) o;
         } else {
             //一天内有效
             redisUtils.set(key, 1, Duration.ofDays(1));
         }
+        return 5;
     }
 
     /**

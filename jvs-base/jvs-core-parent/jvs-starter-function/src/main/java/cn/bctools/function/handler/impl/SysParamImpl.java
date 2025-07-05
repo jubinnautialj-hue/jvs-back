@@ -81,6 +81,8 @@ public class SysParamImpl implements IJvsParam<ElementVo> {
                 return UserCurrentUtils.getDept().stream().map(DeptDto::getDeptName).collect(Collectors.toList());
             case DeptCode:
                 return UserCurrentUtils.getDept().stream().map(DeptDto::getDeptCode).collect(Collectors.toList());
+            case JobName:
+                return UserCurrentUtils.getCurrentUser().getJobName();
             case UserRole:
                 return UserCurrentUtils.getRole();
             case UserEmployeeNo:

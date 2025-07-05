@@ -73,6 +73,7 @@ public class ExpressionController {
         SystemThreadLocal.set(IJvsFunction.KEY_DESIGN_ID, id);
         SystemThreadLocal.set(IJvsFunction.KEY_DESIGN_NODE_ID, nodeId);
         SystemThreadLocal.set(IJvsFunction.KEY_DESIGN_EXTEND_JSON, extendJson);
+        IJvsExpressionElement.local.set(new HashMap<>());
         return R.ok(handler.getAllExpressionElement(useCase));
     }
 
@@ -155,7 +156,10 @@ public class ExpressionController {
         expressionComponent.handleFunctionPo(execPo);
         boolean b = functionBusinessService.updateById(execPo);
         if (!b) {
-            functionBusinessService.save(execPo);
+            FunctionBusinessPo byId = functionBusinessService.getById(execPo.getId());
+            if (ObjectNull.isNull(byId)) {
+                functionBusinessService.save(execPo);
+            }
         }
         //清除清楚其它缓存
         // 校验循环依赖
@@ -260,6 +264,7 @@ public class ExpressionController {
             //表格的操作类型， 如果是表可的操作， 有行级操作，或新增，或删除
             SystemThreadLocal.set("tableType", TableType.line);
         }
+        IJvsExpressionElement.local.set(new HashMap<>());
         body = expressionBeforeHandler.handler(designId, useCase, init, body);
         expressionComponent.getExpression(designId, useCase, body);
         copy.setParams(body.getParams());

@@ -36,7 +36,7 @@ public class OtherAuthUser extends AuthUser implements Serializable {
     /**
      * 是否启用
      */
-    Boolean enable;
+    Object enable;
 
     public List<String> getDeptIds() {
         List<String> objects = new ArrayList<>();

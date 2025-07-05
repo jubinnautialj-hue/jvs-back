@@ -66,17 +66,12 @@ public class SysRequestController {
         //使用的用户名做为帐户名查询条件
         if (ObjectNull.isNotNull(dto.getUserName())) {
             String userName = dto.getUserName();
-            User one = userService.getOne(Wrappers.query(new User().setAccountName(userName)));
-            if (ObjectNull.isNotNull(one)) {
-                dto.setUserId(one.getId());
-                //清楚租户信息查询
-                TenantContextHolder.clear();
-                return R.ok(logMapper.selectPage(page, Wrappers.lambdaQuery(logPo)
-                        .between(LogPo::getStartTime, dto.getStartTime(), dto.getEndTime())
-                        .orderByDesc(LogPo::getCreateDate)));
-            } else {
-                return R.ok(page);
-            }
+            //清楚租户信息查询
+            TenantContextHolder.clear();
+            return R.ok(logMapper.selectPage(page, Wrappers.lambdaQuery(logPo)
+                    .eq(ObjectNull.isNotNull(userName), LogPo::getUserName, userName)
+                    .between(LogPo::getStartTime, dto.getStartTime(), dto.getEndTime())
+                    .orderByDesc(LogPo::getCreateDate)));
         } else {
             return R.ok(logMapper.selectPage(page, Wrappers.lambdaQuery(logPo)
                     .between(LogPo::getStartTime, dto.getStartTime(), dto.getEndTime())

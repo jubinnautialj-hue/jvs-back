@@ -26,9 +26,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * @author zhuxiaokang
@@ -59,15 +59,17 @@ public class WxEnterpriseUser extends BaseWxEnterprise {
     public SyncUserDto getDeptUserAll(String accessToken, List<Dept> depts) {
         SyncUserDto syncUserDto = new SyncUserDto();
         if (CollectionUtils.isNotEmpty(depts)) {
+            Set<String> ids = depts.stream().map(Dept::getId).collect(Collectors.toSet());
+            Map<String, Dept> deptMap = depts.stream().collect(Collectors.toMap(Dept::getParentId, Function.identity()));
+            deptMap.keySet().removeIf(e -> ids.contains(e));
+            deptMap.values().forEach(e -> e.setParentId(String.valueOf(WxEnterpriseDept.ROOT_PARENT_ID)));
             depts.forEach(dept -> {
                 JSONArray deptUsers = getDeptUsers(accessToken, dept.getId());
-                convertUser(syncUserDto, accessToken, dept, deptUsers);
+                if (ObjectNull.isNotNull(deptUsers)) {
+                    convertUser(syncUserDto, accessToken, dept, deptUsers);
+                }
             });
         }
-        // 获取企业微信部门时，排除了根部门。获取用户信息时需要获取根部门下的用户
-        JSONObject rootDept = wxEnterpriseDept.getDept(accessToken, WxEnterpriseDept.ROOT_PARENT_ID);
-        JSONArray deptUsers = getDeptUsers(accessToken, rootDept.getString(WxEnterpriseDept.DEPT_ID));
-        convertUser(syncUserDto, accessToken, null, deptUsers);
         return syncUserDto;
     }
 
@@ -90,6 +92,7 @@ public class WxEnterpriseUser extends BaseWxEnterprise {
             log.error("获取企业微信部门用户失败: {}", jsonObject);
             throw new BusinessException("获取微信部门用户失败", jsonObject);
         }
+        log.info("获取的部门信息为:" + com.alibaba.fastjson2.JSONObject.toJSONString(jsonObject));
         return jsonObject.getJSONArray(USER_LIST);
     }
 
@@ -106,7 +109,7 @@ public class WxEnterpriseUser extends BaseWxEnterprise {
             return;
         }
         String tenantId = TenantContextHolder.getTenantId();
-        deptUsers.parallelStream().forEach(u -> {
+        deptUsers.stream().forEach(u -> {
             JSONObject deptUser = (JSONObject) JSONObject.toJSON(u);
             String deptUserId = deptUser.getString(USER_ID);
             String openId = getOpenId(accessToken, deptUserId);

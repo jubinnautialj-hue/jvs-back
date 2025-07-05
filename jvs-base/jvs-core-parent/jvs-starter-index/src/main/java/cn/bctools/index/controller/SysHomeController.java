@@ -30,6 +30,7 @@ import cn.bctools.index.dto.PresetRenderQueryDto;
 import cn.bctools.index.service.SysHomeService;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
+import org.springframework.beans.BeansException;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
@@ -85,31 +86,35 @@ public class SysHomeController {
         SecurityContext context = SecurityContextHolder.getContext();
         Map<String, Object> stringObjectMap = SystemThreadLocal.get();
         List<ComponentBaseInfo> collect = serviceMap.values().parallelStream().map(e -> {
-            SecurityContextHolder.setContext(context);
-            SystemThreadLocal.setAll(stringObjectMap);
-            ComponentBaseInfo generate = e.generate();
-            Class<? extends FormQueryParamsBase> aClass = e.generateClass();
-            if (ObjectNull.isNotNull(aClass)) {
-                //解析对象，进行属性组装
-                List<FormAttribute> list = getFormAttributes(aClass, e);
-                generate.setFormAttributes(list);
-                //设置基础属性类
-                generate.setFormQueryParamsBaseClass(aClass.getSimpleName());
-            }
-            //设置类型
-            generate.setType(ComponentType.bClass(generate.getClass()));
-            if (generate.getType().equals(ComponentType.DesignApp)) {
+            try {
+                SecurityContextHolder.setContext(context);
+                SystemThreadLocal.setAll(stringObjectMap);
+                ComponentBaseInfo generate = e.generate();
+                Class<? extends FormQueryParamsBase> aClass = e.generateClass();
+                if (ObjectNull.isNotNull(aClass)) {
+                    //解析对象，进行属性组装
+                    List<FormAttribute> list = getFormAttributes(aClass, e);
+                    generate.setFormAttributes(list);
+                    //设置基础属性类
+                    generate.setFormQueryParamsBaseClass(aClass.getSimpleName());
+                }
+                //设置类型
+                generate.setType(ComponentType.bClass(generate.getClass()));
+                if (generate.getType().equals(ComponentType.DesignApp)) {
+                    return null;
+                }
+                //设置名称
+                if (ObjectNull.isNull(generate.getName())) {
+                    generate.setName(generate.getType().getDesc());
+                }
+                //设置 bean
+                if (ObjectNull.isNull(generate.getBean())) {
+                    generate.setBean(e.getClass().getSimpleName());
+                }
+                return generate;
+            } catch (Exception ex) {
                 return null;
             }
-            //设置名称
-            if (ObjectNull.isNull(generate.getName())) {
-                generate.setName(generate.getType().getDesc());
-            }
-            //设置 bean
-            if (ObjectNull.isNull(generate.getBean())) {
-                generate.setBean(e.getClass().getSimpleName());
-            }
-            return generate;
         }).filter(Objects::nonNull).collect(Collectors.toList());
         return R.ok(collect);
     }
@@ -249,41 +254,48 @@ public class SysHomeController {
 //                        }
 //                    }
 
-                    if (ObjectUtil.isNotNull(o)) {
-                        String type = StrUtil.toString(o);
-                        //通过不同的项目,自己的实现类型是不是有实现类, 根据实现类获取当前用户登陆的是否有权限控制的数据
+                    try {
+                        if (ObjectUtil.isNotNull(o)) {
+                            String type = StrUtil.toString(o);
+                            //通过不同的项目,自己的实现类型是不是有实现类, 根据实现类获取当前用户登陆的是否有权限控制的数据
 
-                        ComponentType homeType = ComponentType.valueOf(type);
-                        if (ObjectUtil.isNull(homeType)) {
-                            return null;
-                        }
-                        Class<? extends ComponentBaseService> aClass = homeType.getAClass();
-                        if (aClass == null) {
-                            return null;
-                        }
-                        String name = String.valueOf(metaData.get(ComponentConstant.NAME));
+                            ComponentType homeType = ComponentType.valueOf(type);
+                            if (ObjectUtil.isNull(homeType)) {
+                                return null;
+                            }
+                            Class<? extends ComponentBaseService> aClass = homeType.getAClass();
+                            if (aClass == null) {
+                                return null;
+                            }
+                            String name = String.valueOf(metaData.get(ComponentConstant.NAME));
 
-                        ComponentBaseService bean = SpringContextUtil.getApplicationContext().getBeansOfType(aClass)
-                                .values()
-                                .stream()
-                                .filter(e -> e.generate().getName().equals(name))
-                                .findAny().get();
+                            ComponentBaseService bean = SpringContextUtil.getApplicationContext().getBeansOfType(aClass)
+                                    .values()
+                                    .stream()
+                                    .filter(e -> e.generate().getName().equals(name))
+                                    .findAny().get();
 
-                        //兼容之前老的数据结构
-                        Map<String, Object> paramsDtoMap = queryParams.stream().collect(Collectors.toMap(FormQueryParamsDto::getProp, FormQueryParamsDto::getValue));
-                        //将Map 转对象属性
-                        FormQueryParamsBase copy = (FormQueryParamsBase) BeanCopyUtil.copy(paramsDtoMap, bean.generateClass());
-                        OptionsBase optionsBase = bean.fillData(copy);
-                        if (ObjectNull.isNull(optionsBase) && paramsDtoMap.containsKey("mockData")) {
-                            map.put(ComponentConstant.DATA_LOCATION, com.alibaba.fastjson2.JSONObject.parseObject(paramsDtoMap.get("mockData").toString()));
-                        } else {
-                            map.put(ComponentConstant.DATA_LOCATION, optionsBase);
-                            if (enableCache) {
-                                designCacheUtil.setData(metaData, optionsBase);
+                            //兼容之前老的数据结构
+                            Map<String, Object> paramsDtoMap = queryParams.stream().collect(Collectors.toMap(FormQueryParamsDto::getProp, FormQueryParamsDto::getValue));
+                            //将Map 转对象属性
+                            FormQueryParamsBase copy = (FormQueryParamsBase) BeanCopyUtil.copy(paramsDtoMap, bean.generateClass());
+                            OptionsBase optionsBase = bean.fillData(copy);
+                            if (ObjectNull.isNull(optionsBase) && paramsDtoMap.containsKey("mockData")) {
+                                map.put(ComponentConstant.DATA_LOCATION, com.alibaba.fastjson2.JSONObject.parseObject(paramsDtoMap.get("mockData").toString()));
+                            } else {
+                                map.put(ComponentConstant.DATA_LOCATION, optionsBase);
+                                if (enableCache) {
+                                    designCacheUtil.setData(metaData, optionsBase);
+                                }
                             }
                         }
+                    } catch (IllegalArgumentException e) {
+                        //兼容历史数据，避免引起报错
+                        return null;
+                    } catch (BeansException e) {
+                        //兼容历史数据，避免引起报错
+                        return null;
                     }
-
                     return JSONUtil.parseObj(map);
                 }).filter(ObjectNull::isNotNull)
                 .collect(Collectors.toList());

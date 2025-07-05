@@ -67,12 +67,15 @@ public class JustAuthController {
     @GetMapping("/oauth2")
     public void type(@RequestParam("stats") String status, @RequestParam(value = "callbackUrl", required = false) String callbackUrl, HttpServletRequest request,
                      HttpServletResponse response) {
+
         if (ObjectNull.isNull(callbackUrl)) {
             callbackUrl = Optional.ofNullable(request.getHeader("Referer")).orElse(callbackUrl);
         }
         String key = status + "__" + IdGenerator.getIdStr();
         redisUtils.set(SysConstant.redisKey("just", key), callbackUrl, Duration.ofMinutes(2));
-        response.sendRedirect(otherLoginHandler.getAuthDefaultRequest(status).authorize(key));
+        String authorize = otherLoginHandler.getAuthDefaultRequest(status).authorize(key);
+        log.info("stats: {} callbackUrl : {} 回地地址为: {} ", status, callbackUrl, authorize);
+        response.sendRedirect(authorize);
     }
 
     /**
@@ -94,9 +97,9 @@ public class JustAuthController {
             //判断是否启用了域名
             SysApplyConfig config = sysConfigService.getConfig(ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION);
             if (ObjectNull.isNotNull(config.getDomainName())) {
-                dict.set("domain", config.getDomainName());
+                dict.set("domain", config.getDomainName() + "." + jvsSystemConfig.getDomain());
             } else {
-                dict.set("domain", "http://" + jvsSystemConfig.getDomain() + ":" + domain);
+                dict.set("domain", jvsSystemConfig.getDomain() + ":" + domain);
             }
             dict.set("type", oauthOther.getType());
             return R.ok(dict);
@@ -113,13 +116,7 @@ public class JustAuthController {
      * @return 登录类型集合
      */
     @GetMapping
-    public R<List<String>> index(HttpServletRequest request) {
-        String userAgent = request.getHeader("user-agent");
-        //todo 定制需求
-        if (userAgent != null && userAgent.toLowerCase().contains("wxwork")) {
-            List<String> list = oauthOtherService.list().stream().map(e -> e.getType()).collect(Collectors.toList());
-            return R.ok(list);
-        }
+    public R<List<String>> index() {
         List<OAuthTypeEnum> loginTypes = new ArrayList<>();
         // 密码登录
         loginTypes.add(OAuthTypeEnum.password);

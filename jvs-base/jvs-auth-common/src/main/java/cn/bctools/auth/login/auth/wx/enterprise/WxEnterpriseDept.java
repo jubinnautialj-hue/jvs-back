@@ -6,6 +6,7 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.web.utils.HttpRequestUtils;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +49,7 @@ public class WxEnterpriseDept {
     public List<Dept> getDeptAll(String accessToken) {
         // 获取部门列表
         JSONArray deptSimples = getDeptSimples(accessToken);
+        log.info("获取同步的部门信息:{}", JSONObject.toJSONString(deptSimples));
         if (deptSimples.isEmpty()) {
             throw new BusinessException("同步企业微信信息失败");
         }
@@ -94,7 +96,8 @@ public class WxEnterpriseDept {
      */
     public JSONObject getDept(String accessToken, Object id) {
         String deptUrl = UrlBuilder.fromBaseUrl(DEPT_DETAIL_URL).queryParam(BaseWxEnterprise.ACCESS_TOKEN, accessToken).queryParam(DEPT_ID, id).build();
-        JSONObject jsonObject = HttpRequestUtils.getJson(deptUrl, JSONObject.class, Boolean.FALSE, new HttpHeaders());
+        JSONObject jsonObject = JSONObject.parseObject(HttpUtil.get(deptUrl));
+        log.info("同步企业微信三方返回为,{}", JSONObject.toJSONString(jsonObject));
         if (ObjectUtil.isNull(jsonObject)) {
             throw new BusinessException("获取微信部门用户失败");
         }

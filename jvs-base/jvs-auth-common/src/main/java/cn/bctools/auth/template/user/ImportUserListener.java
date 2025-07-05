@@ -419,7 +419,11 @@ public class ImportUserListener implements ReadListener<UserExcelTemplate> {
             user.setId(IdWorker.get32UUID());
             UserTenant userTenant = BeanCopyUtil.copy(u, UserTenant.class);
             userTenant.setUserId(user.getId());
-            userTenant.setDeptId(Arrays.stream(u.getDeptName().split(",")).collect(Collectors.toList()));
+            if (ObjectNull.isNotNull(u.getDeptName())) {
+                userTenant.setDeptId(Arrays.stream(u.getDeptName().split(",")).collect(Collectors.toList()));
+            } else {
+                userTenant.setDeptId(new ArrayList<>());
+            }
             convertUserTenant(userTenant);
             users.add(user);
             userTenants.add(userTenant);

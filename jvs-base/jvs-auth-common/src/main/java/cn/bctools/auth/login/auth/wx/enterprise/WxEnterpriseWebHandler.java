@@ -7,6 +7,7 @@ import cn.bctools.auth.login.LoginHandler;
 import cn.bctools.auth.login.dto.SyncUserDto;
 import cn.bctools.auth.login.enums.LoginTypeEnum;
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.ObjectNull;
 import cn.hutool.json.JSONUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -51,8 +52,12 @@ public class WxEnterpriseWebHandler extends BaseWxEnterprise implements LoginHan
     public SyncUserDto syncUserDeptAll() {
         String accessToken = getAccessToken();
         List<Dept> deptAll = deptHandler.getDeptAll(accessToken);
-        SyncUserDto deptUserAll = userHandler.getDeptUserAll(accessToken, deptAll);
-        deptUserAll.setList(deptAll);
-        return deptUserAll;
+        if (ObjectNull.isNotNull(deptAll)) {
+            SyncUserDto deptUserAll = userHandler.getDeptUserAll(accessToken, deptAll);
+            deptUserAll.setList(deptAll);
+            return deptUserAll;
+        } else {
+            return new SyncUserDto();
+        }
     }
 }

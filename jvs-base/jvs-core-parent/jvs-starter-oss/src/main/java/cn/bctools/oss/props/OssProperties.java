@@ -57,4 +57,9 @@ public class OssProperties {
     public String getLocalPath() {
         return localPath + "/oss";
     }
+
+    /**
+     * 超时时间
+     */
+    public int timeOut = 0;
 }

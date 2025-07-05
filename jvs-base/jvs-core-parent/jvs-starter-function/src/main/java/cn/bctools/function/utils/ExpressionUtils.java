@@ -308,6 +308,10 @@ public class ExpressionUtils {
                     value = paramGetter.apply((String) value);
                 }
                 if (value instanceof String) {
+                    //直接获取变量值，避免使用\n 换行
+                    if (postfixExpression.size() == 1) {
+                        return value;
+                    }
                     value = ((String) value).replaceAll("\n", "");
                 }
                 calculateStack.push(value);

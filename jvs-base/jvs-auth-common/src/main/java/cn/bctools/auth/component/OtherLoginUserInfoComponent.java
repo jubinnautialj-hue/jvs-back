@@ -72,7 +72,6 @@ public class OtherLoginUserInfoComponent {
      */
     @Transactional(rollbackFor = Exception.class)
     public User registerUser(OtherUserDto otherUser, UserExtension extension) {
-        UserExtension userExtension = new UserExtension();
         //判断用户是否存在 ,如果存在 ,直接更新 否则注册一个新的帐号
         User user = null;
         if (ObjectNull.isNotNull(otherUser.getAccountName())) {
@@ -84,7 +83,8 @@ public class OtherLoginUserInfoComponent {
         if (ObjectNull.isNotNull(user)) {
             if (ObjectNull.isNull(extension)) {
                 //创建扩展信息
-                userExtension.setType(otherUser.getLoginType())
+                UserExtension userExtension = new UserExtension()
+                        .setType(otherUser.getLoginType())
                         .setUserId(user.getId())
                         .setOpenId(otherUser.getOpenId())
                         .setNickname(user.getRealName())
@@ -93,9 +93,11 @@ public class OtherLoginUserInfoComponent {
                 user.setExtension(otherUser.getOtherUser());
                 //绑定三方信息
                 userExtensionService.save(userExtension);
+                extension = userExtension;
             }
             //更新
             user.setHeadImg(otherUser.getAvatar())
+                    .setPhone(otherUser.getPhone())
                     .setRealName(otherUser.getUserName())
                     .setEmail(otherUser.getEmail())
                     .setCancelFlag(false)
@@ -110,9 +112,27 @@ public class OtherLoginUserInfoComponent {
                         } else {
                             one.getDeptId().add(otherUser.getDeptId());
                         }
-                        userTenantService.updateById(one);
                     }
                 }
+                one.setId(one.getId())
+                        .setPhone(otherUser.getPhone())
+                        .setUserId(user.getId())
+                        .setRealName(user.getRealName())
+                        .setCancelFlag(false);
+                userTenantService.updateById(one);
+                // 默认为游客角色
+                userRoleComponent.grandDefaultSysRole(user.getId());
+                return user;
+            } else {
+                UserTenant userTenant = new UserTenant()
+                        .setPhone(otherUser.getPhone())
+                        .setUserId(user.getId())
+                        .setRealName(user.getRealName())
+                        .setCancelFlag(false);
+                userTenantService.save(userTenant);
+                // 默认为游客角色
+                userRoleComponent.grandDefaultSysRole(user.getId());
+                return user;
             }
         } else {
             // 校验是否可自动注册
@@ -135,7 +155,8 @@ public class OtherLoginUserInfoComponent {
             userService.saveUser(user, userTenant);
         }
 
-        userExtension.setType(otherUser.getLoginType())
+        UserExtension userExtension = new UserExtension()
+                .setType(otherUser.getLoginType())
                 .setUserId(user.getId())
                 .setOpenId(otherUser.getOpenId())
                 .setNickname(user.getRealName())

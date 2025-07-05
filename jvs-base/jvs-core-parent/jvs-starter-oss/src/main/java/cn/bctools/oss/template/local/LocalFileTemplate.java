@@ -16,6 +16,7 @@ import lombok.SneakyThrows;
 import org.springframework.http.MediaType;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.util.List;
@@ -69,6 +70,7 @@ public class LocalFileTemplate implements OssTemplate {
         return fileName;
     }
 
+
     @SneakyThrows
     @Override
     public BaseFile put(String bucketName, String businessId, String module, InputStream stream, String key, boolean cover) {
@@ -104,6 +106,41 @@ public class LocalFileTemplate implements OssTemplate {
     @SneakyThrows
     @Override
     public BaseFile put(String bucketName, String module, InputStream stream, String originalName, boolean cover) {
+        return put(bucketName, null, module, stream, originalName, cover);
+    }
+
+    @SneakyThrows
+    @Override
+    public BaseFile put(String bucketName, String businessId, String module, File stream, String key, boolean cover) {
+        ObjectMetadata metadata = new ObjectMetadata();
+
+        makeBucket(bucketName);
+        key = getFileName(module, key, businessId);
+
+        int i = key.lastIndexOf(".") + 1;
+        String substring = key.substring(i);
+
+        String contentType = MIME_MAPPINGS.get(substring);
+        if (contentType == null) {
+            contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        }
+        String s3Key = key.replaceAll("//", "/");
+        metadata.setContentType(contentType);
+        FileUtil.writeFromStream(new FileInputStream(stream), ossProperties.getLocalPath() + FileUtil.FILE_SEPARATOR + bucketName + FileUtil.FILE_SEPARATOR + key);
+        BaseFile file = new BaseFile();
+        file.setOriginalName(key);
+        file.setFileName(s3Key);
+        file.setBucketName(bucketName);
+        file.setFileType(contentType);
+        file.setModule(module);
+        file.setSize(stream.length());
+        //记录信息
+        fileDataInterface.insert(file);
+        return file;
+    }
+
+    @Override
+    public BaseFile put(String bucketName, String module, File stream, String originalName, boolean cover) {
         return put(bucketName, null, module, stream, originalName, cover);
     }
 

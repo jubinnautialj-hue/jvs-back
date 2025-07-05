@@ -93,7 +93,7 @@ public class DeptController {
                 .filter(e -> ObjectNull.isNotNull(e.getDeptId()))
                 .forEach(e ->
                         e.getDeptId().forEach(a ->
-                            deptUserCount.put(a, deptUserCount.getOrDefault(a, 0L) + 1)
+                                deptUserCount.put(a, deptUserCount.getOrDefault(a, 0L) + 1)
                         )
                 );
         // 获取部门树
@@ -211,18 +211,17 @@ public class DeptController {
     @PostMapping("/pull/{type}")
     @Transactional(rollbackFor = Exception.class)
     public R<Boolean> pull(@PathVariable String type) {
-
+        SyncUserDto deptAll;
         if (handlerMap.containsKey(type)) {
             // 获取三方应用组织架构
             LoginHandler loginHandler = handlerMap.get(type);
             //如果类型为空,则表示是动态配置化的用户接口
-            SyncUserDto syncUserDto = loginHandler.syncUserDeptAll();
-            // 同步部门
-            deptService.pull(UserCurrentUtils.getCurrentUser(), (List<Dept>) syncUserDto.getList());
-            // 同步用户
-            userService.pull(syncUserDto);
+            deptAll = loginHandler.syncUserDeptAll();
+
         } else {
-            SyncUserDto deptAll = otherLoginHandler.getDeptAll(type);
+            deptAll = otherLoginHandler.getDeptAll(type);
+        }
+        if (ObjectNull.isNotNull(deptAll.getList())) {
             // 同步部门
             deptService.pull(UserCurrentUtils.getCurrentUser(), (List<Dept>) deptAll.getList());
             // 同步用户

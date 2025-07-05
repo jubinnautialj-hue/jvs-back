@@ -1,4 +1,4 @@
-package cn.bctools.message.push.feign;//package cn.bctools.message.push.feign;
+//package cn.bctools.message.push.feign;
 //
 //import cn.bctools.common.constant.SysConstant;
 //import cn.bctools.common.utils.R;

@@ -9,6 +9,8 @@ import cn.bctools.auth.entity.UserTenant;
 import org.apache.ibatis.annotations.Param;
 
 import javax.validation.constraints.NotNull;
+import java.util.Collection;
+import java.util.List;
 
 /**
  * @author Administrator
@@ -37,4 +39,12 @@ public interface UserTenantService extends IService<UserTenant> {
      * @return 组织机构用户信息
      */
     IPage<TenantUserData> tenantUsers(Page page, @Param("ew") Wrapper wrapper);
+
+    /**
+     * 根据部门id查询用户
+     *
+     * @param deptIds 部门id集合
+     * @return 部门用户
+     */
+    List<UserTenant> listByDeptIds(Collection<String> deptIds);
 }

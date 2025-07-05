@@ -63,7 +63,7 @@ public class RedisConfiguration {
      * 则直接使用此种方式即可实现动态关联删除缓存
      * 当角色授权发生变化后,某个业务系统需要同时清空缓存逻辑
      * 使用方式
-     * 将需要关联的key存放到{@link CacheCons#putCacheLink(String, String...)}
+     * 将需要关联的key存放到{@link CacheCons#putCacheLink(java.lang.String, java.lang.String...)}
      * 建议使用此方式 ,不使用{@link org.springframework.cache.annotation.CacheEvict}value 值中的数组,使用数组需要在starter或基础框架中把所有变量写死
      *
      * @return

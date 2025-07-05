@@ -328,7 +328,13 @@ public class RoleController {
             return R.ok(deptPage);
         }
         Map<String, Dept> deptMap = deptService.listByIds(ids).stream().collect(Collectors.toMap(Dept::getId, Function.identity()));
-        List<RoleDeptVo> collect = page.getRecords().stream().map(e -> BeanCopyUtil.copy(e, RoleDeptVo.class).setName(deptMap.get(e.getDeptId()).getName())).collect(Collectors.toList());
+        List<RoleDeptVo> collect = page.getRecords().stream().map(e -> {
+            RoleDeptVo copy = BeanCopyUtil.copy(e, RoleDeptVo.class);
+            if (deptMap.containsKey(e.getDeptId())) {
+                copy.setName(deptMap.get(e.getDeptId()).getName());
+            }
+            return copy;
+        }).collect(Collectors.toList());
         //角色下的用户操作
         deptPage.setRecords(collect);
         return R.ok(deptPage);

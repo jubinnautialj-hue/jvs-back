@@ -204,6 +204,9 @@ public class ExpressionHandler {
         JvsExpression annotation = this.getAnnotation(param);
         try {
             return param.get(paramName.substring(annotation.prefix().length()), data);
+        } catch (NullPointerException e) {
+            log.error(String.format("参数[%s]获取异常取值报错为空, 异常信息: %s", paramName, e.getMessage()), -1, e);
+            return null;
         } catch (Exception e) {
             log.error(String.format("参数[%s]获取异常, 异常信息: %s", paramName, e.getMessage()), -1, e);
             throw new BusinessException(String.format("参数[%s]获取异常, 异常信息: %s", paramName, e.getMessage()), -1, e);

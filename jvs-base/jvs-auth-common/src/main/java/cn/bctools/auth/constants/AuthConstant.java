@@ -31,6 +31,8 @@ public class AuthConstant {
      * 平台的资源标识
      */
     public static final String jvs_platform_permission = "jvs_platform";
+    public static final String jvs_ai = "ai";
+    public static final String jvs_ai_manager = "ai_manager";
     /**
      * 后台资源分类
      */

@@ -13,7 +13,6 @@ import cn.bctools.gateway.entity.Apply;
 import cn.bctools.gateway.entity.TenantPo;
 import cn.bctools.oauth2.config.JvsDefaultBearerTokenResolver;
 import cn.bctools.oauth2.dto.CustomUser;
-import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.web.utils.WebUtils;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;

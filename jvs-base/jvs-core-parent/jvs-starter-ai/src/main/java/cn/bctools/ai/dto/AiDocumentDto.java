@@ -29,8 +29,11 @@ public class AiDocumentDto implements Serializable {
     /**
      * 知识库ID
      */
-    @Schema(description = "知识库ID")
+    @Schema(description = "向量库ID")
     private String datasetId;
+
+    @Schema(description = "向量库名称")
+    private String datasetName;
 
     /**
      * 名称

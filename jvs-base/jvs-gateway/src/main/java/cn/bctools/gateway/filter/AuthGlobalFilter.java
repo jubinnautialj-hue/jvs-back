@@ -104,15 +104,12 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         // 截取"api/mgr"的请求路径
         // lb://jvs-auth-mgr/mgr/jvs-auth/xx -> lb://jvs-auth-mgr/xx
         if (path.startsWith(MGR_URL)) {
-            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 2,host);
-        }
-        if (path.startsWith(BIZ_URL)) {
             exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 2, host);
-        }
-        if (path.startsWith(OPEN_API_URL)) {
+        } else if (path.startsWith(BIZ_URL)) {
             exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 2, host);
-        }
-        if (path.startsWith(OAUTH_TOKEN_URL)) {
+        } else if (path.startsWith(OPEN_API_URL)) {
+            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 2, host);
+        } else if (path.startsWith(OAUTH_TOKEN_URL)) {
             exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 1, host);
             URI uri = exchange.getRequest().getURI();
             String queryParam = uri.getRawQuery();
@@ -123,6 +120,9 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
             if (StrUtil.isNotBlank(password)) {
                 return changeUrl(exchange, chain, uri, paramMap, password, clientId, host);
             }
+        } else {
+            //对其重写
+            exchange = UrlUtils.getServerWebExchange(exchange, exchange.getResponse(), 0, host);
         }
         return chain.filter(exchange);
     }
@@ -152,7 +152,7 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
                 .replaceQuery(HttpUtil.toParams(paramMap))
                 .build(true)
                 .toUri();
-        ServerHttpRequest newRequest = exchange.getRequest().mutate().header("host",host).uri(newUri).build();
+        ServerHttpRequest newRequest = exchange.getRequest().mutate().header("host", host).uri(newUri).build();
         ServerWebExchange build = exchange.mutate().request(newRequest).build();
         return chain.filter(build);
     }

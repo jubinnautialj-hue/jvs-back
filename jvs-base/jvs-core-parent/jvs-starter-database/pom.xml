@@ -31,13 +31,16 @@
             <artifactId>mysql-connector-java</artifactId>
         </dependency>
 
-
         <!--Postgresql-->
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
 
+        <dependency>
+            <groupId>com.dameng</groupId>
+            <artifactId>DmJdbcDriver18</artifactId>
+        </dependency>
 
         <!--Mybatis plus 插件-->
         <dependency>

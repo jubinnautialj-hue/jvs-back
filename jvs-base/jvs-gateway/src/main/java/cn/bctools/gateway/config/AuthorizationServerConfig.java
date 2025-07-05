@@ -2,6 +2,7 @@ package cn.bctools.gateway.config;
 
 import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.SpringContextUtil;
+import cn.bctools.gateway.filter.AuthGlobalFilter;
 import cn.bctools.gateway.route.GatewayRouteDefinitionWriter;
 import cn.bctools.gateway.utils.CacheUtils;
 import cn.bctools.oauth2.config.JvsOAuth2AuthorizationServiceImpl;
@@ -68,6 +69,7 @@ public class AuthorizationServerConfig {
             public void onMessage(String obj) {
                 //清空缓存
                 CacheUtils.cache.clear();
+                AuthGlobalFilter.cache.clear();
                 CacheUtils.pathCache.clear();
                 //清空路由缓存
                 GatewayRouteDefinitionWriter.clearRoute();

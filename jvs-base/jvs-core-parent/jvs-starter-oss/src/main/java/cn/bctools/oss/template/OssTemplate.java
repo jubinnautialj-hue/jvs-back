@@ -14,6 +14,7 @@ import lombok.SneakyThrows;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -74,8 +75,112 @@ public interface OssTemplate {
      */
     Map<String, String> MIME_MAPPINGS = new HashMap<String, String>(101) {
         {
-            // 初始化文件类型，并添加更多类型
-            putAll(MimeMappings.DEFAULT_MIME_MAPPINGS);
+            put("txt", "text/plain; charset=UTF-8");
+            put("css", "text/css; charset=UTF-8");
+            put("html", "text/html; charset=UTF-8");
+            put("htm", "text/html; charset=UTF-8");
+            put("gif", "image/gif");
+            put("jpg", "image/jpeg");
+            put("jpe", "image/jpeg");
+            put("jpeg", "image/jpeg");
+            put("bmp", "image/bmp");
+            put("js", "application/javascript; charset=UTF-8");
+            put("png", "image/png");
+            put("java", "text/plain; charset=UTF-8");
+            put("body", "text/html; charset=UTF-8");
+            put("rtx", "text/richtext; charset=UTF-8");
+            put("tsv", "text/tab-separated-values");
+            put("etx", "text/x-setext");
+            put("json", "application/json; charset=UTF-8");
+            put("class", "application/java; charset=UTF-8");
+            put("csh", "application/x-csh");
+            put("sh", "application/x-sh");
+            put("tcl", "application/x-tcl");
+            put("tex", "application/x-tex");
+            put("texinfo", "application/x-texinfo");
+            put("texi", "application/x-texinfo");
+            put("t", "application/x-troff");
+            put("tr", "application/x-troff");
+            put("roff", "application/x-troff");
+            put("man", "application/x-troff-man");
+            put("me", "application/x-troff-me");
+            put("ms", "application/x-wais-source");
+            put("src", "application/x-wais-source");
+            put("zip", "application/zip");
+            put("bcpio", "application/x-bcpio");
+            put("cpio", "application/x-cpio");
+            put("gtar", "application/x-gtar");
+            put("shar", "application/x-shar");
+            put("sv4cpio", "application/x-sv4cpio");
+            put("sv4crc", "application/x-sv4crc");
+            put("tar", "application/x-tar");
+            put("ustar", "application/x-ustar");
+            put("dvi", "application/x-dvi");
+            put("hdf", "application/x-hdf");
+            put("latex", "application/x-latex");
+            put("bin", "application/octet-stream");
+            put("oda", "application/oda");
+            put("pdf", "application/pdf");
+            put("ps", "application/postscript");
+            put("eps", "application/postscript");
+            put("ai", "application/postscript");
+            put("rtf", "application/rtf");
+            put("nc", "application/x-netcdf");
+            put("cdf", "application/x-netcdf");
+            put("cer", "application/x-x509-ca-cert");
+            put("exe", "application/octet-stream");
+            put("gz", "application/x-gzip");
+            put("Z", "application/x-compress");
+            put("z", "application/x-compress");
+            put("hqx", "application/mac-binhex40");
+            put("mif", "application/x-mif");
+            put("ico", "image/x-icon");
+            put("ief", "image/ief");
+            put("tiff", "image/tiff");
+            put("tif", "image/tiff");
+            put("ras", "image/x-cmu-raster");
+            put("pnm", "image/x-portable-anymap");
+            put("pbm", "image/x-portable-bitmap");
+            put("pgm", "image/x-portable-graymap");
+            put("ppm", "image/x-portable-pixmap");
+            put("rgb", "image/x-rgb");
+            put("xbm", "image/x-xbitmap");
+            put("xpm", "image/x-xpixmap");
+            put("xwd", "image/x-xwindowdump");
+            put("au", "audio/basic");
+            put("snd", "audio/basic");
+            put("aif", "audio/x-aiff");
+            put("aiff", "audio/x-aiff");
+            put("aifc", "audio/x-aiff");
+            put("wav", "audio/x-wav");
+            put("mp3", "audio/mpeg");
+            put("mpeg", "video/mpeg");
+            put("mpg", "video/mpeg");
+            put("mpe", "video/mpeg");
+            put("qt", "video/quicktime");
+            put("mov", "video/quicktime");
+            put("avi", "video/x-msvideo");
+            put("movie", "video/x-sgi-movie");
+            put("avx", "video/x-rad-screenplay");
+            put("wrl", "x-world/x-vrml");
+            put("mpv2", "video/mpeg2");
+            put("jnlp", "application/x-java-jnlp-file");
+            put("eot", "application/vnd.ms-fontobject");
+            put("woff", "application/font-woff");
+            put("woff2", "application/font-woff2");
+            put("ttf", "application/x-font-ttf");
+            put("otf", "application/x-font-opentype");
+            put("sfnt", "application/font-sfnt");
+            put("xml", "application/xml; charset=UTF-8");
+            put("xhtml", "application/xhtml+xml; charset=UTF-8");
+            put("xsl", "application/xml");
+            put("svg", "image/svg+xml");
+            put("svgz", "image/svg+xml");
+            put("wbmp", "image/vnd.wap.wbmp");
+            put("wml", "text/vnd.wap.wml");
+            put("wmlc", "application/vnd.wap.wmlc");
+            put("wmls", "text/vnd.wap.wmlscript");
+            put("wmlscriptc", "application/vnd.wap.wmlscriptc");
             put("docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
             put("doc", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
         }
@@ -120,6 +225,9 @@ public interface OssTemplate {
      * @return String string
      */
     String fileLink(String fileName, String bucketName);
+
+    @SneakyThrows
+    BaseFile put(String bucketName, String businessId, String module, File stream, String key, boolean cover);
 
     /**
      * 上传文件
@@ -199,6 +307,18 @@ public interface OssTemplate {
     BaseFile put(String bucketName, String module, InputStream stream, String originalName, boolean cover);
 
     /**
+     * 上传文件
+     *
+     * @param bucketName
+     * @param module
+     * @param stream
+     * @param originalName
+     * @param cover
+     * @return
+     */
+    BaseFile put(String bucketName, String module, File stream, String originalName, boolean cover);
+
+    /**
      * 删除文件
      *
      * @param bucketName 存储桶名称
@@ -220,7 +340,7 @@ public interface OssTemplate {
     default String getFileName(String module, String originalFilename, String businessId) {
         // 日期-雪花id-原文件名
         String today = DateUtil.format(new Date(), "yyyy/MM/dd/");
-        String uniqueFilename = today + DateUtil.today() + IdUtil.getSnowflakeNextId() + StringPool.DASH + originalFilename;
+        String uniqueFilename = today + DateUtil.today() + IdUtil.getSnowflakeNextId() + StringPool.SLASH + originalFilename;
         if (ObjectUtil.isEmpty(module)) {
             return uniqueFilename;
         }

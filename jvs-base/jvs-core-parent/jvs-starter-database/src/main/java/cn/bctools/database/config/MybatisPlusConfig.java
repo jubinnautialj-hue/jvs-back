@@ -21,11 +21,14 @@ import com.imadcn.framework.idworker.config.ApplicationConfiguration;
 import com.imadcn.framework.idworker.config.ZookeeperConfiguration;
 import lombok.extern.slf4j.Slf4j;
 import org.mybatis.spring.annotation.MapperScan;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.AutoConfigureAfter;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.jdbc.DataSourceAutoConfiguration;
+import org.springframework.cloud.client.discovery.DiscoveryClient;
+import org.springframework.cloud.commons.util.InetUtils;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -51,6 +54,8 @@ public class MybatisPlusConfig {
     @Value("${mybatis-plus.zookeeper.serverLists:}")
     String zkServerLists;
 
+    @Autowired
+    DiscoveryClient discoveryClient;
 
     /**
      * 适配 zk id生成器
@@ -59,7 +64,7 @@ public class MybatisPlusConfig {
      */
     @Bean
     @ConditionalOnMissingBean
-    public IdentifierGenerator identifierGenerator() {
+    public IdentifierGenerator identifierGenerator(InetUtils inetUtils) {
         if (ObjectNull.isNotNull(zkServerLists)) {
             // 创建idworker实例
             ApplicationConfiguration applicationConfiguration = new ApplicationConfiguration();
@@ -70,7 +75,7 @@ public class MybatisPlusConfig {
             IdWorker.setIdentifierGenerator(imadcnIdentifierGenerator);
             return imadcnIdentifierGenerator;
         } else {
-            DefaultIdentifierGenerator defaultIdentifierGenerator = new DefaultIdentifierGenerator();
+            DefaultIdentifierGenerator defaultIdentifierGenerator = new DefaultIdentifierGenerator(inetUtils.findFirstNonLoopbackAddress());
             IdWorker.setIdentifierGenerator(defaultIdentifierGenerator);
             return defaultIdentifierGenerator;
         }

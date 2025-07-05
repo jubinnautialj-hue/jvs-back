@@ -117,7 +117,7 @@ public class DefaultRedisCacheWriter implements RedisCacheWriter {
     /**
      * (non-Javadoc)
      *
-     * @see RedisCacheWriter#put(String, byte[], byte[], Duration)
+     * @see org.springframework.data.redis.cache.RedisCacheWriter#put(java.lang.String, byte[], byte[], java.time.Duration)
      */
     @Override
     public void put(String name, byte[] key, byte[] value, @Nullable Duration ttl) {
@@ -142,7 +142,7 @@ public class DefaultRedisCacheWriter implements RedisCacheWriter {
     /**
      * (non-Javadoc)
      *
-     * @see RedisCacheWriter#get(String, byte[])
+     * @see org.springframework.data.redis.cache.RedisCacheWriter#get(java.lang.String, byte[])
      */
     @Override
     public byte[] get(String name, byte[] key) {
@@ -165,7 +165,7 @@ public class DefaultRedisCacheWriter implements RedisCacheWriter {
     /**
      * (non-Javadoc)
      *
-     * @see RedisCacheWriter#putIfAbsent(String, byte[], byte[], Duration)
+     * @see org.springframework.data.redis.cache.RedisCacheWriter#putIfAbsent(java.lang.String, byte[], byte[], java.time.Duration)
      */
     @Override
     public byte[] putIfAbsent(String name, byte[] key, byte[] value, @Nullable Duration ttl) {
@@ -207,7 +207,7 @@ public class DefaultRedisCacheWriter implements RedisCacheWriter {
 
     /**
      * (non-Javadoc)
-     * @see RedisCacheWriter#remove(String, byte[])
+     * @see org.springframework.data.redis.cache.RedisCacheWriter#remove(java.lang.String, byte[])
      */
     @Override
     public void remove(String name, byte[] key) {
@@ -220,7 +220,7 @@ public class DefaultRedisCacheWriter implements RedisCacheWriter {
 
     /**
      * (non-Javadoc)
-     * @see RedisCacheWriter#clean(String, byte[])
+     * @see org.springframework.data.redis.cache.RedisCacheWriter#clean(java.lang.String, byte[])
      */
     @Override
     public void clean(String name, byte[] pattern) {
@@ -259,7 +259,7 @@ public class DefaultRedisCacheWriter implements RedisCacheWriter {
 
     /**
      * (non-Javadoc)
-     * @see org.springframework.data.redis.cache.CacheStatisticsProvider#getCacheStatistics(String)
+     * @see org.springframework.data.redis.cache.CacheStatisticsProvider#getCacheStatistics(java.lang.String)
      */
     @Override
     public CacheStatistics getCacheStatistics(String cacheName) {
@@ -269,7 +269,7 @@ public class DefaultRedisCacheWriter implements RedisCacheWriter {
 
     /**
      * (non-Javadoc)
-     * @see RedisCacheWriter#clearStatistics(String)
+     * @see org.springframework.data.redis.cache.RedisCacheWriter#clearStatistics(java.lang.String)
      */
     @Override
     public void clearStatistics(String name) {
@@ -278,7 +278,7 @@ public class DefaultRedisCacheWriter implements RedisCacheWriter {
 
     /**
      * (non-Javadoc)
-     * @see RedisCacheWriter#with(CacheStatisticsCollector)
+     * @see org.springframework.data.redis.cache.RedisCacheWriter#with(CacheStatisticsCollector)
      */
     @Override
     public RedisCacheWriter withStatisticsCollector(CacheStatisticsCollector cacheStatisticsCollector) {

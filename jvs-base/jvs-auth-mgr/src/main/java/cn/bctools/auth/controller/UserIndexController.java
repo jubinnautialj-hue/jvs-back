@@ -105,12 +105,6 @@ public class UserIndexController {
                 .lt(Bulletin::getStartTime, DateUtil.date()).apply(SqlFunctionUtil.jsonContains("app_keys", appKey, "$"))
                 .last(" limit " + count);
         List<Bulletin> list = bulletinService.list(last);
-        list.forEach(e -> {
-            if (e.getContentType().equals(BulletinEnum.TEXT)) {
-                String unescape = HtmlUtil.unescape(HtmlUtil.cleanHtmlTag((e).getContent()).replaceAll("\n", ""));
-                e.setContent(unescape);
-            }
-        });
         if (count > 1) {
             return R.ok(list);
         }

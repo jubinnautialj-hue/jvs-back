@@ -1,0 +1,184 @@
+# jvs
+
+## 协议和授权
+
+jvs 作者保留全部的权利。
+
+可使用注册中心进行访问开发使用，需要进行商业授权才能使用于商业项目开发。
+
+擅自窃用，即属严重侵权行为，与盗窃无异。产生的一切任何后果责任由侵权者自负。
+
+## 商业使用
+
+具体请联系商业合作经理
+
+禁止将本项目的部分或全部和资源进行任何形式的再发行到（上传GitHub、Gitee等开源社区中）
+
+## 贡献代码
+
+你可将自自己编写的程序无条件贡献给组织
+
+## 提交反馈
+
+反馈提交请直接在微信交流群进行沟通，我们会尽快解决和处理
+
+
+
+## 基础框架目录结构
+
+~~~
+├── README.md
+├── jvs-auth  （帐户认证服务）
+│   ├── Dockerfile  （docker 镜像打包文件）
+│   ├── fonts          (字体文件)
+│   ├── pom.xml     (pom.xml)
+│   ├── readme.md   (介绍)
+├── jvs-auth-api      (用户\角色\部门\岗位api服务)
+│   ├── pom.xml
+│   └── src
+├── jvs-auth-common     (帐户 和后台管理,公共服务包)
+│   ├── pom.xml
+│   └── src
+├── jvs-auth-mgr               ( 后台管理模块)
+│   ├── Dockerfile  
+│   ├── fonts
+│   ├── pom.xml
+│   └── src
+├── jvs-common-pom             (基础服务公共包声明)
+│   └── pom.xml
+├── jvs-core-parent                    (抽象的公共父包)
+│   ├── jvs-starter-common            (基础公共包)
+│   ├── jvs-starter-database            (Mysql 数据库支持,多租户,默认字段)
+│   ├── jvs-starter-dingding            (基础公共包)
+│   ├── jvs-starter-dynamic            (多数据源公共配置)
+│   ├── jvs-starter-email            (邮件发送)
+│   ├── jvs-starter-feign            (feign 包含 注解 EnableJvsFeignClients  扫描 cn.bcools.**.api   编码器, 所有feign 必须包含R对象)
+│   ├── jvs-starter-function            (公式基础包,低代码,bi,规则都会使用到此公共包)
+│   │   ├── DesignIdFilter.java       (低代码使用到的,记录设计id)
+│   │   ├── component        (ExpressionComponent 公式执行组件)
+│   │   ├── config            (Bean声明  包含用户体系基础服务)
+│   │   ├── cons             (常量,目前没有使用)
+│   │   ├── controller      (公式新增\删除\修改\查询)
+│   │   ├── entity       (公式实体)
+│   │   ├── enums    (公式枚举,字段类型解释)
+│   │   ├── graph     (表达式元素关系图,根据关系确定执行顺序)
+│   │   ├── handler   (公式处理器,抽象处理公式,场景,参数,  基础用户基础实现, 公共函数实现)
+│   │   ├── mapper   (公式dao层)
+│   │   └── utils        (公式图解析,公式执行逻辑)
+│   ├── jvs-starter-gray            (版本由路公共包)
+│   ├── jvs-starter-job            (接入xxl-job-admin定时任务, 项目启动类中添加 @EnableXxlJobExecutor注解,声明说定时执行)
+│   │   ├── biz                
+│   │   ├── config
+│   │   ├── context
+│   │   ├── enums
+│   │   ├── executor
+│   │   ├── glue
+│   │   ├── handler
+│   │   ├── log
+│   │   ├── server
+│   │   ├── thread
+│   │   └── util
+│   ├── jvs-starter-knife4j            (启用swagger)
+│   ├── jvs-starter-log            (基础公共包)
+│   │   ├── annotation
+│   │   │   ├── Log.java       (Controller 日志注解)
+│   │   │   ├── LogCallBack.java   (Aop回调函数)
+│   │   │   └── LogIgnore.java      
+│   │   ├── aspect
+│   │   │   └── SysLogAspect.java  (日志环绕方法)
+│   │   ├── config
+│   │   │   └── LogMqConfig.java   (日志mq保存)
+│   │   ├── po
+│   │   │   └── LogPo.java   ( 日志对象)
+│   │   └── utils
+│   │       └── IpUtils.java (ip获取工具)
+
+│   ├── jvs-starter-mongodb            (Mongo基础包)
+│   ├── jvs-starter-oauth2            (根据token换取用户对象)
+│   │   ├── annotation
+│   │   │   └── EnableJvsMgrResourceServer.java   (用户信息转换声明)
+│   │   ├── config
+│   │   │   ├── ClientFeignConfig.java
+│   │   │   ├── JvsAdapter.java          (用户信息转换)
+│   │   │   ├── JvsOAuth2AuthorizationServiceImpl.java (token获取用户信息)
+│   │   │   └── ThreadPoolProperties.java
+│   │   ├── dto
+│   │   │   ├── CustomUser.java         (用户对象)
+│   │   │   └── OtherAuthenticationToken.java      
+│   │   ├── prop
+│   │   │   └── JvsOAuth2Property.java
+│   │   └── utils
+│   │       ├── AuthorityManagementUtils.java  (用户\角色\岗位获取工具)
+│   │       └── UserCurrentUtils.java  (当前用户获取工具)
+│   ├── jvs-starter-oss            (文件上传工具)
+│   │   ├── config                 (oss配置)
+│   │   ├── cons
+│   │   ├── controller             (文件上传下载)
+│   │   ├── dto
+│   │   ├── mapper
+│   │   ├── po
+│   │   ├── props
+│   │   ├── service
+│   │   ├── template
+│   │   └── utils           
+│   ├── jvs-starter-rabbit            (mq公共包)
+│   ├── jvs-starter-redis            (redis公共包)
+│   │   └── RedisUtils             (redis 新\删\改\查工具)
+│   ├── jvs-starter-seata            (seata工具包)
+│   ├── jvs-starter-sms            (短信公共包)
+│   ├── jvs-starter-web            (undertow公共包)
+│   ├── jvs-starter-word            (word公共包目前没使用)
+│   ├── jvs-starter-wps            (wps公共包目前没有使用)
+│   ├── pom.xml
+├── jvs-demo-mgr            (示例项目)
+│   ├── Dockerfile
+│   ├── pom.xml
+│   └── src
+├── jvs-gateway            (网关服务,包含权限校验,是否过滤xss,响应加密)
+│   ├── Dockerfile
+│   ├── pom.xml
+│   ├── readme.md    
+│   └── src
+│   │   ├── GatewayApplication.java         (启动类)
+│   │   ├── config
+│   │   │   ├── AuthorizationManager.java   (权限校验)
+│   │   │   ├── AuthorizationServerConfig.java  (SecurityWebFilterChain 配置)
+│   │   │   ├── GatewayConfigProperties.java  (配置是否加解密)
+│   │   │   ├── GatewayErrorConfig.java        (统一异常处理)
+│   │   │   ├── GatewayRouteConfig.java      (动态路由配置)
+│   │   │   ├── JvsReactiveAuthenticationManager.java     (获取token)
+│   │   │   ├── JvsRoutePredicateHandlerMapping.java     (重写RoutePredicateHandlerMapping,添加缓存)
+│   │   │   └── JvsServerBearerTokenAuthenticationConverter.java    (token转换)
+│   │   ├── controller
+│   │   │   └── ResourceController.java   (网关基础资源controller)
+│   │   ├── dto
+│   │   │   └── CheckToken.java  (用于网关校验的token)
+│   │   ├── filter
+│   │   │   ├── AuthGlobalFilter.java   (用于判断是否需要权限)
+│   │   │   ├── GlobalRequestBodyDecodeFilter.java   (返回数据进行加密)
+│   │   │   ├── GrayReactiveLoadBalancerClientFilter.java  (版本路由处理)
+│   │   │   ├── RequestTimeFilter.java  (请求时间记录)
+│   │   │   └── XssFilter.java  (xss攻击拦截)
+│   │   ├── route
+│   │   │   └── GatewayRouteDefinitionWriter.java
+│   │   ├── swagger
+│   │   │   ├── GatewaySwaggerAutoConfiguration.java  (聚合swagger文档)
+│   │   │   └── SwaggerProperties.java
+│   │   └── utils
+│   │       ├── DataUtil.java
+│   │       ├── IpUtils.java
+│   │       ├── JsonUtil.java
+│   │       ├── ServerHttpRequestUtils.java
+│   │       ├── UrlUtils.java
+│   │       └── XssUtil.java
+├── jvs-gateway-common            (网关公共包)
+│   ├── pom.xml
+│   └── src
+├── jvs-message-push            (基础公共包)
+│   ├── message-push-api
+│   ├── message-push-common
+│   ├── message-push-dto
+│   ├── message-push-mgr
+│   ├── pom.xml
+├── pom.xml
+~~~

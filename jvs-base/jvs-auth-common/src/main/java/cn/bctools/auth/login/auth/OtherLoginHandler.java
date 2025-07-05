@@ -20,6 +20,7 @@ import cn.bctools.auth.service.UserService;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
 import cn.bctools.redis.utils.RedisUtils;
+import cn.bctools.web.utils.WebUtils;
 import cn.hutool.core.util.EnumUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
@@ -44,6 +45,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+
+import static cn.bctools.web.utils.HttpRequestUtils.HTTP_PREFIX;
 
 
 /**
@@ -78,7 +81,7 @@ public class OtherLoginHandler extends BaseWxEnterprise {
             authToken.setAccessToken(code);
             OtherAuthUser authUser = (OtherAuthUser) oauthOtherRequest.getUserInfo(authToken);
             OtherUserDto otherUserDto =
-                    new OtherUserDto().setOpenId(authUser.getUuid()).setUserName(authUser.getNickname()).setAccountName(authUser.getAccount()).setEmail(authUser.getEmail()).setLoginType(type1).setAvatar(authUser.getAvatar()).setDeptId(authUser.getCompany()).setOtherUser(authUser.getRawUserInfo());
+                    new OtherUserDto().setOpenId(authUser.getUuid()).setPhone(authUser.getPhone()).setUserName(authUser.getNickname()).setAccountName(authUser.getAccount()).setEmail(authUser.getEmail()).setLoginType(type1).setAvatar(authUser.getAvatar()).setDeptId(authUser.getCompany()).setOtherUser(authUser.getRawUserInfo());
             log.info("三方用户信息返回后数据组装: {}", JSON.toJSONString(otherUserDto));
             return otherLoginUserInfoComponent.getUser(otherUserDto);
         } else {
@@ -102,6 +105,7 @@ public class OtherLoginHandler extends BaseWxEnterprise {
             OtherUserDto otherUserDto = new OtherUserDto().setOpenId(authUser.getUuid()).setUserName(authUser.getNickname()).setAccountName(authUser.getUsername()).setEmail(authUser.getEmail()).setLoginType(type1).setAvatar(authUser.getAvatar()).setDeptId(authUser.getCompany()).setOtherUser(authUser.getRawUserInfo());
             if (authUser instanceof OtherAuthUser) {
                 otherUserDto.setAccountName(((OtherAuthUser) authUser).getAccount());
+                otherUserDto.setPhone(((OtherAuthUser) authUser).getPhone());
             }
             log.info("三方用户信息返回后数据组装: {}", JSON.toJSONString(otherUserDto));
             return otherLoginUserInfoComponent.getUser(otherUserDto);
@@ -109,12 +113,21 @@ public class OtherLoginHandler extends BaseWxEnterprise {
     }
 
     public AuthDefaultRequest getAuthDefaultRequest(String type) {
+        String tenantId = TenantContextHolder.getTenantId();
+        TenantContextHolder.clear();
         //todo 判断是否是企业应用,或公众号内部登陆,不是扫码登陆,
         OauthOther oauthOther = oauthOtherMapper.selectOne(Wrappers.query(new OauthOther().setType(type)));
         if (ObjectNull.isNull(oauthOther)) {
             throw new BusinessException("平台未配置此三方快捷登陆");
         }
+        TenantContextHolder.setTenantId(tenantId);
         AuthConfig config = BeanCopyUtil.copy(oauthOther, AuthConfig.class);
+        //回调地址，看是否匹配
+        String scheme = WebUtils.getRequest().getScheme();
+        String host = WebUtils.getHost();
+        if ((host + "/auth/just/callback").endsWith(oauthOther.getRedirectUri().replace(HTTP_PREFIX, ""))) {
+            config.setRedirectUri(HTTP_PREFIX + host + "/auth/just/callback");
+        }
         config.setIgnoreCheckState(true);
         config.setIgnoreCheckRedirectUri(true);
         return requestJust(type, config, oauthOther);

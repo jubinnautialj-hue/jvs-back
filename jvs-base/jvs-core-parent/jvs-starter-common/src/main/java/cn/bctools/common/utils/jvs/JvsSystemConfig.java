@@ -28,6 +28,14 @@ public class JvsSystemConfig {
      * 域名,或ip地址.如果是多租户模式,请填写为 主域名,写入cookie 时将写入到此域名中
      */
     String domain;
+    /**
+     * 协议  http:// 或 https://
+     */
+    String protocol = "http://";
+    /**
+     * ai 的域名或端口号
+     */
+    String aidomain;
 
     /**
      * 轻应用的标识域名，如果用户在访问登录时，使用此域名。则直接将其匹配到后，将只返回对应的应用数据

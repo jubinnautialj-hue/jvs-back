@@ -8,6 +8,7 @@ import lombok.experimental.Accessors;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * @author zhuxiaokang
@@ -38,6 +39,8 @@ public class SysTenantDto {
     @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createTime;
+    @ApiModelProperty(value = "扩展字段")
+    private Map<String, String> extensionJson;
     @ApiModelProperty(value = "是否删除  1：已删除  0：正常", hidden = true)
     private Boolean delFlag;
     @ApiModelProperty(value = "公司地址")

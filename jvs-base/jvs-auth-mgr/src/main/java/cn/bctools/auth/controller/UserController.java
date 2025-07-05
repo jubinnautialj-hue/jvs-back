@@ -22,6 +22,7 @@ import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.function.Get;
 import cn.bctools.database.util.IdGenerator;
+import cn.bctools.database.util.SqlFunctionUtil;
 import cn.bctools.gateway.entity.TenantPo;
 import cn.bctools.log.annotation.Log;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
@@ -205,7 +206,8 @@ public class UserController {
             for (int i = 0; i < allChildId.size(); i++) {
                 String trim = allChildId.get(i).trim();
                 queryWrapper.or(objectQueryWrapper -> {
-                    objectQueryWrapper.like(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".dept_id", trim)
+                    objectQueryWrapper.apply(SqlFunctionUtil.jsonContains(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".dept_id", trim, "$"))
+                            .isNotNull(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".dept_id")
                             .eq(ObjectNull.isNotNull(userTenant.getSex()), UserTenantMapper.SYS_USER_ALIAS + ".sex", userTenant.getSex())
                             .eq(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".cancel_flag", userTenant.getCancelFlag())
                             .and(ObjectNull.isNotNull(userTenant.getKeywords()), wrapper -> wrapper
@@ -392,14 +394,18 @@ public class UserController {
                     depts = deptService.getAllChildId(UserCurrentUtils.getDept().stream().map(DeptDto::getDeptId).filter(ObjectNull::isNotNull).collect(Collectors.toList()));
             }
         }
+        if (ObjectNull.isNotNull(deptId)) {
+            depts = deptService.getAllChildId(deptId);
+        }
 
         LambdaQueryWrapper<UserTenant> in = new LambdaQueryWrapper<UserTenant>()
                 .select(UserTenant::getId, UserTenant::getUserId, UserTenant::getPhone, UserTenant::getRealName)
-                .like(ObjectNull.isNotNull(deptId), UserTenant::getDeptId, deptId)
+//                .like(ObjectNull.isNotNull(deptId), UserTenant::getDeptId, deptId)
                 .eq(ObjectNull.isNotNull(jobId), UserTenant::getJobId, jobId)
                 .in(ObjectNull.isNotNull(userIds), UserTenant::getUserId, userIds);
         if (ObjectNull.isNotNull(depts)) {
-            in.apply(ObjectNull.isNotNull(depts), "(" + depts.stream().map(e -> String.format("JSON_CONTAINS(dept_id,'\"%s\"')", e)).collect(Collectors.joining(" or ")) + ")");
+            in.isNotNull(UserTenant::getDeptId);
+            in.apply(ObjectNull.isNotNull(depts), "(" + depts.stream().map(e -> SqlFunctionUtil.jsonContains("dept_id", e, "$")).collect(Collectors.joining(" or ")) + ")");
         }
         page = userTenantService.page(page, in
                 .in(ObjectNull.isNotNull(jobs), UserTenant::getJobId, jobs)
@@ -565,6 +571,7 @@ public class UserController {
         }
         userTenant.setAccountLevelId(vo.getLevelId());
         user = userService.saveUser(user, userTenant);
+        userRoleComponent.grandDefaultSysRole(user.getId());
         UserVo userVo = BeanCopyUtil.copy(UserVo.class, user, userTenant);
         return R.ok(userVo);
     }

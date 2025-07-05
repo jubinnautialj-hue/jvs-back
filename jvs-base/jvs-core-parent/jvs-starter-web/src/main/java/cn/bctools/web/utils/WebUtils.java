@@ -1,6 +1,7 @@
 package cn.bctools.web.utils;
 
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.ObjectNull;
 import com.alibaba.fastjson.support.spring.FastJsonHttpMessageConverter;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
@@ -21,6 +22,7 @@ import java.util.Objects;
 @UtilityClass
 public class WebUtils {
     static final FastJsonHttpMessageConverter FAST_JSON_HTTP_MESSAGE_CONVERTER = new FastJsonHttpMessageConverter();
+    static final String KEY = "x-forwarded-host";
 
     public static HttpServletRequest getRequest() {
         return getRequestAttributes().getRequest();
@@ -36,6 +38,17 @@ public class WebUtils {
             throw new BusinessException("请求信息不存在");
         }
         return requestAttributes;
+    }
+
+    public static String getHost() {
+        return getHost(getRequest());
+    }
+    public static String getHost(HttpServletRequest request) {
+        //判断是否存在代理
+        if (ObjectNull.isNotNull(request.getHeader(KEY))) {
+            return request.getHeader(KEY).toString();
+        }
+        return request.getHeader("host").toString();
     }
 
     @SneakyThrows

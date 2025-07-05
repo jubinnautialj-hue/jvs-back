@@ -4,6 +4,7 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.function.entity.po.FunctionBusinessPo;
 import cn.bctools.function.graph.ExpressionGraph;
+import com.alibaba.fastjson2.JSONObject;
 import org.apache.commons.lang3.ObjectUtils;
 
 import java.util.*;
@@ -170,7 +171,7 @@ public class ExpressionGraphUtils {
         // 校验参数循环依赖
         boolean exist = !branchPath.add(currentNode);
         if (exist) {
-            throw new BusinessException("表达式存在循环依赖");
+            throw new BusinessException("表达式存在循环依赖" + JSONObject.toJSONString(branchPath));
         }
         Set<T> preNodes = graph.getPreNodes(currentNode);
         if (ObjectUtils.isEmpty(preNodes)) {

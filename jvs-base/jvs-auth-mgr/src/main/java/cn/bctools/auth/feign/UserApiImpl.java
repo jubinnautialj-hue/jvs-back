@@ -123,15 +123,7 @@ public class UserApiImpl implements AuthUserServiceApi {
         if (ObjectUtils.isEmpty(deptIds)) {
             return R.ok(Collections.emptyList());
         }
-        LambdaQueryWrapper<UserTenant> queryWrapper = Wrappers.lambdaQuery();
-        Iterator<String> deptIdIterator = deptIds.iterator();
-        while (deptIdIterator.hasNext()) {
-            queryWrapper.like(UserTenant::getDeptId, deptIdIterator.next());
-            if (deptIdIterator.hasNext()) {
-                queryWrapper.or();
-            }
-        }
-        List<UserTenant> userTenantList = userTenantService.list(queryWrapper);
+        List<UserTenant> userTenantList = userTenantService.listByDeptIds(deptIds);
         List<String> userIds = userTenantList.stream().map(UserTenant::getUserId).collect(Collectors.toList());
         return this.getByIds(userIds);
     }
@@ -274,7 +266,7 @@ public class UserApiImpl implements AuthUserServiceApi {
         // 部门id集
         List<String> deptIds = dto.getDeptIds();
         if (ObjectUtils.isNotEmpty(deptIds)) {
-            List<String> ids = userTenantService.list(Wrappers.<UserTenant>lambdaQuery().in(UserTenant::getDeptId, deptIds)).stream().map(UserTenant::getUserId).collect(Collectors.toList());
+            List<String> ids = userTenantService.listByDeptIds(deptIds).stream().map(UserTenant::getUserId).collect(Collectors.toList());
             boolean isEmptyResult = this.handleSearchResult(userIdCondition, ids, isAnd, hasCondition);
             if (isEmptyResult) {
                 return R.ok(Collections.emptyList());

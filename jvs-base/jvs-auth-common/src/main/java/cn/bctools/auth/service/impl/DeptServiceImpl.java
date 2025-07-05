@@ -6,7 +6,6 @@ import cn.bctools.auth.mapper.DeptMapper;
 import cn.bctools.auth.service.DeptService;
 import cn.bctools.auth.service.UserTenantService;
 import cn.bctools.auth.util.SyncOrgUtils;
-import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.TreeUtils;
@@ -18,10 +17,10 @@ import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -124,16 +123,22 @@ public class DeptServiceImpl extends ServiceImpl<DeptMapper, Dept> implements De
      *
      * @param deptIds
      */
-    private void removeBatch(List<String> deptIds) {
+    @Transactional(rollbackFor = Exception.class)
+    public void removeBatch(List<String> deptIds) {
         if (CollectionUtils.isEmpty(deptIds)) {
             return;
         }
         // 删除部门信息
         removeByIds(deptIds);
         // 移除该部门下的用户
-        userTenantService.update(Wrappers.<UserTenant>lambdaUpdate()
-                .set(UserTenant::getDeptId, null)
-                .in(UserTenant::getDeptId, deptIds));
+        List<UserTenant> userTenants = userTenantService.listByDeptIds(deptIds)
+                .stream()
+                .map(userTenant -> {
+                    userTenant.getDeptId().removeIf(deptIds::contains);
+                    return userTenant;
+                })
+                .collect(Collectors.toList());
+        userTenantService.updateBatchById(userTenants);
     }
 
     @Override

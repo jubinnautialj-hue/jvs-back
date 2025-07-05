@@ -84,7 +84,12 @@ public class UserRoleComponent {
                         }
                         // 当前部门及该部门所有下级部门，判断是否包含当前用户部门
                         List<String> childDeptIds = TreeUtils.getListPassingBy(deptList, role.getDeptId(), Dept::getId, Dept::getParentId).stream().map(Dept::getId).collect(Collectors.toList());
-                        return childDeptIds.containsAll(list);
+                        for (String s : list) {
+                            if (childDeptIds.contains(s)) {
+                                return true;
+                            }
+                        }
+                        return false;
                     })
                     .map(DeptRole::getRoleId)
                     .collect(Collectors.toList());
@@ -116,20 +121,30 @@ public class UserRoleComponent {
         if (ObjectNull.isNull(deptRoles)) {
             return userRoleMap;
         }
-        Map<String, List<UserTenant>> userDeptMap = new HashMap<>();
-//                userTenantService.list(Wrappers.<UserTenant>lambdaQuery()
-//                        .select(UserTenant::getDeptId, UserTenant::getUserId)
-//                        .in(UserTenant::getUserId, userIds))
-//                .stream()
-//                .filter(userTenant -> ObjectNull.isNotNull(userTenant.getDeptId()))
-//                .collect(Collectors.groupingBy(UserTenant::getDeptId));
+        Map<String, List<String>> userDeptMap = new HashMap<>();
+        userTenantService.list(Wrappers.<UserTenant>lambdaQuery()
+                        .select(UserTenant::getDeptId, UserTenant::getUserId)
+                        .in(UserTenant::getUserId, userIds))
+                .stream()
+                .filter(userTenant -> ObjectNull.isNotNull(userTenant.getDeptId()))
+                .forEach(userTenant ->
+                    userTenant.getDeptId().forEach(deptId -> {
+                        if (userDeptMap.containsKey(deptId)) {
+                            userDeptMap.get(deptId).add(userTenant.getUserId());
+                        } else {
+                            List<String> userIdList = new ArrayList<>();
+                            userIdList.add(userTenant.getUserId());
+                            userDeptMap.put(deptId, userIdList);
+                        }
+                    })
+                );
         if (ObjectNull.isNotNull(userDeptMap)) {
             List<Dept> deptList = deptService.list();
             deptRoles.forEach(deptRole -> {
                 Set<String> userIdList = new HashSet<>();
                 // 不包括部门的下级部门，判断部门id是否与用户部门相同
                 if (Boolean.FALSE.equals(deptRole.getBelow())) {
-                    List<String> deptUserIds = Optional.ofNullable(userDeptMap.get(deptRole.getDeptId())).orElseGet(ArrayList::new).stream().map(UserTenant::getUserId).collect(Collectors.toList());
+                    List<String> deptUserIds = Optional.ofNullable(userDeptMap.get(deptRole.getDeptId())).orElseGet(ArrayList::new);
                     if (ObjectNull.isNotNull(deptUserIds)) {
                         userIdList.addAll(deptUserIds);
                     }
@@ -137,10 +152,8 @@ public class UserRoleComponent {
                     // 当前部门及该部门所有下级部门，判断是否包含当前用户部门
                     List<String> childDeptIds = TreeUtils.getListPassingBy(deptList, deptRole.getDeptId(), Dept::getId, Dept::getParentId).stream().map(Dept::getId).collect(Collectors.toList());
                     List<String> deptUserIds = childDeptIds.stream()
-                            .flatMap(deptId -> Optional.ofNullable(userDeptMap.get(deptId)).orElseGet(ArrayList::new)
-                                    .stream().map(UserTenant::getUserId)
-                                    .collect(Collectors.toList())
-                                    .stream())
+                            .flatMap(deptId -> Optional.ofNullable(userDeptMap.get(deptId)).orElseGet(ArrayList::new).stream())
+                            .filter(ObjectNull::isNotNull)
                             .collect(Collectors.toList());
                     if (ObjectNull.isNotNull(deptUserIds)) {
                         userIdList.addAll(deptUserIds);
@@ -206,9 +219,7 @@ public class UserRoleComponent {
                 return TreeUtils.getListPassingBy(deptList, deptRole.getDeptId(), Dept::getId, Dept::getParentId).stream().map(Dept::getId).collect(Collectors.toList()).stream();
             }
         }).collect(Collectors.toList());
-        userIds.addAll(userTenantService.list(Wrappers.<UserTenant>lambdaQuery()
-                        .select(UserTenant::getUserId)
-                        .in(UserTenant::getDeptId, deptIds))
+        userIds.addAll(userTenantService.listByDeptIds(deptIds)
                 .stream()
                 .map(UserTenant::getUserId)
                 .collect(Collectors.toList()));

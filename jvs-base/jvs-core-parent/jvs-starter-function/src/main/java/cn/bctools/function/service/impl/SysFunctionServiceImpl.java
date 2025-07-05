@@ -12,10 +12,12 @@ import cn.bctools.function.mapper.SysFunctionMapper;
 import cn.bctools.function.service.SysFunctionService;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.NumberUtil;
+import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import groovy.lang.*;
@@ -37,10 +39,13 @@ public class SysFunctionServiceImpl extends ServiceImpl<SysFunctionMapper, BaseF
 
         BaseFunctionPo entity = Optional.ofNullable(getOne(Wrappers.query(new BaseFunctionPo().setName(functionName)))).orElse(new BaseFunctionPo());
         //替换原有函数名
-        boolean contains = body.contains(functionName + "(...");
+        String regex = functionName +"\\((.*?)\\)";
+        List<String> params = ReUtil.findAllGroup1(regex, body);
+//        boolean contains = body.contains(functionName + "(...");
         if (ObjectNull.isNull(dynamicParam)) {
             dynamicParam = false;
         }
+        boolean contains = params.stream().anyMatch(e -> StrUtil.split(e, StringPool.COMMA).stream().anyMatch(v -> v.contains("...")));
         if (dynamicParam && !contains) {
             throw new BusinessException("不是动态参数,请修改参数体");
         }

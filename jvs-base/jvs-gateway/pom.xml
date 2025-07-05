@@ -7,7 +7,7 @@
 
     <parent>
         <groupId>cn.bctools</groupId>
-        <artifactId>jvs-base</artifactId>
+        <artifactId>jvs</artifactId>
         <version>2.3</version>
     </parent>
 
@@ -87,7 +87,6 @@
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-starter-gray</artifactId>
         </dependency>
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis-reactive</artifactId>

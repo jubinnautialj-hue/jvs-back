@@ -2,6 +2,7 @@ package cn.bctools.oauth2.config;
 
 import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.entity.dto.UserDto;
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SystemThreadLocal;
 import cn.bctools.common.utils.TenantContextHolder;
@@ -32,11 +33,14 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.servlet.http.HttpServletRequest;
+import java.io.Serializable;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 /**
  * The type Jvs adapter.
@@ -167,10 +171,21 @@ public class JvsAdapter {
             }
             String tenantId = TenantContextHolder.getTenantId();
             Map<String, Object> systemThreadLocalMap = SystemThreadLocal.get();
+            Map<String, Object> map = new HashMap<>();
+            systemThreadLocalMap.entrySet()
+                    .forEach(e -> {
+                        if (ObjectNull.isNotNull(e.getValue())) {
+                            try {
+                                map.put(e.getKey(), BeanCopyUtil.deepCopy(e.getValue()));
+                            } catch (Exception ex) {
+
+                            }
+                        }
+                    });
             Authentication finalAuthenticationAuthentication = authenticationAuthentication;
             RequestAttributes finalContext = context;
             return () -> {
-                SystemThreadLocal.setAll(systemThreadLocalMap);
+                SystemThreadLocal.setAll(map);
                 TenantContextHolder.setTenantId(tenantId);
                 if (ObjectNull.isNotNull(finalContext)) {
                     //设置上下文user对象

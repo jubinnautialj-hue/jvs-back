@@ -55,7 +55,7 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
             return Collections.emptyList();
         }
         return this.list(Wrappers.<Permission>lambdaQuery()
-                .select(Permission::getPermission,Permission::getClientName)
+                .select(Permission::getPermission, Permission::getClientName)
                 .in(Permission::getId, ids));
     }
 
@@ -107,7 +107,13 @@ public class PermissionServiceImpl extends ServiceImpl<PermissionMapper, Permiss
         } else {
             permission.remove(AuthConstant.jvs_platform_permission);
         }
-
+        //如果有 ai ，都有这个标识
+        if (ObjectNull.isNotNull(jvsSystemConfig.getAidomain())) {
+            //所有人都有这个权限
+            permission.add(AuthConstant.jvs_ai);
+        } else {
+            permission.remove(AuthConstant.jvs_ai);
+        }
         return permission;
     }
 }

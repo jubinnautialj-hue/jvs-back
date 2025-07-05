@@ -8,15 +8,11 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
-import com.alibaba.fastjson2.JSONObject;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellReference;
-import org.apache.poi.xssf.usermodel.XSSFCell;
-import org.apache.poi.xssf.usermodel.XSSFCellStyle;
-import org.apache.poi.xssf.usermodel.XSSFSheet;
-import org.apache.poi.xssf.usermodel.XSSFWorkbook;
+import org.apache.poi.xssf.usermodel.*;
 
 import java.io.*;
 import java.math.BigDecimal;
@@ -224,23 +220,18 @@ public class ExcelVariablesReplaceUtil {
     }
 
     private static List<ExcelVariable> openList(List<ExcelVariable> list) {
-        return list.stream()
-                .filter(e -> ExcelVariable.ExcelType.List.equals(e.getType()))
-                .flatMap(e -> {
-                    List<ExcelVariable> excelVariables = new ArrayList<>();
-                    //转换为 Map
-                    List<Map<String, Object>> value = (List) e.getValue();
-                    for (Map<String, Object> body : value) {
-                        body.keySet().stream()
-                                .map(c -> {
-                                    List read = value.stream().map(f -> f.get(c)).collect(Collectors.toList());
-                                    return new ExcelVariable().setType(ExcelVariable.ExcelType.List).setListKey(e.getName()).setName(e.getName() + "." + c).setValue(read);
-                                })
-                                .forEach(excelVariables::add);
-                    }
-                    return excelVariables.stream().distinct();
-                })
-                .collect(Collectors.toList());
+        return list.stream().filter(e -> ExcelVariable.ExcelType.List.equals(e.getType())).flatMap(e -> {
+            List<ExcelVariable> excelVariables = new ArrayList<>();
+            //转换为 Map
+            List<Map<String, Object>> value = (List) e.getValue();
+            for (Map<String, Object> body : value) {
+                body.keySet().stream().map(c -> {
+                    List read = value.stream().map(f -> f.get(c)).collect(Collectors.toList());
+                    return new ExcelVariable().setType(ExcelVariable.ExcelType.List).setListKey(e.getName()).setName(e.getName() + "." + c).setValue(read);
+                }).forEach(excelVariables::add);
+            }
+            return excelVariables.stream().distinct();
+        }).collect(Collectors.toList());
     }
 
     private static List<ExcelVariable> getList() {
@@ -267,8 +258,7 @@ public class ExcelVariablesReplaceUtil {
     private static String VARIABLE_PATTERN = "\\$\\{.*?\\}";
 
     public static void replaceVariables(String inputFilePath, String outputFilePath, Map<String, Object> variables) throws IOException {
-        try (FileInputStream fis = new FileInputStream(inputFilePath);
-             Workbook workbook = new XSSFWorkbook(fis)) {
+        try (FileInputStream fis = new FileInputStream(inputFilePath); Workbook workbook = new XSSFWorkbook(fis)) {
 
             // 遍历每个工作表
             for (Sheet sheet : workbook) {
@@ -410,76 +400,98 @@ public class ExcelVariablesReplaceUtil {
         return variables;
     }
 
-    public static List<Dict> searchData(InputStream inputStream, Map<Object, Map<String, Object>> map) {
+    /**
+     * 读取 excel
+     *
+     * @param inputStream      文件流
+     * @param map              读取数据格式
+     * @param ignoreFormatRead 是否忽略格式读取
+     * @return
+     */
+    public static List<Dict> searchData(InputStream inputStream, Map<Object, Map<String, Object>> map, Boolean ignoreFormatRead) {
         try (XSSFWorkbook workbook = new XSSFWorkbook(inputStream)) {
             List<Dict> data = map.keySet().stream().map(e -> {
-                        XSSFSheet sheetAt;
-                        if (e instanceof Number) {
-                            sheetAt = workbook.getSheetAt(((Number) e).intValue());
-                        } else {
-                            sheetAt = workbook.getSheet(e.toString());
+                XSSFSheet sheetAt;
+                if (e instanceof Number) {
+                    sheetAt = workbook.getSheetAt(((Number) e).intValue());
+                } else {
+                    sheetAt = workbook.getSheet(e.toString());
+                }
+                if (ObjectNull.isNull(sheetAt)) {
+                    return null;
+                }
+                //搜索 value
+                Map<String, Object> body = map.get(e);
+                body.keySet().forEach(key -> {
+                    String field = body.get(key).toString();
+                    //是否是表格
+                    if (field.contains("x") || field.contains("X")) {
+                        CellReference cellReference = parseCellReference(field.split("x")[0].toLowerCase().replace("r", ""));
+                        short col = cellReference.getCol();
+                        int row = cellReference.getRow();
+                        Integer cell = Integer.valueOf(field.split("x")[1].split("\\(")[0].toString().toLowerCase().replace("c", ""));
+                        List<String> fields = Arrays.stream(field.substring(field.indexOf("(") + 1, field.indexOf(")")).split(",")).collect(Collectors.toList());
+                        if (fields.size() != cell) {
+                            throw new BusinessException(field + "描述不正确,字段个数与列数必须相同");
                         }
-                        if (ObjectNull.isNull(sheetAt)) {
-                            return null;
-                        }
-                        //搜索 value
-                        Map<String, Object> body = map.get(e);
-                        body.keySet().forEach(key -> {
-                            String field = body.get(key).toString();
-                            //是否是表格
-                            if (field.contains("x") || field.contains("X")) {
-                                CellReference cellReference = parseCellReference(field.split("x")[0].toLowerCase().replace("r", ""));
-                                short col = cellReference.getCol();
-                                int row = cellReference.getRow();
-                                Integer cell = Integer.valueOf(field.split("x")[1].split("\\(")[0].toString().toLowerCase().replace("c", ""));
-                                List<String> fields = Arrays.stream(field.substring(field.indexOf("(") + 1, field.indexOf(")")).split(",")).collect(Collectors.toList());
-                                if (fields.size() != cell) {
-                                    throw new BusinessException(field + "描述不正确,字段个数与列数必须相同");
-                                }
-                                List<Object> objectList = new ArrayList<>();
+                        List<Object> objectList = new ArrayList<>();
 
-                                List<XSSFCellStyle> list = new ArrayList<>();
-                                for (int i = 0; i < col; i++) {
-                                    list.add(null);
-                                }
-                                getList(col, cell, sheetAt, row, list, objectList, fields);
-                                body.put(key, objectList);
-                            } else {
-                                CellReference cellReference = parseCellReference(field.toLowerCase());
-                                XSSFCell cell = sheetAt.getRow(cellReference.getRow()).getCell(cellReference.getCol());
-                                body.put(key, getCellValue(cell));
-                            }
-                        });
-                        return Dict.create().set(sheetAt.getSheetName(), body);
-                    })
-                    .filter(ObjectNull::isNotNull)
-                    .collect(Collectors.toList());
+                        List<XSSFCellStyle> list = new ArrayList<>();
+                        for (int i = 0; i < col; i++) {
+                            list.add(null);
+                        }
+                        readList(col, cell, sheetAt, row, list, objectList, fields, ignoreFormatRead);
+                        body.put(key, objectList);
+                    } else {
+                        CellReference cellReference = parseCellReference(field.toLowerCase());
+                        XSSFCell cell = sheetAt.getRow(cellReference.getRow()).getCell(cellReference.getCol());
+                        body.put(key, getCellValue(cell));
+                    }
+                });
+                return Dict.create().set(sheetAt.getSheetName(), body);
+            }).filter(ObjectNull::isNotNull).collect(Collectors.toList());
             return data;
+        } catch (BusinessException e) {
+            throw e;
         } catch (Exception e) {
             log.error("解析错误", e);
             throw new BusinessException("Excel 解析错误");
         }
     }
 
-    private static void getList(short col, Integer cell, XSSFSheet sheetAt, int row, List<XSSFCellStyle> list, List<Object> objectList, List<String> fields) {
+    private static void readList(short col, Integer cell, XSSFSheet sheetAt, int row, List<XSSFCellStyle> list, List<Object> objectList, List<String> fields, Boolean ignoreFormatRead) {
+        int line = 0;
         while (true) {
             Dict dict = Dict.create();
-            for (int i = col; i < cell; i++) {
+            for (int i = col; i < cell + col; i++) {
                 //遍历列取值
-                XSSFCell cell1 = sheetAt.getRow(row).getCell(i);
+                XSSFRow atRow = sheetAt.getRow(row);
+                if (ObjectNull.isNull(atRow)) {
+                    return;
+                }
+                XSSFCell cell1 = atRow.getCell(i);
+
                 if (list.size() <= i) {
                     list.add(i, cell1.getCellStyle());
                 }
-                if (areCellStylesSimilar(cell1.getCellStyle(), list.get(i))) {
+                if (ignoreFormatRead) {
+                    dict.set(fields.get(i - col), getCellValue(cell1, true));
+                } else if (areCellStylesSimilar(cell1.getCellStyle(), list.get(i))) {
                     //如果样式一致才继续向下读取，如果不一致则退出读取数据规则
-                    dict.set(fields.get(i), getCellValue(cell1, true));
+                    dict.set(fields.get(i - col), getCellValue(cell1, true));
                 } else {
                     //这里需要判断是否是最后一个，如不是最后一个需要删除行级数据，，退出
                     return;
                 }
             }
             if (!dict.values().stream().allMatch(ObjectNull::isNull)) {
+                line = 0;
                 objectList.add(dict);
+            } else {
+                if (++line > 100) {
+                    //这里需要判断是否是最后一个，如不是最后一个需要删除行级数据，，退出
+                    return;
+                }
             }
             row++;
         }
@@ -633,10 +645,7 @@ public class ExcelVariablesReplaceUtil {
                     if (!list.isEmpty()) {
                         list.forEach(a -> {
                             Arrays.stream(a.split(" ")).forEach(e -> {
-                                variables.add(new ExcelVariable().setName(e).setCellStyle(cell.getCellStyle()).setType(ExcelVariable.ExcelType.String)
-                                        .setSheet(sheetI)
-                                        .setRow(row.getRowNum())
-                                        .setColumn(cell.getColumnIndex()));
+                                variables.add(new ExcelVariable().setName(e).setCellStyle(cell.getCellStyle()).setType(ExcelVariable.ExcelType.String).setSheet(sheetI).setRow(row.getRowNum()).setColumn(cell.getColumnIndex()));
                             });
                         });
                     }

@@ -103,7 +103,7 @@ public class HttpRequestUtils {
     /**
      * 发送GET请求
      * <p>
-     * 响应数据结构为: {@link R<T>}
+     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
      * <p>
      * 请求方式: GET
      * 请求格式: application/json
@@ -120,7 +120,7 @@ public class HttpRequestUtils {
     /**
      * 发送请求
      * <p>
-     * 响应数据结构为: {@link R<T>}
+     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
      * <p>
      * 请求方式: POST
      * 请求格式: application/json
@@ -138,7 +138,7 @@ public class HttpRequestUtils {
     /**
      * 发送GET请求
      * <p>
-     * 响应数据结构为: {@link R<T>}
+     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
      * <p>
      * 请求方式: GET
      * 请求格式: application/json
@@ -156,7 +156,7 @@ public class HttpRequestUtils {
     /**
      * 发送请求
      * <p>
-     * 响应数据结构为: {@link R<T>}
+     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
      * <p>
      * 请求方式: POST
      * 请求格式: application/json

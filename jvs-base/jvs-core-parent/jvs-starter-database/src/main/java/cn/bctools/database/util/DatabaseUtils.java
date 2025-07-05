@@ -75,7 +75,7 @@ public class DatabaseUtils {
 
         // 数据库名称
         String schema = "schema=";
-        String databaseName = subUrl[1].substring(subUrl[1].indexOf(schema) + schema.length());
+        String databaseName = subUrl[1].substring(subUrl[1].indexOf(schema) + schema.length()).split("&")[0];
         if (StringUtils.isBlank(databaseName)) {
             log.error("数据源连接url格式异常: {}", url);
             throw new BusinessException("数据源连接url格式异常");

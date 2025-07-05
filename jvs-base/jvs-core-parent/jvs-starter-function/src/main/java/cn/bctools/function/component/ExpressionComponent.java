@@ -86,6 +86,15 @@ public class ExpressionComponent {
                                             return true;
                                         }
                                     } else {
+                                        //那必须是相同的表格。或不为表格表格才返回 .true
+                                        if (ObjectNull.isNotNull(body.getIndex())) {
+                                            //表示同级表格返回 true
+                                            if (e.getBody().contains(parentKeyPath)) {
+                                                return true;
+                                            } else {
+                                                return false;
+                                            }
+                                        }
                                         return true;
                                     }
                                 })
@@ -146,7 +155,7 @@ public class ExpressionComponent {
                         {
                             Map<String, FunctionBusinessPo> collect = functionList.stream().filter(e -> e.getRelatedIds().contains(nextKey))
                                     .filter(e -> finalFunctionMap.containsKey(e.getBusinessId()))
-                                    .collect(Collectors.toMap(FunctionBusinessPo::getBusinessId, Function.identity()));
+                                    .collect(Collectors.toMap(FunctionBusinessPo::getBusinessId, Function.identity(), (e1, e2) -> e1.getUpdateTime().isAfter(e2.getUpdateTime()) ? e1 : e2));
                             //如果有完全匹配的，就使用完全匹配
                             if (ObjectNull.isNotNull(collect.keySet())) {
                                 functionMap = collect;
@@ -162,7 +171,7 @@ public class ExpressionComponent {
                                             return relatedIds.stream().filter(v -> v.startsWith(nextKey)).findFirst().isPresent();
                                         })
                                         .filter(e -> finalFunctionMap.containsKey(e.getBusinessId()))
-                                        .collect(Collectors.toMap(FunctionBusinessPo::getBusinessId, Function.identity()));
+                                        .collect(Collectors.toMap(FunctionBusinessPo::getBusinessId, Function.identity(), (e1, e2) -> e1.getUpdateTime().isAfter(e2.getUpdateTime()) ? e1 : e2));
                                 //这里做两次循环，是因为可能存在 tab 多次操作
                                 for (FunctionBusinessPo e : functionList) {
                                     if (ObjectNull.isNull(e.getParentType())) {
@@ -191,7 +200,7 @@ public class ExpressionComponent {
             }
         }
         if (ObjectNull.isNotNull(list)) {
-            Map<String, FunctionBusinessPo> businessPoMap = list.stream().collect(Collectors.toMap(FunctionBusinessPo::getBusinessId, Function.identity()));
+            Map<String, FunctionBusinessPo> businessPoMap = list.stream().collect(Collectors.toMap(FunctionBusinessPo::getBusinessId, Function.identity(), (e1, e2) -> e1.getUpdateTime().isAfter(e2.getUpdateTime()) ? e1 : e2));
             // 构建变量引用的关系图
             ExpressionGraph<String> graph = ExpressionGraphUtils.buildFunctionGraph(list);
             //这里需要根据顺序计算，避免表单中的相互引用时导致的间隔多步不执行情况
@@ -212,12 +221,12 @@ public class ExpressionComponent {
      */
     private List<FunctionBusinessPo> getFunctionList(String designId, String useCase) {
         return functionBusinessService.list(Wrappers.<FunctionBusinessPo>lambdaQuery()
-                        .select(FunctionBusinessPo::getId, FunctionBusinessPo::getType, FunctionBusinessPo::getParentType, FunctionBusinessPo::getBusinessId, FunctionBusinessPo::getRelatedIds, FunctionBusinessPo::getBody)
-                        .eq(FunctionBusinessPo::getUseCase, useCase)
-                        .eq(FunctionBusinessPo::getDesignId, designId)
-                        .orderByAsc(FunctionBusinessPo::getCreateTime))
-                //排除为空的公式
-                .stream().filter(e -> ObjectNull.isNotNull(e.getBody())).filter(e -> ObjectNull.isNotNull(e.getBody().trim())).collect(Collectors.toList());
+                .select(FunctionBusinessPo::getId, FunctionBusinessPo::getType, FunctionBusinessPo::getParentType, FunctionBusinessPo::getBusinessId, FunctionBusinessPo::getUpdateTime, FunctionBusinessPo::getRelatedIds,
+                        FunctionBusinessPo::getBody)
+                .eq(FunctionBusinessPo::getUseCase, useCase)
+                .isNotNull(FunctionBusinessPo::getBody)
+                .eq(FunctionBusinessPo::getDesignId, designId)
+                .orderByAsc(FunctionBusinessPo::getCreateTime));
     }
 
     /**

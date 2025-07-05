@@ -60,7 +60,7 @@ public class TenantConfigApiImpl implements AuthTenantConfigServiceApi {
         String shortName = "";
         if (IpUtil.isIpAddress(jvsSystemConfig.getDomain())) {
             //拼接地址
-            String url = "http://" + jvsSystemConfig.getDomain() + ":" + first.get().getPort();
+            String url = jvsSystemConfig.getProtocol() + jvsSystemConfig.getDomain() + ":" + first.get().getPort();
             return R.ok(url);
         }
         //如果是多租户模式,则根据租户信息,获取对应的配置信息
@@ -76,7 +76,7 @@ public class TenantConfigApiImpl implements AuthTenantConfigServiceApi {
                 shortName = config.getDomainName() + ".";
             }
         }
-        String url = "http://" + shortName + jvsSystemConfig.getDomain() + (jvsSystemConfig.getMultiTenantMode() ? "" :
+        String url = jvsSystemConfig.getProtocol() + shortName + jvsSystemConfig.getDomain() + (jvsSystemConfig.getMultiTenantMode() ? "" :
                 (":" + first.get().getPort()));
         return R.ok(url);
     }

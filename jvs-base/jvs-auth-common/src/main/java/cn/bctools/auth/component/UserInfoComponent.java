@@ -22,6 +22,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Component;
 
 import javax.servlet.http.HttpServletRequest;
@@ -142,17 +143,20 @@ public class UserInfoComponent {
             for (User user : userList) {
                 String userId = user.getId();
                 userDto = BeanCopyUtil.copy(UserDto.class, user, userTenantMap.get(userId));
+                if (ObjectNull.isNull(userDto.getRealName())) {
+                    userDto.setRealName(userDto.getAccountName());
+                }
                 String headImg = userDto.getHeadImg();
                 if ("/jvs-ui-public/img/headImg.png".equals(headImg)) {
                     SysFrameApplyConfig config = configService.getConfig(ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION);
                     JvsServiceConfig service = jvsSystemConfig.getService().stream().filter(e -> ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION.equals(e.getName())).findFirst().get();
                     if (pattern.matcher(jvsSystemConfig.getDomain()).matches()) {
                         //直接根据主域名获取前缀获取全地址
-                        String url = "http://" + config.getDomainName() + "." + jvsSystemConfig.getDomain();
+                        String url = jvsSystemConfig.getProtocol() + config.getDomainName() + "." + jvsSystemConfig.getDomain();
                         headImg = url + "/" + headImg;
                     } else {
                         //直接根据主域名获取前缀获取全地址
-                        String url = "http://" + jvsSystemConfig.getDomain() + ":" + service.getPort();
+                        String url = jvsSystemConfig.getProtocol() + jvsSystemConfig.getDomain() + ":" + service.getPort();
                         headImg = url + "/" + headImg;
                     }
 
@@ -176,11 +180,13 @@ public class UserInfoComponent {
                 //设置扩展参数
                 userDto.setExceptions(body);
                 userDto.setHeadImg(headImg);
-                List<String> id = userTenantMap.get(userId).getDeptId();
-                if (ObjectNull.isNotNull(id)) {
-                    List<DeptDto> dtoList =
-                            id.stream().map(e -> deptService.getById(e)).filter(ObjectNull::isNotNull).map(e -> new DeptDto().setDeptId(e.getId()).setDeptName(e.getName()).setDeptCode(e.getDeptCode())).collect(Collectors.toList());
-                    userDto.setDept(dtoList);
+                if (userTenantMap.containsKey(userId)) {
+                    List<String> id = userTenantMap.get(userId).getDeptId();
+                    if (ObjectNull.isNotNull(id)) {
+                        List<DeptDto> dtoList =
+                                id.stream().map(e -> deptService.getById(e)).filter(ObjectNull::isNotNull).map(e -> new DeptDto().setDeptId(e.getId()).setDeptName(e.getName()).setDeptCode(e.getDeptCode())).collect(Collectors.toList());
+                        userDto.setDept(dtoList);
+                    }
                 }
                 List<String> childDeptIds = userDto.getDept().stream().flatMap(e -> deptService.getAllChildId(e.getDeptId()).stream()).collect(Collectors.toList());
                 userDto.setChildDeptIds(childDeptIds);

@@ -12,10 +12,13 @@ import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.web.utils.HttpRequestUtils;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
+import cn.hutool.http.ContentType;
+import cn.hutool.http.HttpRequest;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.xkcoding.http.HttpUtil;
+import com.xkcoding.http.support.HttpHeader;
 import com.xkcoding.http.support.hutool.HutoolImpl;
 import lombok.Getter;
 import lombok.experimental.Accessors;
@@ -24,22 +27,23 @@ import me.zhyd.oauth.cache.AuthStateCache;
 import me.zhyd.oauth.config.AuthConfig;
 import me.zhyd.oauth.config.AuthSource;
 import me.zhyd.oauth.enums.AuthResponseStatus;
+import me.zhyd.oauth.enums.scope.AuthWeChatEnterpriseWebScope;
 import me.zhyd.oauth.exception.AuthException;
 import me.zhyd.oauth.model.AuthCallback;
 import me.zhyd.oauth.model.AuthToken;
 import me.zhyd.oauth.model.AuthUser;
 import me.zhyd.oauth.request.AuthDefaultRequest;
 import me.zhyd.oauth.utils.AuthChecker;
+import me.zhyd.oauth.utils.AuthScopeUtils;
+import me.zhyd.oauth.utils.HttpUtils;
+import me.zhyd.oauth.utils.UrlBuilder;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 
@@ -55,9 +59,12 @@ public class OauthOtherRequest extends AuthDefaultRequest {
      * 对应的字段映射关系
      */
     private OtherAuthUser field;
+    private String scope;
     private OauthOther oauthOther;
 
     public OauthOtherRequest(OauthOther oauthOther, AuthConfig config, AuthStateCache authStateCache) {
+
+
         super(config, new AuthSource() {
             @Override
             public String authorize() {
@@ -74,6 +81,7 @@ public class OauthOtherRequest extends AuthDefaultRequest {
                 return oauthOther.getUserInfo();
             }
         });
+        this.scope = oauthOther.getScope();
         this.authStateCache = authStateCache;
         this.field = oauthOther.getFiledJson();
         this.oauthOther = oauthOther;
@@ -107,12 +115,39 @@ public class OauthOtherRequest extends AuthDefaultRequest {
     }
 
     @Override
+    public String authorize(String state) {
+        return UrlBuilder.fromBaseUrl(source.authorize())
+                .queryParam("response_type", "code")
+                .queryParam("client_id", config.getClientId())
+                .queryParam("redirect_uri", config.getRedirectUri())
+                .queryParam("grant_type", "authorization_code")
+                .queryParam("scope", scope)
+                .queryParam("state", getRealState(state))
+                .build();
+    }
+
+    @Override
     protected AuthToken getAccessToken(AuthCallback authCallback) {
         HttpUtil.setHttp(new HutoolImpl());
         String response = null;
+        String url = accessTokenUrl(authCallback.getCode());
+        log.info("get Token url" + url);
         try {
-            response = doPostAuthorizationCode(authCallback.getCode());
+            UrlBuilder urlBuilder = UrlBuilder.fromBaseUrl(source.accessToken())
+                    .queryParam("code", authCallback.getCode())
+                    .queryParam("client_id", config.getClientId())
+                    .queryParam("client_secret", config.getClientSecret())
+                    .queryParam("redirect_uri", config.getRedirectUri())
+                    .queryParam("grant_type", "authorization_code")
+                    .queryParam("scope", scope);
+            Map<String, Object> readOnlyParams = urlBuilder.getReadOnlyParams();
+            HttpRequest body = cn.hutool.http.HttpUtil.createPost(source.accessToken())
+                    .header(HttpHeaders.CONTENT_TYPE, ContentType.FORM_URLENCODED.getValue())
+                    .form(readOnlyParams);
+            log.info("请求路径" + body);
+            response = body.executeAsync().body();
         } catch (Exception e) {
+            log.error("post获取 token 异常 : url : " + url + "\n", e);
             response = doGetAuthorizationCode(authCallback.getCode());
         }
         log.info("获取的 token 信息为,{}", response);
@@ -136,14 +171,21 @@ public class OauthOtherRequest extends AuthDefaultRequest {
 
     @Override
     public AuthUser getUserInfo(AuthToken authToken) {
-        String response = doGetUserInfo(authToken);
-        log.info("登陆其它项目获取用户信息: {}", response);
-        JSONObject object = JSONObject.parseObject(response);
+        String userInfo;
+        if (oauthOther.getType().contains("oauth2")) {
+            HttpHeader httpHeader = new HttpHeader();
+            httpHeader.add("Authorization", "Bearer " + authToken.getAccessToken());
+            userInfo = new HttpUtils(config.getHttpConfig()).post(userInfoUrl(authToken), null, httpHeader);
+        } else {
+            userInfo = doGetUserInfo(authToken);
+        }
+        log.info("登陆其它项目获取用户信息: {}", userInfo);
+        JSONObject object = JSONObject.parseObject(userInfo);
         this.checkResponse(object);
         return getUser(object, authToken);
     }
 
-    private OtherAuthUser getUser(JSONObject object, AuthToken authToken) {
+    public OtherAuthUser getUser(JSONObject object, AuthToken authToken) {
         log.info("映射字段关系:{}", JSONObject.toJSONString(field));
         String string = object.getString(field.getUuid());
         if (ObjectNull.isNull(string)) {
@@ -166,19 +208,22 @@ public class OauthOtherRequest extends AuthDefaultRequest {
         String headImg = object.getString(field.getAvatar());
         String avatar = LoginHandler.getDurableAvatar(otherAuthUser.getNickname(), headImg);
         otherAuthUser.setAvatar(avatar);
-        otherAuthUser.setEnable(field.getEnable());
+        try {
+            otherAuthUser.setEnable(object.getBoolean(field.getEnable().toString()));
+        } catch (Exception e) {
+
+        }
         otherAuthUser.setBlog(object.getString(field.getBlog()));
         otherAuthUser.setCompany(JSONObject.toJSONString(object.get(field.getCompany())));
         otherAuthUser.setLocation(object.getString(field.getLocation()));
         otherAuthUser.setEmail(object.getString(field.getEmail()));
         otherAuthUser.setRemark(object.getString(field.getRemark()));
-        otherAuthUser.setGender(field.getGender());
         otherAuthUser.setSex(sexTypeEnum);
         otherAuthUser.setToken(authToken);
         otherAuthUser.setSource(oauthOther.getType());
         otherAuthUser.setAccount(object.getString(field.getAccount()));
-        otherAuthUser.setDeptIds(field.getDeptIds());
-        otherAuthUser.setPhone(field.getPhone());
+        otherAuthUser.setDeptIds(object.get(field.getDeptIds()));
+        otherAuthUser.setPhone(object.getString(field.getPhone()));
         return otherAuthUser;
     }
 

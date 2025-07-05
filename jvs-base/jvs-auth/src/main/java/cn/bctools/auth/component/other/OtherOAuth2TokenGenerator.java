@@ -102,7 +102,7 @@ public class OtherOAuth2TokenGenerator implements OAuth2TokenGenerator<OAuth2Acc
     private static final class OAuth2AccessTokenClaims extends OAuth2AccessToken implements ClaimAccessor {
         private final Map<String, Object> claims;
 
-        private OAuth2AccessTokenClaims(TokenType tokenType, String tokenValue,
+        private OAuth2AccessTokenClaims(OAuth2AccessToken.TokenType tokenType, String tokenValue,
                                         Instant issuedAt, Instant expiresAt, Set<String> scopes, Map<String, Object> claims) {
             super(tokenType, tokenValue, issuedAt, expiresAt, scopes);
             this.claims = claims;

@@ -8,7 +8,9 @@ import cn.bctools.auth.mapper.RoleMapper;
 import cn.bctools.auth.mapper.UserMapper;
 import cn.bctools.auth.mapper.UserRoleMapper;
 import cn.bctools.auth.service.UserRoleService;
+import cn.bctools.common.utils.ObjectNull;
 import cn.hutool.core.util.ObjectUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.AllArgsConstructor;
@@ -67,15 +69,20 @@ public class UserRoleServiceImpl extends ServiceImpl<UserRoleMapper, UserRole> i
             log.warn("[赋予默认角色] 操作失败, 用户id为空");
             return;
         }
-        List<Role> roleList = roleMapper.selectList(Wrappers.<Role>lambdaQuery().eq(Role::getAutoGrant, true).eq(Role::getMemberScope, RoleMemberScopeEnum.USER));
-        if (ObjectUtils.isEmpty(roleList)) {
+        Set<String> ids = roleMapper.selectList(Wrappers.<Role>lambdaQuery().eq(Role::getAutoGrant, true).eq(Role::getMemberScope, RoleMemberScopeEnum.USER))
+                .stream().map(Role::getId).collect(Collectors.toSet());
+        if (ObjectUtils.isEmpty(ids)) {
             log.warn("[赋予默认角色] 操作失败, 有找到默认角色");
             return;
         }
-        List<UserRole> userRoleList = roleList.stream()
-                .map(role -> new UserRole().setUserId(userId).setRoleId(role.getId()))
-                .collect(Collectors.toList());
-        this.saveBatch(userRoleList);
+        list(new LambdaQueryWrapper<UserRole>().in(UserRole::getRoleId, ids).eq(UserRole::getUserId, userId))
+                .forEach(e -> ids.remove(e.getRoleId()));
+        if (ObjectNull.isNotNull(ids)) {
+            List<UserRole> userRoleList = ids.stream()
+                    .map(role -> new UserRole().setUserId(userId).setRoleId(role))
+                    .collect(Collectors.toList());
+            this.saveBatch(userRoleList);
+        }
     }
 
     @Override

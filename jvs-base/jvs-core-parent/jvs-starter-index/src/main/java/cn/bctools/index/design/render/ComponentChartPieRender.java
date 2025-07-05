@@ -40,7 +40,7 @@ public class ComponentChartPieRender extends OptionsBase {
     /**
      * The type Pie data.
      */
-    @Data
+    @lombok.Data
     @Accessors(chain = true)
     public static class PieData {
         /**

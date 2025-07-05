@@ -72,6 +72,11 @@ public class OauthOther implements Serializable {
      * @return url
      */
     String authorize;
+    /**
+     *
+     */
+    String scope;
+
 
     /**
      * 获取accessToken的api

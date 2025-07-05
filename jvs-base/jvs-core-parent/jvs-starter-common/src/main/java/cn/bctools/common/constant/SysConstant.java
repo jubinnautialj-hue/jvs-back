@@ -28,7 +28,7 @@ public class SysConstant {
     public static final String USERID = "userId";
     public static final String DATASCOPE = "datascope:applicationname:";
     /**
-     * 应用名称, 详情见{@link SpringContextUtil#applicationContextName}
+     * 应用名称, 详情见{@link cn.bctools.common.utils.SpringContextUtil#applicationContextName}
      */
     public static final String APPLICATION_NAME = "_application_name_";
 

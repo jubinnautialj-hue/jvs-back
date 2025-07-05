@@ -22,6 +22,7 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.MediaType;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.net.URL;
 import java.util.Date;
@@ -43,6 +44,9 @@ public class S3Template implements OssTemplate {
         this.ossProperties = ossProperties;
         this.fileDataInterface = fileDataInterface;
         ClientConfiguration clientConfiguration = new ClientConfiguration();
+        clientConfiguration.setRequestTimeout(ossProperties.getTimeOut());
+        clientConfiguration.setSocketTimeout(ossProperties.getTimeOut());
+        clientConfiguration.setConnectionTimeout(ossProperties.getTimeOut());
         AwsClientBuilder.EndpointConfiguration endpointConfiguration = new AwsClientBuilder.EndpointConfiguration(
                 ossProperties.getEndpoint().trim().startsWith("http") ? ossProperties.getEndpoint() : "http://" + ossProperties.getEndpoint(), null);
         AWSCredentials awsCredentials = new BasicAWSCredentials(ossProperties.getAccessKey(),
@@ -115,6 +119,35 @@ public class S3Template implements OssTemplate {
 
     @SneakyThrows
     @Override
+    public BaseFile put(String bucketName, String businessId, String module, File stream, String key, boolean cover) {
+
+        makeBucket(bucketName);
+        String originalName = key;
+        key = getFileName(module, key, businessId);
+
+        int i = key.lastIndexOf(".") + 1;
+        String substring = key.substring(i);
+
+        String contentType = MIME_MAPPINGS.get(substring);
+        if (contentType == null) {
+            contentType = MediaType.APPLICATION_OCTET_STREAM_VALUE;
+        }
+        String s3Key = key.replaceAll("//", "/");
+        s3.putObject(bucketName, s3Key, stream);
+        BaseFile file = new BaseFile();
+        file.setOriginalName(originalName);
+        file.setFileName(s3Key);
+        file.setBucketName(bucketName);
+        file.setFileType(contentType);
+        file.setModule(module);
+        file.setSize(stream.length());
+        //记录信息
+        fileDataInterface.insert(file);
+        return file;
+    }
+
+    @SneakyThrows
+    @Override
     public BaseFile put(String bucketName, String businessId, String module, InputStream stream, String key, boolean cover) {
         ObjectMetadata metadata = new ObjectMetadata();
 
@@ -149,6 +182,12 @@ public class S3Template implements OssTemplate {
     public BaseFile put(String bucketName, String module, InputStream stream, String key, boolean cover) {
         return put(bucketName, null, module, stream, key, cover);
     }
+
+    @Override
+    public BaseFile put(String bucketName, String module, File stream, String originalName, boolean cover) {
+        return put(bucketName, null, module, stream, originalName, cover);
+    }
+
 
     @Override
     public void removeFile(String bucketName, String fileName) {

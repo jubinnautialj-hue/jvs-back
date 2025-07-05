@@ -103,7 +103,12 @@ public class SelectedApiImpl implements SelectedServiceApi {
                 SysDeptDto root = new SysDeptDto().setId(rootDeptId).setSort(0).setChildList(Collections.emptyList());
                 deptList.add(root);
                 // 转树形结构
-                SysDeptDto deptDto = TreeUtils.list2Tree(deptList, rootDeptId, SysDeptDto::getId, SysDeptDto::getParentId, SysDeptDto::setChildList, Comparator.comparing(SysDeptDto::getSort));
+                SysDeptDto deptDto = null;
+                try {
+                    deptDto = TreeUtils.list2Tree(deptList, rootDeptId, SysDeptDto::getId, SysDeptDto::getParentId, SysDeptDto::setChildList, Comparator.comparing(SysDeptDto::getSort));
+                } catch (Exception e) {
+
+                }
                 if (Objects.isNull(deptDto)) {
                     userSelectedDto.setDepts(Collections.emptyList());
                 } else {

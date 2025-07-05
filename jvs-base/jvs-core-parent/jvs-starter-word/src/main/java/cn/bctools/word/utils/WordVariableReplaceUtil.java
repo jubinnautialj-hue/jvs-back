@@ -555,11 +555,17 @@ public class WordVariableReplaceUtil {
 
         // 替换为文本
         String replaceData = ObjectNull.isNull(dataValue) ? " " : String.valueOf(dataValue);
-        String[] textArr = replaceData.split("\n");
-        if (replaceData.contains("\n")) {
+        replaceData = replaceData.replaceAll("\\n", "\n");
+        List<String> textArr = new ArrayList<>();
+        for (String s : replaceData.split("\\\\n")) {
+            for (String string : s.split("\n")) {
+                textArr.add(string);
+            }
+        }
+        if (textArr.size() > 1) {
             List<Object> rParentContent = ((R) textElement.getParent()).getContent();
-            for (int i = 0; i < textArr.length; i++) {
-                String text = textArr[i];
+            for (int i = 0; i < textArr.size(); i++) {
+                String text = textArr.get(i);
                 if (i == 0) {
                     textElement.setValue(textElement.getValue().replace(buildVariableKey(variableKey), text));
                 } else {

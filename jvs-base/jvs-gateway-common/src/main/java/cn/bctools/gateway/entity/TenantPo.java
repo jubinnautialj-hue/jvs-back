@@ -1,5 +1,6 @@
 package cn.bctools.gateway.entity;
 
+import cn.bctools.database.handler.Fastjson2TypeHandler;
 import com.baomidou.mybatisplus.annotation.*;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.annotations.ApiModel;
@@ -9,6 +10,7 @@ import lombok.experimental.Accessors;
 import org.springframework.format.annotation.DateTimeFormat;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 /**
  * @author guojing
@@ -55,7 +57,11 @@ public class TenantPo {
     @ApiModelProperty(value = "用户默认密码", notes = "未设置初始密码，默认123456")
     @TableField(value = "default_password")
     private String defaultPassword = "123456";
-
+    /**
+     * 扩展字段
+     */
+    @TableField(typeHandler = Fastjson2TypeHandler.class)
+    Map<String, String> extensionJson;
     /**
      * ICON
      */
