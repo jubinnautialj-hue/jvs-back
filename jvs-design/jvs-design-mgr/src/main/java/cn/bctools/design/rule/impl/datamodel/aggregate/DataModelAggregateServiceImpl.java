@@ -10,9 +10,11 @@ import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import com.alibaba.fastjson2.JSONArray;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.annotation.Order;
+import org.springframework.data.mongodb.core.aggregation.Fields;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
@@ -50,7 +52,16 @@ public class DataModelAggregateServiceImpl implements BaseCustomFunctionInterfac
         List<QueryConditionDto> queryConditions = dataModelDto.getBody();
         Criteria criteria = DynamicDataUtils.buildDynamicCriteria(queryConditions);
         criteria = DynamicDataUtils.initCriteria(criteria);
-        return dynamicDataService.aggregate(criteria, dataModelDto.getDataModelId(), dataModelDto.getType(), dataModelDto.getGroupBy(), dataModelDto.getFields());
+        if (dataModelDto.getGroupBy() instanceof String) {
+            Fields from = Fields.from(Fields.field((String) dataModelDto.getGroupBy()));
+            return dynamicDataService.aggregate(criteria, dataModelDto.getDataModelId(), dataModelDto.getType(), dataModelDto.getFields(), from);
+        } else if (dataModelDto.getGroupBy() instanceof List) {
+            String[] a = new String[((JSONArray) dataModelDto.getGroupBy()).size()];
+            String[] array = ((JSONArray) dataModelDto.getGroupBy()).toArray(a);
+            Fields from = Fields.fields(array);
+            return dynamicDataService.aggregate(criteria, dataModelDto.getDataModelId(), dataModelDto.getType(), dataModelDto.getFields(), from);
+        }
+        return null;
     }
 
     @Override

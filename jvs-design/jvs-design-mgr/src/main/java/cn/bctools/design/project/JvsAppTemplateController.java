@@ -16,6 +16,7 @@ import cn.bctools.design.project.service.JvsAppTemplateService;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.design.util.ModeUtils;
 import cn.bctools.log.annotation.Log;
+import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.URLUtil;
 import com.alibaba.fastjson2.JSONObject;
@@ -183,12 +184,11 @@ public class JvsAppTemplateController {
     @SneakyThrows
     @ApiOperation("发布到模板")
     @PostMapping("/deploy")
-    @Transactional(rollbackFor = Exception.class)
     public R<Boolean> deploy(@RequestBody JvsAppTemplate jvsAppTemplate) {
         DynamicDataUtils.setDto(new DesignRoleSettingDto().setJvsAppId(jvsAppTemplate.getId()).setJvsAppName(jvsAppTemplate.getName()));
         jvsAppTemplate.setVersion(SpringContextUtil.getVersion());
-        templateService.saveTemplate(jvsAppTemplate);
-        return R.ok(true);
+        templateService.saveTemplateAsync(jvsAppTemplate, UserCurrentUtils.getUserId(),UserCurrentUtils.getRealName(),UserCurrentUtils.getCurrentUser().getTenantId());
+        return R.ok(true).setMsg("后台正在发布,请稍等");
     }
 
     @ApiOperation("上传模板中心")

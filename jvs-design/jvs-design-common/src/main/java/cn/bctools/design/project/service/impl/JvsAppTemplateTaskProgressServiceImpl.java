@@ -50,7 +50,8 @@ public class JvsAppTemplateTaskProgressServiceImpl extends ServiceImpl<JvsAppTem
                 .map(detail -> JSON.parseObject((String) detail, JvsAppTemplateTaskProgressDetail.class))
                 .peek(detail -> {
                     if (AppTemplateTaskProgressEnum.PROCESSING.equals(detail.getProgress())) {
-                        detail.setProgress(AppTemplateTaskProgressEnum.FAILURE);
+                        detail.setProgress(AppTemplateTaskProgressEnum.FAILURE)
+                                .setTenantId(progressTask.getTenantId());
                     }
                 })
                 .collect(Collectors.toList());

@@ -24,10 +24,11 @@ import java.util.zip.DataFormatException;
 @AllArgsConstructor
 public class BoxFieldHandler implements IDataFieldHandler<BoxHtml> {
     @Override
-    public void checkDataFieldType(BoxHtml boxHtml, Object o) throws Exception {
+    public Object checkDataFieldType(BoxHtml boxHtml, Object o) throws Exception {
         if (!(o instanceof String)) {
             throw new DataFormatException("类型不正确");
         }
+        return o;
     }
 
 

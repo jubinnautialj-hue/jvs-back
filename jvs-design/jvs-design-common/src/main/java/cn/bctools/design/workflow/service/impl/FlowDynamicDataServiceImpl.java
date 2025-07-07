@@ -101,7 +101,7 @@ public class FlowDynamicDataServiceImpl implements FlowDynamicDataService {
             return new FlowTaskModelData();
         }
         Object task = Optional.ofNullable(data.get(FlowDataFieldEnum.TASK.getFieldKey())).orElseGet(Object::new);
-        return BeanCopyUtil.copy(task, FlowTaskModelData.class);
+        return BeanCopyUtil.copy(task, FlowDynamicDataServiceImpl.FlowTaskModelData.class);
     }
 
     @Override
@@ -297,7 +297,7 @@ public class FlowDynamicDataServiceImpl implements FlowDynamicDataService {
             List<Map<String, Object>> updateList = new ArrayList<>();
             for (FlowTask flowTask : flowTaskList) {
                 String taskId = flowTask.getId();
-                FlowTaskModelData flowTaskModelData = new FlowTaskModelData();
+                FlowDynamicDataServiceImpl.FlowTaskModelData flowTaskModelData = new FlowDynamicDataServiceImpl.FlowTaskModelData();
                 flowTaskModelData.setCreateById(flowTask.getCreateById());
                 flowTaskModelData.setFlowTaskPersons(new ArrayList<>(Optional.ofNullable(pendingTaskPersonMap.get(taskId)).orElseGet(HashSet::new)));
                 String dataId = flowTask.getDataId();

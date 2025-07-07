@@ -3,6 +3,7 @@ package cn.bctools.design.data.fields.impl;
 import cn.bctools.auth.api.api.DictApi;
 import cn.bctools.auth.api.dto.SysDictItemDto;
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.common.utils.SystemThreadLocal;
@@ -20,6 +21,7 @@ import cn.bctools.design.rule.service.RuleDesignService;
 import cn.bctools.design.rule.service.RunLogService;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.rule.entity.enums.RunType;
+import cn.bctools.rule.utils.RuleSystemThreadLocal;
 import cn.bctools.rule.utils.dto.RuleExecDto;
 import cn.bctools.rule.utils.html.HtmlGraph;
 import cn.bctools.rule.utils.html.RuleExecuteDto;
@@ -82,7 +84,7 @@ public interface ISelectorDataHandler {
                 return null;
             } else {
                 Map<String, String> map = list.stream().collect(Collectors.toMap(s -> String.valueOf(s.get(dto.getProps().getLabel())), s -> String.valueOf(s.get("id")), (s1, s2) -> s1));
-                if (map.containsKey(o)) {
+                if (map.containsKey(o.toString())) {
                     //存在，直接添加
                     //查询出所有的数据
                     cascaderFieldPathIdsMap.put(dto.getProp(), map);
@@ -129,7 +131,10 @@ public interface ISelectorDataHandler {
                     RuleDesignPo po = ruleDesignService.getEnableDesign(optionHttp);
                     if (ObjectNull.isNotNull(po)) {
                         RunLogPo logPo = logService.create(po.getJvsAppId(), po.getSecret(), RunType.REAL, new HashMap<>(8), po.getReqType(), po.getReqType(), false);
-                        RuleExecuteDto executeDto = new RuleExecuteDto().setReqVariableMap(lineData).setVariableMap(lineData);
+                        HashMap<String, Object> reqVariableMap = new HashMap<>(lineData);
+                        //表示是导入
+                        reqVariableMap.put("import", true);
+                        RuleExecuteDto executeDto = new RuleExecuteDto().setReqVariableMap(reqVariableMap).setVariableMap(lineData);
                         RuleExecDto ruleExecDto = new RuleExecDto()
                                 .setExecuteDto(executeDto)
                                 .setType(RunType.REAL)
@@ -375,12 +380,15 @@ public interface ISelectorDataHandler {
                             .setType(RunType.REAL)
                             .setSecret(po.getSecret())
                             .setGraph(JSONObject.parseObject(po.getDesignDrawingJson(), HtmlGraph.class));
+                    RuleExecDto rule = RuleSystemThreadLocal.getRule();
                     ruleStartUtils.start(po, logPo, ruleExecDto);
+                    RuleSystemThreadLocal.set(rule);
                     if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getEndResult())) {
                         Object value = ruleExecDto.getExecuteDto().getEndResult().getValue();
                         if (value instanceof List) {
-                            List<FormValueHtml> copys = ((List<JSONObject>) value).stream()
-                                    .map(e -> new FormValueHtml().setLabel(e.getString(selectItem.getProps().getLabel())).setValue(e.getString(selectItem.getProps().getValue())))
+                            List<FormValueHtml> copys = ((List<Map>) value).stream()
+                                    .filter(e -> ObjectNull.isNotNullOne(e.get(selectItem.getProps().getLabel()), e.get(selectItem.getProps().getValue())))
+                                    .map(e -> new FormValueHtml().setLabel(e.get(selectItem.getProps().getLabel()).toString()).setValue(e.get(selectItem.getProps().getValue()).toString()))
                                     .collect(Collectors.toList());
                             if (data instanceof List) {
                                 return ((ArrayList) data).stream().map(e -> getLabel(e.toString(), copys, aBoolean)).collect(Collectors.joining(","));

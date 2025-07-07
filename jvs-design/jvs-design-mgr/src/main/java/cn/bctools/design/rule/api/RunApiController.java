@@ -169,6 +169,7 @@ public class RunApiController {
             throw new RuleException(RuleExceptionEnum.不支持调用);
         }
         switch (ruleDesignPo.getReqType()) {
+            case Low_code_logic:
             case Source_code_development_docking_logic:
                 //判断此逻辑的类型，是否需要登录如果需要登录，则获取一下当前用户
                 UserCurrentUtils.getCurrentUser();
@@ -271,8 +272,7 @@ public class RunApiController {
     @Log
     @ApiOperation("执行逻辑")
     @RequestMapping(value = "/api/run/{ruleKey}", method = {RequestMethod.PUT, RequestMethod.GET, RequestMethod.POST, RequestMethod.DELETE})
-    public R<Object> run(HttpServletRequest request, @RequestHeader("appId") String appId, @RequestHeader("secret") String secret, @PathVariable String ruleKey,
-                         @RequestBody(required = false) Map<String, Object> variableMap, HttpServletResponse response) {
+    public R<Object> run(HttpServletRequest request, @RequestHeader("appId") String appId, @RequestHeader("secret") String secret, @PathVariable String ruleKey, @RequestBody(required = false) Map<String, Object> variableMap, HttpServletResponse response) {
         //判断应用是否已经启用
         TenantContextHolder.clear();
         //清楚租户
@@ -350,10 +350,14 @@ public class RunApiController {
         } else {
             ruleStartUtils.getRuleReturn(response, po, logPo, data, ruleExecDto);
             boolean notNull = ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getException());
-            if (ruleExecDto.getExecuteDto().getEndResult().getFunctionName().equals("提示消息")) {
-                if (notNull) {
-                    throw ruleExecDto.getExecuteDto().getException();
+            try {
+                if (ruleExecDto.getExecuteDto().getEndResult().getFunctionName().equals("提示消息")) {
+                    if (notNull) {
+                        throw ruleExecDto.getExecuteDto().getException();
+                    }
                 }
+            } catch (RuntimeException e) {
+                throw new RuleException(RuleExceptionEnum.设计错误, ruleExecDto.getExecuteDto().getErrorMessage());
             }
             //返回执行日志对象
             if (ObjectNull.isNull(data.getEndResult())) {

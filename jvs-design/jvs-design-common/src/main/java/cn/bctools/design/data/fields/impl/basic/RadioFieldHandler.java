@@ -64,10 +64,11 @@ public class RadioFieldHandler extends IMultipleTypeHandler implements IDataFiel
     }
 
     @Override
-    public void checkDataFieldType(RadioItemHtml radioItemHtml, Object o) throws Exception {
+    public Object checkDataFieldType(RadioItemHtml radioItemHtml, Object o) throws Exception {
         if (!(o instanceof String)) {
             throw new RuntimeException("正确格式为字符串");
         }
+        return o;
     }
 
     @Override

@@ -1,5 +1,7 @@
 package cn.bctools.design.data.service.impl;
 
+import cn.bctools.ai.api.JvsAiDatasetApi;
+import cn.bctools.ai.dto.AiDocumentDto;
 import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.auth.api.dto.PersonnelDto;
 import cn.bctools.common.entity.dto.UserDto;
@@ -9,6 +11,7 @@ import cn.bctools.common.utils.function.Get;
 import cn.bctools.common.utils.sensitive.SensitiveInfoUtils;
 import cn.bctools.database.util.IdGenerator;
 import cn.bctools.design.common.OrderFormat;
+import cn.bctools.design.config.DesignConfig;
 import cn.bctools.design.constant.DynamicDataConstant;
 import cn.bctools.design.crud.entity.FormPo;
 import cn.bctools.common.entity.dto.DeptDto;
@@ -38,10 +41,13 @@ import cn.bctools.design.data.util.DataModelUtil;
 import cn.bctools.design.data.util.QueryConditionUtils;
 import cn.bctools.design.data.util.RoleUtils;
 import cn.bctools.design.expression.EnvConstant;
+import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.entity.enums.AppLogTypeEnum;
 import cn.bctools.design.project.handler.DesignHandler;
+import cn.bctools.design.project.mapper.JvsAppMapper;
 import cn.bctools.design.project.service.JvsAppLogService;
 import cn.bctools.design.rule.RuleRunService;
+import cn.bctools.design.util.CurrentAppUtils;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.design.util.OrderUtils;
 import cn.bctools.design.workflow.enums.FlowDataFieldEnum;
@@ -84,6 +90,7 @@ import org.bson.types.Decimal128;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.aggregation.Aggregation;
 import org.springframework.data.mongodb.core.aggregation.AggregationOperation;
+import org.springframework.data.mongodb.core.aggregation.Fields;
 import org.springframework.data.mongodb.core.aggregation.GroupOperation;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
@@ -121,6 +128,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      * The Rule run service.
      */
     RuleRunService ruleRunService;
+    DesignConfig designConfig;
+    JvsAiDatasetApi jvsAiDatasetApi;
     /**
      * The Data id service.
      */
@@ -137,6 +146,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      * The Data field service.
      */
     DataFieldService dataFieldService;
+    JvsAppMapper appMapper;
     /**
      * The Form mapper.
      */
@@ -260,7 +270,12 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
     @Override
     public void checkDataFieldType(String appId, String modelId, Map<String, Object> map, Boolean emptyEnable) throws BusinessException {
-        List<FieldBasicsHtml> fields = dataFieldService.getFields(appId, modelId, true, true);
+        String designId = DynamicDataUtils.getDesignId();
+        JvsApp app = CurrentAppUtils.getApp();
+        if (ObjectNull.isNull(app)) {
+            CurrentAppUtils.setApp(appMapper.selectById(appId));
+        }
+        List<FieldBasicsHtml> fields = dataFieldService.getFields(appId, modelId, designId, true, true);
         List<FieldBasicsHtml> designField = fields.stream().filter(e -> ObjectNull.isNotNull(e.getDesignId())).filter(e -> e.getDesignId().equals(getDesignId())).collect(Collectors.toList());
         //设计 id如果存在，则直接只使用这个设计id相同的字段，如果没有，则使用模型的字段,避免不同设计中可能存在不同的设计结果
         Map<String, FieldBasicsHtml> fieldBasicsHtmlMap;
@@ -276,37 +291,85 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             IDataFieldHandler handler = iDataFieldHandler.get(fieldBasicsHtml.getType().getDesc());
             if (ObjectNull.isNotNull(handler, fieldBasicsHtml.getDesignJson())) {
                 FieldBasicsHtml html = handler.toHtml(fieldBasicsHtml.getDesignJson());
+                //判断是否显示隐藏
+                if (checkDataDisplayExpress(html, map, fieldBasicsHtmlMap)) {
+                    continue;
+                }
                 Object o = map.get(key);
                 Boolean htmlEmptyEnable = true;
                 if (emptyEnable == null) {
-                    htmlEmptyEnable = html.getEmptyEnable();
+                    if (ObjectNull.isNull(html.getRules())) {
+                        htmlEmptyEnable = false;
+                    } else {
+                        htmlEmptyEnable = html.getRules().get(0).getRequired();
+                    }
                 } else {
                     htmlEmptyEnable = emptyEnable;
                 }
                 //占位符直接跳过
-                if (htmlEmptyEnable && DATA_EMPTY.equals(o)) {
+                if (html.getEmptyEnable() && DATA_EMPTY.equals(o)) {
                     continue;
                 }
                 if (ObjectNull.isNotNull(o, html)) {
                     try {
-                        handler.checkDataFieldType(html, o);
+                        o = handler.checkDataFieldType(html, o);
+                        if (fieldBasicsHtml.getType().equals(DataFieldType.inputNumber)) {
+                            map.put(key, o);
+                        }
                         if (fieldBasicsHtml.getType().equals(DataFieldType.input) && NumberUtil.isNumber(o.toString())) {
                             //对类型进行强转，避免是数字类型
                             map.put(key, o.toString());
                         }
+                        if (fieldBasicsHtml.getType().equals(DataFieldType.datePicker)) {
+                            //对类型进行强转
+                            map.put(key, o);
+                        }
                     } catch (Exception e) {
-                        log.error(o + " " + html.getLabel() + "组件数据格式不正确:" + o + e.getMessage() + "\n");
-                        error.append(html.getLabel()).append("组件数据格式不正确:").append(o).append(e.getMessage()).append("\n");
+                        log.error(o + " " + html.getLabel() + "组件数据格式不正确:" + o + e.getMessage() + "<br/>");
+                        error.append(html.getLabel()).append("组件数据格式不正确:").append(o).append(e.getMessage()).append("<br/>");
                     }
-                } else if (!htmlEmptyEnable && map.containsKey(key)) {
+                } else if (htmlEmptyEnable) {
                     //暂时不处理类型为空的情况
-                    error.append(html.getLabel()).append("不能为空");
+                    error.append(html.getLabel()).append("不能为空<br/>");
                 }
             }
         }
         if (ObjectNull.isNotNull(error.toString())) {
             throw new BusinessException(error.toString());
         }
+    }
+
+    /**
+     * 判断前端显示隐藏，是否要进行数据校验
+     *
+     * @param html
+     * @param map
+     * @param basicsHtmlMap
+     * @return
+     */
+    private boolean checkDataDisplayExpress(FieldBasicsHtml html, Map<String, Object> map, Map<String, FieldBasicsHtml> basicsHtmlMap) {
+        if (ObjectNull.isNotNull(html.getDisplayExpress())) {
+            if (html.getShowOperator().equals("&")) {
+                //需要全部满足
+                return html.getDisplayExpress().stream().allMatch(e -> {
+                    String[] split = e.getValue().split(",");
+                    if (Arrays.stream(split).anyMatch(a -> a.equals(map.get(e.getProp())))) {
+                        return false;
+                    }
+                    return true;
+                });
+            } else {
+                //只满足一个
+                return html.getDisplayExpress().stream().anyMatch(e -> {
+                    String[] split = e.getValue().split(",");
+                    if (Arrays.stream(split).anyMatch(a -> a.equals(map.get(e.getProp())))) {
+                        return false;
+                    }
+                    return true;
+                });
+            }
+        }
+        return false;
     }
 
     /**
@@ -373,17 +436,38 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      */
     private String saveDataLog(DataEventType dataEventType, String appId, String modelId, String dataId, Map<String, Object> data, Map<String, Object> oldData) {
         if (DataEventType.DATA_NEW.equals(dataEventType)) {
+
+            MapDifference<String, Object> difference = Maps.difference(new HashMap<>(), data);
+            DataChangePo o = saveDataChange(appId, modelId, oldData, difference, data).get(0);
             ArrayList<Object> value = new ArrayList<>();
             value.add(new Dict().set("timestamp", DateUtil.now()).set("content", UserCurrentUtils.getRealName() + "添加了数据"));
+            if (designConfig.getAi()) {
+                try {
+                    ArrayList<AiDocumentDto> document = new ArrayList<>();
+                    document.add(new AiDocumentDto().setId(dataId).setName(dataId).setDatasetName(modelId).setDatasetId(modelId).setContent(o.getContent()));
+                    jvsAiDatasetApi.documents(document);
+                } catch (Exception e) {
+
+                }
+            }
             return dataLogService.saveLog(modelId, dataId, data, value, DataEventType.DATA_NEW);
         }
         if (DataEventType.DATA_UPDATE.equals(dataEventType)) {
             MapDifference<String, Object> difference = Maps.difference(oldData, data);
-            List<Object> dataChange = null;
+            List<DataChangePo> dataChange = null;
             if (!difference.areEqual()) {
                 dataChange = saveDataChange(appId, modelId, oldData, difference, data);
             }
-            return dataLogService.saveLog(modelId, dataId, data, dataChange, DataEventType.DATA_UPDATE);
+            if (designConfig.getAi()) {
+                try {
+                    ArrayList<AiDocumentDto> document = new ArrayList<>();
+                    document.add(new AiDocumentDto().setId(dataId).setName(dataId).setDatasetName(modelId).setDatasetId(modelId).setContent(dataChange.get(0).getContent()));
+                    jvsAiDatasetApi.documents(document);
+                } catch (Exception e) {
+
+                }
+            }
+            return dataLogService.saveLog(modelId, dataId, data, Arrays.asList(dataChange.toArray()), DataEventType.DATA_UPDATE);
         }
         return null;
     }
@@ -867,10 +951,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      * @param difference 修改数据
      * @param data       修改后的数据
      */
-    private List<Object> saveDataChange(String appId, String modelId, Map<String, Object> jsonData, MapDifference<String, Object> difference, Map<String, Object> data) {
+    @Override
+    public List<DataChangePo> saveDataChange(String appId, String modelId, Map<String, Object> jsonData, MapDifference<String, Object> difference, Map<String, Object> data) {
         Map<String, FieldBasicsHtml> map = dataFieldService.getFields(appId, modelId, true, false).stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity()));
         //记录内容变化到一个字段中去
-        List<Object> dataChange = new ArrayList<Object>();
+        List<DataChangePo> dataChange = new ArrayList<DataChangePo>();
         DataChangePo dataChangePo = new DataChangePo();
         UserDto userDto = UserCurrentUtils.getNullableUser();
         if (ObjectNull.isNotNull(userDto)) {
@@ -887,8 +972,10 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 .filter(e -> ObjectNull.isNotNull(difference.entriesOnlyOnRight().get(e)))
                 .forEach(e -> {
                     Object echo = dataFieldHandler.echo(map.get(e), difference.entriesOnlyOnRight().get(e), data);
-                    String s = " 创建了 " + map.get(e).getFieldName() + "为 " + echo;
-                    changes.add(s);
+                    if (!(map.get(e).getFieldName().equals("创建时间") || map.get(e).getFieldName().equals("修改时间"))) {
+                        String s = " 创建了 " + map.get(e).getFieldName() + "为 " + echo;
+                        changes.add(s);
+                    }
                 });
 
         //需要将修改记录,单独存放到一个数据表中,用于数据留痕
@@ -910,7 +997,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     } else {
                         Object right = dataFieldHandler.echo(map.get(e), difference.entriesDiffering().get(e).rightValue(), data);
                         Object left = dataFieldHandler.echo(map.get(e), difference.entriesDiffering().get(e).leftValue(), data);
-                        return "更新了" + map.get(e).getFieldName() + "   " + left + " 为  " + right;
+                        return "更新了 \"" + map.get(e).getFieldName() + "\"   " + left + " 为  " + right;
                     }
                 })
                 .filter(ObjectNull::isNotNull)
@@ -922,7 +1009,6 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
     }
 
     @Override
-    @Transactional(rollbackFor = Exception.class)
     public RuleExecuteDto remove(String modelId, String dataId) {
         DynamicDataPo dataPo = this.get(modelId, dataId);
         Map<String, Object> oldData = dataPo.getJsonData();
@@ -1011,7 +1097,20 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         List<Criteria> list = new ArrayList<>();
         //拼接查询条件
         if (ObjectNull.isNotNull(conditions)) {
-            list = DynamicDataUtils.buildDynamicCriteriaList(Optional.ofNullable(conditions).map(c -> c.get(0)).orElse(null));
+            List<QueryConditionDto> queryConditionDtos = Optional.ofNullable(conditions).map(c -> c.get(0)).orElse(new ArrayList<>());
+            if (andOr) {
+                //过滤出有 key的
+                List<QueryConditionDto> collect = queryConditionDtos.stream().filter(e -> !DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
+                if (ObjectNull.isNotNull(collect)) {
+                    List<Criteria> criteria = buildDynamicCriteriaList(collect);
+                    authCriteria.andOperator(criteria);
+                }
+            } else {
+                List<QueryConditionDto> collect = queryConditionDtos.stream().filter(e -> DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
+                if (ObjectNull.isNotNull(collect)) {
+                    list = DynamicDataUtils.buildDynamicCriteriaList(collect);
+                }
+            }
         }
         Boolean isFree = SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_FREE);
         Query query;
@@ -1650,7 +1749,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      */
     @Override
     public Map<String, Object> echo(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap, boolean override) {
-        return echo(data, fieldMap, override, e -> e.getObject());
+        return echo(data, fieldMap, override, ExportFieldDto::getObject);
     }
 
     @Override
@@ -1707,6 +1806,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                             String fieldKey = entry.getKey();
                             Object value = entry.getValue();
                             FieldBasicsHtml fieldDto = fieldMap.get(fieldKey);
+
                             IDataFieldHandler fieldHandler = iDataFieldHandler.get(fieldDto.getType().getDesc());
                             if (ObjectNull.isNotNull(fieldHandler)) {
                                 if (ObjectNull.isNull(fieldDto.getDesignJson())) {
@@ -1720,7 +1820,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                     echoValue = function.apply(new ExportFieldDto().setField(fieldKey).setType(html.getType()).setObject(echoValue));
                                 }
                                 String path = DynamicDataUtils.getEchoFieldKey(html.getProp());
-                                fieldHandler.setDataOverride(data, fieldKey, html, path, override, echoValue);
+                                if ((html.getType().equals(DataFieldType.input) || html.getType().equals(DataFieldType.tabGenerate)) && echoValue instanceof HashMap) {
+                                    fieldHandler.setDataOverride(data, fieldKey, html, path, override, "不支持显示");
+                                } else {
+                                    fieldHandler.setDataOverride(data, fieldKey, html, path, override, echoValue);
+                                }
                             }
                         }
                     } catch (BusinessException be) {
@@ -2196,11 +2300,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
         authCriteria.addAll(list);
         Criteria criteria = DynamicDataUtils.trueCriteria().andOperator(authCriteria);
-        return aggregate(criteria, collectionName, type, groupBy, aggregateField);
+        return aggregate(criteria, collectionName, type, aggregateField, Fields.from(Fields.field(groupBy)));
     }
 
     @Override
-    public List<Map> aggregate(Criteria criteria, String collectionName, AggregateEnumType type, String groupBy, String aggregateField) {
+    public List<Map> aggregate(Criteria criteria, String collectionName, AggregateEnumType type, String aggregateField, Fields groupBy) {
 
         //拼装模型的数据权限
         List<AggregationOperation> operations = new ArrayList<>();
@@ -2229,7 +2333,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         Aggregation aggregation = Aggregation.newAggregation(operations);
         List<Map> mappedResults = dataModelHandler.aggregate(aggregation, collectionName);
         mappedResults.forEach(e -> {
-            e.put("name", e.get("_id"));
+            if (groupBy.asList().size() == 1) {
+                e.put("name", e.get("_id"));
+            } else {
+                e.putAll((Map) e.get("_id"));
+            }
             e.remove(("_id"));
         });
         return mappedResults;
@@ -2290,7 +2398,13 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     parentKey.add(body.getModifiedField());
                     body.setParentKey(parentKey);
                 }
-                String collect = String.join(".", body.getParentKey());
+                String collect = null;
+                try {
+                    formDesignHtml.getFormdata().get(0).getForms().stream().filter(e -> e.get("prop").toString().equals(body.getParentKey().get(0))).filter(e -> e.get("detachData").equals(true)).findFirst().get();
+                    collect = body.getParentKey().get(body.getParentKey().size() - 1);
+                } catch (Exception e) {
+                    collect = String.join(".", body.getParentKey());
+                }
                 Object tableLineList = null;
                 //如果是删除只删除，直接返回
                 if (add.equals(tableType) || line.equals(tableType)) {
@@ -2365,7 +2479,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 QueryConditionUtils.replaceConditionValue(dataLinkageList, data);
                 List<Map<String, Object>> linkageDataList = queryList(modelDisplay.getDataLinkageModelId(), linkageQueryFieldKeys, dataLinkageList.toArray(new QueryConditionDto[0]));
                 if (ObjectNull.isNull(linkageDataList)) {
-                    return;
+                    continue;
                 }
                 // 回显处理
                 List<FieldBasicsHtml> allLinkageDataFieldList = dataFieldService.getFields(appId, modelDisplay.getDataLinkageModelId(), true, true).stream()

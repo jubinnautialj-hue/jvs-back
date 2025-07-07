@@ -46,7 +46,7 @@ public class DataModelLinkSelected implements LinkFieldSelected<String> {
 
     @Override
     public Object link(String id, String body) {
-        fields field = fields.valueOf(body);
+        fields field = DataModelLinkSelected.fields.valueOf(body);
         DataModelPo model = dataModelService.getModel(id);
         //需要排除一下设计的容器字段 ，和设计的样式字段
 
@@ -88,6 +88,12 @@ public class DataModelLinkSelected implements LinkFieldSelected<String> {
                                     enabledQueryTypes.add(DataQueryType.isNull);
                                 }
                                 e.setEnabledQueryTypes(enabledQueryTypes);
+                            }
+                            if (!e.getEnabledQueryTypes().contains(DataQueryType.isNull)) {
+                                e.getEnabledQueryTypes().add(DataQueryType.isNull);
+                            }
+                            if (!e.getEnabledQueryTypes().contains(DataQueryType.isNotNull)) {
+                                e.getEnabledQueryTypes().add(DataQueryType.isNotNull);
                             }
                             //转中文
                             List<Dict> collect = e.getEnabledQueryTypes().stream().map(s -> Dict.create().set("label", s.getDesc()).set("value", s.name())).collect(Collectors.toList());

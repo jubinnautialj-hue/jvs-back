@@ -9,8 +9,10 @@ import cn.bctools.design.rule.entity.RunLogPo;
 import cn.bctools.design.rule.service.RunLogService;
 import cn.bctools.log.annotation.Log;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
+import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.rule.entity.enums.RunType;
 import cn.hutool.core.date.DateUtil;
+import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
@@ -23,7 +25,9 @@ import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.InputStream;
 import java.nio.charset.Charset;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -42,6 +46,7 @@ public class LogController {
     private static final String http = "http";
 
     RunLogService service;
+    OssTemplate ossTemplate;
 
     @Log(back = false)
     @ApiOperation("删除历史日志")
@@ -85,6 +90,11 @@ public class LogController {
                     String s = HttpUtil.downloadString(one.getLogs(), Charset.defaultCharset());
                     one.setLogs(s);
                 }
+                if (one.getLogs().contains("jvs-design-mgr/rule/run/log") && one.getLogs().endsWith(".log")) {
+                    InputStream object = ossTemplate.getObject("jvs-design-mgr", one.getLogs());
+                    String read = IoUtil.read(object, Charset.defaultCharset());
+                    one.setLogs(read);
+                }
             }
         }
         return R.ok(one);
@@ -110,6 +120,7 @@ public class LogController {
                 .eq(ObjectNull.isNotNull(tid), RunLogPo::getTid, tid)
                 .eq(RunLogPo::getJvsAppId, appId)
                 .eq(RunLogPo::getTenantId, TenantContextHolder.getTenantId())
+                .ge(ObjectNull.isNull(tid), RunLogPo::getStartTime, LocalDateTime.now().plusDays(-7))
                 .orderByDesc(RunLogPo::getStartTime)
                 .last("limit 7")
         );
@@ -188,6 +199,11 @@ public class LogController {
         if (byId.getLogs().startsWith(http)) {
             String s = HttpUtil.downloadString(byId.getLogs(), Charset.defaultCharset());
             byId.setLogs(s);
+        }
+        if (byId.getLogs().contains("jvs-design-mgr/rule/run/log") && byId.getLogs().endsWith(".log")) {
+            InputStream object = ossTemplate.getObject("jvs-design-mgr", byId.getLogs());
+            String read = IoUtil.read(object, Charset.defaultCharset());
+            byId.setLogs(read);
         }
         return R.ok(byId);
     }

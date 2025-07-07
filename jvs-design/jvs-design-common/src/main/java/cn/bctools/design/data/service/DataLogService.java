@@ -62,6 +62,8 @@ public interface DataLogService {
      */
     String saveLog(String dataModelId, String dataId, Map<String, Object> data, List<Object> dataChange, DataEventType eventType, UserDto userDto);
 
+    String saveLogBatch(String dataModelId, List<Object> data, DataEventType eventType, UserDto userDto);
+
     /**
      * 记录跟进记录
      *

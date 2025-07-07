@@ -61,22 +61,41 @@ public class NumberFieldHandler implements IDataFieldHandler<InputNumberHtml> {
         return new BigDecimal(NumberUtil.decimalFormat(pattern, value));
     }
 
+
     @Override
-    public void checkDataFieldType(InputNumberHtml inputNumberHtml, Object o) throws Exception {
+    public Object checkDataFieldType(InputNumberHtml inputNumberHtml, Object o) throws Exception {
         if (!(o instanceof Number)) {
-            throw new RuntimeException("正确格式为数字");
+            try {
+                BigDecimal bigDecimal = new BigDecimal(o.toString());
+                if (inputNumberHtml.getPrecision() == 0) {
+                    o = bigDecimal.longValue();
+                } else {
+                    o = bigDecimal.setScale(inputNumberHtml.getPrecision(), BigDecimal.ROUND_HALF_UP);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException("正确格式为数字");
+            }
         }
         if (ObjectNull.isNotNull(inputNumberHtml.getMax())) {
-            //判断是否超过最大最小
-            if (Float.parseFloat(o.toString()) > inputNumberHtml.getMax()) {
+            if (o instanceof BigDecimal) {
+                if (((BigDecimal) o).compareTo(BigDecimal.valueOf(inputNumberHtml.getMax().longValue())) == 1) {
+                    throw new RuntimeException("数据超过最大值");
+                }
+            } else if (Double.parseDouble(o.toString()) > inputNumberHtml.getMax()) {
+                //判断是否超过最大最小
                 throw new RuntimeException("数据超过最大值");
             }
         }
         if (ObjectNull.isNotNull(inputNumberHtml.getMin())) {
-            if (Float.parseFloat(o.toString()) < inputNumberHtml.getMin()) {
+            if (o instanceof BigDecimal) {
+                if (((BigDecimal) o).compareTo(BigDecimal.valueOf(inputNumberHtml.getMin().longValue())) == -1) {
+                    throw new RuntimeException("数据超过最大值");
+                }
+            } else if (Double.parseDouble(o.toString()) < inputNumberHtml.getMin()) {
                 throw new RuntimeException("数据小余最小值");
             }
         }
+        return o;
     }
 
     @Override

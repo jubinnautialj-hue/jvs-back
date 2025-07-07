@@ -137,7 +137,7 @@ public enum InputType {
     /**
      * 树型选择，只选择子项
      */
-    treeChildSelected(false),
+    treeSelectedChild(false),
 
     /**
      * 多选
@@ -219,7 +219,7 @@ public enum InputType {
     /**
      * 工作流节点属性
      */
-    flowNode(true, false),
+    flowNode(true, false, List.class),
     /**
      * value下拉选择
      */

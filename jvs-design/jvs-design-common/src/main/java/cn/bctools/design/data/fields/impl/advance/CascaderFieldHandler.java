@@ -82,17 +82,25 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                 //此处直接跳过数据模型
                 Object o = null;
                 if (showPath) {
-                    List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
-                    SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
-                    List<String> fields = new ArrayList<>();
-                    fields.add(cascaderItem.getProps().getLabel());
-                    fields.add(cascaderItem.getProps().getSecTitle());
-                    List<Map<String, Object>> dictList = dynamicDataService.queryList(cascaderItem.getFormId(), fields, new QueryConditionDto());
-                    Map<String, Object> map = dictList
+                    Object o1 = SystemThreadLocal.get(cascaderItem.getFormId() + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle());
+                    Map<String, Object> map = null;
+                    List<Map<String, Object>> dictList;
+                    if (ObjectNull.isNotNull(o1)) {
+                        dictList = (List<Map<String, Object>>) o1;
+                    } else {
+                        List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
+                        SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
+                        List<String> fields = new ArrayList<>();
+                        fields.add(cascaderItem.getProps().getLabel());
+                        fields.add(cascaderItem.getProps().getSecTitle());
+                        dictList = dynamicDataService.queryList(cascaderItem.getFormId(), fields, new QueryConditionDto());
+                        SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                        SystemThreadLocal.set(cascaderItem.getFormId() + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle(), dictList);
+                    }
+                    map = dictList
                             .stream()
                             .filter(e -> ObjectNull.isNotNull(e.get(cascaderItem.getProps().getLabel())))
                             .collect(Collectors.toMap(e -> e.get("id").toString(), e -> e.get(cascaderItem.getProps().getLabel())));
-                    SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
                     try {
                         data = dataFieldHandler.handlePathId(data, isMulti, showPath, dictList, e -> e.get("id").toString(), e -> e.getOrDefault(cascaderItem.getProps().getSecTitle(), "-1").toString());
                     } catch (Exception e) {
@@ -362,8 +370,8 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                 if (ObjectNull.isNotNull(optionHttp)) {
                     List<Map<String, Object>> ruleValue = getRuleValue(optionHttp);
                     List<Tree<Object>> tree = TreeUtils.tree(ruleValue, value, cascaderItem.getProps().getSecTitle(), cascaderItem.getProps().getValue(), cascaderItem.getProps().getLabel(), "id");
-                    if(ObjectNull.isNull(tree)){
-                       break;
+                    if (ObjectNull.isNull(tree)) {
+                        break;
                     }
                     return tree.stream().flatMap(a -> TreeUtils.tree2List(a, Tree::getChildren).stream()).map(e -> e.getId().toString()).collect(Collectors.toSet());
                 }

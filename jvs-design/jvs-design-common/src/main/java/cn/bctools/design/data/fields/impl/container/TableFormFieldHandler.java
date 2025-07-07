@@ -28,6 +28,7 @@ import com.alibaba.fastjson2.JSONPath;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.poi.ss.formula.functions.T;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -151,7 +152,11 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
         if (SystemThreadLocal.get(TABLE_TYPE).equals(TableType.line)) {
             if (ObjectNull.isNotNull(html.getDataModelId())) {
                 if (ObjectNull.isNotNull(html.getDataFilterList()) || ObjectNull.isNotNull(html.getDataFilterGroupList())) {
-                    List<List<FilterHtml>> dataFilterGroupList = CollectionUtils.isNotEmpty(html.getDataFilterGroupList()) ? html.getDataFilterGroupList() : Collections.singletonList(html.getDataFilterList());
+
+                    List<FilterHtml> filterHtmls = (List<FilterHtml>) html.getDataFilterList().stream().map(e -> BeanCopyUtil.copy(e, FilterHtml.class)).collect(Collectors.toList());
+                    List<List<FilterHtml>> ts = Collections.singletonList(filterHtmls);
+
+                    List<List<FilterHtml>> dataFilterGroupList = CollectionUtils.isNotEmpty(html.getDataFilterGroupList()) ? html.getDataFilterGroupList() : ts;
                     List<String> collect = new ArrayList<>();
                     //添加下级字段，目前只有表格才有这个操作
                     addFields(collect, html);
@@ -181,7 +186,9 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
                                         } catch (Exception exception) {
                                             return null;
                                         }
-                                    }).filter(ObjectNull::isNotNull).collect(Collectors.toList()))
+                                    })
+                                    .filter(ObjectNull::isNotNull)
+                                    .collect(Collectors.toList()))
                             .collect(Collectors.toList());
                     //获取表格字段 判断逻辑为空不处理
                     if (ObjectNull.isNotNull(queryConditionDtos)) {
@@ -302,7 +309,9 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
         QueryListDto queryPageDto = new QueryListDto();
         queryPageDto.setFieldList(field);
         if (ObjectNull.isNotNull(html.getDataFilterList()) || ObjectNull.isNotNull(html.getDataFilterGroupList())) {
-            List<List<FilterHtml>> dataFilterGroupList = CollectionUtils.isNotEmpty(html.getDataFilterGroupList()) ? html.getDataFilterGroupList() : Collections.singletonList(html.getDataFilterList());
+            List<FilterHtml> collect = (List<FilterHtml>) html.getDataFilterList().stream().map(e -> BeanCopyUtil.copy(e, FilterHtml.class)).collect(Collectors.toList());
+            List<List<FilterHtml>> ts = Collections.singletonList(collect);
+            List<List<FilterHtml>> dataFilterGroupList = CollectionUtils.isNotEmpty(html.getDataFilterGroupList()) ? html.getDataFilterGroupList() : ts;
             List<List<QueryConditionDto>> collections = dataFilterGroupList.stream().map(filterGroup -> filterGroup.stream()
                             .peek(e -> queryPageDto.getFieldList().add(e.getFieldKey()))
                             .map(e -> {

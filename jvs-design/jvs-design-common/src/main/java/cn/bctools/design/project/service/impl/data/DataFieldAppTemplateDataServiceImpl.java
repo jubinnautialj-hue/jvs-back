@@ -13,6 +13,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
@@ -29,6 +30,9 @@ public class DataFieldAppTemplateDataServiceImpl extends AppTemplateDataBase imp
 
     @Override
     public List<DataFieldPo> list(List<String> modelIds, List<String> ids) {
+        if (ObjectNull.isNull(modelIds)) {
+            return Collections.emptyList();
+        }
         List<DataFieldPo> dataFieldPoList = dataFieldService.list(new LambdaQueryWrapper<DataFieldPo>().in(DataFieldPo::getModelId, modelIds));
         List<String> collect = dataFieldPoList.stream()
                 .peek(this::clearDefaultData)

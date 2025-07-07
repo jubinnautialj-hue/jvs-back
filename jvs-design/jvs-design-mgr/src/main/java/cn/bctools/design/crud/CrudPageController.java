@@ -20,6 +20,8 @@ import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.log.annotation.Log;
+import cn.hutool.core.net.URLDecoder;
+import cn.hutool.core.net.URLEncodeUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -32,6 +34,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.nio.charset.Charset;
 import java.util.List;
 import java.util.Objects;
 
@@ -85,6 +88,16 @@ public class CrudPageController {
     @GetMapping("/generateForm/{dataModelId}/{designId}/{buttonName}")
     @ApiOperation("生成表单")
     public R generateForm(@PathVariable("dataModelId") String dataModelId, @PathVariable("appId") String appId, @PathVariable("buttonName") String buttonName) {
+        FormPo formPo = formService.create(dataModelId, appId, buttonName);
+        return R.ok(formPo.getId());
+    }
+
+
+    @Log
+    @GetMapping("/generateForm/{dataModelId}/{designId}")
+    @ApiOperation("生成表单")
+    public R generate(@PathVariable("dataModelId") String dataModelId, @PathVariable("appId") String appId, @RequestParam("buttonName") String buttonName) {
+        buttonName = URLDecoder.decode(buttonName, Charset.defaultCharset());
         FormPo formPo = formService.create(dataModelId, appId, buttonName);
         return R.ok(formPo.getId());
     }
@@ -157,7 +170,7 @@ public class CrudPageController {
     @Transactional(rollbackFor = Exception.class)
     public R<List<CrudPage>> page(@PathVariable String appId) {
         List<CrudPage> pageList = crudPageService.list(Wrappers.<CrudPage>lambdaQuery()
-                .select(CrudPage::getId,CrudPage::getDataModelId,CrudPage::getName,CrudPage::getJvsAppId)
+                .select(CrudPage::getId, CrudPage::getDataModelId, CrudPage::getName, CrudPage::getJvsAppId)
                 .isNotNull(CrudPage::getName)
                 .eq(StringUtils.isNotBlank(appId), CrudPage::getJvsAppId, appId)
                 .orderByAsc(CrudPage::getCreateTime));

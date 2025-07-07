@@ -1,4 +1,4 @@
-package cn.bctools.rule.ess.impl.processsigning;//package cn.bctools.rule.ess.impl.processsigning;
+//package cn.bctools.rule.ess.impl.processsigning;
 //
 //import cn.bctools.common.exception.BusinessException;
 //import cn.bctools.common.utils.BeanCopyUtil;

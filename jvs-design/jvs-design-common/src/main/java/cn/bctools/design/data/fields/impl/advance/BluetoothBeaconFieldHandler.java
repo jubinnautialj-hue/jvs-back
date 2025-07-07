@@ -24,11 +24,12 @@ import java.util.zip.DataFormatException;
 public class BluetoothBeaconFieldHandler implements IDataFieldHandler<BluetoothBeaconHtml> {
 
     @Override
-    public void checkDataFieldType(BluetoothBeaconHtml bluetoothBeaconHtml, Object o) throws Exception {
+    public Object checkDataFieldType(BluetoothBeaconHtml bluetoothBeaconHtml, Object o) throws Exception {
         //校验是否是数组
         if (!(o instanceof List)) {
             throw new DataFormatException("类型不正确");
         }
+        return o;
     }
 
     @Override

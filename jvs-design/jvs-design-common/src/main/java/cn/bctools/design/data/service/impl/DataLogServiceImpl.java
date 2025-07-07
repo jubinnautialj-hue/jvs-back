@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -60,6 +61,16 @@ public class DataLogServiceImpl implements DataLogService {
     @Override
     public String saveLog(String dataModelId, String dataId, Map<String, Object> data, List<Object> dataChange, DataEventType eventType) {
         return saveLog(dataModelId, dataId, data, dataChange, eventType, UserCurrentUtils.getNullableUser());
+    }
+
+    @Async
+    @Override
+    public String saveLogBatch(String dataModelId, List<Object> list, DataEventType eventType, UserDto userDto) {
+        list.forEach(e -> {
+            Map<String, Object> data = (Map<String, Object>) e;
+            saveLog(dataModelId, String.valueOf(data.get("dataId")), data, Collections.emptyList(), eventType, userDto);
+        });
+        return null;
     }
 
     @Override

@@ -23,8 +23,8 @@ public class ZipFileDto {
     @ParameterValue(info = "文件名称,默认为zip", type = InputType.input)
     public String name;
 
-    @ParameterValue(info = "文件内容", type = InputType.list)
-    public List<RuleFile> files;
+    @ParameterValue(info = "文件内容", explain = "文件链接数组，或文件组件对象数组", type = InputType.list)
+    public List files;
 
 
 }

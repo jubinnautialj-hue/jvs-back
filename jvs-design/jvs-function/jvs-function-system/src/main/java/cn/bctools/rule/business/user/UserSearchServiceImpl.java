@@ -14,9 +14,7 @@ import cn.bctools.rule.function.BaseCustomFunctionInterface;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -35,26 +33,30 @@ import java.util.stream.Collectors;
 public class UserSearchServiceImpl implements BaseCustomFunctionInterface<UserSearchDto> {
 
     @Override
-    public Object execute(UserSearchDto dto, Map<String, Object> params) {
-        SearchUserDto searchUserDto = new SearchUserDto();
-        switch (dto.getType()) {
-            case Email:
-                searchUserDto.setEmail(dto.getSearchUser());
-                break;
-            case Phone:
-                searchUserDto.setPhone(dto.getSearchUser());
-                break;
-            case Account:
-                searchUserDto.setAccountName(dto.getSearchUser());
-                break;
-        }
-        List<UserDto> userDtos = AuthorityManagementUtils.userSearch(searchUserDto);
-        if (ObjectNull.isNotNull(userDtos)) {
-            List<UserDto> userById = userDtos.stream().peek(e -> e.setPassword(null)).collect(Collectors.toList());
-            return BeanCopyUtil.copys(userById, UserDto.class);
-        } else {
-            return new ArrayList<>();
-        }
+    public Object execute(UserSearchDto a, Map<String, Object> params) {
+        return Arrays.stream(a.getSearchUser().split(","))
+                .map(e -> {
+                    UserSearchDto dto = new UserSearchDto().setType(a.getType()).setSearchUser(e);
+                    SearchUserDto searchUserDto = new SearchUserDto();
+                    switch (dto.getType()) {
+                        case Email:
+                            searchUserDto.setEmail(dto.getSearchUser());
+                            break;
+                        case Phone:
+                            searchUserDto.setPhone(dto.getSearchUser());
+                            break;
+                        case Account:
+                            searchUserDto.setAccountName(dto.getSearchUser());
+                            break;
+                    }
+                    List<UserDto> userDtos = AuthorityManagementUtils.userSearch(searchUserDto);
+                    if (ObjectNull.isNotNull(userDtos)) {
+                        List<UserDto> userById = userDtos.stream().peek(b -> b.setPassword(null)).collect(Collectors.toList());
+                        return BeanCopyUtil.copys(userById, UserDto.class);
+                    } else {
+                        return new ArrayList<>();
+                    }
+                }).flatMap(Collection::stream).collect(Collectors.toList());
     }
 }
 

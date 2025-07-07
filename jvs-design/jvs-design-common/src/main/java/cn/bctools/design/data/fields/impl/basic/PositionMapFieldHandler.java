@@ -21,10 +21,11 @@ import java.util.Map;
 @AllArgsConstructor
 public class PositionMapFieldHandler implements IDataFieldHandler<FieldBasicsHtml> {
     @Override
-    public void checkDataFieldType(FieldBasicsHtml fieldBasicsHtml, Object o) throws Exception {
+    public Object checkDataFieldType(FieldBasicsHtml fieldBasicsHtml, Object o) throws Exception {
         if (!(o instanceof Map)) {
             throw new RuntimeException("正确格式为键值对");
         }
+        return o;
     }
 
     @Override

@@ -33,10 +33,11 @@ public class SwitchFieldHandler implements IDataFieldHandler<SwitchHtml> {
     }
 
     @Override
-    public void checkDataFieldType(SwitchHtml switchHtml, Object o) throws Exception {
+    public Object checkDataFieldType(SwitchHtml switchHtml, Object o) throws Exception {
         if (!(o instanceof Boolean)) {
             throw new RuntimeException("正确格式为真假");
         }
+        return o;
     }
 
     @Override

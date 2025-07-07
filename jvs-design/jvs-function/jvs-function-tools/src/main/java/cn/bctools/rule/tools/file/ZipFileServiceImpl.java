@@ -1,5 +1,7 @@
 package cn.bctools.rule.tools.file;
 
+import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.JvsJsonPath;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.oss.cons.OssSystemCons;
 import cn.bctools.oss.dto.BaseFile;
@@ -12,6 +14,8 @@ import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.entity.enums.type.OutputType;
 import cn.bctools.rule.entity.enums.type.RuleFile;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.hutool.core.io.file.FileNameUtil;
+import cn.hutool.core.util.URLUtil;
 import cn.hutool.core.util.ZipUtil;
 import cn.hutool.http.HttpUtil;
 import lombok.AllArgsConstructor;
@@ -44,7 +48,22 @@ public class ZipFileServiceImpl implements BaseCustomFunctionInterface<ZipFileDt
 
     @Override
     public Object execute(ZipFileDto dto, Map<String, Object> params) {
-        List<String> fileNames = dto.getFiles().stream().map(e -> ObjectNull.isNull(e.getOriginalName()) ? e.getName() : e.getOriginalName()).collect(Collectors.toList());
+        List<String> fileNames;
+        List<ByteArrayInputStream> byteArrayInputStreams;
+        if (ObjectNull.isNotNull(dto.getFiles())) {
+            if (dto.getFiles().get(0) instanceof String) {
+                fileNames = (List<String>) dto.getFiles().stream().map(e -> FileNameUtil.getName(e.toString())).collect(Collectors.toList());
+                byteArrayInputStreams = (List<ByteArrayInputStream>) dto.getFiles().stream()
+                        .map(e -> new ByteArrayInputStream(HttpUtil.downloadBytes(e.toString())))
+                        .collect(Collectors.toList());
+            } else {
+                fileNames = (List<String>) dto.getFiles().stream().map(e -> ObjectNull.isNull(JvsJsonPath.read(e, "originalName")) ? JvsJsonPath.read(e, "fileName").toString() : JvsJsonPath.read(e, "originalName").toString()).collect(Collectors.toList());
+                byteArrayInputStreams = (List<ByteArrayInputStream>) dto.getFiles().stream().map(e -> ossTemplate.fileLink(JvsJsonPath.read(e, "fileName").toString(), JvsJsonPath.read(e, "bucketName").toString()))
+                        .map(e -> new ByteArrayInputStream(HttpUtil.downloadBytes(e.toString())));
+            }
+        } else {
+            throw new BusinessException("文件链接必须填写");
+        }
         //压缩文件可能存在同名的情况下对名称进行重命名
         for (int i = 0; i < fileNames.size() - 1; i++) {
             for (int j = i + 1; j < fileNames.size(); j++) {
@@ -53,9 +72,7 @@ public class ZipFileServiceImpl implements BaseCustomFunctionInterface<ZipFileDt
                 }
             }
         }
-        List<ByteArrayInputStream> byteArrayInputStreams = dto.getFiles().stream().map(e -> ossTemplate.fileLink(e.getFileName(), e.getBucketName()))
-                .map(e -> new ByteArrayInputStream(HttpUtil.downloadBytes(e)))
-                .collect(Collectors.toList());
+        fileNames = fileNames.stream().map(URLUtil::decode).collect(Collectors.toList());
         //获取输接受文件
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ZipUtil.zip(out, fileNames.toArray(new String[0]), byteArrayInputStreams.toArray(new ByteArrayInputStream[0]));

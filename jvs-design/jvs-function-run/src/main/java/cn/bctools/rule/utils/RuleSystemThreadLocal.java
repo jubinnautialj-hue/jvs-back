@@ -62,8 +62,23 @@ public class RuleSystemThreadLocal extends SystemThreadLocal {
         if (ObjectUtils.isEmpty(data)) {
             return;
         }
-        Set<String> collect = SpringContextUtil.getApplicationContext().getBeansOfType(ParameterSelected.class).values().stream().filter(e -> ObjectNull.isNotNull(e.key())).map(ParameterSelected::key).collect(Collectors.toSet());
-        params.addAll(collect);
+        if (ObjectUtils.isEmpty(data)) {
+            return;
+        }
+        if (ObjectNull.isNull(params)) {
+            params = SpringContextUtil.getApplicationContext().getBeansOfType(ParameterSelected.class).values()
+                    .stream()
+                    .map(e -> {
+                        String key = e.key();
+                        if (ObjectNull.isNotNull(key)) {
+                            return key;
+                        } else {
+                            return null;
+                        }
+                    })
+                    .filter(ObjectNull::isNotNull)
+                    .collect(Collectors.toSet());
+        }
         for (String name : params) {
             if (ObjectNull.isNotNull(data)) {
                 if (data.containsKey(name)) {

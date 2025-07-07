@@ -6,6 +6,7 @@ import cn.bctools.design.data.fields.enums.DataEventType;
 import cn.bctools.rule.utils.html.RuleExecuteDto;
 import com.baomidou.mybatisplus.extension.service.IService;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -18,7 +19,6 @@ public interface DataEventService extends IService<DataEventPo> {
     /**
      * 查询指定设计的数据事件配置
      *
-     *
      * @param appId
      * @param modelId  模型id
      * @param designId 设计id
@@ -28,7 +28,6 @@ public interface DataEventService extends IService<DataEventPo> {
 
     /**
      * 修改指定设计的数据事件配置
-     *
      *
      * @param appId
      * @param modelId    模型id
@@ -50,5 +49,14 @@ public interface DataEventService extends IService<DataEventPo> {
      */
     RuleExecuteDto callback(String modelId, String dataId, DataEventType type, Map<String, Object> data, boolean isBefore);
 
+    String getCallbackRuleId(String modelId, String designId, DataEventType eventType, boolean isBefore);
+
+    /**
+     * 批量执行数据删除的后置操作
+     *
+     * @param modelId 模型 Id
+     * @param objects 数据
+     */
+    void batchEventDeleteCallBack(String modelId, List<Object> objects);
 }
 

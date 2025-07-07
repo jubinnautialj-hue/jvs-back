@@ -88,11 +88,12 @@ public class FileFieldHandler implements IDataFieldHandler<FileHtml> {
     }
 
     @Override
-    public void checkDataFieldType(FileHtml fileHtml, Object o) throws Exception {
+    public Object checkDataFieldType(FileHtml fileHtml, Object o) throws Exception {
         if (o instanceof Map || o instanceof List || o instanceof FileNameDto) {
         } else {
             throw new RuntimeException("正确格式为键值对");
         }
+        return o;
     }
 
     @Override

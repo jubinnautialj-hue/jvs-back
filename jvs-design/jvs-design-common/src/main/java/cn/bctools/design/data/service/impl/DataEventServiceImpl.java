@@ -19,6 +19,7 @@ import cn.bctools.rule.error.MessageTipsDto;
 import cn.bctools.rule.utils.html.RuleExecuteDto;
 import cn.bctools.web.utils.WebUtils;
 import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -26,6 +27,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -95,10 +97,20 @@ public class DataEventServiceImpl extends ServiceImpl<DataEventMapper, DataEvent
     }
 
 
+    @Async
+    @Override
+    public void batchEventDeleteCallBack(String modelId, List<Object> objects) {
+        for (Object object : objects) {
+            Map<String,Object> data = (Map<String, Object>) object;
+            callback(modelId,String.valueOf(data.get("dataId")),DataEventType.DATA_DELETE,data,false);
+        }
+    }
+
     @Override
     public RuleExecuteDto callback(String modelId, String dataId, DataEventType type, Map<String, Object> data, boolean isBefore) {
         String designId = DynamicDataUtils.getDesignId();
         if (StringUtils.isBlank(designId)) {
+            log.error("事件执行前后置信息未执行1:modelId: {},designId:{},type: {}, isBefore: {} 数据:{}", modelId, designId, type, isBefore, JSONObject.toJSONString(dataId));
             return null;
         }
         String ruleId;
@@ -107,11 +119,13 @@ public class DataEventServiceImpl extends ServiceImpl<DataEventMapper, DataEvent
         } else {
             ruleId = this.getCallbackRuleId(modelId, designId, type, isBefore);
         }
-        if (StringUtils.isBlank(ruleId)) {
+        // 一个请求最多只对一条数据执行一次前置、后置逻辑引擎。避免循环调用
+        boolean exists = checkRequestExists(ruleId, modelId, type, isBefore);
+        if (exists) {
+            log.error("事件执行前后置失败:modelId: {},designId:{},type: {}, isBefore: {} 数据:{}", modelId, designId, type, isBefore, JSONObject.toJSONString(dataId));
             return null;
         }
-        // 一个请求最多只对一条数据执行一次前置、后置逻辑引擎。避免循环调用
-        if (checkRequestExists(ruleId, modelId, type, isBefore)) {
+        if (ObjectNull.isNull(ruleId)) {
             return null;
         }
         // 同步回调, 需要获取回调的返回值
@@ -155,6 +169,7 @@ public class DataEventServiceImpl extends ServiceImpl<DataEventMapper, DataEvent
      * @param eventType 事件类型
      * @return 逻辑id
      */
+    @Override
     public String getCallbackRuleId(String modelId, String designId, DataEventType eventType, boolean isBefore) {
         List<DataEventPo> list = this.list(Wrappers.<DataEventPo>lambdaQuery()
                 .eq(DataEventPo::getModelId, modelId)

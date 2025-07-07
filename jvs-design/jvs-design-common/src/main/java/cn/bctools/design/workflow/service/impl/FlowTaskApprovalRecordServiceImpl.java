@@ -71,6 +71,7 @@ public class FlowTaskApprovalRecordServiceImpl extends ServiceImpl<FlowTaskAppro
                 .eq("ar.user_id", userDto.getId())
                 .in("ar.jvs_app_id", appIds)
                 .like(StringUtils.isNotBlank(dto.getTaskCode()), "t.task_code", dto.getTaskCode())
+                .like(ObjectNull.isNotNull(dto.getTaskStatus()), "t.task_status", dto.getTaskStatus())
                 .like(StringUtils.isNotBlank(dto.getFlowName()), "t.name", dto.getFlowName())
                 .like(StringUtils.isNotBlank(dto.getSendUser()), "t.create_by", dto.getSendUser());
 

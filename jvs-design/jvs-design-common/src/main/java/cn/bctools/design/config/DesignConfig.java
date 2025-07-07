@@ -34,4 +34,8 @@ public class DesignConfig {
      * 列表页按钮功能，,默认是兼容的，兼容
      */
     Boolean pageButtonFormulaChinese = true;
+    /**
+     * 是否启用 ai
+     */
+    Boolean ai = false;
 }

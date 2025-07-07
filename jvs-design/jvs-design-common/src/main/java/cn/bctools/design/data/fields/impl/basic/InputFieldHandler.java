@@ -33,13 +33,14 @@ public class InputFieldHandler implements IDataFieldHandler<FieldBasicsHtml> {
             types.add(DataQueryType.eq);
             types.add(DataQueryType.ne);
             types.add(DataQueryType.like);
+            types.add(DataQueryType.in);
             this.types = types;
         }
         return this.types;
     }
 
     @Override
-    public void checkDataFieldType(FieldBasicsHtml fieldBasicsHtml, Object o) throws Exception {
+    public Object checkDataFieldType(FieldBasicsHtml fieldBasicsHtml, Object o) throws Exception {
         try {
             if (ObjectNull.isNotNull(fieldBasicsHtml.getEncryptionExpress())) {
                 if (!Pattern.compile(fieldBasicsHtml.getEncryptionExpress()).matcher(o.toString()).matches()) {
@@ -49,7 +50,7 @@ public class InputFieldHandler implements IDataFieldHandler<FieldBasicsHtml> {
         } catch (Exception e) {
             throw new RuntimeException("文本组件校验正则配置错误");
         }
-
+        return o;
     }
 
     @Override

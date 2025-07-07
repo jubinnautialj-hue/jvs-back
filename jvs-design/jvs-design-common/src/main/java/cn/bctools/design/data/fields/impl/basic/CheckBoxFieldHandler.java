@@ -70,14 +70,15 @@ public class CheckBoxFieldHandler extends IMultipleTypeHandler implements IDataF
     }
 
     @Override
-    public void checkDataFieldType(CheckboxHtml checkboxHtml, Object o) throws Exception {
+    public Object checkDataFieldType(CheckboxHtml checkboxHtml, Object o) throws Exception {
         if (o instanceof String) {
             o = Arrays.stream(o.toString().split(",")).collect(Collectors.toList());
-            return;
+            return o;
         }
         if (!(o instanceof List)) {
             throw new RuntimeException("正确格式为数组");
         }
+        return o;
     }
 
     @Override

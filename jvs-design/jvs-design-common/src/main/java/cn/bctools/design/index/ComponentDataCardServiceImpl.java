@@ -90,34 +90,39 @@ public class ComponentDataCardServiceImpl extends DataModelIndexFieldOrLink impl
                 fieldList.add(body.getAggregationField());
                 fieldList.add("createTime");
                 List<Map<String, Object>> list = dynamicDataService.queryList(modelId, criteria, fieldList);
-                switch (body.getAggregationType()) {
-                    case ave:
-                        double asDouble = list.stream().mapToDouble(e -> Double.parseDouble(e.getOrDefault(body.getAggregationField(), 0).toString())).average().orElse(0);
-                        componentDataCardRender.setData(new BigDecimal(asDouble).setScale(2, 2));
-                        return componentDataCardRender;
-                    case sum:
-                        double sum = list.stream().mapToDouble(e -> Double.parseDouble(e.getOrDefault(body.getAggregationField(), 0).toString()))
-                                .sum();
-                        componentDataCardRender.setData(new BigDecimal(sum).setScale(2, 2));
-                        return componentDataCardRender;
-                    case max:
-                        double max = list.stream()
-                                .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
-                                .max()
-                                .orElse(0);
-                        componentDataCardRender.setData(new BigDecimal(max).setScale(2, 2));
-                        return componentDataCardRender;
-                    case min:
-                        double min = list.stream()
-                                .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
-                                .min()
-                                .orElse(0);
-                        componentDataCardRender.setData(new BigDecimal(min).setScale(2, 2));
-                        return componentDataCardRender;
-                    case count:
-                        componentDataCardRender.setData(new BigDecimal(list.size()).setScale(0));
-                        return componentDataCardRender;
-                    default:
+                try {
+                    switch (body.getAggregationType()) {
+                        case ave:
+                            double asDouble = list.stream().mapToDouble(e -> Double.parseDouble(e.getOrDefault(body.getAggregationField(), 0).toString())).average().orElse(0);
+                            componentDataCardRender.setData(new BigDecimal(asDouble).setScale(2, 2));
+                            return componentDataCardRender;
+                        case sum:
+                            double sum = list.stream().mapToDouble(e -> Double.parseDouble(e.getOrDefault(body.getAggregationField(), 0).toString()))
+                                    .sum();
+                            componentDataCardRender.setData(new BigDecimal(sum).setScale(2, 2));
+                            return componentDataCardRender;
+                        case max:
+                            double max = list.stream()
+                                    .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
+                                    .max()
+                                    .orElse(0);
+                            componentDataCardRender.setData(new BigDecimal(max).setScale(2, 2));
+                            return componentDataCardRender;
+                        case min:
+                            double min = list.stream()
+                                    .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
+                                    .min()
+                                    .orElse(0);
+                            componentDataCardRender.setData(new BigDecimal(min).setScale(2, 2));
+                            return componentDataCardRender;
+                        case count:
+                            componentDataCardRender.setData(new BigDecimal(list.size()).setScale(0));
+                            return componentDataCardRender;
+                        default:
+                    }
+                } catch (Exception e) {
+                    componentDataCardRender.setData(new BigDecimal(list.size()).setScale(0));
+                    return componentDataCardRender;
                 }
             }
         }

@@ -41,6 +41,8 @@ import cn.bctools.design.project.service.JvsAppVersionService;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.design.util.ModeUtils;
 import cn.bctools.log.annotation.Log;
+import cn.bctools.oauth2.config.JvsDefaultBearerTokenResolver;
+import cn.bctools.oauth2.dto.CustomUser;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.redis.utils.RedisUtils;
 import com.alibaba.fastjson2.JSON;
@@ -53,10 +55,14 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
+import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
+import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -83,6 +89,8 @@ public class JvsAppBaseController {
     AuthUserServiceApi authUserServiceApi;
     Map<String, IDataFieldHandler> fieldHandlerMap;
     AutoCreateCrudDesignService autoCreateCrudDesignService;
+    OAuth2AuthorizationService oAuth2AuthorizationService;
+    static JvsDefaultBearerTokenResolver jvsDefaultBearerTokenResolver = new JvsDefaultBearerTokenResolver();
 
 
     @ApiOperation("应用-获取名称")
@@ -217,14 +225,19 @@ public class JvsAppBaseController {
 
     @ApiOperation("模式切换")
     @PostMapping("/switch/mode")
-    public R<Boolean> submitBeta(@Validated @RequestBody SwitchModeDto dto) {
-        // 查询模拟用户信息
-        String userId = Optional.ofNullable(dto.getAnalogUser()).map(UserDto::getId).orElse(null);
-        if (ObjectNull.isNotNull(userId)) {
-            //模拟用户不能设置为管理员
-            dto.setAnalogUser(authUserServiceApi.getById(userId).getData().setAdminFlag(false).setPlatformAdmin(false));
+    public R<Boolean> submitBeta(@Validated @RequestBody SwitchModeDto dto, HttpServletRequest request) {
+        String resolve = jvsDefaultBearerTokenResolver.resolve(request);
+        CustomUser user = oAuth2AuthorizationService.findByToken(resolve, OAuth2TokenType.ACCESS_TOKEN).getAttribute("user");
+        //没有设计权限
+        if (user.getPermissions().contains("jvs_app")) {
+            // 查询模拟用户信息
+            String userId = Optional.ofNullable(dto.getAnalogUser()).map(UserDto::getId).orElse(null);
+            if (ObjectNull.isNotNull(userId)) {
+                //模拟用户不能设置为管理员
+                dto.setAnalogUser(authUserServiceApi.getById(userId).getData().setAdminFlag(false).setPlatformAdmin(false));
+            }
+            ModeUtils.setModeCache(dto);
         }
-        ModeUtils.setModeCache(dto);
         return R.ok();
     }
 

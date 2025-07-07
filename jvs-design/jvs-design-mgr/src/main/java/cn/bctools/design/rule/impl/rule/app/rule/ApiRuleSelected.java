@@ -43,10 +43,4 @@ public class ApiRuleSelected implements ParameterSelected<String> {
                 .map(e -> new ParameterOption<String>().setLabel(e.getName()).setValue(e.getSecret())).collect(Collectors.toList());
     }
 
-    @Override
-    public Object getDefaultValueParameter() {
-        //默认获取第0个
-        return getOptions().get(0).getValue();
-    }
-
 }

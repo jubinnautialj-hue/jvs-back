@@ -125,7 +125,7 @@ public class SelectFieldHandler extends IMultipleTypeHandler implements IDataFie
     }
 
     @Override
-    public void checkDataFieldType(MultipleHtml multipleHtml, Object o) throws Exception {
+    public Object checkDataFieldType(MultipleHtml multipleHtml, Object o) throws Exception {
         if (multipleHtml.getMultiple()) {
             if (!(o instanceof List)) {
                 if (o instanceof String) {
@@ -136,11 +136,15 @@ public class SelectFieldHandler extends IMultipleTypeHandler implements IDataFie
             }
         } else {
             if (!FormDataTypeEnum.flowable.equals(multipleHtml.getDatatype())) {
+                if(o instanceof Number){
+                    return o.toString();
+                }
                 if (!(o instanceof String)) {
                     throw new RuntimeException("正确格式为字符串");
                 }
             }
         }
+        return o;
     }
 
     @Override

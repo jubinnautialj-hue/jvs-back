@@ -2,10 +2,7 @@ package cn.bctools.design.project.service.impl;
 
 import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.BeanCopyUtil;
-import cn.bctools.common.utils.JvsAppSecretUtils;
-import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.common.utils.R;
+import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.function.Get;
 import cn.bctools.database.util.IdGenerator;
 import cn.bctools.design.constant.AppConstant;
@@ -49,6 +46,7 @@ import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.date.LocalDateTimeUtil;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.crypto.Mode;
@@ -75,7 +73,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.InputStream;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -1072,8 +1070,11 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
     }
 
     private BaseFile uploadTemplate(byte[] serialize) {
-        ByteArrayInputStream byteInputStream = new ByteArrayInputStream(serialize);
-        return ossTemplate.put(OSS_BUCKET_NAME, OSS_BUCKET_NAME_PATH, byteInputStream, IdGenerator.getIdStr() + ".jvs", true);
+        File dest = new File(IdGenerator.getIdStr() + ".jvs");
+        FileUtil.writeBytes(serialize, dest);
+        BaseFile put = ossTemplate.put(OSS_BUCKET_NAME, OSS_BUCKET_NAME_PATH, dest, IdGenerator.getIdStr() + ".jvs", true);
+        dest.delete();
+        return put;
     }
 
     /**
@@ -1262,13 +1263,6 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         List<DataModelPo> dataModelList = dataModelTemplateService.list(jvsAppId, ids);
         //得到模型id集合
         List<String> modelIds = dataModelList.stream().map(DataModelPo::getId).collect(Collectors.toList());
-        if (ObjectNull.isNull(modelIds)) {
-            TemplateBo templateBo = new TemplateBo();
-            templateBo.setIds(ids);
-            templateBo.setAppMenuTypes(appMenuTypes);
-            String s = JSONObject.toJSONString(templateBo);
-            return encryptData(s);
-        }
 
         //列表页
         List<CrudPage> pageList = crudPageTemplateService.list(jvsAppId, ids);
@@ -1390,6 +1384,25 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         //获取这个应用下所有的数据
         String designData = getDesignData(jvsAppTemplate);
         saveTemplate(null, jvsAppTemplate, designData);
+    }
+
+    @Async
+    @Override
+    public void saveTemplateAsync(JvsAppTemplate jvsAppTemplate, String userId, String realName, String tenantId) {
+        //只支持在线服务
+        //获取这个应用下所有的数据
+        String designData = getDesignData(jvsAppTemplate);
+        saveTemplate(null, jvsAppTemplate, designData);
+        //发送消息
+        //拼装数据
+        Dict set = Dict.create().set("title", jvsAppTemplate.getName() + "模板发布成功").set("content", jvsAppTemplate.getName() + "模板发布成功");
+        InsideNotificationDto interiorMessage = new InsideNotificationDto();
+        interiorMessage.setContent(JSONObject.toJSONString(set));
+        List<ReceiversDto> receiversDtos = new ArrayList<>();
+        receiversDtos.add(new ReceiversDto().setUserId(userId).setUserName(realName).setTenantId(tenantId));
+        interiorMessage.setDefinedReceivers(receiversDtos);
+        interiorMessage.setTenantId(TenantContextHolder.getTenantId());
+        insideNotificationApi.send(interiorMessage);
     }
 
     @Override

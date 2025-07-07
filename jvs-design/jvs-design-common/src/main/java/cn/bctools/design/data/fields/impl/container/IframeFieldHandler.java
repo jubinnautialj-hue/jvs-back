@@ -23,10 +23,11 @@ import java.util.Map;
 @AllArgsConstructor
 public class IframeFieldHandler implements IDataFieldHandler<IframeHtml> {
     @Override
-    public void checkDataFieldType(IframeHtml iframeHtml, Object o) throws Exception {
+    public Object checkDataFieldType(IframeHtml iframeHtml, Object o) throws Exception {
         if (!(o instanceof String)) {
             throw new RuntimeException("正确格式为链接地址");
         }
+        return o;
     }
 
     @Override

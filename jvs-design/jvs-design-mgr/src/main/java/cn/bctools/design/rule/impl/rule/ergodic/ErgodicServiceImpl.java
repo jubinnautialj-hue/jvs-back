@@ -81,7 +81,7 @@ public class ErgodicServiceImpl implements BaseCustomFunctionInterface<ErgodicDt
         HtmlGraph graph = currentCanvasDto.getGraph();
         HtmlGraph htmlGraph = graph.getErgodicCanvas().get(execNodeId);
         if (ObjectNull.isNull(htmlGraph)) {
-            return null;
+            throw new BusinessException("找不到循环画面信息");
         }
         //设置上下文
         htmlGraph.setTid(graph.getTid());
@@ -157,14 +157,18 @@ public class ErgodicServiceImpl implements BaseCustomFunctionInterface<ErgodicDt
                 RuleSystemThreadLocal.clearErgodic();
                 Result result = getResult(currentCanvasDto, index, body, execNodeId, graph, htmlGraph, tenantId, type);
                 try {
-                    String logs = TaskLogUtil.get()
-                            .stream()
-                            .distinct()
-                            .map(e -> String.format(FORMAT_LOG, FORMAT_DATETIME.format(e.getTime()), e.getType(), e.getMsg()))
-                            .collect(Collectors.joining("<br/>"));
-                    BaseFile baseFile = ossTemplate.putFile("jvs-public", "rule/run/log", IdGenerator.getIdStr() + ".log", new ByteArrayInputStream(logs.getBytes()));
-                    String url = ossTemplate.fileLink(baseFile.getFileName(), "jvs-public");
-                    result.log.setLogs(url);
+                    if (currentCanvasDto.getOpenLogRecording()) {
+                        String logs = TaskLogUtil.get()
+                                .stream()
+                                .distinct()
+                                .map(e -> String.format(FORMAT_LOG, FORMAT_DATETIME.format(e.getTime()), e.getType(), e.getMsg()))
+                                .collect(Collectors.joining("<br/>"));
+                        BaseFile baseFile = ossTemplate.putFile("jvs-design-mgr", "rule/run/log", IdGenerator.getIdStr() + ".log", new ByteArrayInputStream(logs.getBytes()));
+                        //这里要使用内网地址
+                        result.log.setLogs(baseFile.getFileName());
+                    }else{
+                        TaskLogUtil.clear();
+                    }
                 } catch (Exception e) {
                 }
                 return result;
@@ -175,6 +179,8 @@ public class ErgodicServiceImpl implements BaseCustomFunctionInterface<ErgodicDt
         List<RunLogPo> ergodicLogs = collect.parallelStream().map(e -> e.log).collect(Collectors.toList());
         if (currentCanvasDto.getOpenLogRecording()) {
             runLogService.saveBatch(ergodicLogs);
+        } else {
+            TaskLogUtil.clear();
         }
         return collect.stream().map(e -> e.map).collect(Collectors.toList());
     }
@@ -216,7 +222,11 @@ public class ErgodicServiceImpl implements BaseCustomFunctionInterface<ErgodicDt
         }
         //判断是否需要去记录日志
         if (currentCanvasDto.getOpenLogRecording()) {
-            runLogService.saveBatch(logPos);
+            if (ObjectNull.isNotNull(logPos)) {
+                logPos.forEach(e -> runLogService.saveLog(e));
+            }
+        } else {
+            TaskLogUtil.clear();
         }
     }
 

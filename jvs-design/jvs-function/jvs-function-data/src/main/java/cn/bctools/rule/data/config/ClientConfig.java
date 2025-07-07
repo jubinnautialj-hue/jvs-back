@@ -3,11 +3,14 @@ package cn.bctools.rule.data.config;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.rule.data.kingbase.KingBaseDatasourceSelectedOption;
 import cn.bctools.rule.data.mysql.DatasourceSelectedOption;
+import cn.bctools.rule.data.oracle.OracleSelectedOption;
+import cn.bctools.rule.data.postgresql.PgsqlSelectOption;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.cache.impl.TimedCache;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
 import lombok.Data;
+import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.PreparedStatementCreator;
@@ -20,6 +23,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Function;
 
+
 /**
  * DM客户端获取
  *
@@ -31,19 +35,42 @@ public class ClientConfig {
 
     private JdbcTemplate jdbcTemplate;
 
-   static String KINGBASE_URL = "jdbc:kingbase8://{}:{}/{}?currentSchema={}&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&useJDBCCompliantTimezoneShift=true" +
+    static String KINGBASE_URL = "jdbc:kingbase8://{}:{}/{}?currentSchema={}&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&useJDBCCompliantTimezoneShift=true" +
             "&useLegacyDatetimeCode=false&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&stringtype=unspecified";
 
     public static Function<KingBaseDatasourceSelectedOption, String> KINGBASE_FUNCTION_URL = datasourceSelectedOption -> {
-        return StrUtil.format(KINGBASE_URL, datasourceSelectedOption.getIp(), datasourceSelectedOption.getPort(), datasourceSelectedOption.getDatabaseName(),datasourceSelectedOption.getSchema());
+        return StrUtil.format(KINGBASE_URL, datasourceSelectedOption.getIp(), datasourceSelectedOption.getPort(), datasourceSelectedOption.getDatabaseName(), datasourceSelectedOption.getSchema());
     };
 
     static String URL = "jdbc:dm://{}:{}?schema={}";
 
     static String MYSQL = "jdbc:mysql://{}:{}/{}?characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true";
 
+    static String PGSQL = "jdbc:postgresql://{}:{}/{}?currentSchema={}&connectTimeout={}";
+    /**
+     * 通过服务名链接
+     */
+    private static final String URL_SERVER_NAME = "jdbc:oracle:thin:@//{}:{}/{}";
+
+    private static final String URL_SID = "jdbc:oracle:thin:@//{}:{}:{}";
+
+    public static Function<PgsqlSelectOption, String> PGSQL_URL = pgsqlSelectOption -> {
+        return StrUtil.format(PGSQL, pgsqlSelectOption.getSourceHost(), pgsqlSelectOption.getSourcePort(), pgsqlSelectOption.getSourceLibraryName(), pgsqlSelectOption.getSchema(), 5000);
+    };
+
     public static Function<DatasourceSelectedOption, String> MYSQL_URL = datasourceSelectedOption -> {
         return StrUtil.format(MYSQL, datasourceSelectedOption.getIp(), datasourceSelectedOption.getPort(), datasourceSelectedOption.getDatabaseName());
+    };
+
+    public static Function<OracleSelectedOption, String> ORACLE_URL = oracleConnectDto -> {
+        String url;
+        //如果是获取模式那么链接数据库时模式就不会传入
+        if (StrUtil.isNotBlank(oracleConnectDto.getServerName())) {
+            url = StrUtil.format(URL_SERVER_NAME, oracleConnectDto.getSourceHost(), oracleConnectDto.getSourcePort(), oracleConnectDto.getServerName());
+        } else {
+            url = StrUtil.format(URL_SID, oracleConnectDto.getSourceHost(), oracleConnectDto.getSourcePort(), oracleConnectDto.getSid());
+        }
+        return url;
     };
 
     public static Function<DatasourceSelectedOption, String> DM_URL = datasourceSelectedOption -> {
@@ -51,6 +78,9 @@ public class ClientConfig {
     };
 
     private static final TimedCache<String, DriverManagerDataSource> local = CacheUtil.newTimedCache(1000 * 60 * 60);
+
+    private static final TimedCache<String, PGSimpleDataSource> PGSQL_LOCAL = CacheUtil.newTimedCache(1000 * 60 * 60);
+    private static final TimedCache<String, DriverManagerDataSource> ORACLE_LOCAL = CacheUtil.newTimedCache(1000 * 60 * 60);
 
     private Boolean status = Boolean.FALSE;
 
@@ -85,6 +115,29 @@ public class ClientConfig {
                 publicConnectDto.getPassWord());
         String key = SecureUtil.md5(concat);
         DriverManagerDataSource dataSource = local.get(key, () -> function.apply(publicConnectDto));
+        client.setJdbcTemplate(new JdbcTemplate(dataSource));
+        return client;
+    }
+
+    public static ClientConfig init(OracleSelectedOption option, Function<OracleSelectedOption, DriverManagerDataSource> function) {
+        ClientConfig client = new ClientConfig();
+        //重用dataSource
+        String concat = StrUtil.concat(true, option.getSourceHost(), StrUtil.toString(option.getSourcePort()), option.getSchema(), option.getSourceUserName(),
+                option.getSourcePwd());
+        String key = SecureUtil.md5(concat);
+        DriverManagerDataSource dataSource = ORACLE_LOCAL.get(key, () -> function.apply(option));
+        client.setJdbcTemplate(new JdbcTemplate(dataSource));
+        return client;
+    }
+
+
+    public static ClientConfig init(PgsqlSelectOption option, Function<PgsqlSelectOption, PGSimpleDataSource> function) {
+        ClientConfig client = new ClientConfig();
+        //重用dataSource
+        String concat = StrUtil.concat(true, option.getSourceHost(), StrUtil.toString(option.getSourcePort()), option.getSchema(), option.getSourceUserName(),
+                option.getSourcePwd());
+        String key = SecureUtil.md5(concat);
+        PGSimpleDataSource dataSource = PGSQL_LOCAL.get(key, () -> function.apply(option));
         client.setJdbcTemplate(new JdbcTemplate(dataSource));
         return client;
     }

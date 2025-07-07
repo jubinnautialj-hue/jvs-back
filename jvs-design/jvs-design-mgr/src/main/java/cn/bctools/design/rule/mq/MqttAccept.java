@@ -1,4 +1,4 @@
-package cn.bctools.design.rule.mq;//package cn.bctools.design.rule.mq;
+//package cn.bctools.design.rule.mq;
 //
 //import cn.bctools.database.util.IdGenerator;
 //import cn.bctools.common.utils.ObjectNull;

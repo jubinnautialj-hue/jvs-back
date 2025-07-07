@@ -51,6 +51,7 @@ import java.io.Serializable;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * @author zhuxiaokang
@@ -443,19 +444,39 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
             return Collections.emptyList();
         }
 
-        return flowTask.getCourses().stream().map(course -> course.getApproveResultDtos().stream().map(approve -> {
-            ProgressPrintResDto dto = BeanCopyUtil.copy(approve, ProgressPrintResDto.class);
-            dto.setNodeId(course.getNodeId());
-            dto.setNodeName(course.getNodeName());
-            if (ObjectNull.isNotNull(approve.getNodeOperationTypeEnum())) {
-                dto.setNodeOperation(approve.getNodeOperationTypeEnum().getName());
-            }
-            if (ObjectNull.isNotNull(approve.getOpinion())) {
-                dto.setOpinionContent(approve.getOpinion().getContent());
-                dto.setOpinionSign(Optional.ofNullable(approve.getOpinion().getSign()).map(sign -> BeanCopyUtil.copys(sign, BaseFile.class)).orElse(null));
-            }
-            return dto;
-        }).collect(Collectors.toList())).flatMap(Collection::stream).collect(Collectors.toList());
+        ApproveResultDto rootResult = flowTask.getCourses().get(0).getApproveResultDtos().get(0);
+        return flowTask.getCourses().stream()
+                .map(course -> {
+                    if (NodeTypeEnum.ROOT.equals(course.getNodeType())) {
+                        ProgressPrintResDto dto = BeanCopyUtil.copy(rootResult, ProgressPrintResDto.class);
+                        dto.setNodeId(course.getNodeId());
+                        dto.setNodeName(NodeTypeEnum.ROOT.getDefaultNodeName());
+                        if (ObjectNull.isNotNull(course.getApproveResultDtos())) {
+                            dto.setNodeOperation("提交申请");
+                        } else {
+                            dto.setNodeOperation("重新提交");
+                        }
+                        return Stream.of(dto).collect(Collectors.toList());
+                    } else {
+                        return course.getApproveResultDtos().stream()
+                                .map(approve -> {
+                                    ProgressPrintResDto dto = BeanCopyUtil.copy(approve, ProgressPrintResDto.class);
+                                    dto.setNodeId(course.getNodeId());
+                                    dto.setNodeName(course.getNodeName());
+                                    if (ObjectNull.isNotNull(approve.getNodeOperationTypeEnum())) {
+                                        dto.setNodeOperation(approve.getNodeOperationTypeEnum().getName());
+                                    }
+                                    if (ObjectNull.isNotNull(approve.getOpinion())) {
+                                        dto.setOpinionContent(approve.getOpinion().getContent());
+                                        dto.setOpinionSign(Optional.ofNullable(approve.getOpinion().getSign()).map(sign -> BeanCopyUtil.copys(sign, BaseFile.class)).orElse(null));
+                                    }
+                                    return dto;
+                                }).collect(Collectors.toList());
+                    }
+
+                }
+                )
+                .flatMap(Collection::stream).collect(Collectors.toList());
     }
 
 
@@ -565,8 +586,8 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
     }
 
     @Override
-    public int countPendingByModeId(String modeId) {
-        long count = count(Wrappers.<FlowTask>lambdaQuery().eq(FlowTask::getDataModelId, modeId).eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PENDING));
+    public int countByModeId(String modeId) {
+        long count = count(Wrappers.<FlowTask>lambdaQuery().eq(FlowTask::getDataModelId, modeId));
         return Long.valueOf(count).intValue();
     }
 

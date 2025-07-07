@@ -14,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -102,6 +103,7 @@ public enum DataConditionType {
                     //查询用户所在公司
                     return UserCurrentUtils.getDept().stream().map(e -> AuthorityManagementUtils.getParentBranchOffice(e.getDeptId()))
                             .map(DataConditionType::branch)
+                            .flatMap(Collection::stream)
                             .collect(Collectors.toList());
                 default:
                     return str;

@@ -65,7 +65,8 @@ public class ModelCollectionNameAspect {
         } catch (DuplicateKeyException throwable) {
             throw new BusinessException("数据唯一性校验不通过,存在重复提交,请检查");
         } catch (Throwable throwable) {
-            log.error("AOP拦截到错误", throwable);
+            log.error("AOP拦截到错误,数据操作失败", throwable);
+            throw new BusinessException("数据操作失败");
         }
         return obj;
     }

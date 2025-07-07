@@ -1,9 +1,11 @@
 package cn.bctools.design.data.controller;
 
+import cn.bctools.ai.api.JvsAiDatasetApi;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.TenantContextHolder;
+import cn.bctools.design.config.DesignConfig;
 import cn.bctools.design.crud.entity.IndexFields;
 import cn.bctools.design.crud.service.CrudPageService;
 import cn.bctools.design.crud.service.FormService;
@@ -52,6 +54,8 @@ public class DynamicDataDesignController {
     DataModelService dataModelService;
     Map<String, IDataFieldHandler> fieldHandlerMap;
     DesignHandler designHandler;
+    JvsAiDatasetApi jvsAiDatasetApi;
+    DesignConfig designConfig;
     ArrayListConvert arrayListConvert;
     LocalDateTimeConvert localDateTimeConvert;
     DataNoticeHandler dataNoticeHandler;
@@ -140,6 +144,13 @@ public class DynamicDataDesignController {
     @DeleteMapping("/{modelId}")
     public R<String> putDataModelName(@PathVariable String appId, @PathVariable("modelId") String modelId) {
         dataModelService.remove(Wrappers.query(new DataModelPo().setAppId(appId).setId(modelId)));
+        if (designConfig.getAi()) {
+            try {
+                jvsAiDatasetApi.delDataset(modelId);
+            } catch (Exception e) {
+
+            }
+        }
         return R.ok();
     }
 

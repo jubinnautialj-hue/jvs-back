@@ -107,7 +107,7 @@ public class RunController {
     public Object run(@PathVariable String ruleKey, @RequestBody(required = false) Map<String, Object> variableMap, @RequestHeader(value = "formdesignid", required = false) String formdesignid, @RequestHeader(value =
             "cruddesignid", required = false) String cruddesignid, @PathVariable String appId, HttpServletResponse response) {
         //根据参数获取的值
-        RuleSystemThreadLocal.setParameterSelectedOption(variableMap);
+//        RuleSystemThreadLocal.setParameterSelectedOption(variableMap);
         //根据租户ID调用自己的服务
         RuleDesignPo po = ruleService.getEnableDesign(ruleKey);
         if (ObjectNull.isNotNull(cruddesignid) && variableMap.containsKey("dataModelId") && variableMap.containsKey("id")) {
@@ -118,12 +118,12 @@ public class RunController {
         //直接返回
         if (ObjectNull.isNull(po)) {
             log.error("没有找到设计");
-            return R.ok();
+            return R.ok().setMsg("");
         }
         //不匹配直接返回
         if (!po.getJvsAppId().equals(appId)) {
             log.error("应用和设计应用不一致");
-            return R.ok();
+            return R.ok().setMsg("");
         }
         if (ObjectNull.isNotNull(po.getComponentType())) {
             //如果是表单，直接查看是否有表单内部的删除数据

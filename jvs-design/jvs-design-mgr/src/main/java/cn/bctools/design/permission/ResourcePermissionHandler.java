@@ -36,6 +36,7 @@ public class ResourcePermissionHandler implements BasePermissionHandlerHandler {
      * {type}不是变量，可根据type的值知道应该从那个缓存或数据库查询数据
      */
     private static final String APP_USE_PERMISSION_VERIFICATION_PATTERN = "/app/use/{appId}/{type}/**/{resourcesId}/**";
+    private static final String APP_USE_IDENTIFICATION_PATTERN = "/app/identification/use/dynamic/data/**";
     /**
      * 资源id（如表单id、列表id等）
      */
@@ -43,6 +44,17 @@ public class ResourcePermissionHandler implements BasePermissionHandlerHandler {
 
     @Override
     public boolean check(UserDto userDto, String appId, JvsApp jvsApp, String requestUri, Map<String, Object> variablesAttribute) throws BusinessException {
+        if (PATH_MATCHER.matchStart(APP_USE_IDENTIFICATION_PATTERN, requestUri)) {
+            // 是自己创建的应用，则放行
+            if (UserCurrentUtils.getUserId().equals(jvsApp.getCreateById())) {
+                return Boolean.TRUE;
+            }
+            if (Boolean.FALSE.equals(RoleUtils.hasPermit(getRoleByDb("jvsAppUrl", requestUri, appId)))) {
+                throw new BusinessException("没有权限操作");
+            } else {
+                return true;
+            }
+        }
         if (PATH_MATCHER.matchStart(APP_USE_PERMISSION_VERIFICATION_PATTERN, requestUri)) {
             String resourceId = null;
             // 优先从路径变量中获取资源id

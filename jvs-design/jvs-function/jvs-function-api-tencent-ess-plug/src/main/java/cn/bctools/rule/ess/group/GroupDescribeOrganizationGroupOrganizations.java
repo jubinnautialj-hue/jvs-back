@@ -1,4 +1,4 @@
-package cn.bctools.rule.ess.group;//package cn.bctools.rule.ess.group;
+//package cn.bctools.rule.ess.group;
 //
 //import com.google.gson.Gson;
 //import cn.bctools.rule.ess.common.Client;

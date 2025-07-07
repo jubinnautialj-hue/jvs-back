@@ -98,11 +98,17 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
         if (ObjectNull.isNull(o)) {
             return o;
         }
-        List<String> collect = Arrays.stream(o.toString().split("/")).map(String::trim).collect(Collectors.toList());
-        List<SysDeptDto> data = deptApi.getAllTree().getData();
-        //遍历数据,找出名称与这个字段相同的数据
-        Object next = getNextDeptId(data, collect, 0);
-        return next;
+        if (o.toString().contains("/")) {
+            List<String> collect = Arrays.stream(o.toString().split("/")).map(String::trim).collect(Collectors.toList());
+            List<SysDeptDto> data = deptApi.getAllTree().getData();
+            log.info("获取部门数据" + JSONObject.toJSONString(data));
+            //遍历数据,找出名称与这个字段相同的数据
+            Object next = getNextDeptId(data, collect, 0);
+            return next;
+        } else {
+            String id = deptApi.search(new SysDeptDto().setName(o.toString())).getData().get(0).getId();
+            return id;
+        }
     }
 
     private Object getNextDeptId(List<SysDeptDto> sysDeptDto, List<String> collect, int i) {

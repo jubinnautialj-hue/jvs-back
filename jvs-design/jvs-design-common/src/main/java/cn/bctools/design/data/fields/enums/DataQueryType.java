@@ -18,6 +18,7 @@ public enum DataQueryType {
      */
     eq("等于"),
     isNull("等于空"),
+    isNotNull("不等于空"),
     ne("不等于"),
     gt("大于"),
     ge("大于等于"),

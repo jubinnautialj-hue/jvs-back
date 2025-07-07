@@ -39,10 +39,11 @@ public class JsonEditorFieldHandler implements IDataFieldHandler<FieldBasicsHtml
     }
 
     @Override
-    public void checkDataFieldType(FieldBasicsHtml fieldBasicsHtml, Object o) throws Exception {
+    public Object checkDataFieldType(FieldBasicsHtml fieldBasicsHtml, Object o) throws Exception {
         if (!JSONUtil.isTypeJSON(o.toString())) {
             throw new DataFormatException("类型不正确");
         }
+        return o;
     }
 
     @Override

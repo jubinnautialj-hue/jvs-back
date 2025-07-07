@@ -279,6 +279,48 @@ public class DesignHandler {
         return false;
     }
 
+    /**
+     * 按钮的操作，默认都显示，执行执行为 false是才不显示
+     *
+     * @param formulaId
+     * @param useCase
+     * @return
+     */
+    public boolean checkFormula(String formulaId, String useCase) {
+        HashMap<String, Object> data = new HashMap<>();
+        FunctionBusinessPo function = functionMapper.selectById(formulaId);
+        if (ObjectNull.isNull(function)) {
+            return true;
+        }
+        String expression = function.getBody();
+        List<ExpressionParam> params = ExpressionUtils.parsePostfixExpression(expression);
+        if (ObjectUtils.isEmpty(params)) {
+            return true;
+        }
+        try {
+            Object result = expressionHandler.calculate(params, data, useCase);
+            if (result instanceof Boolean) {
+                if (Boolean.parseBoolean(result.toString())) {
+                    return true;
+                } else {
+                    if (designConfig.getPageButtonFormulaChinese()) {
+                        HashMap<String, Object> body = new HashMap<>(data);
+                        //将转换的key全部再放回到新的对象中进行匹配是
+                        data.keySet().stream().filter(s -> s.endsWith(DynamicDataUtils.SUFFIX_ECHO)).forEach(s -> body.put(s.substring(0, s.length() - DynamicDataUtils.SUFFIX_ECHO.length()), data.get(s)));
+                        result = expressionHandler.calculate(params, body, useCase);
+                        return Boolean.parseBoolean(result.toString());
+                    } else {
+                        return Boolean.parseBoolean(result.toString());
+                    }
+                }
+            }
+        } catch (Exception exception) {
+            //如果报错了，默认也给显示
+            return true;
+        }
+        return true;
+    }
+
     public Object runFormula(FunctionBusinessPo expression, Map<String, Object> data, String useCase) {
         try {
             List<ExpressionParam> params = ExpressionUtils.parsePostfixExpression(expression.getBody());

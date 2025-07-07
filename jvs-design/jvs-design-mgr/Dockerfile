@@ -7,7 +7,7 @@ COPY ./target/jvs-design-mgr.jar /app/app.jar
 
 COPY fonts /usr/share/fonts/zh_CN
 RUN chmod 775 /usr/share/fonts/zh_CN
-
+RUN yum install wget -y  && wget  https://arthas.aliyun.com/arthas-boot.jar
 ENV JAVA_OPTS=""
 ENV nacosAddr="cloud-nacos:8848"
 ENV namespace="jvs"

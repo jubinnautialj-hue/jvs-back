@@ -25,12 +25,13 @@ import java.util.Map;
 public class TimeSelectFieldHandler implements IDataFieldHandler<TimeSelectHtml> {
 
     @Override
-    public void checkDataFieldType(TimeSelectHtml timeSelectHtml, Object o) throws Exception {
+    public Object checkDataFieldType(TimeSelectHtml timeSelectHtml, Object o) throws Exception {
         try {
             DatePattern.createFormatter("mm:ss").parse(o.toString());
         } catch (Exception e) {
             throw new RuntimeException("正确格式为mm:ss");
         }
+        return o;
     }
 
     @Override

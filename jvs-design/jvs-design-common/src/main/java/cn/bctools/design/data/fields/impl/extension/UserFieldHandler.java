@@ -71,13 +71,6 @@ public class UserFieldHandler extends IMultipleTypeHandler implements IDataField
         return dataFieldHandler.joinFormItems(userMap, data, isMulti, false);
     }
 
-    public static void main(String[] args) {
-        ArrayList<Object> objects = new ArrayList<>();
-        objects.add(new ArrayList<>());
-        System.out.println(objects);
-        System.out.println(ObjUtil.isNull(objects));
-    }
-
     @Override
     public String getConversionKey(MultipleHtml dto, Object o, Map<String, Object> lineData, Map<String, Map<String, String>> cascaderFieldPathIdsMap, Map<String, List<Map<String, Object>>> generateCascaderList) {
         Map<String, String> orDefault = cascaderFieldPathIdsMap.getOrDefault(dto.getProp(), new LinkedHashMap<>());
@@ -95,7 +88,8 @@ public class UserFieldHandler extends IMultipleTypeHandler implements IDataField
             orDefault.putAll(userMap);
         } else {
             try {
-                String id = userApi.getByRealName(o.toString().trim()).getData().get(0).getId();
+                Object finalO = o;
+                String id = userApi.getByRealName(o.toString().trim()).getData().stream().filter(e -> e.getRealName().equals(finalO.toString().trim())).findAny().get().getId();
                 orDefault.put(o.toString().trim(), id);
             } catch (Exception e) {
                 throw new BusinessException(o.toString().trim() + "用户不存在，导入失败");

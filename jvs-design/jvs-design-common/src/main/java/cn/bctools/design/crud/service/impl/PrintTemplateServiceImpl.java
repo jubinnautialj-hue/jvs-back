@@ -18,7 +18,6 @@ import cn.bctools.design.crud.mapper.PrintTemplateMapper;
 import cn.bctools.design.crud.service.PrintTemplateService;
 import cn.bctools.design.crud.vo.PrintOtherField;
 import cn.bctools.design.data.entity.DataModelPo;
-import cn.bctools.design.data.entity.DynamicDataPo;
 import cn.bctools.design.data.fields.IDataFieldHandler;
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
 import cn.bctools.design.data.fields.enums.DataFieldType;
@@ -44,6 +43,7 @@ import cn.bctools.function.handler.ExpressionHandler;
 import cn.bctools.function.handler.IJvsFunction;
 import cn.bctools.function.handler.IJvsParam;
 import cn.bctools.function.handler.impl.SysParamImpl;
+import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.oss.props.OssProperties;
 import cn.bctools.web.utils.WebUtils;
 import cn.bctools.word.utils.WordPdfUtil;
@@ -201,17 +201,17 @@ public class PrintTemplateServiceImpl extends ServiceImpl<PrintTemplateMapper, P
     }
 
     /**
-     * 封装数据创建人信息
+     * 封装登录用户信息
      *
      * @param data 数据
      */
     private void packSys(Map<String, Object> data) {
-        String createUserId = (String) data.get(Get.name(DynamicDataPo::getCreateById));
-        if (ObjectNull.isNull(createUserId)) {
+        String userId = UserCurrentUtils.getUserId();
+        if (ObjectNull.isNull(userId)) {
             return;
         }
         //查询创建人相关信息
-        UserDto userDto = authUserServiceApi.getById(createUserId).getData();
+        UserDto userDto = authUserServiceApi.getById(userId).getData();
         if (ObjectNull.isNull(userDto)) {
             return;
         }

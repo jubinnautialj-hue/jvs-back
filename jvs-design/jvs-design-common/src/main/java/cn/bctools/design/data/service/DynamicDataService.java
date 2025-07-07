@@ -3,6 +3,7 @@ package cn.bctools.design.data.service;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.design.crud.entity.FormPo;
 import cn.bctools.design.data.dto.ExportFieldDto;
+import cn.bctools.design.data.entity.DataChangePo;
 import cn.bctools.design.data.entity.DataModelPo;
 import cn.bctools.design.data.entity.DynamicDataPo;
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
@@ -16,7 +17,9 @@ import cn.bctools.function.entity.dto.ExecDto;
 import cn.bctools.function.entity.po.FunctionBusinessPo;
 import cn.bctools.rule.utils.html.RuleExecuteDto;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.google.common.collect.MapDifference;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.mongodb.core.aggregation.Fields;
 import org.springframework.data.mongodb.core.query.Criteria;
 
 import java.util.*;
@@ -693,7 +696,7 @@ public interface DynamicDataService {
      * @param aggregateField 聚合字段
      * @return list
      */
-    List aggregate(Criteria criteria, String dataModelId, AggregateEnumType type, String group, String aggregateField);
+    List aggregate(Criteria criteria, String dataModelId, AggregateEnumType type, String aggregateField, Fields group);
 
     /**
      * Gets string object map.
@@ -766,5 +769,7 @@ public interface DynamicDataService {
     List<String> encryptionData(DataModelPo byId);
 
     List<String> encryptionData(String byId);
+
+    List<DataChangePo> saveDataChange(String jvsAppId, String designId, Map<String, Object> oldData, MapDifference<String, Object> difference, Map<String, Object> data);
 }
 

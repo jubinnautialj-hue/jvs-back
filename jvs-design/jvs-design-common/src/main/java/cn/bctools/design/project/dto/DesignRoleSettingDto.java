@@ -5,6 +5,7 @@ import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -15,7 +16,9 @@ import java.util.List;
  */
 @Data
 @Accessors(chain = true)
-public class DesignRoleSettingDto {
+public class DesignRoleSettingDto implements Serializable {
+
+    private static final long serialVersionUID = 1L;
 
     @ApiModelProperty("权限设置")
     private List<DesignRole> role = new ArrayList<>(1);

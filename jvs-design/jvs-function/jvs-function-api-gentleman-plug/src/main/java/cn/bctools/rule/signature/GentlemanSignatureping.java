@@ -1,4 +1,4 @@
-package cn.bctools.rule.signature;//package cn.bctools.rule.signature;
+//package cn.bctools.rule.signature;
 //
 //import cn.bctools.common.utils.PasswordUtil;
 //import cn.bctools.common.utils.SpringContextUtil;

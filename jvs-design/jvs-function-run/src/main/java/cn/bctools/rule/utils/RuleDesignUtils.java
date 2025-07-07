@@ -434,8 +434,10 @@ public class RuleDesignUtils {
         log.info("连线返回值,{}", calculate);
         if (calculate instanceof Boolean) {
             return (boolean) calculate;
+        } else {
+            return false;
         }
-        throw new RuleException(设计错误, "连线返回类型不是布尔类型,请重新设计");
+//        throw new RuleException(设计错误, "连线返回类型不是布尔类型,请重新设计");
     }
 
     /**
@@ -879,7 +881,7 @@ public class RuleDesignUtils {
                     } else if (ObjectNull.isNull(execCanvasId) && i != -1) {
                         s = fieldKey.substring(0, i);
                     }
-                    if (param.getProp().equals(LinkTypeEnum.empty)) {
+                    if (LinkTypeEnum.empty.equals(param.getProp())) {
                         if (fieldKey.contains("©ergodic©")) {
                             String[] split = fieldKey.split("©ergodic©");
                             JSONPath.remove(nodeResult.get(split[0]).getValue(), split[1].replaceAll("\\*", "."));
@@ -887,7 +889,7 @@ public class RuleDesignUtils {
                             JSONPath.remove(nodeResult.get(s).getValue(), fieldKey.substring(i + 1).replaceAll("\\*", "."));
                         }
                     }
-                    if (param.getProp().equals(LinkTypeEnum.field)) {
+                    if (LinkTypeEnum.field.equals(param.getProp())) {
                         int i1 = param.getValue().toString().indexOf("©");
                         Object result;
 
@@ -926,7 +928,7 @@ public class RuleDesignUtils {
                             }
                         }
                     }
-                    if (param.getProp().equals(LinkTypeEnum.value)) {
+                    if (LinkTypeEnum.value.equals(param.getProp())) {
                         if (fieldKey.contains("©ergodic©")) {
                             String[] split = fieldKey.split("©");
                             if (split.length == 3) {
@@ -946,7 +948,7 @@ public class RuleDesignUtils {
                             }
                         }
                     }
-                    if (param.getProp().equals(LinkTypeEnum.formula)) {
+                    if (LinkTypeEnum.formula.equals(param.getProp())) {
                         Object result = SpringContextUtil.getBean(ExpressionHandler.class).calculate(param.getFormulaContent(), data, "RULE");
                         //通过公式获取数据值，判断是否第一层
                         if ("start".equals(s)) {

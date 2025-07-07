@@ -285,6 +285,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
         //判断公式是否有设计到 字段
         functionBusinessMapper.selectList(new LambdaQueryWrapper<FunctionBusinessPo>().eq(FunctionBusinessPo::getDesignId, po.getId()))
                 .stream()
+                .peek(e -> associationSettingsFields.add(e.getBusinessId()))
                 .flatMap(e -> e.getRelatedIds().stream())
                 .forEach(e -> fieldMap.keySet().forEach(s -> {
                     //需要循环递归的选项

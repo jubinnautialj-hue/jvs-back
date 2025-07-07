@@ -1,6 +1,9 @@
 package cn.bctools.design.filter;
 
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.TenantContextHolder;
+import cn.bctools.design.identification.entity.Identification;
+import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.entity.JvsAppVersion;
 import cn.bctools.design.project.service.JvsAppService;
@@ -26,16 +29,19 @@ import java.util.Optional;
 public class BaseInterceptor implements HandlerInterceptor {
     JvsAppService jvsAppService;
     JvsAppVersionService appVersionService;
+    IdentificationService identificationService;
 
-    public BaseInterceptor(JvsAppService jvsAppService, JvsAppVersionService jvsAppVersionService) {
+    public BaseInterceptor(JvsAppService jvsAppService, JvsAppVersionService jvsAppVersionService, IdentificationService identificationService) {
         this.jvsAppService = jvsAppService;
         this.appVersionService = jvsAppVersionService;
+        this.identificationService = identificationService;
     }
 
     /**
      * 应用id
      */
     private static final String APP_ID = "appId";
+    private static final String APPIDENTIFICATION_ID = "appIdentification";
     private static final String UNDEFINED = "undefined";
 
     @Override
@@ -78,6 +84,19 @@ public class BaseInterceptor implements HandlerInterceptor {
         String appId = null;
         if (MapUtils.isNotEmpty(variablesAttribute)) {
             appId = Optional.ofNullable(variablesAttribute.get(APP_ID)).map(String::valueOf).orElseGet(() -> null);
+        }
+        if (ObjectNull.isNull(appId) && MapUtils.isNotEmpty(variablesAttribute)) {
+            //将其标识转换一下
+            String appidentification = Optional.ofNullable(variablesAttribute.get(APPIDENTIFICATION_ID)).map(String::valueOf).orElseGet(() -> null);
+            if (ObjectNull.isNotNull(appidentification)) {
+                //清除租户
+                TenantContextHolder.clear();
+                //根据标识获取 appid
+                Identification byIdentifierApp = identificationService.getByIdentifierApp(appidentification);
+                if (ObjectNull.isNotNull(byIdentifierApp)) {
+                    appId = byIdentifierApp.getJvsAppId();
+                }
+            }
         }
         return appId;
     }

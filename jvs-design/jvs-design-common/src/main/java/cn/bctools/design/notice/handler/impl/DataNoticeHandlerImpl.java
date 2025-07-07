@@ -55,6 +55,25 @@ public class DataNoticeHandlerImpl implements DataNoticeHandler {
                 .setTriggerType(triggerType);
         sendNotify(req);
     }
+
+
+    @Async
+    @Override
+    public void sendNotify(String tenantId, String appId, TriggerTypeEnum triggerType, String modelId, List<Object> objects) {
+        objects.forEach(e -> {
+            Map<String, Object> data = (Map<String, Object>) e;
+            SendNoticeReqBo req = new SendNoticeReqBo()
+                    .setTenantId(tenantId)
+                    .setAppId(appId)
+                    .setModelId(modelId)
+                    .setDataId(String.valueOf(data.get("dataId")))
+                    .setData(data)
+                    .setTriggerType(triggerType);
+            sendNotify(req);
+        });
+
+    }
+
     @Async
     @Override
     public void sendNotify(String tenantId, String appId, TriggerTypeEnum triggerType, String modelId, String dataId, Map<String, Object> data, Collection<String> changeKey) {
@@ -86,7 +105,7 @@ public class DataNoticeHandlerImpl implements DataNoticeHandler {
     /**
      * 发送消息
      *
-     * @param req    发送通知请求参数
+     * @param req 发送通知请求参数
      */
     public void sendNotify(SendNoticeReqBo req) {
         String tenantId = req.getTenantId();
@@ -128,7 +147,7 @@ public class DataNoticeHandlerImpl implements DataNoticeHandler {
      * 得到待发送消息通知的配置集
      *
      * @param dataNoticePos 消息配置
-     * @param req 发送通知请求
+     * @param req           发送通知请求
      * @return 待发送消息通知的配置集
      */
     private List<QueryDataNoticeRespDto> checkSendNotify(List<QueryDataNoticeRespDto> dataNoticePos, SendNoticeReqBo req) {

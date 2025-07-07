@@ -21,6 +21,10 @@ import java.util.LinkedList;
  */
 public class TaskLogUtil extends Slf4jLog {
 
+    public static void clear() {
+        threadLocal.remove();
+    }
+
     /**
      * The type Log.
      */

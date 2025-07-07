@@ -5,6 +5,7 @@ import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;
+import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
@@ -121,7 +122,8 @@ public class ModeUtils {
         }
         String key = getModeCacheKey(token);
         SwitchModeDto mode = Optional.ofNullable((SwitchModeDto) REDIS_UTILS.get(key))
-                .orElseGet(() -> new SwitchModeDto().setMode(AppVersionTypeEnum.valueOf(jvsSystemConfig.getDesignDefaultMode())));
+                //只有主租户才生效这个配置
+                .orElseGet(() -> new SwitchModeDto().setMode(TenantContextHolder.getTenantId().equals("1") ? AppVersionTypeEnum.valueOf(jvsSystemConfig.getDesignDefaultMode()) : AppVersionTypeEnum.GA));
         // 正式模式不能模拟用户
         if (AppVersionTypeEnum.GA.equals(mode.getMode())) {
             mode.setAnalogUser(null);

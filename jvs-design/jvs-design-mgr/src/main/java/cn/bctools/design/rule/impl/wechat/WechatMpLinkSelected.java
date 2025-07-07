@@ -2,7 +2,9 @@ package cn.bctools.design.rule.impl.wechat;
 
 
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.message.push.api.WechatOfficialAccountApi;
+import cn.bctools.message.push.dto.vo.WxMpTemplateVo;
 import cn.bctools.rule.common.LinkFieldSelected;
 import cn.bctools.rule.common.ParameterOption;
 import lombok.AllArgsConstructor;
@@ -31,7 +33,11 @@ public class WechatMpLinkSelected implements LinkFieldSelected<String> {
     @Override
     public Object link(String id, String body) {
 
-        String content = wechatOfficialAccountApi.getAllPrivateTemplate(false)
+        List<WxMpTemplateVo> allPrivateTemplate = wechatOfficialAccountApi.getAllPrivateTemplate(false);
+        if (ObjectNull.isNull(allPrivateTemplate)) {
+            return new ArrayList<>();
+        }
+        String content = allPrivateTemplate
                 .stream()
                 .filter(e -> e.getTemplateId().equals(id))
                 .findFirst()

@@ -1,5 +1,12 @@
 package cn.bctools.design.permission;
 
+import cn.bctools.auth.api.api.AuthDeptServiceApi;
+import cn.bctools.auth.api.api.AuthRoleServiceApi;
+import cn.bctools.auth.api.api.AuthUserServiceApi;
+import cn.bctools.auth.api.dto.SysDeptDto;
+import cn.bctools.auth.api.dto.SysRoleDto;
+import cn.bctools.auth.api.enums.PersonnelTypeEnum;
+import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
@@ -17,6 +24,7 @@ import cn.bctools.design.menu.util.MenuUtil;
 import cn.bctools.design.permission.dto.*;
 import cn.bctools.design.permission.entity.PermissionGroup;
 import cn.bctools.design.permission.entity.PermissionSetting;
+import cn.bctools.design.permission.entity.dto.PermissionMemberDto;
 import cn.bctools.design.permission.entity.enums.PermissionGroupType;
 import cn.bctools.design.permission.service.DesignPermissionService;
 import cn.bctools.design.permission.service.PermissionGroupService;
@@ -34,10 +42,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -56,14 +61,66 @@ public class PermissionController {
     private final DesignPermissionService designPermissionService;
     private final CrudPageService pageService;
     private final AppVersionMenuHandler appVersionMenuHandler;
+    private final AuthDeptServiceApi deptServiceApi;
+    private final AuthRoleServiceApi roleServiceApi;
+    private final AuthUserServiceApi userServiceApi;
 
     @ApiOperation("查询权限组集合")
     @GetMapping("/group/list/{groupType}")
     public R<List<PermissionGroup>> groupList(@PathVariable String appId, @PathVariable PermissionGroupType groupType) {
-        return R.ok(permissionGroupService.list(Wrappers.<PermissionGroup>lambdaQuery()
+        List<PermissionGroup> groups = permissionGroupService.list(Wrappers.<PermissionGroup>lambdaQuery()
                 .eq(PermissionGroup::getJvsAppId, appId)
                 .eq(PermissionGroup::getGroupType, groupType)
-                .orderByAsc(PermissionGroup::getCreateTime)));
+                .orderByAsc(PermissionGroup::getCreateTime));
+        List<String> userIds = new ArrayList<>();
+        List<String> deptIds = new ArrayList<>();
+        List<String> roleIds = new ArrayList<>();
+        for (PermissionGroup group : groups) {
+            if (ObjectNull.isNull(group.getMember())) {
+                continue;
+            }
+            PermissionMemberDto member = group.getMember();
+            if (ObjectNull.isNull(member.getPersonnels())) {
+                continue;
+            }
+            member.getPersonnels().forEach(personnel -> {
+                if (PersonnelTypeEnum.user.equals(personnel.getType())) {
+                    userIds.add(personnel.getId());
+                }
+                if (PersonnelTypeEnum.dept.equals(personnel.getType())) {
+                    deptIds.add(personnel.getId());
+                }
+                if (PersonnelTypeEnum.role.equals(personnel.getType())) {
+                    roleIds.add(personnel.getId());
+                }
+            });
+        }
+        Map<String, String> userMap = ObjectNull.isNull(userIds) ? Collections.emptyMap() : userServiceApi.getByIds(userIds).getData().stream()
+                .collect(Collectors.toMap(UserDto::getId, UserDto::getRealName));
+        Map<String, String> roleMap = ObjectNull.isNull(roleIds) ? Collections.emptyMap() : roleServiceApi.getByIds(roleIds).getData().stream()
+                .collect(Collectors.toMap(SysRoleDto::getId, SysRoleDto::getRoleName));
+        Map<String, String> deptMap =  ObjectNull.isNull(deptIds) ? Collections.emptyMap(): deptServiceApi.getByIds(deptIds).getData().stream()
+                .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName));
+
+        groups.forEach(group -> {
+            PermissionMemberDto member = group.getMember();
+            if (ObjectNull.isNotNull(member) && ObjectNull.isNotNull(member.getPersonnels())) {
+               member.getPersonnels().forEach(personnel -> {
+                   if (PersonnelTypeEnum.user.equals(personnel.getType())) {
+                       personnel.setName(userMap.getOrDefault(personnel.getId(), personnel.getName()));
+                   }
+                   if (PersonnelTypeEnum.dept.equals(personnel.getType())) {
+                       personnel.setName(deptMap.getOrDefault(personnel.getId(), personnel.getName()));
+                   }
+                   if (PersonnelTypeEnum.role.equals(personnel.getType())) {
+                       personnel.setName(roleMap.getOrDefault(personnel.getId(), personnel.getName()));
+                   }
+               });
+            }
+        });
+        
+
+        return R.ok(groups);
     }
 
     @ApiOperation("新增权限组基本信息")

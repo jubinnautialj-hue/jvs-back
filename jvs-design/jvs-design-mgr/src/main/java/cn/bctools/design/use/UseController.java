@@ -61,7 +61,7 @@ public class UseController {
                 }
             }
         }
-        List<Tree<Object>> tree = useComponent.menu("", ModeUtils.getRealUser().getId(), IpUtil.isMobile(), ModeUtils.getMode(), jvsApp);
+        List<Tree<Object>> tree = useComponent.menu("", ModeUtils.getRealUser().getId(), IpUtil.isMobile(), ModeUtils.getMode(), jvsApp).getKey();
         //树结构二次处理
         //获取应用
         String finalAppid = Optional.ofNullable(jvsApp).map(JvsApp::getId).orElseGet(() -> "");

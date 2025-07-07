@@ -292,6 +292,9 @@ public class DynamicDataUtils {
                 case isNull:
                     criteria = new Criteria().orOperator(Criteria.where(fieldId).isNull(), Criteria.where(fieldId).is(""));
                     break;
+                case isNotNull:
+                    criteria = new Criteria().andOperator(Criteria.where(fieldId).ne(null), Criteria.where(fieldId).ne(""));
+                    break;
                 case between:
                     // 范围查询可参考官方文档: https://www.mongodb.com/docs/manual/reference/operator/query/elemMatch/
                     List queryValues = null;

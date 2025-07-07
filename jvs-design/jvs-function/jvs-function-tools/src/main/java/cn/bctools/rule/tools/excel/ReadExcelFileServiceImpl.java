@@ -1,6 +1,7 @@
 package cn.bctools.rule.tools.excel;
 
 
+import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
 import cn.bctools.rule.entity.enums.RuleGroup;
@@ -37,7 +38,10 @@ public class ReadExcelFileServiceImpl implements BaseCustomFunctionInterface<Rea
     public Object execute(ReadExcelFileDto dto, Map<String, Object> params) {
         Map<Object, Map<String, Object>> map = new HashMap<>();
         map.put(dto.getSheet(), dto.getCell());
-        List<Dict> dicts = ExcelVariablesReplaceUtil.searchData(new ByteArrayInputStream(HttpUtil.downloadBytes(dto.getFileUrl())), map);
+        if (ObjectNull.isNull(dto.getIgnoreFormat())) {
+            dto.setIgnoreFormat(false);
+        }
+        List<Dict> dicts = ExcelVariablesReplaceUtil.searchData(new ByteArrayInputStream(HttpUtil.downloadBytes(dto.getFileUrl())), map, dto.getIgnoreFormat());
         Object o = dicts.get(0).get(dto.getSheet());
         return o;
     }

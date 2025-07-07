@@ -1,4 +1,4 @@
-package cn.bctools.design.data.component;//package cn.bctools.design.data.component;
+//package cn.bctools.design.data.component;
 //
 //import cn.bctools.common.constant.SysConstant;
 //import cn.bctools.common.entity.TenantSpace;

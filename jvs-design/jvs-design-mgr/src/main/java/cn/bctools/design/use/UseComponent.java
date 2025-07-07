@@ -54,6 +54,7 @@ import io.swagger.annotations.Api;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.MapUtils;
+import org.apache.commons.lang3.tuple.Pair;
 import org.springframework.boot.autoconfigure.mongo.MongoProperties;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -181,7 +182,7 @@ public class UseComponent implements AppApi, TreeApi {
      * @param app
      * @return
      */
-    public List<Tree<Object>> menu(String appId, String userId, boolean mobile, AppVersionTypeEnum mode, JvsApp app) {
+    public Pair<List<Tree<Object>>, List<JvsMenuVo>> menu(String appId, String userId, boolean mobile, AppVersionTypeEnum mode, JvsApp app) {
         List<JvsMenuVo> list = new ArrayList<>();
         Map<String, JvsApp> allAppMap = new HashMap<>(2);
         // 有设计权限的应用
@@ -213,7 +214,7 @@ public class UseComponent implements AppApi, TreeApi {
         appTree(noDesignPermissionAppMap.values(), list, Boolean.FALSE);
 
         if (MapUtils.isEmpty(appVersionMap)) {
-            return JvsMenuVo.tree(list);
+            return Pair.of(JvsMenuVo.tree(list), list);
         }
 
         //构建目录树
@@ -287,7 +288,7 @@ public class UseComponent implements AppApi, TreeApi {
         //资源转树
         list.addAll(menus);
 
-        return JvsMenuVo.tree(list);
+        return Pair.of(JvsMenuVo.tree(list), list);
     }
 
     private List<AppMenu> getMenus(Map<String, String> appVersionMap) {

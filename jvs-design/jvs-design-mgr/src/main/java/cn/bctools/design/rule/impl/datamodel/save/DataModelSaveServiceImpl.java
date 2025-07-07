@@ -65,7 +65,7 @@ public class DataModelSaveServiceImpl implements BaseCustomFunctionInterface<Dat
     public Object execute(DataModelSaveDto dataModelDto, Map<String, Object> params) {
         String appId = dataModelService.getById(dataModelDto.getDataModelId()).getAppId();
         if (ObjectNull.isNotNull(appId)) {
-            dynamicDataService.checkDataFieldType(appId, dataModelDto.getDataModelId(), dataModelDto.getBody(), true);
+            dynamicDataService.checkDataFieldType(appId, dataModelDto.getDataModelId(), dataModelDto.getBody(), false);
             String save = dynamicDataService.saveTransactionalRule(appId, dataModelDto.getDataModelId(), dataModelDto.getBody());
             dataNoticeHandler.sendNotify(TenantContextHolder.getTenantId(), appId, TriggerTypeEnum.CREATED, dataModelDto.getDataModelId(), save, dataModelDto.getBody());
             return String.valueOf(save);

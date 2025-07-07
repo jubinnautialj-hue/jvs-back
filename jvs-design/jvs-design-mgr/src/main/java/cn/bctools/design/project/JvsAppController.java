@@ -110,10 +110,7 @@ public class JvsAppController {
     @GetMapping("/secret")
     public R<String> secret(@PathVariable("appId") String appId) {
         JvsApp jvsApp = service.getById(appId);
-        if (UserCurrentUtils.getCurrentUser().getAdminFlag()) {
-            return R.ok(jvsApp.getSecret());
-        }
-        return R.failed("没有权限请联系管理员");
+        return R.ok(jvsApp.getSecret());
     }
 
     @Log(callBackClass = JvsLogServiceImpl.class)
@@ -181,7 +178,7 @@ public class JvsAppController {
         if (ObjectNull.isNull(versionApps)) {
             versionApps.add(new JvsAppVersion().setJvsAppId(appId).setVersionType(AppVersionTypeEnum.GA));
         }
-        versionApps.forEach(app ->  service.removeById(app.getJvsAppId()));
+        versionApps.forEach(app -> service.removeById(app.getJvsAppId()));
         designHandler.appDataDeleted(versionApps);
         // 发布逻辑API swagger缓存变更事件
         swaggerRuleApiCacheService.publishSwaggerRuleApiEvent(true, appId);

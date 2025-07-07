@@ -109,6 +109,7 @@ public interface JvsAppTemplateService extends IService<JvsAppTemplate> {
      * @param jvsAppTemplate 应用模板
      */
     void saveTemplate(JvsAppTemplate jvsAppTemplate);
+    void saveTemplateAsync(JvsAppTemplate jvsAppTemplate, String userId, String realName, String tenantId);
 
 
     /**

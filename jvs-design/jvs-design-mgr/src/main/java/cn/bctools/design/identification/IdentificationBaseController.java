@@ -41,7 +41,8 @@ public class IdentificationBaseController {
         //获取当前模式下所有的标识
         Map<String, String> mappings = service.getIdentificationModel()
                 .stream()
-                .collect(Collectors.toMap(Identification::getIdentifier, Identification::getDesignId));
+                .filter(e->ObjectNull.isNotNull(e.getDesignId()))
+                .collect(Collectors.toMap(Identification::getIdentifier, Identification::getDesignId, (k1, k2) -> k2));
         return R.ok(mappings);
     }
 

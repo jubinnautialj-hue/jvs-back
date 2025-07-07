@@ -21,10 +21,11 @@ import java.util.Map;
 @DesignField(value = "流水号", type = DataFieldType.serialNumber)
 public class SerialNumberFieldHandler implements IDataFieldHandler<FieldBasicsHtml> {
     @Override
-    public void checkDataFieldType(FieldBasicsHtml fieldBasicsHtml, Object o) throws Exception {
+    public Object checkDataFieldType(FieldBasicsHtml fieldBasicsHtml, Object o) throws Exception {
         if (!(o instanceof String)) {
             throw new RuntimeException("正确格式为字符串");
         }
+        return o;
     }
 
     @Override

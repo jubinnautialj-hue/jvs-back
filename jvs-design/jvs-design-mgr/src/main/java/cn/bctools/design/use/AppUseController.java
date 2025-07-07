@@ -30,9 +30,11 @@ import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.data.util.RoleUtils;
+import cn.bctools.design.expression.EnvConstant;
 import cn.bctools.design.menu.service.AppMenuService;
 import cn.bctools.design.permission.service.DesignPermissionService;
 import cn.bctools.design.permission.service.PermissionCompatibleService;
+import cn.bctools.design.project.handler.DesignHandler;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.util.ModeUtils;
 import cn.bctools.design.workflow.service.FlowTaskService;
@@ -70,6 +72,7 @@ import static cn.bctools.design.crud.utils.DesignUtils.parseField;
 @RequestMapping("/app/use/{appId}")
 public class AppUseController {
     DataFieldDynamicService dataFieldDynamicService;
+    DesignHandler designHandler;
     OssProperties ossProperties;
     AuthRoleServiceApi roleServiceApi;
     UseComponent useComponent;
@@ -92,7 +95,7 @@ public class AppUseController {
     public R trees(@PathVariable String appId) {
         //只返回目录
         boolean mobile = IpUtil.isMobile();
-        List<Tree<Object>> tree = useComponent.menu(appId, ModeUtils.getRealUser().getId(), mobile, ModeUtils.getMode(), null);
+        List<Tree<Object>> tree = useComponent.menu(appId, ModeUtils.getRealUser().getId(), mobile, ModeUtils.getMode(), null).getKey();
         if (ObjectNull.isNull(tree)) {
             return R.ok();
         }
@@ -144,7 +147,7 @@ public class AppUseController {
             }
         }
         //当模型关联的工作流一条数据都没有时不加载默认工作流按钮
-        if (0 != flowTaskService.countPendingByModeId(po.getDataModelId())) {
+        if (0 != flowTaskService.countByModeId(po.getDataModelId())) {
             List<ButtonDesignHtml> defaultButtonDesignHtmls = crudPageService.getSystemDefaultButtons();
             defaultButtonDesignHtmls.forEach(button -> button.setPosition("line"));
             if (ObjectNull.isNotNull(design)) {
@@ -178,6 +181,8 @@ public class AppUseController {
                     e.getEnabledQueryTypes().add(DataQueryType.isNull);
                 }
             });
+            //如果是选项卡类型，将不显示选项卡
+            design.getDataPage().getAutoTableFields().removeIf(e -> e.getComponentType().equals(DataFieldType.tab));
             // 解析显示设置-关联模型，获取关联显示字段填充到列表页设计
             dataFieldDynamicService.parseModelDisplayFillFields(design.getDataPage().getAutoTableFields());
             return R.ok(po.setViewJson(JSONObject.toJSONString(design)));
@@ -193,7 +198,7 @@ public class AppUseController {
         String userId = ModeUtils.getRealUser().getId();
         boolean mobile = IpUtil.isMobile();
 
-        List<Tree<Object>> tree = useComponent.menu(appId, userId, mobile, ModeUtils.getMode(), null);
+        List<Tree<Object>> tree = useComponent.menu(appId, userId, mobile, ModeUtils.getMode(), null).getKey();
         List<Tree<Object>> trees = tree
                 .stream()
                 .findFirst()
@@ -291,7 +296,18 @@ public class AppUseController {
         formsetting.setDataLogEnable(ObjectNull.isNotNull(formsetting.getDataLogEnable()) ? formsetting.getDataLogEnable() : false);
         List<ButtonDesignHtml> formButtonList = formsetting.getBtnSetting();
         //删除未应用的， 包括超级管理员
-        formButtonList.removeIf(button -> !Boolean.TRUE.equals(button.getEnable()));
+        formButtonList.removeIf(button -> {
+            if (!Boolean.TRUE.equals(button.getEnable())) {
+                return true;
+            } else {
+                //执行公式
+                if (ObjectNull.isNotNull(button.getFormula())) {
+                    return !designHandler.checkFormula(button.getFormula(), EnvConstant.FORM_BUTTON_DISPLAY);
+                } else {
+                    return false;
+                }
+            }
+        });
         Set<String> prop = design.getFormdata().get(0).getForms().stream().map(e -> e.get("prop").toString()).collect(Collectors.toSet());
 
         List<Map> formAutoTableFields = dataFieldDynamicService.getFormAutoTableFields(appId, po.getDataModelId(), po.getId(), prop);

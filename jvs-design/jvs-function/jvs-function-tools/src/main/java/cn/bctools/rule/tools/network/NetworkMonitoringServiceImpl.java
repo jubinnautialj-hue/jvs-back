@@ -1,4 +1,4 @@
-package cn.bctools.rule.tools.network;//package cn.bctools.rule.tools.network;
+//package cn.bctools.rule.tools.network;
 //
 //import cn.bctools.rule.annotations.Rule;
 //import cn.bctools.rule.entity.enums.ClassType;

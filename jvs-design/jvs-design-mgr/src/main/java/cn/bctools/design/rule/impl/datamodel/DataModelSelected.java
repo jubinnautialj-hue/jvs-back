@@ -49,10 +49,5 @@ public class DataModelSelected implements ParameterSelected<String> {
                 .map(e -> new ParameterOption<String>().setLabel(e.getName()).setValue(e.getId())).collect(Collectors.toList());
     }
 
-    @Override
-    public Object getDefaultValueParameter() {
-        return getOptions().get(0).getValue();
-    }
-
 
 }

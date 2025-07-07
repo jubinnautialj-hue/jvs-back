@@ -128,7 +128,7 @@ public class WebServiceUtils {
             }
             NodeList children = element.getChildNodes();
             for (int i = 0; i < children.getLength(); i++) {
-                Node node = children.item(i);
+                org.w3c.dom.Node node = children.item(i);
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element childElement = (Element) node;
                     NodeList docNodes = childElement.getElementsByTagName(DOCUMENTATION);

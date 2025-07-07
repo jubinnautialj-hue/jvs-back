@@ -55,10 +55,11 @@ public class SignatureFieldHandler implements IDataFieldHandler<ImageUploadHtml>
     }
 
     @Override
-    public void checkDataFieldType(ImageUploadHtml imageUploadHtml, Object o) throws Exception {
+    public Object checkDataFieldType(ImageUploadHtml imageUploadHtml, Object o) throws Exception {
         if (!(o instanceof List)) {
             throw new RuntimeException("正确格式为数组");
         }
+        return o;
     }
 
     @Override

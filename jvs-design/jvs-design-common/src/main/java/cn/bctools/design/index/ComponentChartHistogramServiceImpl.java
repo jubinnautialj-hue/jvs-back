@@ -141,32 +141,36 @@ public class ComponentChartHistogramServiceImpl extends DataModelIndexFieldOrLin
                     List collect = times.stream()
                             .map(s -> timesMap.getOrDefault(s, new ArrayList<>()))
                             .map(s -> {
-                                switch (body.getAggregationType()) {
-                                    case ave:
-                                        return s.stream()
-                                                .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
-                                                .average()
-                                                .orElse(0);
-                                    case sum:
-                                        //求和
-                                        return s.stream()
-                                                .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
-                                                .sum();
-                                    case max:
-                                        return s.stream()
-                                                .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
-                                                .max()
-                                                .orElse(0);
-                                    case min:
-                                        return s.stream()
-                                                .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
-                                                .min()
-                                                .orElse(0);
-                                    case count:
-                                        //计数
-                                        return s.size();
-                                    default:
-                                        return 0;
+                                try {
+                                    switch (body.getAggregationType()) {
+                                        case ave:
+                                            return s.stream()
+                                                    .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
+                                                    .average()
+                                                    .orElse(0);
+                                        case sum:
+                                            //求和
+                                            return s.stream()
+                                                    .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
+                                                    .sum();
+                                        case max:
+                                            return s.stream()
+                                                    .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
+                                                    .max()
+                                                    .orElse(0);
+                                        case min:
+                                            return s.stream()
+                                                    .mapToDouble(a -> Double.parseDouble(a.getOrDefault(body.getAggregationField(), 0).toString()))
+                                                    .min()
+                                                    .orElse(0);
+                                        case count:
+                                            //计数
+                                            return s.size();
+                                        default:
+                                            return 0;
+                                    }
+                                } catch (Exception e) {
+                                    return 0;
                                 }
                             })
                             .collect(Collectors.toList());

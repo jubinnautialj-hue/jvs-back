@@ -66,7 +66,7 @@ public class TimePickerFieldHandler implements IDataFieldHandler<TimePickerHtml>
     }
 
     @Override
-    public void checkDataFieldType(TimePickerHtml timePickerHtml, Object o) throws Exception {
+    public Object checkDataFieldType(TimePickerHtml timePickerHtml, Object o) throws Exception {
         try {
             if (timePickerHtml.getIsrange()) {
                 if (!(o instanceof List)) {
@@ -79,6 +79,7 @@ public class TimePickerFieldHandler implements IDataFieldHandler<TimePickerHtml>
         } catch (Exception e) {
             throw new RuntimeException("正确格式为" + NORM_TIME_PATTERN);
         }
+        return o;
     }
 
     @Override

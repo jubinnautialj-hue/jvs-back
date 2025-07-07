@@ -13,7 +13,11 @@
     <artifactId>jvs-design-common</artifactId>
 
     <dependencies>
-
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-ai</artifactId>
+            <version>${project.version}</version>
+        </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-starter-mongodb</artifactId>
@@ -102,8 +106,6 @@
             <artifactId>jvs-starter-index</artifactId>
             <version>${project.version}</version>
         </dependency>
-
-
         <dependency>
             <groupId>wsdl4j</groupId>
             <artifactId>wsdl4j</artifactId>

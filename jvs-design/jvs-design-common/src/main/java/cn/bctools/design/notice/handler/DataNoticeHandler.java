@@ -51,4 +51,6 @@ public interface DataNoticeHandler {
      * @param taskNodeIds 待办任务节点id
      */
     void sendNotify(String tenantId, String appId, TriggerTypeEnum triggerType, String modelId, String dataId, FlowTask flowTask, List<String> taskNodeIds);
+
+    void sendNotify(String tenantId, String appId, TriggerTypeEnum triggerTypeEnum, String modelId, List<Object> objects);
 }

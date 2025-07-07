@@ -21,6 +21,7 @@ import cn.bctools.function.handler.JvsExpression;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.ttl.TransmittableThreadLocal;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.annotation.Order;
@@ -111,9 +112,14 @@ public class FormItemParam implements IJvsParam<ElementVo> {
         return list;
     }
 
+
     private List<ElementVo> getFormDesignVo(String designId) {
         if (StringUtils.isBlank(designId)) {
             return Collections.emptyList();
+        }
+        List<ElementVo> elementVos = localElementVo();
+        if (ObjectNull.isNotNull(elementVos)) {
+            return elementVos;
         }
         String dataModelId = designId;
         FormPo formPo = null;
@@ -159,8 +165,8 @@ public class FormItemParam implements IJvsParam<ElementVo> {
         Map<String, String> stringMap = list.stream().collect(Collectors.toMap(ElementVo::getId, ElementVo::getId, (a, b) -> a));
         formPo.setFieldPathMap(stringMap);
         formService.updateById(formPo);
+        local.get().put(designId, list);
         return list;
-
     }
 
     /**

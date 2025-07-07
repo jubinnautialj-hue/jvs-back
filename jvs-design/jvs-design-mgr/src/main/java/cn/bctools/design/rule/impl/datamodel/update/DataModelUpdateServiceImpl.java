@@ -80,7 +80,7 @@ public class DataModelUpdateServiceImpl implements BaseCustomFunctionInterface<D
         List<QueryConditionDto> queryConditions = dataModelDto.getQuery();
         queryConditions.forEach(e -> fieldList.add(e.getFieldKey()));
         List<Map<String, Object>> maps = dynamicDataService.queryList(dataModelDto.getDataModelId(), DynamicDataUtils.buildDynamicCriteria(queryConditions), fieldList);
-        dynamicDataService.checkDataFieldType(appId, dataModelDto.getDataModelId(), dataModelDto.getBody(), true);
+        dynamicDataService.checkDataFieldType(appId, dataModelDto.getDataModelId(), dataModelDto.getBody(), false);
         long l = dynamicDataService.updateMulti(dataModelDto.getDataModelId(), dataModelDto.getQuery(), dataModelDto.getBody());
         //查詢所有要删除的数据，发通知,再删除
         maps.forEach(e -> {

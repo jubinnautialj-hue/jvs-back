@@ -12,7 +12,7 @@ import lombok.experimental.Accessors;
 @Accessors(chain = true)
 public class UserSearchDto {
 
-    @ParameterValue(info = "用户搜索")
+    @ParameterValue(info = "用户搜索", explain = "如果使用逗号,分割则搜索多个")
     public String searchUser;
     @ParameterValue(info = "类型", type = InputType.selected, cls = SearchUserSelected.class)
     public SearchType type;

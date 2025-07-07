@@ -287,6 +287,9 @@ public class SystemInit extends SpringContextUtil {
                             log.error("加载字段{}失败,{},{}", cls, e, ann.info());
                             throw exception;
                         }
+                        if (ObjectNull.isNotNull(ann.defaultValue())) {
+                            functionParameter.setDefaultValue(ann.defaultValue());
+                        }
                     } else {
                         Object s = ann.defaultValue();
                         if (ann.type().equals(InputType.onOff)) {
@@ -393,7 +396,13 @@ public class SystemInit extends SpringContextUtil {
                         if (ObjectNull.isNotNull(list)) {
                             ParameterOption o = (ParameterOption) list.get(0);
                             functionParameter.setOptions(list);
-                            functionParameter.setDefaultValue(o.getValue());
+                            Object defaultValue = functionParameter.getDefaultValue();
+                            Optional<ParameterOption> first = list.stream().filter(e -> ((ParameterOption) e).getValue().toString().equals(defaultValue)).findFirst();
+                            if (first.isPresent()) {
+                                functionParameter.setDefaultValue(first.get().getValue());
+                            } else {
+                                functionParameter.setDefaultValue(o.getValue());
+                            }
                             break;
                         }
                         //直接使用
@@ -404,8 +413,14 @@ public class SystemInit extends SpringContextUtil {
                         if (functionParameter.getOptions().isEmpty()) {
                             functionDto.setStatusMsg(functionParameter.getStatsMsg());
                         } else {
-                            ParameterOption o = (ParameterOption) functionParameter.getOptions().get(0);
-                            functionParameter.setDefaultValue(o.getValue());
+                            Object defaultValue = functionParameter.getDefaultValue();
+                            Optional<ParameterOption> first = functionParameter.getOptions().stream().filter(e -> ((ParameterOption) e).getValue().toString().equals(defaultValue)).findFirst();
+                            if (first.isPresent()) {
+                                functionParameter.setDefaultValue(first.get().getValue());
+                            } else {
+                                ParameterOption o = (ParameterOption) functionParameter.getOptions().get(0);
+                                functionParameter.setDefaultValue(o.getValue());
+                            }
                         }
                         SystemThreadLocal.set(selectedClass, options);
                     } catch (BusinessException e) {

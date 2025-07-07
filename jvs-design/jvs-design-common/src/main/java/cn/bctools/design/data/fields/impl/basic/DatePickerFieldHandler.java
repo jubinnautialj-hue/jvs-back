@@ -9,11 +9,14 @@ import cn.bctools.design.data.fields.dto.form.html.DatePickerHtml;
 import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.fields.enums.DataQueryType;
 import cn.hutool.core.date.DatePattern;
+import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -120,6 +123,7 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
         }
         List<DataQueryType> types = new ArrayList<>();
         types.add(DataQueryType.isNull);
+        types.add(DataQueryType.isNotNull);
         types.add(DataQueryType.between);
         if (ObjectNull.isNull(dateType)) {
             return types;
@@ -156,7 +160,11 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
                 DatePattern.createFormatter("yyyy-MM").parse(o.toString()).toString();
                 return o.toString();
             case datetime:
-                return DateUtil.parseDateTime(o.toString());
+                if (o instanceof LocalDateTime) {
+                    return o;
+                } else {
+                    return DateUtil.parseDateTime(o.toString()).toLocalDateTime();
+                }
             case daterange:
             case monthrange:
             case datetimerange:
@@ -168,16 +176,16 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
     }
 
     @Override
-    public void checkDataFieldType(DatePickerHtml dto, Object o) {
+    public Object checkDataFieldType(DatePickerHtml dto, Object o) {
         DateType dateType = dto.getDatetype();
         switch (dateType) {
             case date:
                 try {
-                    DateUtil.parseDate(o.toString()).toDateStr();
+                    DateTime dateTime = DateUtil.parseDate(o.toString());
+                    dateTime.toLocalDateTime();
                 } catch (Exception e) {
                     throw new RuntimeException("正确格式为" + NORM_DATE_PATTERN);
                 }
-                break;
             case week:
                 //不校验
                 break;
@@ -186,7 +194,6 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
                     DatePattern.createFormatter("yyyy-MM").parse(o.toString());
                 } catch (Exception e) {
                     throw new RuntimeException("正确格式为yyyy-MM");
-
                 }
                 break;
             case year:
@@ -202,11 +209,11 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
                 break;
             case datetime:
                 try {
-                    DatePattern.createFormatter("yyyy-MM-dd HH:mm:ss").parse(o.toString());
+                    DateTimeFormatter formatter = DatePattern.createFormatter("yyyy-MM-dd HH:mm:ss");
+                    return LocalDateTime.from(formatter.parse(o.toString()));
                 } catch (Exception e) {
                     throw new RuntimeException("正确格式为yyyy-MM-dd HH:mm:ss");
                 }
-                break;
             case datetimerange:
                 try {
                     DatePattern.createFormatter("yyyy-MM-dd HH:mm:ss").parse(((List) o).get(0).toString());
@@ -234,6 +241,7 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
 
         }
 
+        return o;
     }
 
     @Override

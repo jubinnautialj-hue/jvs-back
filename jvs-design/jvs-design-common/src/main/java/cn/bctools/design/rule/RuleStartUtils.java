@@ -26,10 +26,13 @@ import cn.bctools.rule.utils.html.RuleExecuteDto;
 import cn.hutool.core.util.URLUtil;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONWriter;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import io.swagger.models.auth.In;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import net.bytebuddy.description.field.FieldDescription;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
@@ -189,11 +192,11 @@ public class RuleStartUtils {
                     Object value = data.getExecuteDto().getEndResult().getValue();
                     if (value instanceof List) {
                         //如果是数组，则分批处理并聚合
-                        List<Object> collect = ((List<?>) value).stream().map(e -> checkParameterOut(BeanCopyUtil.copy(e, Object.class), po.getParameterOut())).collect(Collectors.toList());
+                        List<Object> collect = ((List<?>) value).stream().map(e -> checkParameterOut(e, po.getParameterOut())).collect(Collectors.toList());
                         data.getExecuteDto().getEndResult().setValue(collect);
                     } else {
                         //如果是对象直接 copy
-                        Object obj = checkParameterOut(BeanCopyUtil.copy(value, Object.class), po.getParameterOut());
+                        Object obj = checkParameterOut(value, po.getParameterOut());
                         //正确的直接将返回数据值处理进去
                         data.getExecuteDto().getEndResult().setValue(obj);
                     }
@@ -211,26 +214,27 @@ public class RuleStartUtils {
         //避免返回数据带有引用关系
         logPo.setErrorMsg(data.getExecuteDto().getErrorMessage());
         RequestAttributes requestAttributes = RequestContextHolder.getRequestAttributes();
-        if (data.getOpenLogRecording()) {
-            EXECUTOR.execute(() -> {
-                log.info("线程保存日志");
-                TenantContextHolder.setTenantId(tenantId);
-                RequestContextHolder.setRequestAttributes(requestAttributes);
-                SecurityContextHolder.setContext(context);
-                logPo.setResult(JSON.parseObject(JSON.toJSONString(data.getExecuteDto(), JSONWriter.Feature.LargeObject)));
+        EXECUTOR.execute(() -> {
+            log.info("线程保存日志");
+            TenantContextHolder.setTenantId(tenantId);
+            RequestContextHolder.setRequestAttributes(requestAttributes);
+            SecurityContextHolder.setContext(context);
+            logPo.setResult(JSON.parseObject(JSON.toJSONString(data.getExecuteDto(), JSONWriter.Feature.LargeObject)));
+            if (data.getOpenLogRecording()) {
                 String logs = logsList
                         .stream()
                         .distinct()
                         .map(e -> String.format(FORMAT_LOG, FORMAT_DATETIME.format(e.getTime()), e.getType(), e.getMsg()))
                         .collect(Collectors.joining("<br/>"));
-                BaseFile baseFile = ossTemplate.putFile("jvs-public", "rule/run/log", IdGenerator.getIdStr() + ".log", new ByteArrayInputStream(logs.getBytes()));
-                String url = ossTemplate.fileLink(baseFile.getFileName(), "jvs-public");
-                logPo.setLogs(url);
-                logPo.setStatus(ObjectNull.isNull(data.getExecuteDto().getErrorMessage(), data.getExecuteDto().getErrorNodeId()));
-                runLogService.saveLog(logPo);
-                log.info("线程保存日志完成");
-            });
-        }
+                BaseFile baseFile = ossTemplate.putFile("jvs-design-mgr", "rule/run/log", IdGenerator.getIdStr() + ".log", new ByteArrayInputStream(logs.getBytes()));
+                logPo.setLogs(baseFile.getFileName());
+            } else {
+                logPo.setLogs("未开启日志");
+            }
+            logPo.setStatus(ObjectNull.isNull(data.getExecuteDto().getErrorMessage(), data.getExecuteDto().getErrorNodeId()));
+            runLogService.saveLog(logPo);
+            log.info("线程保存日志完成");
+        });
 
         //如果是测试执行才做结构定义推断
         if (logPo.getRunType().equals(RunType.TEST)) {
@@ -302,7 +306,25 @@ public class RuleStartUtils {
             } else {
                 if (ObjectNull.isNotNull(bodyInDto.getDefaultValue())) {
                     //设置默认的值
-                    JvsJsonPath.set(obj, path, bodyInDto.getDefaultValue());
+                    //没有默认值，系统自动给默认值
+                    if (String.class.equals(inputTypeMap.get(bodyInDto.getInputType()))) {
+                        JvsJsonPath.set(obj, path, bodyInDto.getDefaultValue());
+                    }
+                    if (Integer.class.equals(inputTypeMap.get(bodyInDto.getInputType()))) {
+                        JvsJsonPath.set(obj, path, Integer.valueOf(bodyInDto.getDefaultValue().toString()));
+                    }
+                    if (Boolean.class.equals(inputTypeMap.get(bodyInDto.getInputType()))) {
+                        JvsJsonPath.set(obj, path, Boolean.valueOf(bodyInDto.getDefaultValue().toString()));
+                    }
+                    if (List.class.equals(inputTypeMap.get(bodyInDto.getInputType()))) {
+                        JvsJsonPath.set(obj, path, JSONArray.parseArray(bodyInDto.getDefaultValue().toString()));
+                    }
+                    if (Object.class.equals(inputTypeMap.get(bodyInDto.getInputType()))) {
+                        JvsJsonPath.set(obj, path, com.alibaba.fastjson2.JSONObject.parseObject(bodyInDto.getDefaultValue().toString()));
+                    }
+                    if (Number.class.equals(inputTypeMap.get(bodyInDto.getInputType()))) {
+                        JvsJsonPath.set(obj, path, new BigDecimal(bodyInDto.getDefaultValue().toString()));
+                    }
                 } else {
                     //没有默认值，系统自动给默认值
                     if (String.class.equals(inputTypeMap.get(bodyInDto.getInputType()))) {

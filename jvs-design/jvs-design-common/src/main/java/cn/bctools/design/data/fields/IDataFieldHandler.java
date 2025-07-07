@@ -1,20 +1,20 @@
 package cn.bctools.design.data.fields;
 
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.BeanCopyUtil;
-import cn.bctools.common.utils.JvsJsonPath;
-import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.common.utils.SpringContextUtil;
+import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.function.Get;
 import cn.bctools.design.data.entity.DynamicDataPo;
 import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
 import cn.bctools.design.data.fields.dto.FieldPublicHtml;
 import cn.bctools.design.data.fields.dto.QueryConditionDto;
 import cn.bctools.design.data.fields.dto.form.MultipleHtml;
+import cn.bctools.design.data.fields.dto.form.html.TableFormItemHtml;
 import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.fields.enums.DataQueryType;
 import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.util.DynamicDataUtils;
+import cn.bctools.function.component.ExpressionComponent;
+import cn.bctools.function.entity.dto.ExecDto;
 import cn.bctools.function.entity.vo.ElementVo;
 import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
@@ -187,7 +187,7 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
     /**
      * 解析下级字段
      * 于用公式逻辑处理
-     * 此方法已经摒弃,使用 {@linkplain IDataFieldHandler#next(List, FieldPublicHtml, Map, ElementVo) }代替
+     * 此方法已经摒弃,使用 {@linkplain IDataFieldHandler#next(java.util.List, cn.bctools.design.data.fields.dto.FieldPublicHtml, java.util.Map, cn.bctools.function.entity.vo.ElementVo) }代替
      *
      * @param list       公式数据
      * @param publicHtml 字段对象信息
@@ -272,8 +272,13 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
                     return queryConditionDto;
                 }).collect(Collectors.toList());
                 // 需要有查询条件查询数据进行替换
-                if (ObjectNull.isNotNull(queryConditionDtos) && e.getDataLinkageList().size() == queryConditionDtos.size()) {
-                    setValue(appId, e.getDataLinkageModelId(), e, map, collect, Collections.singletonList(queryConditionDtos), parentPath);
+                if (ObjectNull.isNotNull(queryConditionDtos) && e.getDataLinkageList().size() == queryConditionDtos.size() && ObjectNull.isNotNull(e.getDataLinkageModelId())) {
+                    //如果是动态流程，并不存在这个值时
+                    if ((!map.containsKey(e.getProp())) && DataFieldType.flowNode.equals(e.getType())) {
+                        setValue(appId, e.getDataLinkageModelId(), e, map, collect, Collections.singletonList(queryConditionDtos), parentPath);
+                    } else {
+                        setValue(appId, e.getDataLinkageModelId(), e, map, collect, Collections.singletonList(queryConditionDtos), parentPath);
+                    }
                 } else {
                     //如果触发器为空,则关联值为默认值
                     if (ObjectNull.isNull(map.get(key))) {
@@ -303,6 +308,10 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
                     }
                 }
             }
+            ExpressionComponent bean = SpringContextUtil.getBean(ExpressionComponent.class);
+            String designId = SystemThreadLocal.get("designId");
+            ExecDto execDto = new ExecDto().setIndex(index).setModifiedField(e.getProp()).setParams(map).setParentKey(collect);
+            bean.getExpression(designId, "formItemValue", execDto);
         }
     }
 
@@ -538,8 +547,9 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
      * @param o 数据
      * @throws Exception the exception
      */
-    default void checkDataFieldType(T t, Object o) throws Exception {
+    default Object checkDataFieldType(T t, Object o) throws Exception {
         //默认不处理数据类型格式
+        return o;
     }
 
     /**

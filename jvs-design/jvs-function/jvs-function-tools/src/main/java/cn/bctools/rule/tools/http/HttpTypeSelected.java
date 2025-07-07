@@ -24,7 +24,7 @@ public class HttpTypeSelected implements ParameterSelected<Method> {
     /**
      * 获取请求方法类型
      *
-     * @return {@linkplain List<ParameterOption>}
+     * @return {@linkplain java.util.List<ParameterOption>}
      * @author: guojing
      */
     @Override

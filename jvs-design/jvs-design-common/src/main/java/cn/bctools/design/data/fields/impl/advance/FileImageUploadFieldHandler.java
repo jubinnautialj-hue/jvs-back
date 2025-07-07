@@ -80,11 +80,12 @@ public class FileImageUploadFieldHandler implements IDataFieldHandler<ImageUploa
     }
 
     @Override
-    public void checkDataFieldType(ImageUploadHtml imagesHtml, Object o) throws Exception {
+    public Object checkDataFieldType(ImageUploadHtml imagesHtml, Object o) throws Exception {
         if (o instanceof Map || o instanceof List || o instanceof FileNameDto) {
         } else {
             throw new RuntimeException("正确格式为键值对");
         }
+        return o;
     }
 
 

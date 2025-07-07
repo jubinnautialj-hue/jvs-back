@@ -2,6 +2,7 @@ package cn.bctools.design.config;
 
 import cn.bctools.design.filter.AppInterceptor;
 import cn.bctools.design.filter.BaseInterceptor;
+import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.permission.AppPermissionHandler;
 import cn.bctools.design.permission.DesignPermissionHandler;
 import cn.bctools.design.permission.ResourcePermissionHandler;
@@ -43,7 +44,7 @@ public class JvsAppConfig {
      * @return the base interceptor
      */
     @Bean
-    BaseInterceptor baseInterceptor(JvsAppService jvsAppService, JvsAppVersionService jvsAppVersionService) {
-        return new BaseInterceptor(jvsAppService, jvsAppVersionService);
+    BaseInterceptor baseInterceptor(JvsAppService jvsAppService, JvsAppVersionService jvsAppVersionService, IdentificationService identificationService) {
+        return new BaseInterceptor(jvsAppService, jvsAppVersionService, identificationService);
     }
 }

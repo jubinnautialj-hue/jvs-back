@@ -5,7 +5,7 @@
 
     <parent>
         <groupId>cn.bctools</groupId>
-        <artifactId>jvs-design</artifactId>
+        <artifactId>jvs</artifactId>
         <version>2.3</version>
     </parent>
 

@@ -31,12 +31,11 @@ public class DataModelAggregateDto {
     @ParameterValue(info = "数据模型", explain = "选择当前应用下的模型", type = InputType.selected, cls = DataModelSelected.class, linkFields = {"fields", "body", "groupBy"}, linkCls = DataModelLinkSelected.class)
     public String dataModelId;
 
-    @NotNull(message = "查询条件不能为空")
     @ParameterValue(info = "查询条件", type = InputType.dataModelFilterField, necessity = false)
     public List<QueryConditionDto> body;
 
-    @ParameterValue(info = "分组字段", type = InputType.selected, necessity = false)
-    public String groupBy;
+    @ParameterValue(info = "分组字段", type = InputType.multipleSelected, necessity = false)
+    public Object groupBy;
 
     @ParameterValue(info = "聚合类型", necessity = false, type = InputType.selected, cls = AggregateTypeSelected.class)
     public AggregateEnumType type;

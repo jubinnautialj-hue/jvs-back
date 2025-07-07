@@ -86,6 +86,10 @@ public class FieldPublicHtml extends FieldJsonHtml {
     private List<String> showFrom;
     @ApiModelProperty("接口数据-显示值与传递值")
     private FormValueHtml props;
+    @ApiModelProperty("显示隐藏")
+    private List<FormValueHtml> displayExpress;
+    @ApiModelProperty("条件且或  &  表示关系||")
+    private String showOperator;
     private Object linkbind;
     private int minlength;
     private int maxlength;

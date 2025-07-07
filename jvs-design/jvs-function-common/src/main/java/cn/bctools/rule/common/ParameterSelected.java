@@ -1,6 +1,7 @@
 package cn.bctools.rule.common;
 
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.ObjectNull;
 
 import java.util.Collections;
 import java.util.List;
@@ -32,7 +33,12 @@ public interface ParameterSelected<T> extends DefaultValueParameter {
      * @return 返回关联字段的key string
      */
     default String key() {
-        return null;
+        List<ParameterOption<T>> options = getOptions();
+        if (ObjectNull.isNotNull(options)) {
+            return options.get(0).getValue().toString();
+        } else {
+            return null;
+        }
     }
 
 }

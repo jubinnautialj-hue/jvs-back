@@ -71,7 +71,6 @@ public class TaskServiceImpl implements TaskService {
      * 启动流程锁key
      */
     private static final String START_FLOW_LOCK = "start:flow:lock";
-
     private final RedisUtils redisUtils;
     private final FlowDesignService flowDesignService;
     private final FlowTaskService flowTaskService;
@@ -135,6 +134,11 @@ public class TaskServiceImpl implements TaskService {
         try {
             if (!redisUtils.tryLock(lockKey, LOCK_EXPIRE_TIME)) {
                 throw new BusinessException("正在启动流程,请勿重复操作");
+            }
+            // 检查是否有未结束的任务，若有未结束的任务，则不启动新流程
+            boolean startFlow = havePendingTask(dataId);
+            if (startFlow) {
+                return new StartFlowResDto();
             }
             FlowTask flowTask = flowTaskService.buildSaveFlowTask(flowDesignModelId, flowDesign, design, dataId, variables.getSendFormId());
             flowTask.setCreateTime(LocalDateTime.now());

@@ -900,6 +900,10 @@ public class RuleItemParam implements IJvsParam<ElementVo> {
         FieldBasicsHtml basicsHtml = new FieldBasicsHtml();
         basicsHtml.setFieldKey(Get.name(DynamicDataPo::getId)).setFieldName("数据id").setType(DataFieldType.input);
         list.add(0, fieldDto2ElementVo(basicsHtml, e1));
+        list.add(0,
+                new ElementVo().setId(e1.getId() + PREFIX + "import").setName(e1.getName() + SHOW_PREFIX + "导入判断").setInfo(e1.getId() + SHOW_PREFIX + "判断导入操作,如果是下拉值来源于逻辑时，需要判断导入操作时返回所有的可选项。").setType(e1.getType()).setShortName(
+                        "导入判断").setJvsParamType(JvsParamType.bool));
+
         //避免嵌套后没有前缀强制添加一个前缀
         list.forEach(e -> {
             if (!e.getId().startsWith(e1.getId() + PREFIX)) {

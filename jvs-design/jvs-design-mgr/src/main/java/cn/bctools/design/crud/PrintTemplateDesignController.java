@@ -84,14 +84,14 @@ public class PrintTemplateDesignController {
                                  @PathVariable String designId,
                                  @PathVariable String bucketName,
                                  @RequestParam("file") MultipartFile file,
-                                 @RequestParam(value = "module", required = false) String module,
+                                 @RequestParam(value = "module", required = false, defaultValue = "print") String module,
                                  @RequestParam(value = "label", defaultValue = "默认") String label) {
         // 校验文件
         String fileName = file.getOriginalFilename();
         PrintTemplateFileUtil.checkFileType(PrintTemplateFileUtil.getFileTypeByName(fileName));
         // 上传文件
         SystemThreadLocal.set("label", label);
-        BaseFile source = ossTemplate.putFile(bucketName, module, file.getInputStream());
+        BaseFile source = ossTemplate.putFile(bucketName, module, file.getName(), file);
         String fileLink = ossTemplate.fileLink(source.getFileName(), bucketName);
         // 保存文件模板
         PrintTemplateDto printTemplateDto = new PrintTemplateDto()

@@ -220,6 +220,7 @@ public class DataModelServiceImpl extends ServiceImpl<DataModelMapper, DataModel
                 .select(DataModelPo::getId, DataModelPo::getAppId, DataModelPo::getName,  DataModelPo::getIndexFields, DataModelPo::getCreateTime, DataModelPo::getCollectionName, DataModelPo::getEnableModelField)
                 .eq(ObjectNull.isNotNull(appId), DataModelPo::getAppId, appId)
                 .eq(ObjectNull.isNotNull(dto.getEnableWorkflow()), DataModelPo::getEnableWorkflow, dto.getEnableWorkflow())
+                .like(ObjectNull.isNotNull(dto.getId()), DataModelPo::getId, dto.getId())
                 .like(ObjectNull.isNotNull(dto.getName()), DataModelPo::getName, dto.getName())
                 .like(ObjectNull.isNotNull(dto.getCollectionName()), DataModelPo::getCollectionName, dto.getCollectionName())
                 .orderByDesc(DataModelPo::getCreateTime));

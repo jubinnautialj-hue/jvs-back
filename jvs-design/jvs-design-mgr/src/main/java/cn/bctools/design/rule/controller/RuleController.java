@@ -12,6 +12,7 @@ import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.design.project.service.JvsAppService;
+import cn.bctools.design.rule.HtmlGraphUtils;
 import cn.bctools.design.rule.api.dto.RuleDto;
 import cn.bctools.design.rule.component.XxlJobComponent;
 import cn.bctools.design.rule.entity.RuleDesignPo;
@@ -436,6 +437,9 @@ public class RuleController {
         if (RuleType.Timing_logic.equals(ruleDesignPo.getReqType()) && ObjectNull.isNull(cronId)) {
             lockKey = SysConstant.redisKey(RULE_DESIGN_EDIT_LOCK, ruleDesignPo.getSecret());
         }
+        HtmlGraph graph = JSONObject.parseObject(ruleDesignPo.getDesignDrawingJson(), HtmlGraph.class);
+        //检查同一条路径是否有两条异步线
+        HtmlGraphUtils.duplicateSyncLine(graph);
         try {
             if (ObjectNull.isNotNull(lockKey)) {
                 boolean lock = redisUtils.tryLock(lockKey, LOCK_EXPIRE_TIME);

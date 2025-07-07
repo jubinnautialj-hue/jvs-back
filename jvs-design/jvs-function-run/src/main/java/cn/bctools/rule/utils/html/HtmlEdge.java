@@ -65,5 +65,8 @@ public class HtmlEdge {
      * 描述
      */
     private String desc;
+    public boolean isAsync(){
+        return "async".equals(this.getState());
+    }
 
 }

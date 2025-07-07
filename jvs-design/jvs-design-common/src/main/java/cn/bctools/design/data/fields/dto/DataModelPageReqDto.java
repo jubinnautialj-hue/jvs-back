@@ -16,6 +16,9 @@ public class DataModelPageReqDto {
     @ApiModelProperty("模型名称")
     private String name;
 
+    @ApiModelProperty("模型id")
+    private String id;
+
     @ApiModelProperty("数据集名")
     private String collectionName;
 

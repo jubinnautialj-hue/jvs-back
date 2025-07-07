@@ -1,4 +1,4 @@
-package cn.bctools.rule.data.mongo;//package cn.bctools.rule.data.mongo;
+//package cn.bctools.rule.data.mongo;
 //
 //public enum MongodbOperationTypeEnum {
 //    /**
