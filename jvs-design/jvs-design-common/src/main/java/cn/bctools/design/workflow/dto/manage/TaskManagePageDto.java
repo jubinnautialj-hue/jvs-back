@@ -23,6 +23,9 @@ public class TaskManagePageDto {
     @ApiModelProperty(value = "流程标题")
     private String title;
 
+    @ApiModelProperty(value = "应用id")
+    private String jvsAppId;
+
     @ApiModelProperty(value = "模式")
     private AppVersionTypeEnum mode;
 }
