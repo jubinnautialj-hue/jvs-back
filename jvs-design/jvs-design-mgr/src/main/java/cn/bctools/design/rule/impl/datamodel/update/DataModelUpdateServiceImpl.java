@@ -70,7 +70,7 @@ public class DataModelUpdateServiceImpl implements BaseCustomFunctionInterface<D
     public Object execute(DataModelUpdateDto dataModelDto, Map<String, Object> params) {
         DynamicDataUtils.freePermit();
         dataModelDto.getBody().keySet().forEach(e -> {
-            if (dataModelDto.getBody().get(e).equals(DynamicDataConstant.DATA_EMPTY)) {
+            if (DynamicDataConstant.DATA_EMPTY.equals(dataModelDto.getBody().get(e))) {
                 dataModelDto.getBody().put(e, null);
             }
         });
