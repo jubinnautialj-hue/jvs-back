@@ -184,6 +184,7 @@ public class FlowTaskManageController {
         return R.ok(pageDto);
     }
 
+    @Log
     @ApiOperation("流程导出")
     @GetMapping("/exportTaskManage")
     public void exportTaskManage(TaskManagePageDto dto, HttpServletResponse response) throws IOException {
