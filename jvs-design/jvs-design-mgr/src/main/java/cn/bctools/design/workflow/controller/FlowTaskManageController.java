@@ -137,7 +137,7 @@ public class FlowTaskManageController {
             taskNodeIdMap = Optional.ofNullable(flowTaskNodeService.getCurrentNodeByTaskIds(taskIds))
                     .orElseGet(ArrayList::new)
                     .stream()
-                    .collect(Collectors.groupingBy(FlowTaskNode::getFlowTaskId, Collectors.mapping(FlowTaskNode::getNodeId, Collectors.toList())));
+                    .collect(Collectors.groupingBy(FlowTaskNode::getFlowTaskId,Collectors.mapping(FlowTaskNode::getNodeId, Collectors.toList())));
             // 查询任务节点待处理人
             pendingTaskPersonMap = ObjectNull.isNull(taskIds) ? Collections.emptyMap() :
                     flowTaskPersonService.listPerson(taskIds)

@@ -109,10 +109,12 @@ public class RuleExternalPo implements Serializable {
                     }
                     Boolean cache = a.get("cache") == null ? false : Boolean.parseBoolean(a.toString());
                     Object orDefault = a.getOrDefault("paramType", ParameterType.BODY.name());
-                    ParameterType parameterType = ParameterType.valueOf(orDefault.toString());
-                    s.setSupportFunction(true)
-                            .setParamType(parameterType)
-                            .setInfo(s.getExplain()).setCache(cache);
+                    if (ObjectNull.isNotNull(orDefault)) {
+                        ParameterType parameterType = ParameterType.valueOf(orDefault.toString());
+                        s.setSupportFunction(true)
+                                .setParamType(parameterType)
+                                .setInfo(s.getExplain()).setCache(cache);
+                    }
                     return s;
                 })
                 .collect(Collectors.toList());

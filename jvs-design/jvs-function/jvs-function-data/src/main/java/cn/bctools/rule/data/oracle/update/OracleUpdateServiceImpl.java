@@ -15,10 +15,10 @@ import cn.bctools.rule.service.ModelInterface;
 import cn.hutool.core.util.StrUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.stereotype.Service;
 
-import java.sql.SQLException;
 import java.util.Map;
 import java.util.Properties;
 import java.util.function.Function;
@@ -39,6 +39,7 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class OracleUpdateServiceImpl implements BaseCustomFunctionInterface<OracleBaseDto> {
 
+    @Autowired
     ModelInterface modelInterface;
 
 
@@ -52,6 +53,10 @@ public class OracleUpdateServiceImpl implements BaseCustomFunctionInterface<Orac
         Object byKey = modelInterface.getByKey(dto.getDatabaseName());
         OracleSelectedOption option = BeanCopyUtil.copy(OracleSelectedOption.class, byKey);
         String replace = SQLStringUtils.replace(dto.getExecSql(), dto.getParam());
+        replace = replace.trim();
+        if (replace.endsWith(";")) {
+            replace = replace.substring(0, replace.length() - 1);
+        }
         Function<OracleSelectedOption, DriverManagerDataSource> oracle_templateFunction = e -> {
             DriverManagerDataSource dataSource = new DriverManagerDataSource();
             String url = ClientConfig.ORACLE_URL.apply(option);
@@ -66,11 +71,38 @@ public class OracleUpdateServiceImpl implements BaseCustomFunctionInterface<Orac
             dataSource.setConnectionProperties(properties);
             return dataSource;
         };
-
-        try {
-            return ClientConfig.init(option, oracle_templateFunction).updateData(replace);
-        } catch (Exception e) {
-        }
-        return null;
+        return ClientConfig.init(option, oracle_templateFunction).updateData(replace);
     }
+
+//    public static void main(String[] args) {
+//        OracleSelectedOption option = new OracleSelectedOption();
+//
+//        option.setServerName("ORCL");
+//        option.setSourcePort(1521);
+//        option.setSourcePwd("sjzxgx@2025");
+//        option.setSourceHost("10.0.0.110");
+//        option.setSourceUserName("usr_share");
+//
+//        OracleBaseDto oracleBaseDto = new OracleBaseDto();
+//        oracleBaseDto.setExecSql("SELECT 1 FROM DUAL");
+//        oracleBaseDto.setParam(new HashMap<>());
+//        String replace = SQLStringUtils.replace(oracleBaseDto.getExecSql(), oracleBaseDto.getParam());
+//        Function<OracleSelectedOption, DriverManagerDataSource> oracle_templateFunction = e -> {
+//            DriverManagerDataSource dataSource = new DriverManagerDataSource();
+//            String url = ClientConfig.ORACLE_URL.apply(option);
+//            dataSource.setUrl(url);
+//            dataSource.setDriverClassName("oracle.jdbc.driver.OracleDriver");
+//            dataSource.setUsername(option.getSourceUserName());
+//            dataSource.setPassword(option.getSourcePwd());
+//            //链接的属性
+//            Properties properties = new Properties();
+//            //设置超时时间
+//            properties.setProperty("connectTimeout", String.valueOf(10000));
+//            dataSource.setConnectionProperties(properties);
+//            return dataSource;
+//        };
+//
+//        Object o = ClientConfig.init(option, oracle_templateFunction).updateData(replace);
+//        System.out.println(o);
+//    }
 }

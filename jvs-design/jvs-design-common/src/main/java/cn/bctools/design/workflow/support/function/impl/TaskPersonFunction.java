@@ -91,6 +91,10 @@ public class TaskPersonFunction extends AbstractFunctionHandler<List<FlowApprova
                 initData(runtimeData);
                 userList = getPersonnelFieldUsers(node, runtimeData.getData());
                 break;
+            case DEPT:
+                // 根据指定的单个、多个部门查找部门主管
+                userList = getDeptUsers(node);
+                break;
             default:
                 log.info("待审批人类型[{}]不存在", node.getProps().getType());
                 break;
@@ -240,7 +244,7 @@ public class TaskPersonFunction extends AbstractFunctionHandler<List<FlowApprova
         // 找每个用户的主管
         userList.forEach(user -> {
             Set<String> deptIds = user.getDept().stream().map(DeptDto::getDeptId).collect(Collectors.toSet());
-            Map<Integer, Set<SysDeptDto>> currentuserParentLevelDeptMap = findLevelDept(deptIds, sysDeptDtoList, leaderLevel, runtimeData.getUser());
+            Map<Integer, Set<SysDeptDto>> currentuserParentLevelDeptMap = findLevelDept(deptIds, sysDeptDtoList, leaderLevel, user);
             currentuserParentLevelDeptMap.forEach((deptLevel, deptList) -> {
                 if (parentLevelDeptMap.containsKey(deptLevel)) {
                     parentLevelDeptMap.get(deptLevel).addAll(deptList);
@@ -279,7 +283,7 @@ public class TaskPersonFunction extends AbstractFunctionHandler<List<FlowApprova
             return Collections.emptyList();
         }
         // 上级部门集合
-        Map<Integer, Set<SysDeptDto>> parentLevelDeptMap = findLevelDept(deptIds, sysDeptDtoList, leaderLevel, runtimeData.getUser());
+        Map<Integer, Set<SysDeptDto>> parentLevelDeptMap = findLevelDept(deptIds, sysDeptDtoList, leaderLevel, sendUserDto);
         // 按部门顺序获取部门主管信息
         return queryLevelDeptLeaderUsers(parentLevelDeptMap, leaderLevel, assignLevel);
     }
@@ -506,8 +510,6 @@ public class TaskPersonFunction extends AbstractFunctionHandler<List<FlowApprova
     }
 
 
-
-
     /**
      * 查询成员字段对应的人员
      *
@@ -593,5 +595,30 @@ public class TaskPersonFunction extends AbstractFunctionHandler<List<FlowApprova
                 )
                 .distinct()
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * 获取指定部门人员
+     *
+     * <p>>
+     * 默认只获取指定部门的主管
+     *
+     * @param node 节点
+     * @return 用户集合
+     */
+    private List<FlowApprovalUserDTO> getDeptUsers(Node node) {
+        // 查询所有指定部门的主管
+        List<String> deptIds = node.getProps().getTargetObj().getPersonnelIdByType(TargetObjectTypeEnum.dept);
+        if (ObjectNull.isNull(deptIds)) {
+            throw new BusinessException("节点未设置审批人", node.getName());
+        }
+        SearchUserDto search = new SearchUserDto();
+        search.setDeptLeaderIds(deptIds);
+
+        List<UserDto> userDtos = authUserServiceApi.userSearch(search).getData();
+        if (ObjectNull.isNull(userDtos)) {
+            return Collections.emptyList();
+        }
+        return BeanCopyUtil.copys(userDtos, FlowApprovalUserDTO.class);
     }
 }

@@ -22,13 +22,19 @@ import java.util.Map;
 public class OracleBaseDto {
 
     @NotNull(message = "数据源不能为空")
-    @ParameterValue(info = "目标数据源", type = InputType.selected,  cls = OracleSelected.class)
+    @ParameterValue(info = "目标数据源", explain = "示例值:\n\n{\n" +
+            "  \"sourceHost\": \"127.0.0.1\",\n" +
+            "  \"sourcePort\": \"1521\",\n" +
+            "  \"serverName\": \"ORCL\",\n" +
+            "  \"sourceUserName\": \"user\",\n" +
+            "  \"sourcePwd\": \"password\"\n" +
+            "}", type = InputType.selected, cls = OracleSelected.class)
     public String databaseName;
 
     @NotNull(message = "执行SQL语句不能为空")
-    @ParameterValue(info = "SQL执行语句", type = InputType.sql,explain = "内容中如果存在变量,则自动替换,变量示例:${变量名}")
+    @ParameterValue(info = "SQL执行语句", type = InputType.sql, explain = "内容中如果存在变量,则自动替换,变量示例:${变量名}")
     public String execSql;
 
-    @ParameterValue(info = "参数变量", type = InputType.map,necessity = false)
+    @ParameterValue(info = "参数变量", type = InputType.map, necessity = false)
     public Map<String, Object> param;
 }

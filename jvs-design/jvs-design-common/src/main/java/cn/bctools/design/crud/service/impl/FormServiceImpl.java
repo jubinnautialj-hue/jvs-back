@@ -461,6 +461,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
             //获取多个字段集
             Optional<FieldBasicsHtml> formId = dataFieldService.getAllField(appId, String.valueOf(map.get("formId")))
                     .stream()
+                    .filter(e -> id.equals(e.getDesignId()))
                     //必须要是多选的控件组件
                     .filter(s -> s.getType().equals(DataFieldType.checkbox))
                     .findFirst();
@@ -478,11 +479,15 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                 for (Map<String, Object> form : design.getFormdata().get(0).getForms()) {
                     for (Map<String, Object> prop : props) {
                         //获取多选的属性值
-                        ArrayList arrayList = (ArrayList) prop.get(fieldKey1);
-                        if (ObjectNull.isNotNull(arrayList) && arrayList.contains(form.get("prop"))) {
-                            List displayExpress = (List) form.getOrDefault("displayExpress", new ArrayList<>());
-                            displayExpress.add(Dict.create().set("prop", map.get("prop")).set("label", map.get("label")).set("value", prop.get("id")));
-                            form.put("displayExpress", displayExpress);
+                        try {
+                            ArrayList arrayList = (ArrayList) prop.get(fieldKey1);
+                            if (ObjectNull.isNotNull(arrayList) && arrayList.contains(form.get("prop"))) {
+                                List displayExpress = (List) form.getOrDefault("displayExpress", new ArrayList<>());
+                                displayExpress.add(Dict.create().set("prop", map.get("prop")).set("label", map.get("label")).set("value", prop.get("id")));
+                                form.put("displayExpress", displayExpress);
+                            }
+                        } catch (Exception e) {
+                            throw new RuntimeException("多选匹配失败:" + fieldKey1);
                         }
                     }
                 }

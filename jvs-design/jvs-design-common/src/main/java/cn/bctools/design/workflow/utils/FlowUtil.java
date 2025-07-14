@@ -653,6 +653,7 @@ public class FlowUtil {
                 break;
             case JOB:
             case ROLE:
+            case DEPT:
             case ASSIGN_USER:
                 // 兼容旧数据，未配置是否禁止动态选择审批人时，默认为false
                 disableDynamicApprover = Optional.ofNullable(props.getDisableDynamicApprover()).orElse(false);

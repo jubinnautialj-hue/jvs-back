@@ -1067,12 +1067,17 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         Page<Map<String, Object>> mapPage = new Page<>(current, size);
         List<Criteria> criteriaList = DynamicDataUtils.getAuthCriteria();
         Criteria authCriteria = DynamicDataUtils.trueCriteria();
+        List<Criteria> list = new ArrayList<>();
         //将查询条件和列表过滤条件进行分离
         if (ObjectNull.isNotNull(conditions)) {
             //列表过滤条件
             List<QueryConditionDto> collect = conditions.stream().flatMap(Collection::stream).filter(QueryConditionDto::getCrud).collect(Collectors.toList());
+            List<QueryConditionDto> queryConditionDtoList = conditions.stream()
+                    .flatMap(Collection::stream).filter(s -> !s.getCrud())
+                    .collect(Collectors.toList());
+            queryConditionDtoList.removeIf(collect::contains);
             //过滤出列表过滤的数据
-            if (ObjectNull.isNotNull(collect)) {
+            if (ObjectNull.isNotNull(collect) && ObjectNull.isNull(queryConditionDtoList)) {
                 //将列表过滤和数据权限添加上组合查询
                 List<Criteria> crud = buildDynamicCriteriaList(collect);
                 if (ObjectNull.isNotNull(criteriaList, crud)) {
@@ -1082,36 +1087,80 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 } else if (ObjectNull.isNotNull(crud)) {
                     authCriteria = DynamicDataUtils.trueCriteria().andOperator(crud);
                 }
-            } else if (ObjectNull.isNotNull(criteriaList)) {
+            } else if (ObjectNull.isNotNull(criteriaList) && ObjectNull.isNull(queryConditionDtoList)) {
                 if (criteriaList.size() == 1) {
                     authCriteria = DynamicDataUtils.trueCriteria().andOperator(criteriaList);
                 } else {
                     authCriteria = DynamicDataUtils.trueCriteria().orOperator(criteriaList);
                 }
             }
-            conditions = conditions.stream().map(e -> e.stream().filter(s -> !s.getCrud()).collect(Collectors.toList())).collect(Collectors.toList());
+            if (ObjectNull.isNotNull(collect, queryConditionDtoList)) {
+                List<QueryConditionDto> conditionDtos = queryConditionDtoList.stream().filter(e -> !DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
+                //将列表过滤和数据权限添加上组合查询
+                List<Criteria> crud = buildDynamicCriteriaList(collect);
+                List<QueryConditionDto> conditionDtoList = queryConditionDtoList.stream().filter(e -> DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
+                if (ObjectNull.isNotNull(conditionDtos)) {
+                    List<Criteria> criteria = buildDynamicCriteriaList(conditionDtos);
+                    if (ObjectNull.isNotNull(criteria)) {
+                        crud.addAll(criteria);
+                    }
+                    if (andOr) {
+                        if (ObjectNull.isNotNull(criteriaList, crud)) {
+                            authCriteria = DynamicDataUtils.trueCriteria().andOperator(crud).orOperator(criteriaList);
+                        } else if (ObjectNull.isNotNull(criteriaList)) {
+                            authCriteria = DynamicDataUtils.trueCriteria().andOperator(criteriaList);
+                        } else if (ObjectNull.isNotNull(crud)) {
+                            authCriteria = DynamicDataUtils.trueCriteria().andOperator(crud);
+                        }
+                    } else {
+                        if (ObjectNull.isNotNull(conditionDtoList)) {
+                            List<Criteria> buildDynamicCriteriaList = buildDynamicCriteriaList(conditionDtoList);
+                            if (ObjectNull.isNotNull(criteria, crud)) {
+                                criteria.forEach(e -> e.andOperator(crud));
+                                authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
+                            } else if (ObjectNull.isNotNull(criteriaList) && ObjectNull.isNull(crud)) {
+                                authCriteria = DynamicDataUtils.trueCriteria().andOperator(buildDynamicCriteriaList);
+                            } else if (ObjectNull.isNotNull(crud) && ObjectNull.isNull(buildDynamicCriteriaList)) {
+                                authCriteria = DynamicDataUtils.trueCriteria().andOperator(crud);
+                            } else if (ObjectNull.isNotNull(crud) && ObjectNull.isNotNull(buildDynamicCriteriaList)) {
+                                buildDynamicCriteriaList.forEach(e -> e.andOperator(crud));
+                                authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
+                            }
+                        }
+                    }
+                } else if (ObjectNull.isNotNull(conditionDtoList)) {
+                    List<Criteria> buildDynamicCriteriaList = buildDynamicCriteriaList(conditionDtoList);
+                    if (ObjectNull.isNotNull(buildDynamicCriteriaList, crud)) {
+                        buildDynamicCriteriaList.forEach(e -> e.andOperator(crud));
+                        authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
+                    } else if (ObjectNull.isNotNull(criteriaList) && ObjectNull.isNull(crud)) {
+                        authCriteria = DynamicDataUtils.trueCriteria().andOperator(buildDynamicCriteriaList);
+                    } else if (ObjectNull.isNotNull(crud) && ObjectNull.isNull(buildDynamicCriteriaList)) {
+                        authCriteria = DynamicDataUtils.trueCriteria().andOperator(crud);
+                    }
+                }
+            } else if (ObjectNull.isNull(collect) && ObjectNull.isNotNull(queryConditionDtoList)) {
+                List<QueryConditionDto> conditionDtos = queryConditionDtoList.stream().filter(e -> !DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
+                List<QueryConditionDto> conditionDtoList = queryConditionDtoList.stream().filter(e -> DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
+                List<Criteria> buildDynamicCriteriaList = buildDynamicCriteriaList(conditionDtoList);
+                List<Criteria> dynamicCriteriaList = buildDynamicCriteriaList(conditionDtos);
+                if (ObjectNull.isNotNull(buildDynamicCriteriaList, dynamicCriteriaList)) {
+                    buildDynamicCriteriaList.forEach(e -> e.andOperator(dynamicCriteriaList));
+                    authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
+                } else if (ObjectNull.isNotNull(buildDynamicCriteriaList) && ObjectNull.isNull(dynamicCriteriaList)) {
+                    authCriteria = DynamicDataUtils.trueCriteria().andOperator(buildDynamicCriteriaList);
+                } else if (ObjectNull.isNull(buildDynamicCriteriaList) && ObjectNull.isNotNull(dynamicCriteriaList)) {
+                    authCriteria = DynamicDataUtils.trueCriteria().andOperator(dynamicCriteriaList);
+                }
+            } else if (ObjectNull.isNull(collect) && ObjectNull.isNull(queryConditionDtoList)) {
+
+            } else if (ObjectNull.isNotNull(criteriaList, queryConditionDtoList)) {
+
+            }
         } else if (ObjectNull.isNotNull(criteriaList)) {
             authCriteria = DynamicDataUtils.trueCriteria().orOperator(criteriaList);
         }
 
-        List<Criteria> list = new ArrayList<>();
-        //拼接查询条件
-        if (ObjectNull.isNotNull(conditions)) {
-            List<QueryConditionDto> queryConditionDtos = Optional.ofNullable(conditions).map(c -> c.get(0)).orElse(new ArrayList<>());
-            if (andOr) {
-                //过滤出有 key的
-                List<QueryConditionDto> collect = queryConditionDtos.stream().filter(e -> !DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
-                if (ObjectNull.isNotNull(collect)) {
-                    List<Criteria> criteria = buildDynamicCriteriaList(collect);
-                    authCriteria.andOperator(criteria);
-                }
-            } else {
-                List<QueryConditionDto> collect = queryConditionDtos.stream().filter(e -> DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
-                if (ObjectNull.isNotNull(collect)) {
-                    list = DynamicDataUtils.buildDynamicCriteriaList(collect);
-                }
-            }
-        }
         Boolean isFree = SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_FREE);
         Query query;
         if (ObjectNull.isNotNull(list)) {

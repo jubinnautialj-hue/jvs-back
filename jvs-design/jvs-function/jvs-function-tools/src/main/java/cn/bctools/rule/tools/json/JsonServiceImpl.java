@@ -44,7 +44,9 @@ public class JsonServiceImpl implements BaseCustomFunctionInterface<JsonDto> {
     @Override
     public void inspect(JsonDto o) {
         if (!JSONUtil.isTypeJSONObject(o.getContent())) {
-            throw new BusinessException("不支持的操作类型");
+            if (!JSONUtil.isTypeJSONArray(o.getContent())) {
+                throw new BusinessException("不支持的操作类型");
+            }
         }
     }
 }

@@ -15,6 +15,7 @@ import cn.bctools.rule.service.ModelInterface;
 import cn.hutool.core.util.StrUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.stereotype.Service;
 
@@ -38,6 +39,7 @@ import java.util.function.Function;
 @RequiredArgsConstructor
 public class OracleDeleteServiceImpl implements BaseCustomFunctionInterface<OracleBaseDto> {
 
+    @Autowired
     ModelInterface modelInterface;
 
     @Override
@@ -50,7 +52,10 @@ public class OracleDeleteServiceImpl implements BaseCustomFunctionInterface<Orac
         Object byKey = modelInterface.getByKey(dto.getDatabaseName());
         OracleSelectedOption option = BeanCopyUtil.copy(OracleSelectedOption.class, byKey);
         String replace = SQLStringUtils.replace(dto.getExecSql(), dto.getParam());
-
+        replace = replace.trim();
+        if (replace.endsWith(";")) {
+            replace = replace.substring(0, replace.length() - 1);
+        }
         Function<OracleSelectedOption, DriverManagerDataSource> oracle_templateFunction = e -> {
             DriverManagerDataSource dataSource = new DriverManagerDataSource();
             String url = ClientConfig.ORACLE_URL.apply(option);
@@ -66,10 +71,6 @@ public class OracleDeleteServiceImpl implements BaseCustomFunctionInterface<Orac
             return dataSource;
         };
 
-        try {
-            return ClientConfig.init(option, oracle_templateFunction).updateData(replace);
-        } catch (Exception e) {
-        }
-        return null;
+        return ClientConfig.init(option, oracle_templateFunction).updateData(replace);
     }
 }
