@@ -1,5 +1,7 @@
 package cn.bctools.design.workflow.controller;
 
+import cn.bctools.auth.api.api.AuthUserServiceApi;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
@@ -80,7 +82,8 @@ public class FlowTaskManageController {
     private final ApplicationEventPublisher applicationEventPublisher;
     private final FlowTaskNodeService flowTaskNodeService;
     private final FlowTaskPersonService flowTaskPersonService;
-    UseComponent useComponent;
+    private final AuthUserServiceApi userServiceApi;
+    private final UseComponent useComponent;
 
     @Log
     @ApiOperation("流程任务分页")
@@ -114,6 +117,11 @@ public class FlowTaskManageController {
         }
         // 填充数据
         List<PageFlowTaskManageResDto> resultList = BeanCopyUtil.copys(page.getRecords(), PageFlowTaskManageResDto.class);
+        resultList.forEach(task->{
+            R<UserDto> byId = userServiceApi.getById(task.getCreateById());
+            task.setCreateDeptName(byId.getData().getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(",")));
+        });
+
         pageDto.setRecords(resultList);
         pageDto.setTotal(page.getTotal());
         // 未结束的任务id
@@ -333,6 +341,8 @@ public class FlowTaskManageController {
             }
             FlowUtil.clearNodeCache();
             TaskManageExcelDto excel = BeanCopyUtil.copy(task, TaskManageExcelDto.class);
+            R<UserDto> byId = userServiceApi.getById(task.getCreateById());
+            excel.setCreateDeptName(byId.getData().getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(",")));
             excel.setId(task.getId());
             excel.setNodeName(currentNodeName.deleteCharAt(currentNodeName.length() - 1).toString());
             excel.setArrivalTime(Date.from(task.getUpdateTime().atZone(ZoneId.systemDefault()).toInstant()));

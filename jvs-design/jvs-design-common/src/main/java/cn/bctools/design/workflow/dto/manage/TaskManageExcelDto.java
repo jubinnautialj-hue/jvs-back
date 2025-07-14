@@ -37,6 +37,10 @@ public class TaskManageExcelDto {
 //    @ExcelProperty(value = "流程标题")
 //    private String title;
 
+    @ApiModelProperty(value = "发起人单位名称")
+    @ExcelProperty(value = "发起人单位名称")
+    private String createDeptName;
+
     @ApiModelProperty(value = "发起人")
     @ExcelProperty(value = "发起人")
     private String createBy;
