@@ -1,10 +1,12 @@
 package cn.bctools.design.workflow.controller;
 
-import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.*;
+import cn.bctools.common.utils.BeanCopyUtil;
+import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.R;
+import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.design.notice.handler.enums.TriggerTypeEnum;
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.design.project.service.JvsAppVersionService;
@@ -31,6 +33,7 @@ import cn.bctools.design.workflow.support.listener.asynctask.AsyncTaskDynamicDat
 import cn.bctools.design.workflow.support.listener.notify.FlowNotifyEvent;
 import cn.bctools.design.workflow.utils.FlowUtil;
 import cn.bctools.log.annotation.Log;
+import cn.bctools.oauth2.utils.AuthorityManagementUtils;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.web.utils.IpUtil;
 import cn.hutool.core.lang.tree.Tree;
@@ -82,7 +85,6 @@ public class FlowTaskManageController {
     private final ApplicationEventPublisher applicationEventPublisher;
     private final FlowTaskNodeService flowTaskNodeService;
     private final FlowTaskPersonService flowTaskPersonService;
-    private final AuthUserServiceApi userServiceApi;
     private final UseComponent useComponent;
 
     @Log
@@ -118,8 +120,8 @@ public class FlowTaskManageController {
         // 填充数据
         List<PageFlowTaskManageResDto> resultList = BeanCopyUtil.copys(page.getRecords(), PageFlowTaskManageResDto.class);
         resultList.forEach(task -> {
-            R<UserDto> byId = userServiceApi.getById(task.getCreateById());
-            task.setCreateDeptName(byId.getData().getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(",")));
+            UserDto userById = AuthorityManagementUtils.getUserById(task.getCreateById());
+            task.setCreateDeptName(userById.getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(",")));
         });
 
         pageDto.setRecords(resultList);
@@ -286,8 +288,8 @@ public class FlowTaskManageController {
                             .collect(Collectors.groupingBy(FlowTaskPerson::getFlowTaskId));
         }
         for (FlowTask task : records) {
-            R<UserDto> byId = userServiceApi.getById(task.getCreateById());
-            String deptName = byId.getData().getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(","));
+            UserDto userById = AuthorityManagementUtils.getUserById(task.getCreateById());
+            String deptName = userById.getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(","));
             LinkedList<CourseDto> courses = task.getCourses();
             for (int i = 0; i < courses.size(); i++) {
                 CourseDto course = courses.get(i);

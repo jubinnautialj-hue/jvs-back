@@ -123,12 +123,6 @@
             <groupId>org.springframework.integration</groupId>
             <artifactId>spring-integration-mqtt</artifactId>
         </dependency>
-        <dependency>
-            <groupId>cn.bctools</groupId>
-            <artifactId>jvs-auth-common</artifactId>
-            <version>2.3</version>
-            <scope>compile</scope>
-        </dependency>
 
 
     </dependencies>
