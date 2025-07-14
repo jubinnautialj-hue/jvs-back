@@ -117,7 +117,7 @@ public class FlowTaskManageController {
         }
         // 填充数据
         List<PageFlowTaskManageResDto> resultList = BeanCopyUtil.copys(page.getRecords(), PageFlowTaskManageResDto.class);
-        resultList.forEach(task->{
+        resultList.forEach(task -> {
             R<UserDto> byId = userServiceApi.getById(task.getCreateById());
             task.setCreateDeptName(byId.getData().getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(",")));
         });
@@ -137,7 +137,7 @@ public class FlowTaskManageController {
             taskNodeIdMap = Optional.ofNullable(flowTaskNodeService.getCurrentNodeByTaskIds(taskIds))
                     .orElseGet(ArrayList::new)
                     .stream()
-                    .collect(Collectors.groupingBy(FlowTaskNode::getFlowTaskId,Collectors.mapping(FlowTaskNode::getNodeId, Collectors.toList())));
+                    .collect(Collectors.groupingBy(FlowTaskNode::getFlowTaskId, Collectors.mapping(FlowTaskNode::getNodeId, Collectors.toList())));
             // 查询任务节点待处理人
             pendingTaskPersonMap = ObjectNull.isNull(taskIds) ? Collections.emptyMap() :
                     flowTaskPersonService.listPerson(taskIds)
@@ -286,6 +286,8 @@ public class FlowTaskManageController {
                             .collect(Collectors.groupingBy(FlowTaskPerson::getFlowTaskId));
         }
         for (FlowTask task : records) {
+            R<UserDto> byId = userServiceApi.getById(task.getCreateById());
+            String deptName = byId.getData().getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(","));
             LinkedList<CourseDto> courses = task.getCourses();
             for (int i = 0; i < courses.size(); i++) {
                 CourseDto course = courses.get(i);
@@ -295,6 +297,7 @@ public class FlowTaskManageController {
                     excel.setId(task.getId());
                     excel.setNodeName(course.getNodeName());
                     excel.setUserName(approveResultDto.getUserName());
+                    excel.setCreateDeptName(deptName);
                     ApproveOpinionDto opinion = approveResultDto.getOpinion();
                     excel.setContent(opinion != null ? opinion.getContent() : "");
                     excel.setTime(DateUtil.parse(approveResultDto.getTime(), DateUtil.PATTERN_DATETIME));
@@ -341,8 +344,7 @@ public class FlowTaskManageController {
             }
             FlowUtil.clearNodeCache();
             TaskManageExcelDto excel = BeanCopyUtil.copy(task, TaskManageExcelDto.class);
-            R<UserDto> byId = userServiceApi.getById(task.getCreateById());
-            excel.setCreateDeptName(byId.getData().getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(",")));
+            excel.setCreateDeptName(deptName);
             excel.setId(task.getId());
             excel.setNodeName(currentNodeName.deleteCharAt(currentNodeName.length() - 1).toString());
             excel.setArrivalTime(Date.from(task.getUpdateTime().atZone(ZoneId.systemDefault()).toInstant()));
