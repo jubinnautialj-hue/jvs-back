@@ -530,6 +530,7 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
                 // 无表单，不显示
                 .isNotNull("t.form_id")
                 .like(StringUtils.isNotBlank(dto.getFlowName()), "t.name", dto.getFlowName())
+                .like(StringUtils.isNotBlank(dto.getTitle()), "t.title", dto.getTitle())
                 .like(StringUtils.isNotBlank(dto.getSendUser()), "t.create_by", dto.getSendUser())
                 .like(StringUtils.isNotBlank(dto.getTaskCode()), "t.task_code", dto.getTaskCode());
         baseMapper.pendingApprovePage(page, queryWrapper);

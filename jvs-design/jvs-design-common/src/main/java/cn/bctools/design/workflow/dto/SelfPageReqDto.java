@@ -17,6 +17,9 @@ public class SelfPageReqDto {
     @ApiModelProperty(value = "任务名称")
     private String name;
 
+    @ApiModelProperty(value = "任务标题")
+    private String title;
+
     @ApiModelProperty(value = "状态")
     private FlowTaskStatusEnum taskStatus;
 
