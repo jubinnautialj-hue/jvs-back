@@ -147,7 +147,7 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
                 "        \"position\": \"right\"\n" +
                 "    },\n" +
                 "    \"multiple\": false,\n" +
-                "    \"showalllevels\": true,\n" +
+                "    \"showalllevels\": false,\n" +
                 "    \"collapsetags\": false,\n" +
                 "    \"emitPath\": false,\n" +
                 "    \"showFrom\": [\n" +
