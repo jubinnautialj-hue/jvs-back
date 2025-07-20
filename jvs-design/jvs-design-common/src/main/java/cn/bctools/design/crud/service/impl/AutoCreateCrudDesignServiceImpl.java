@@ -189,9 +189,9 @@ public class AutoCreateCrudDesignServiceImpl implements AutoCreateCrudDesignServ
             }
             {
                 ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                buttonDesignHtml.setEnable(true);
-                buttonDesignHtml.setIsDefault(true);
-                buttonDesignHtml.setMobileEnable(true);
+                buttonDesignHtml.setEnable(false);
+                buttonDesignHtml.setIsDefault(false);
+                buttonDesignHtml.setMobileEnable(false);
                 buttonDesignHtml.setName("导入");
                 buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                 buttonDesignHtml.setPosition("top");
@@ -200,9 +200,9 @@ public class AutoCreateCrudDesignServiceImpl implements AutoCreateCrudDesignServ
             }
             {
                 ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                buttonDesignHtml.setEnable(true);
-                buttonDesignHtml.setIsDefault(true);
-                buttonDesignHtml.setMobileEnable(true);
+                buttonDesignHtml.setEnable(false);
+                buttonDesignHtml.setIsDefault(false);
+                buttonDesignHtml.setMobileEnable(false);
                 buttonDesignHtml.setName("导出");
                 buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                 buttonDesignHtml.setPosition("top");
@@ -212,9 +212,9 @@ public class AutoCreateCrudDesignServiceImpl implements AutoCreateCrudDesignServ
             }
             {
                 ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                buttonDesignHtml.setEnable(true);
-                buttonDesignHtml.setIsDefault(true);
-                buttonDesignHtml.setMobileEnable(true);
+                buttonDesignHtml.setEnable(false);
+                buttonDesignHtml.setIsDefault(false);
+                buttonDesignHtml.setMobileEnable(false);
                 buttonDesignHtml.setName("下载模板");
                 buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                 buttonDesignHtml.setPosition("top");
@@ -312,7 +312,7 @@ public class AutoCreateCrudDesignServiceImpl implements AutoCreateCrudDesignServ
                         .setCancal(false)
                         .setBtnSetting(btnSetting)
                         .setPopupWidth(50)
-                        .setPopupType("drawer"));
+                        .setPopupType("dialog"));
 
         formDesignHtml.setFormType(FormTypeEnum.normalForm);
         formPo.setViewJson(JSONObject.toJSONString(formDesignHtml));

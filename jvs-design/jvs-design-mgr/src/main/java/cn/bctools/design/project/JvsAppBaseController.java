@@ -55,7 +55,6 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.transaction.annotation.Transactional;
@@ -416,10 +415,10 @@ public class JvsAppBaseController {
                 }
                 {
                     ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                    buttonDesignHtml.setEnable(true);
+                    buttonDesignHtml.setEnable(false);
                     buttonDesignHtml.setFormType("normalForm");
-                    buttonDesignHtml.setIsDefault(true);
-                    buttonDesignHtml.setMobileEnable(true);
+                    buttonDesignHtml.setIsDefault(false);
+                    buttonDesignHtml.setMobileEnable(false);
                     buttonDesignHtml.setName("导入");
                     buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                     buttonDesignHtml.setPosition("top");
@@ -428,10 +427,10 @@ public class JvsAppBaseController {
                 }
                 {
                     ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                    buttonDesignHtml.setEnable(true);
+                    buttonDesignHtml.setEnable(false);
                     buttonDesignHtml.setFormType("normalForm");
-                    buttonDesignHtml.setIsDefault(true);
-                    buttonDesignHtml.setMobileEnable(true);
+                    buttonDesignHtml.setIsDefault(false);
+                    buttonDesignHtml.setMobileEnable(false);
                     buttonDesignHtml.setName("导出");
                     buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                     buttonDesignHtml.setPosition("top");
@@ -441,10 +440,10 @@ public class JvsAppBaseController {
                 }
                 {
                     ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                    buttonDesignHtml.setEnable(true);
+                    buttonDesignHtml.setEnable(false);
                     buttonDesignHtml.setFormType("normalForm");
-                    buttonDesignHtml.setIsDefault(true);
-                    buttonDesignHtml.setMobileEnable(true);
+                    buttonDesignHtml.setIsDefault(false);
+                    buttonDesignHtml.setMobileEnable(false);
                     buttonDesignHtml.setName("下载模板");
                     buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                     buttonDesignHtml.setPosition("top");
@@ -527,7 +526,7 @@ public class JvsAppBaseController {
                                 .setCancal(false)
                                 .setBtnSetting(btnSetting)
                                 .setPopupWidth(50)
-                                .setPopupType("drawer"));
+                                .setPopupType("dialog"));
                 formDesignHtml.setFormType(FormTypeEnum.normalForm);
                 formPo.setViewJson(JSONObject.toJSONString(formDesignHtml));
                 List<DataFieldPo> datafields =
@@ -574,7 +573,7 @@ public class JvsAppBaseController {
                                 .setCancal(false)
                                 .setBtnSetting(btnSetting)
                                 .setPopupWidth(50)
-                                .setPopupType("drawer"));
+                                .setPopupType("dialog"));
                 formDesignHtml.setFormType(FormTypeEnum.normalForm);
                 formPo.setViewJson(JSONObject.toJSONString(formDesignHtml));
                 formService.updateById(formPo);
@@ -610,7 +609,7 @@ public class JvsAppBaseController {
                                 .setCancal(false)
                                 .setBtnSetting(btnSetting)
                                 .setPopupWidth(50)
-                                .setPopupType("drawer"));
+                                .setPopupType("dialog"));
                 formDesignHtml.setFormType(FormTypeEnum.normalForm);
                 formPo.setViewJson(JSONObject.toJSONString(formDesignHtml));
                 formService.updateById(formPo);
