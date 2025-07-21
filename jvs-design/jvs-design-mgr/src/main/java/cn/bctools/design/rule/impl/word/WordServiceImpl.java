@@ -66,7 +66,7 @@ public class WordServiceImpl implements BaseCustomFunctionInterface<WordDto> {
             //表示 excel输出
             ExcelVariablesReplaceUtil.writeExcel(wordDto.getBody(), new ByteArrayInputStream(templateBytes), outputStream);
         } else {
-            wordDto.setFileName(wordDto.getFileName() + StrUtil.DOT + wordDto.getFileType());
+            //wordDto.setFileName(wordDto.getFileName() + StrUtil.DOT + wordDto.getFileType());
             String fileName = wordDto.getFileUrl();
             fileName = fileName.substring(fileName.lastIndexOf(StrUtil.DOT) + 1);
             if (!fileName.contains(DOC)) {
