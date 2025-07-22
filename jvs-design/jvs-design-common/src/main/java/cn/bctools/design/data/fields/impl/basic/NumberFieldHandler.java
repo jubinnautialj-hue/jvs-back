@@ -129,7 +129,7 @@ public class NumberFieldHandler implements IDataFieldHandler<InputNumberHtml> {
                 "    ],\n" +
                 "    \"linkbind\": \"\",\n" +
                 "    \"min\": 0,\n" +
-                "    \"max\": 0,\n" +
+                "    \"max\": 99999999,\n" +
                 "    \"step\": 1,\n" +
                 "    \"stepstrictly\": false,\n" +
                 "    \"precision\": 0,\n" +
