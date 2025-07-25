@@ -27,14 +27,12 @@ import me.zhyd.oauth.cache.AuthStateCache;
 import me.zhyd.oauth.config.AuthConfig;
 import me.zhyd.oauth.config.AuthSource;
 import me.zhyd.oauth.enums.AuthResponseStatus;
-import me.zhyd.oauth.enums.scope.AuthWeChatEnterpriseWebScope;
 import me.zhyd.oauth.exception.AuthException;
 import me.zhyd.oauth.model.AuthCallback;
 import me.zhyd.oauth.model.AuthToken;
 import me.zhyd.oauth.model.AuthUser;
 import me.zhyd.oauth.request.AuthDefaultRequest;
 import me.zhyd.oauth.utils.AuthChecker;
-import me.zhyd.oauth.utils.AuthScopeUtils;
 import me.zhyd.oauth.utils.HttpUtils;
 import me.zhyd.oauth.utils.UrlBuilder;
 import org.apache.commons.collections4.CollectionUtils;
@@ -132,6 +130,26 @@ public class OauthOtherRequest extends AuthDefaultRequest {
         String response = null;
         String url = accessTokenUrl(authCallback.getCode());
         log.info("get Token url" + url);
+        if (ObjectNull.isNull(oauthOther.getUrlType(), oauthOther.getParameterType())) {
+            response = getResponse(url, authCallback);
+        } else {
+            if ("post".equals(oauthOther.getUrlType()) && "url".equals(oauthOther.getParameterType())) {
+                response = doPostAuthorizationCode(authCallback.getCode());
+            }
+            if ("post".equals(oauthOther.getUrlType()) && "form".equals(oauthOther.getParameterType())) {
+                response = getResponse(url, authCallback);
+            }
+            if ("get".equals(oauthOther.getUrlType())) {
+                response = doGetAuthorizationCode(authCallback.getCode());
+            }
+        }
+        log.info("获取的 token 信息为,{}", response);
+        JSONObject object = JSONObject.parseObject(response);
+        checkResponse(object);
+        return AuthToken.builder().accessToken(object.getString("access_token")).refreshToken(object.getString("refresh_token")).idToken(object.getString("id_token")).tokenType(object.getString("token_type")).scope(object.getString("scope")).build();
+    }
+
+    private String getResponse(String url, AuthCallback authCallback) {
         try {
             UrlBuilder urlBuilder = UrlBuilder.fromBaseUrl(source.accessToken())
                     .queryParam("code", authCallback.getCode())
@@ -145,15 +163,11 @@ public class OauthOtherRequest extends AuthDefaultRequest {
                     .header(HttpHeaders.CONTENT_TYPE, ContentType.FORM_URLENCODED.getValue())
                     .form(readOnlyParams);
             log.info("请求路径" + body);
-            response = body.executeAsync().body();
+            return body.executeAsync().body();
         } catch (Exception e) {
             log.error("post获取 token 异常 : url : " + url + "\n", e);
-            response = doGetAuthorizationCode(authCallback.getCode());
+            return doGetAuthorizationCode(authCallback.getCode());
         }
-        log.info("获取的 token 信息为,{}", response);
-        JSONObject object = JSONObject.parseObject(response);
-        checkResponse(object);
-        return AuthToken.builder().accessToken(object.getString("access_token")).refreshToken(object.getString("refresh_token")).idToken(object.getString("id_token")).tokenType(object.getString("token_type")).scope(object.getString("scope")).build();
     }
 
     /**

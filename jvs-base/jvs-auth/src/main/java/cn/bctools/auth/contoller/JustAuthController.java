@@ -217,7 +217,7 @@ public class JustAuthController {
             String redirectUri = (String) redisUtils.get(SysConstant.redisKey("just", state));
             if (ObjectNull.isNull(redirectUri)) {
                 //默认值
-                redirectUri = "http://" + jvsSystemConfig.getDomain() + ":" + jvsSystemConfig.getService().get(0).getPort() + "/";
+                redirectUri = jvsSystemConfig.getProtocol() + jvsSystemConfig.getDomain() + ":" + jvsSystemConfig.getService().get(0).getPort() + "/";
             }
             if (redirectUri.indexOf("?") > 0) {
                 response.sendRedirect(redirectUri + "&code=" + code);

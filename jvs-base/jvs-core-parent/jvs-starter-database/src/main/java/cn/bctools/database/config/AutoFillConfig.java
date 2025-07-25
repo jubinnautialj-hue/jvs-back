@@ -7,6 +7,7 @@ import cn.bctools.common.entity.dto.UserInfoDto;
 import cn.bctools.common.utils.SystemThreadLocal;
 import cn.bctools.common.utils.function.Get;
 import cn.bctools.database.entity.po.BasePo;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.ibatis.reflection.MetaObject;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 
@@ -16,6 +17,7 @@ import java.time.LocalDateTime;
  * @author zhuxiaokang
  * 自动填充
 */
+@Slf4j
 @ConditionalOnMissingBean(value = {MetaObjectHandler.class})
 public class AutoFillConfig implements MetaObjectHandler {
 

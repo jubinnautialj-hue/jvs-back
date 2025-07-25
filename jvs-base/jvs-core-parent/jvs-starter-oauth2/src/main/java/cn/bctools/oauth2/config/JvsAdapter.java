@@ -190,7 +190,10 @@ public class JvsAdapter {
                 if (ObjectNull.isNotNull(finalContext)) {
                     //设置上下文user对象
                     RequestContextHolder.setRequestAttributes(finalContext);
-                    SystemThreadLocal.set("user", finalAuthenticationAuthentication.getPrincipal());
+                    Object principal = finalAuthenticationAuthentication.getPrincipal();
+                    if (!(principal instanceof String)) {
+                        SystemThreadLocal.set("user", principal);
+                    }
                     SecurityContextHolder.getContext().setAuthentication(finalAuthenticationAuthentication);
                 }
                 // 2. 缓存租户id

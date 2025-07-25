@@ -67,6 +67,7 @@ public class GatewayErrorConfig implements ErrorWebExceptionHandler {
      * The Config mapper.
      */
     ConfigMapper configMapper;
+    NacosDiscoveryProperties nacosDiscoveryProperties;
 
     @Override
     public Mono<Void> handle(ServerWebExchange exchange, Throwable ex) {
@@ -104,7 +105,7 @@ public class GatewayErrorConfig implements ErrorWebExceptionHandler {
         //转义
         String s = StackTraceElementUtils.logThrowableToString(ex);
         String env = SpringContextUtil.getEnv();
-        String msg = env + SpringContextUtil.getBean(NacosDiscoveryProperties.class).getIp() + "网关错误拦截:请求地址:" + path + "返回信息:" + body + ",异常信息为:" + s;
+        String msg = env + nacosDiscoveryProperties.getIp() + " _ " + nacosDiscoveryProperties.getPort() + "网关错误拦截:请求地址:" + path + "返回信息:" + body + ",异常信息为:" + s;
         log.error(msg);
         //发送消息
         try {

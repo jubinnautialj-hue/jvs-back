@@ -1,7 +1,6 @@
 package cn.bctools.word.utils;
 
 import cn.bctools.common.utils.ObjectNull;
-import cn.hutool.core.img.Img;
 import cn.hutool.http.HttpUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
@@ -9,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.SneakyThrows;
 import org.apache.commons.collections4.CollectionUtils;
+import org.apache.poi.util.Units;
 import org.docx4j.dml.wordprocessingDrawing.Inline;
 import org.docx4j.jaxb.Context;
 import org.docx4j.openpackaging.packages.WordprocessingMLPackage;
@@ -84,8 +84,8 @@ public class WordImageUtil {
                 continue;
             }
             if (HttpUtil.isHttp(image) || HttpUtil.isHttps(image)) {
-                byte[] imageBytes = scale(image, imgParam.getW(), imgParam.getH());
-                R r = WordImageUtil.newImageR(mlPackage, imageBytes);
+                byte[] imageBytes = getImageBytes(image);
+                R r = WordImageUtil.newWidthAndHeightImageR(mlPackage, imageBytes, null, null, imgParam.getW(), imgParam.getH());
                 imageRs.add(r);
             }
         }
@@ -93,24 +93,13 @@ public class WordImageUtil {
     }
 
     /**
-     * 图片缩放
+     * 获取图片
      *
      * @param imgUrl 图片地址
-     * @param width  宽
-     * @param height 高
-     * @return 缩放后的图片byte[]
+     * @return 原图片byte[]
      */
-    private static byte[] scale(String imgUrl, Integer width, Integer height) {
-        byte[] bytes = HttpUtil.downloadBytes(imgUrl);
-        if (ObjectNull.isNull(width) || ObjectNull.isNull(height)) {
-            return bytes;
-        }
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        Img.from(new ByteArrayInputStream(bytes))
-                .setTargetImageType("jpg")
-                .scale(width, height, java.awt.Color.WHITE)
-                .write(byteArrayOutputStream);
-        return byteArrayOutputStream.toByteArray();
+    private static byte[] getImageBytes(String imgUrl) {
+        return HttpUtil.downloadBytes(imgUrl);
     }
 
 
@@ -182,6 +171,26 @@ public class WordImageUtil {
     /**
      * 生成图片
      *
+     * @param wordmlpackage
+     * @param imageBytes
+     * @param filenameHint  任何文本，例如原始文件名
+     * @param altText       类似HTML的alt文本
+     * @param width  宽
+     * @param height 高
+     * @return R
+     */
+    @SneakyThrows
+    public static R newWidthAndHeightImageR(WordprocessingMLPackage wordmlpackage, byte[] imageBytes, String filenameHint, String altText, Integer width, Integer height) {
+        int id1 = (int) ((Math.random() * 1000) * (Math.random() * 1000));
+        int id2 = (int) ((Math.random() * 1000) * (Math.random() * 1000));
+        width = Optional.ofNullable(width).orElse(0);
+        height = Optional.ofNullable(height).orElse(0);
+        return newImageR(wordmlpackage, imageBytes, filenameHint, altText, id1, id2, width, height);
+    }
+
+    /**
+     * 生成图片
+     *
      * @param aPackage
      * @param imageBytes
      * @param filenameHint 任何文本，例如原始文件名
@@ -192,8 +201,33 @@ public class WordImageUtil {
      */
     @SneakyThrows
     public static R newImageR(WordprocessingMLPackage aPackage, byte[] imageBytes, String filenameHint, String altText, int id1, int id2) {
+        return newImageR(aPackage, imageBytes, filenameHint, altText, id1, id2, 0, 0);
+    }
+
+    /**
+     * 生成图片
+     *
+     * @param aPackage
+     * @param imageBytes
+     * @param filenameHint 任何文本，例如原始文件名
+     * @param altText      类似HTML的alt文本
+     * @param id1          文档中唯一的id
+     * @param id2          文档中另一个唯一的id
+     * @param width  宽
+     * @param height 高
+     * @return R
+     */
+    @SneakyThrows
+    public static R newImageR(WordprocessingMLPackage aPackage, byte[] imageBytes, String filenameHint, String altText, int id1, int id2, int width, int height) {
         BinaryPartAbstractImage imagePart = BinaryPartAbstractImage.createImagePart(aPackage, imageBytes);
-        Inline inline = imagePart.createImageInline(filenameHint, altText, id1, id2, false);
+        Inline inline = null;
+        if (width > 0 && height > 0 ) {
+            int widthEmu = Units.pixelToEMU(width);
+            int heightEmu = Units.pixelToEMU(height);
+            inline = imagePart.createImageInline(filenameHint, altText, id1, id2, widthEmu, heightEmu, false);
+        } else {
+            inline = imagePart.createImageInline(filenameHint, altText, id1, id2, false);
+        }
         ObjectFactory factory = Context.getWmlObjectFactory();
         R run = factory.createR();
         Drawing drawing = factory.createDrawing();
@@ -201,6 +235,8 @@ public class WordImageUtil {
         drawing.getAnchorOrInline().add(inline);
         return run;
     }
+
+
 
     /**
      * 图片参数

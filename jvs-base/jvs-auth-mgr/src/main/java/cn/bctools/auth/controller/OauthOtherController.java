@@ -51,9 +51,9 @@ public class OauthOtherController {
                         return null;
                     }
                     if (systemConfig.getMultiTenantMode()) {
-                        stringObjectMap.put("url", "http://" + config.getDomainName() + "." + systemConfig.getDomain() + "/auth/just/callback");
+                        stringObjectMap.put("url", systemConfig.getProtocol() + config.getDomainName() + "." + systemConfig.getDomain() + "/auth/just/callback");
                     } else {
-                        stringObjectMap.put("url", "http://" + systemConfig.getDomain() + ":" + e.getPort() + "/auth/just/callback");
+                        stringObjectMap.put("url", systemConfig.getProtocol() + systemConfig.getDomain() + ":" + e.getPort() + "/auth/just/callback");
                     }
                     return stringObjectMap;
                 }).filter(Objects::nonNull).collect(Collectors.toList());

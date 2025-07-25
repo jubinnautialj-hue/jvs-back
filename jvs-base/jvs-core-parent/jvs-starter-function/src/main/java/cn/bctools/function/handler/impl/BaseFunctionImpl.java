@@ -13,14 +13,11 @@ import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.json.JSONUtil;
-import com.alibaba.fastjson2.JSONArray;
-import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
 import groovy.lang.Script;
-import jdk.nashorn.internal.ir.ObjectNode;
 import lombok.Data;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
@@ -28,7 +25,9 @@ import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.core.annotation.Order;
 
-import java.util.*;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -140,7 +139,7 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
         int expectedParamCount = paramCount;
         Set<Integer> validParamCount = baseFunctionPo.getParamCount();
         boolean hasDynamicParam = Boolean.TRUE.equals(baseFunctionPo.getDynamicParam());
-        if (ObjectUtils.isEmpty(validParamCount)) {
+        if (!hasDynamicParam && ObjectUtils.isEmpty(validParamCount)) {
             throw new BusinessException("该函数的参数数量不确定_无法计算", functionName);
         }
         if (hasDynamicParam) {

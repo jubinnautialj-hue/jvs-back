@@ -112,7 +112,7 @@ public class DynamicResourceController {
                 }
             }
             DynamicResource dynamicResource =
-                    new DynamicResource().setClientId(e.getName().clientId).setType(e.getName()).setName(SpringContextUtil.msg(e.getName().msg)).setUrl("http://" + shortName + jvsSystemConfig.getDomain() + (jvsSystemConfig.getMultiTenantMode() && pattern.matcher(jvsSystemConfig.getDomain()).matches() ? "" :
+                    new DynamicResource().setClientId(e.getName().clientId).setType(e.getName()).setName(SpringContextUtil.msg(e.getName().msg)).setUrl(jvsSystemConfig.getProtocol() + shortName + jvsSystemConfig.getDomain() + (jvsSystemConfig.getMultiTenantMode() && pattern.matcher(jvsSystemConfig.getDomain()).matches() ? "" :
                             (":" + e.getPort()))).setDesc(e.getName().desc).setIconUrl(e.getName().iconUrl);
             if (e.getName().equals(ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION)) {
                 //判断资源类型是否包含，如果不包含就不返回

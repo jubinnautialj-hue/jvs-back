@@ -107,6 +107,8 @@ public class TokenController {
                     tokenResponse.setUsername(e.getPrincipalName());
                     UserDto userDto = user.getUserDto();
                     ConfigsTypeEnum configsTypeEnum = Arrays.stream(ConfigsTypeEnum.values()).filter(s -> clientId.equals(s.clientId)).findAny().get();
+                    String tenantId = userDto.getTenantId();
+                    TenantContextHolder.setTenantId(tenantId);
                     SysApplyConfig config = sysConfigsService.getConfig(configsTypeEnum);
                     userDto.getTenant().setSystemName(ObjectNull.isNotNull(config.getSystemName()) ? config.getSystemName() : configsTypeEnum.serviceName).setLogo(config.getLogo()).setIcon(config.getIcon());
                     //此处需要替换这个终端的Logo和icon

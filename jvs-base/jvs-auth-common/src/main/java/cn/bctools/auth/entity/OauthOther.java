@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableId;
 import com.baomidou.mybatisplus.annotation.TableName;
 import io.swagger.annotations.ApiModel;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
@@ -34,6 +35,10 @@ public class OauthOther implements Serializable {
      */
     @TableId(value = "id", type = IdType.ASSIGN_UUID)
     String id;
+    @Schema(name = "参数类型(form,url)")
+    String parameterType;
+    @Schema(name = "请求类型(post,get)")
+    String urlType;
     /**
      * 平台名称
      */

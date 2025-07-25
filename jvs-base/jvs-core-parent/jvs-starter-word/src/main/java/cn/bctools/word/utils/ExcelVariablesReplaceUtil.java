@@ -8,6 +8,8 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.ObjectUtil;
 import cn.hutool.core.util.ReUtil;
 import cn.hutool.core.util.StrUtil;
+import cn.hutool.http.HttpUtil;
+import com.alibaba.fastjson2.JSONObject;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -30,21 +32,33 @@ public class ExcelVariablesReplaceUtil {
 
     @SneakyThrows
     public static void main(String[] args) {
+
         Map<Object, Map<String, Object>> map = new HashMap<>();
         Map<String, Object> cellMap = new HashMap<>();
         cellMap.put("table", "A6Rx11c(a,b,c,d,e,f,g,h,i,j,k)");
         map.put("附件2 固定资产投保需求统计表", cellMap);
+
+        String str = "{\"body\":{\"chepai\":\"姓名\",\"table\":[{\"id\":\"1921837383508008961\",\"ziDuan2\":\"2\",\"riQi_1\":\"\",\"riQi\":\"2025-07-30\"},{\"riQi\":\"2025-07-21\",\"id\":\"1946053966008233985\"," +
+                "\"ziDuan2\":\"123\",\"riQi_1\":\"2025-07-21\"}]},\"fileName\":\"测试\",\"fileType\":\"xlsx\",\"fileUrl\":\"http://10.0.0.201:9000/jvs-public/ten_1/2_3/jvs-auth-mgr/jvs-ui/file/2025/07/22/2025-07-221947480674225696768/%E6%96%B0%E6%B5%8B%E8%AF%95xin.xlsx\"}";
+        JSONObject jsonObject = JSONObject.parseObject(str);
+        byte[] bytes = HttpUtil.downloadBytes("http://10.0.0.201:9000/jvs-public/ten_1/2_3/jvs-auth-mgr/jvs-ui/file/2025/07/22/2025-07-221947480674225696768/%E6%96%B0%E6%B5%8B%E8%AF%95xin.xlsx");
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        ExcelVariablesReplaceUtil.writeExcel(jsonObject.getJSONObject("body"), new ByteArrayInputStream(bytes), outputStream);
+        byte[] byteArray = outputStream.toByteArray();
+
+
 //        List<Dict> dicts = ExcelVariablesReplaceUtil.searchData(new ByteArrayInputStream(HttpUtil.downloadBytes("http://10.0.0.219:9000/jvs-public/ten_1/2_2/jvs-auth-mgr/jvs-ui/file/2024/12/25/2024-12-251871808644700487680-%E9%99%84%E4%BB%B6%EF%BC%9A2024-2025%E5%B9%B4%E5%BA%A6%E8%B4%A2%E4%BA%A7%E4%BF%9D%E9%99%A9%E9%9C%80%E6%B1%82%E7%BB%9F%E8%AE%A1%E9%99%84%E4%BB%B61-5%202024-12-25.xlsx")),
 //                map);
         List<ExcelVariable> list = getList();
-        String pathname = "/Users/guojing/Desktop/aabc.xlsx";
-        File file = new File(pathname);
-        BufferedInputStream inputStream = FileUtil.getInputStream(file);
+        String pathname = "/Users/guojing/Desktop/资产负债表-合并2.xlsx";
+//        File file = new File(pathname);
+//        BufferedInputStream inputStream = FileUtil.getInputStream(file);
+
 //        ExcelUtils.readAll(inputStream, Object.class);
-        System.out.println(1);
-        ByteArrayOutputStream fos = new ByteArrayOutputStream();
-        writeExcel(list, inputStream, fos);
-        byte[] byteArray = fos.toByteArray();
+//        System.out.println(1);
+//        ByteArrayOutputStream fos = new ByteArrayOutputStream();
+//        writeExcel(list, inputStream, fos);
+//        byte[] byteArray = fos.toByteArray();
         FileUtil.writeBytes(byteArray, new File("abc.xlsx"));
 
 //        List<Dict> dicts2 = searchData(FileUtil.getInputStream(pathname), map);
@@ -101,6 +115,12 @@ public class ExcelVariablesReplaceUtil {
             Sheet sheet = workbook.getSheetAt(sheetI);
 
             AtomicInteger rowSize = new AtomicInteger();
+
+            listMap.get(sheetI).stream().filter(e -> !variableMap.containsKey(e.getName()))
+                    .forEach(e -> {
+                        //设置空
+                        sheet.getRow(e.getRow()).getCell(e.getColumn()).setBlank();
+                    });
             listMap.get(sheetI).stream().filter(e -> variableMap.containsKey(e.getName())).map(e -> {
                 ExcelVariable excelVariable = variableMap.get(e.getName());
                 return new ExcelVariable().setValue(excelVariable.getValue()).setType(excelVariable.getType()).setSheet(e.getSheet()).setRow(e.getRow()).setColumn(e.getColumn()).setName(e.getName());
@@ -117,6 +137,7 @@ public class ExcelVariablesReplaceUtil {
                             rowSize.addAndGet(rowList.size() - 1);
                             for (int i = 0; i < rowList.size() - 1; i++) {
                                 Row nowRow = sheet.createRow(e.getRow() + i);
+                                nowRow.setHeight(row.getHeight());
                                 //拷贝格式
                                 copyRow(row, nowRow);
                             }
@@ -128,6 +149,8 @@ public class ExcelVariablesReplaceUtil {
                         Cell cell = line.getCell(e.getColumn());
                         Object e1 = rowList.get(i);
                         if (ObjectNull.isNotNull(e1)) {
+                            // 2. 创建样式并启用自动换行
+                            cell.getCellStyle().setWrapText(true);
                             writeValue(cell, e1);
                         } else {
                             cell.setBlank();
@@ -135,6 +158,8 @@ public class ExcelVariablesReplaceUtil {
                     }
                 } else {
                     Cell cell = sheet.getRow(e.getRow() + rowSize.get()).getCell(e.getColumn());
+                    // 2. 创建样式并启用自动换行
+                    cell.getCellStyle().setWrapText(true);
                     write(cell, e);
                 }
             });
@@ -146,36 +171,17 @@ public class ExcelVariablesReplaceUtil {
 
 
     private static void copyRow(Row sourceRow, Row newRow) {
-        for (int i = 0; i < sourceRow.getPhysicalNumberOfCells(); i++) {
+        for (int i = 0; i <= sourceRow.getPhysicalNumberOfCells(); i++) {
             Cell sourceCell = sourceRow.getCell(i);
-            Cell newCell = newRow.createCell(i);
-
             if (sourceCell != null) {
                 // 复制单元格的样式
                 CellStyle newCellStyle = newRow.getSheet().getWorkbook().createCellStyle();
-                newCellStyle.cloneStyleFrom(sourceCell.getCellStyle());
+                CellStyle cellStyle = sourceCell.getCellStyle();
+                newCellStyle.cloneStyleFrom(cellStyle);
+                sourceCell.setBlank();
+                Cell newCell = newRow.createCell(i);
                 newCell.setCellStyle(newCellStyle);
-
-                // 复制单元格的值
-                switch (sourceCell.getCellType()) {
-                    case STRING:
-                        newCell.setCellValue(sourceCell.getStringCellValue());
-                        break;
-                    case NUMERIC:
-                        newCell.setCellValue(sourceCell.getNumericCellValue());
-                        break;
-                    case BOOLEAN:
-                        newCell.setCellValue(sourceCell.getBooleanCellValue());
-                        break;
-                    case FORMULA:
-                        newCell.setCellFormula(sourceCell.getCellFormula());
-                        break;
-                    case BLANK:
-                        newCell.setBlank();
-                        break;
-                    default:
-                        break;
-                }
+                newCell.setBlank();
             }
         }
     }
