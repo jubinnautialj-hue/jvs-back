@@ -77,22 +77,26 @@ public class NumberFieldHandler implements IDataFieldHandler<InputNumberHtml> {
             }
         }
         if (ObjectNull.isNotNull(inputNumberHtml.getMax())) {
-            if (o instanceof BigDecimal) {
-                if (((BigDecimal) o).compareTo(BigDecimal.valueOf(inputNumberHtml.getMax().longValue())) == 1) {
+            if (!inputNumberHtml.getMax().toString().contains("Infnity")) {
+                if (o instanceof BigDecimal) {
+                    if (((BigDecimal) o).compareTo(BigDecimal.valueOf(Long.valueOf(inputNumberHtml.getMax().toString()))) == 1) {
+                        throw new RuntimeException("数据超过最大值");
+                    }
+                } else if (Double.parseDouble(o.toString()) > Double.parseDouble(inputNumberHtml.getMax().toString())) {
+                    //判断是否超过最大最小
                     throw new RuntimeException("数据超过最大值");
                 }
-            } else if (Double.parseDouble(o.toString()) > inputNumberHtml.getMax()) {
-                //判断是否超过最大最小
-                throw new RuntimeException("数据超过最大值");
             }
         }
         if (ObjectNull.isNotNull(inputNumberHtml.getMin())) {
-            if (o instanceof BigDecimal) {
-                if (((BigDecimal) o).compareTo(BigDecimal.valueOf(inputNumberHtml.getMin().longValue())) == -1) {
-                    throw new RuntimeException("数据超过最大值");
+            if (!inputNumberHtml.getMax().toString().contains("Infnity")) {
+                if (o instanceof BigDecimal) {
+                    if (((BigDecimal) o).compareTo(BigDecimal.valueOf(Long.valueOf(inputNumberHtml.getMin().toString()))) == -1) {
+                        throw new RuntimeException("数据超过最大值");
+                    }
+                } else if (Double.parseDouble(o.toString()) < Double.parseDouble(inputNumberHtml.getMin().toString())) {
+                    throw new RuntimeException("数据小余最小值");
                 }
-            } else if (Double.parseDouble(o.toString()) < inputNumberHtml.getMin()) {
-                throw new RuntimeException("数据小余最小值");
             }
         }
         return o;
@@ -128,8 +132,8 @@ public class NumberFieldHandler implements IDataFieldHandler<InputNumberHtml> {
                 "        \"defaultUrl\"\n" +
                 "    ],\n" +
                 "    \"linkbind\": \"\",\n" +
-                "    \"min\": 0,\n" +
-                "    \"max\": 99999999,\n" +
+                "    \"min\": -9007199254740991,\n" +
+                "    \"max\": 9007199254740991,\n" +
                 "    \"step\": 1,\n" +
                 "    \"stepstrictly\": false,\n" +
                 "    \"precision\": 0,\n" +

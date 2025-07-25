@@ -38,7 +38,7 @@ public class Target {
      * @return id集合
      */
     public List<String> getPersonnelIdByType(TargetObjectTypeEnum type) {
-        if (TargetObjectTypeEnum.user_field.equals(type)) {
+        if (TargetObjectTypeEnum.user_field.equals(type) || TargetObjectTypeEnum.dept_field.equals(type) ) {
             return this.getPersonnels().stream()
                     .map(PersonnelDto::getId)
                     .collect(Collectors.toList());
@@ -59,7 +59,7 @@ public class Target {
         if (CollectionUtils.isEmpty(this.getPersonnels())) {
             return Collections.emptyList();
         }
-        if (TargetObjectTypeEnum.user_field.equals(type)) {
+        if (TargetObjectTypeEnum.user_field.equals(type) || TargetObjectTypeEnum.dept_field.equals(type)) {
             return this.getPersonnels();
         } else {
             return this.getPersonnels().stream().filter(r -> type.getValue().equals(r.getType().getValue())).collect(Collectors.toList());
@@ -88,6 +88,7 @@ public class Target {
             case LEADER_TOP:
             case LEADER:
             case USER_FIELD:
+            case DEPT_FIELD:
             default:
                 // 不需要校验类型
                 break;

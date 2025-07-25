@@ -501,7 +501,7 @@ public class DynamicDataUseController {
         }
         Map<String, Object> handler = expressionAfterHandler.handler(designId, init, body);
         //清除结果为空数组的字段
-        Map<String, Object> parse = JSON.parseObject(JSON.toJSONString(handler, JSONWriter.Feature.LargeObject, JSONWriter.Feature.NotWriteEmptyArray));
+        Map<String, Object> parse = JSON.parseObject(JSON.toJSONString(handler, JSONWriter.Feature.LargeObject));
         return R.ok(parse);
     }
 

@@ -34,4 +34,7 @@ public interface RuleApi {
      */
     @PostMapping(PREFIX + "/run/{key}")
     R run(@PathVariable("key") String key, @RequestBody Map<String, Object> dataMap);
+
+    @PostMapping(PREFIX + "/run/event/{key}")
+    Object event(@PathVariable("key") String key, @RequestBody Map<String, Object> dataMap);
 }

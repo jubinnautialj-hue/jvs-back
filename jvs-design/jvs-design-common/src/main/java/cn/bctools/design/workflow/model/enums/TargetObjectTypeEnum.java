@@ -32,6 +32,10 @@ public enum TargetObjectTypeEnum {
      * 成员字段
      */
     user_field("user_field"),
+    /**
+     * 部门字段
+     */
+    dept_field("dept_field"),
     ;
 
     private final String value;

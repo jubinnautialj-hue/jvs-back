@@ -187,7 +187,7 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
     /**
      * 解析下级字段
      * 于用公式逻辑处理
-     * 此方法已经摒弃,使用 {@linkplain IDataFieldHandler#next(java.util.List, cn.bctools.design.data.fields.dto.FieldPublicHtml, java.util.Map, cn.bctools.function.entity.vo.ElementVo) }代替
+     * 此方法已经摒弃,使用 {@linkplain IDataFieldHandler#next(List, FieldPublicHtml, Map, ElementVo) }代替
      *
      * @param list       公式数据
      * @param publicHtml 字段对象信息
@@ -225,6 +225,11 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
      */
     default void dataLinkage(String appId, Map<String, ? extends FieldPublicHtml> fieldMap, String key, T e, Map<String, Object> map, Integer index, String... parentPath) {
         if (ObjectNull.isNotNull(e.getDataLinkageList())) {
+            if (ObjectNull.isNotNull(e.getDataLinkageEnable())) {
+                if (!e.getDataLinkageEnable()) {
+                    return;
+                }
+            }
             DynamicDataService dynamicDataService = SpringContextUtil.getBean(DynamicDataService.class);
 
             //数据联动，获取当前控件的联动

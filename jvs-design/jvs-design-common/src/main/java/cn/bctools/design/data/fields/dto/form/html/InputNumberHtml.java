@@ -19,9 +19,9 @@ public class InputNumberHtml extends FieldBasicsHtml {
     @ApiModelProperty("小数位数")
     private Integer precision;
     @ApiModelProperty("最大值")
-    private Long max;
+    private Object max;
     @ApiModelProperty("最小值")
-    private Long min;
+    private Object min;
 
     @ApiModelProperty("默认值")
     private Long defaultValue;

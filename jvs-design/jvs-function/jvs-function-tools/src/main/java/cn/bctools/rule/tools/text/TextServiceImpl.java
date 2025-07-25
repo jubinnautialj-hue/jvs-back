@@ -37,7 +37,7 @@ public class TextServiceImpl implements BaseCustomFunctionInterface<TextFunction
     @Override
     public Object execute(TextFunctionDto dto, Map<String, Object> params) {
         if (ObjectNull.isNotNull(dto.getText())) {
-            dto.getText().keySet().forEach(e -> dto.setContent(dto.getContent().replaceAll("\\$\\{" + e + "}", dto.getText().getOrDefault(e, ""))));
+            dto.getText().keySet().forEach(e -> dto.setContent(dto.getContent().replaceAll("\\$\\{" + e + "}", ObjectNull.isNull(dto.getText().get(e)) ? "" : dto.getText().get(e))));
         }
         if (ObjectNull.isNotNull(dto.getClear())) {
             if (dto.getClear()) {

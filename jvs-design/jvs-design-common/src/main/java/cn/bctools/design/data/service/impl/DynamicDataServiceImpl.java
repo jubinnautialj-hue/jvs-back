@@ -1850,7 +1850,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     try {
                         if (ObjectNull.isNull(entry.getValue())) {
                             //可能是空数组 ，或空对象。当选择了用户部门，后又取消。
-                            entry.setValue(null);
+//                            entry.setValue(null);
                         } else {
                             String fieldKey = entry.getKey();
                             Object value = entry.getValue();
@@ -2382,12 +2382,16 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         Aggregation aggregation = Aggregation.newAggregation(operations);
         List<Map> mappedResults = dataModelHandler.aggregate(aggregation, collectionName);
         mappedResults.forEach(e -> {
-            if (groupBy.asList().size() == 1) {
-                e.put("name", e.get("_id"));
+            if (ObjectNull.isNotNull(groupBy)) {
+                if (groupBy.asList().size() == 1) {
+                    e.put("name", e.get("_id"));
+                } else {
+                    e.putAll((Map) e.get("_id"));
+                }
+                e.remove(("_id"));
             } else {
-                e.putAll((Map) e.get("_id"));
+                e.remove(("_id"));
             }
-            e.remove(("_id"));
         });
         return mappedResults;
     }

@@ -69,6 +69,9 @@ public class DataModelDataConvertShowServiceImpl implements BaseCustomFunctionIn
 
             //判断是单条还是多条数据
             List<Map<String, Object>> body = dto.getBody();
+            if (ObjectNull.isNull(body)) {
+                throw new BusinessException("没有数据");
+            }
             //做数据转换
             try {
                 body.forEach(e -> {

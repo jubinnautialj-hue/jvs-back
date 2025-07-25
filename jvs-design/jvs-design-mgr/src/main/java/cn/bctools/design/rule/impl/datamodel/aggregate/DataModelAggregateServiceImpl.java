@@ -18,6 +18,9 @@ import org.springframework.data.mongodb.core.aggregation.Fields;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.stereotype.Service;
 
+import java.sql.Array;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -52,23 +55,34 @@ public class DataModelAggregateServiceImpl implements BaseCustomFunctionInterfac
         List<QueryConditionDto> queryConditions = dataModelDto.getBody();
         Criteria criteria = DynamicDataUtils.buildDynamicCriteria(queryConditions);
         criteria = DynamicDataUtils.initCriteria(criteria);
-        if (dataModelDto.getGroupBy() instanceof String) {
-            Fields from = Fields.from(Fields.field((String) dataModelDto.getGroupBy()));
-            return dynamicDataService.aggregate(criteria, dataModelDto.getDataModelId(), dataModelDto.getType(), dataModelDto.getFields(), from);
-        } else if (dataModelDto.getGroupBy() instanceof List) {
-            String[] a = new String[((JSONArray) dataModelDto.getGroupBy()).size()];
-            String[] array = ((JSONArray) dataModelDto.getGroupBy()).toArray(a);
-            Fields from = Fields.fields(array);
-            return dynamicDataService.aggregate(criteria, dataModelDto.getDataModelId(), dataModelDto.getType(), dataModelDto.getFields(), from);
+        if (ObjectNull.isNotNull(dataModelDto.getGroupBy())) {
+            if (dataModelDto.getGroupBy() instanceof List) {
+                long count = ((List<?>) dataModelDto.getGroupBy()).stream().filter(ObjectNull::isNotNull).count();
+                if (count != 0) {
+                    if (dataModelDto.getGroupBy() instanceof String) {
+                        Fields from = Fields.from(Fields.field((String) dataModelDto.getGroupBy()));
+                        return dynamicDataService.aggregate(criteria, dataModelDto.getDataModelId(), dataModelDto.getType(), dataModelDto.getFields(), from);
+                    } else if (dataModelDto.getGroupBy() instanceof List) {
+                        String[] a = new String[((JSONArray) dataModelDto.getGroupBy()).size()];
+                        String[] array = ((JSONArray) dataModelDto.getGroupBy()).toArray(a);
+                        Fields from = Fields.fields(array);
+                        return dynamicDataService.aggregate(criteria, dataModelDto.getDataModelId(), dataModelDto.getType(), dataModelDto.getFields(), from);
+                    }
+                }
+            }
         }
-        return null;
+        List aggregate = dynamicDataService.aggregate(criteria, dataModelDto.getDataModelId(), dataModelDto.getType(), dataModelDto.getFields(), null);
+        if (ObjectNull.isNotNull(aggregate)) {
+            Map<String, Object> o = (Map<String, Object>) aggregate.get(0);
+            Object o1 = o.get("value");
+            return o1;
+        } else {
+            return 0;
+        }
     }
 
     @Override
     public void inspect(DataModelAggregateDto o) {
-        if (ObjectNull.isNull(o.getBody())) {
-            throw new BusinessException("查询条件不能为空");
-        }
         //并校验条件是否为空，如果为空，则查询条件不满足返回异常
         o.getBody().forEach(e -> {
             if (ObjectNull.isNull(e.getValue())) {

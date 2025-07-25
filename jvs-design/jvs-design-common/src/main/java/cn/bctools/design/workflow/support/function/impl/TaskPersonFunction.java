@@ -95,6 +95,10 @@ public class TaskPersonFunction extends AbstractFunctionHandler<List<FlowApprova
                 // 根据指定的单个、多个部门查找部门主管
                 userList = getDeptUsers(node);
                 break;
+            case DEPT_FIELD:
+                // 没有数据时，需要查询数据（批量审批没有传递数据）
+                initData(runtimeData);
+                userList = getPersonnelFieldDeptUsers(node, runtimeData.getData());
             default:
                 log.info("待审批人类型[{}]不存在", node.getProps().getType());
                 break;
@@ -566,6 +570,48 @@ public class TaskPersonFunction extends AbstractFunctionHandler<List<FlowApprova
     }
 
     /**
+     * 查询部门字段对应的人员
+     *
+     * <p>
+     * 只返回部门主管
+     *
+     * @param node 节点
+     * @param data 数据
+     * @return 用户集合
+     */
+    private List<FlowApprovalUserDTO> getPersonnelFieldDeptUsers(Node node, JSONObject data) {
+        if (ObjectNull.isNull(data)) {
+            return Collections.emptyList();
+        }
+        // 查询部门字段对应的配置
+        List<PersonnelDto> personnelList = node.getProps().getTargetObj().getPersonnelByType(TargetObjectTypeEnum.dept_field);
+        if (CollectionUtils.isEmpty(personnelList)) {
+            throw new BusinessException("未完成审批人节点设置", node.getProps().getType().getDesc());
+        }
+        // 支持部门组件
+        List<String> deptFieldKeys = personnelList.stream().filter(p -> PersonnelTypeEnum.dept.equals(p.getType())).map(PersonnelDto::getId).collect(Collectors.toList());
+        if (ObjectNull.isNull(deptFieldKeys)) {
+            return Collections.emptyList();
+        }
+        List<String> deptIds =  deptFieldKeys.stream().map(data::get).filter(ObjectNull::isNotNull)
+                .flatMap(deptIdObj -> {
+                    // 部门组件的数据可能是多选(数据结构为：数组)，可能是单选(数据结构为：字符串)
+                    if (deptIdObj instanceof Collection) {
+                        return Convert.toList(String.class, deptIdObj).stream();
+                    } else {
+                        return Stream.of((String) deptIdObj);
+                    }
+                })
+                .collect(Collectors.toList());
+        if (ObjectNull.isNull(deptIds)) {
+            return Collections.emptyList();
+        }
+        // 查询部门主管
+        return getDeptLeader(deptIds);
+    }
+
+
+    /**
      * 查询指定流程节点最终审批人id集合
      *
      * @param flowNodeConfig 主管来源——流程节点配置
@@ -612,6 +658,17 @@ public class TaskPersonFunction extends AbstractFunctionHandler<List<FlowApprova
         if (ObjectNull.isNull(deptIds)) {
             throw new BusinessException("节点未设置审批人", node.getName());
         }
+        // 根据部门id集合查询部门
+        return getDeptLeader(deptIds);
+    }
+
+    /**
+     * 查询部门主管
+     *
+     * @param deptIds 部门id集合
+     * @return 部门主管
+     */
+    private List<FlowApprovalUserDTO> getDeptLeader(List<String> deptIds) {
         SearchUserDto search = new SearchUserDto();
         search.setDeptLeaderIds(deptIds);
 

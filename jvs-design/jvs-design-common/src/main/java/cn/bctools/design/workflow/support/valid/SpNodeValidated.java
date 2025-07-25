@@ -84,7 +84,8 @@ public class SpNodeValidated {
                 NodePropertiesTypeEnum.JOB.equals(props.getType()) ||
                 NodePropertiesTypeEnum.USER_FIELD.equals(props.getType()) ||
                 NodePropertiesTypeEnum.LEADER.equals(props.getType()) ||
-                NodePropertiesTypeEnum.LEADER_TOP.equals(props.getType())
+                NodePropertiesTypeEnum.LEADER_TOP.equals(props.getType()) ||
+                NodePropertiesTypeEnum.DEPT_FIELD.equals(props.getType())
                 ;
         if (Boolean.FALSE.equals(checkType)) {
             return;
@@ -103,6 +104,9 @@ public class SpNodeValidated {
                 break;
             case USER_FIELD:
                 checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.user_field);
+                break;
+            case DEPT_FIELD:
+                checkPendingUserSp(nodeName, props, TargetObjectTypeEnum.dept_field);
                 break;
             case LEADER:
             case LEADER_TOP:

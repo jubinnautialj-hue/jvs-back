@@ -23,6 +23,7 @@ public enum NodePropertiesTypeEnum {
     JOB("JOB", "岗位"),
     USER_FIELD("USER_FIELD", "成员字段"),
     DEPT("DEPT", "部门"),
+    DEPT_FIELD("DEPT_FIELD", "部门字段"),
 
     /**
      * 指定抄送人
