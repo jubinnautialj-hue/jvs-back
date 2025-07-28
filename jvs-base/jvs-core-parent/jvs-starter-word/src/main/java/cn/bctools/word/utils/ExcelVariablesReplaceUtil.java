@@ -38,10 +38,9 @@ public class ExcelVariablesReplaceUtil {
         cellMap.put("table", "A6Rx11c(a,b,c,d,e,f,g,h,i,j,k)");
         map.put("附件2 固定资产投保需求统计表", cellMap);
 
-        String str = "{\"body\":{\"chepai\":\"姓名\",\"table\":[{\"id\":\"1921837383508008961\",\"ziDuan2\":\"2\",\"riQi_1\":\"\",\"riQi\":\"2025-07-30\"},{\"riQi\":\"2025-07-21\",\"id\":\"1946053966008233985\"," +
-                "\"ziDuan2\":\"123\",\"riQi_1\":\"2025-07-21\"}]},\"fileName\":\"测试\",\"fileType\":\"xlsx\",\"fileUrl\":\"http://10.0.0.201:9000/jvs-public/ten_1/2_3/jvs-auth-mgr/jvs-ui/file/2025/07/22/2025-07-221947480674225696768/%E6%96%B0%E6%B5%8B%E8%AF%95xin.xlsx\"}";
+        String str = "{\"body\":{\"tableForm1746775162431\":[{\"id\":\"1948585319525318657\",\"youKu\":\"中石化151\",\"beiZhu\":\"\",\"danJia\":1,\"shiJian\":\"2025-07-25\",\"zongJia\":100,\"shuLiang\":100,\"shiJian_1\":\"2025-07-25\",\"youPinZhongLei\":\"92\",\"youPinZhongLei_1\":\"92#\"}],\"tableForm1753410074296\":[{\"input1753425001622\":\"\",\"select1753410110175\":\"0\",\"select1753410110175_1\":\"0#\",\"datePicker1753425045206\":\"2025-07-25\",\"inputNumber1753410124094\":0,\"inputNumber1753410135407\":0,\"datePicker1753425045206_1\":\"2025-07-25\"},{\"input1753425001622\":\"\",\"select1753410110175\":\"92\",\"select1753410110175_1\":\"92#\",\"datePicker1753425045206\":\"2025-07-25\",\"inputNumber1753410124094\":40,\"inputNumber1753410135407\":60,\"datePicker1753425045206_1\":\"2025-07-25\"},{\"input1753425001622\":\"\",\"select1753410110175\":\"95\",\"select1753410110175_1\":\"95#\",\"datePicker1753425045206\":\"2025-07-25\",\"inputNumber1753410124094\":0,\"inputNumber1753410135407\":0,\"datePicker1753425045206_1\":\"2025-07-25\"}],\"tableForm1753414231330\":[{\"id\":\"1927260504239214593\",\"keHuDanWei\":\"张三\",\"leiJiTiYou\":1040,\"leiJiGouJin\":1100,\"zongKuYuCun\":60,\"youPinZhongLei\":\"92\",\"jinRiShiJiTiYou\":40,\"youPinZhongLei_1\":\"92#\"}],\"tableForm1747290386021\":[{\"id\":\"1948573776662298626\",\"riQi\":\"2025-07-25\",\"youKu\":\"151\",\"riQi_1\":\"2025-07-25\",\"dianHua\":\"12345678910\",\"shuLiang\":10,\"chePaiHao\":\"渝A88888\",\"tiYouSiJi\":\"老李\",\"tiYouDanWei\":\"中石化\",\"youPinZhongLei\":\"92#\",\"shenFenZhengHao\":\"2133224232112144\",\"youPinZhongLei_1\":\"\"}],\"tableForm1746776192646\":[{\"id\":\"1948572769811234818\",\"jinE\":0,\"keHu\":\"张三\",\"riQi\":\"2025-07-25\",\"tiYou\":20,\"danJia\":1,\"riQi_1\":\"2025-07-25\",\"gongYouYouKu\":\"中石化\",\"youPinZhongLei\":\"92\",\"youPinZhongLei_1\":\"92#\"},{\"id\":\"1948571357093662721\",\"jinE\":0,\"keHu\":\"张三\",\"riQi\":\"2025-07-25\",\"tiYou\":20,\"danJia\":1,\"riQi_1\":\"2025-07-25\",\"gongYouYouKu\":\"中石化\",\"youPinZhongLei\":\"92\",\"youPinZhongLei_1\":\"92#\"}]},\"fileName\":\"测试\",\"fileType\":\"xlsx\",\"fileUrl\":\"http://10.0.0.201:9000/jvs-public/ten_1/2_3/jvs-auth-mgr/jvs-ui/file/2025/07/25/2025-07-251948672935630286848/%E6%97%A5%E6%8A%A5%E8%A1%A8.xlsx\"}";
         JSONObject jsonObject = JSONObject.parseObject(str);
-        byte[] bytes = HttpUtil.downloadBytes("http://10.0.0.201:9000/jvs-public/ten_1/2_3/jvs-auth-mgr/jvs-ui/file/2025/07/22/2025-07-221947480674225696768/%E6%96%B0%E6%B5%8B%E8%AF%95xin.xlsx");
+        byte[] bytes = HttpUtil.downloadBytes("http://10.0.0.201:9000/jvs-public/ten_1/2_3/jvs-auth-mgr/jvs-ui/file/2025/07/25/2025-07-251948672935630286848/%E6%97%A5%E6%8A%A5%E8%A1%A8.xlsx");
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         ExcelVariablesReplaceUtil.writeExcel(jsonObject.getJSONObject("body"), new ByteArrayInputStream(bytes), outputStream);
         byte[] byteArray = outputStream.toByteArray();
@@ -123,8 +122,10 @@ public class ExcelVariablesReplaceUtil {
                     });
             listMap.get(sheetI).stream().filter(e -> variableMap.containsKey(e.getName())).map(e -> {
                 ExcelVariable excelVariable = variableMap.get(e.getName());
-                return new ExcelVariable().setValue(excelVariable.getValue()).setType(excelVariable.getType()).setSheet(e.getSheet()).setRow(e.getRow()).setColumn(e.getColumn()).setName(e.getName());
-            }).sorted(Comparator.comparingInt(ExcelVariable::getRow)).forEach(e -> {
+                return new ExcelVariable()
+                        .setListKey(excelVariable.getListKey())
+                        .setValue(excelVariable.getValue()).setType(excelVariable.getType()).setSheet(e.getSheet()).setRow(e.getRow()).setColumn(e.getColumn()).setName(e.getName());
+            }).sorted(Comparator.comparingInt(ExcelVariable::getRow).reversed()).forEach(e -> {
                 Row row = sheet.getRow(e.getRow());
                 if (ExcelVariable.ExcelType.List.equals(e.getType())) {
                     //根据字段确定是否添加行  确定添加几行
