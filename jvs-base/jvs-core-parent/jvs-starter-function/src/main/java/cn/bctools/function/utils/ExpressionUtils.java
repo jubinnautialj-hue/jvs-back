@@ -4,6 +4,7 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.function.enums.JvsParamType;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.NumberUtil;
+import groovy.json.StringEscapeUtils;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -51,7 +52,7 @@ public class ExpressionUtils {
 
     public static void main(String[] args) {
         List<ExpressionParam> expressionParams = ExpressionUtils.parsePostfixExpression(
-                "`SYSRealName`");
+                "${CONTRACT}(\"12321\",\"\\nfadsfa\",\"afsafds\\n\",\u200B\u200B\u200B\"fdasfsa\")");
         System.out.println(expressionParams);
     }
 
@@ -65,6 +66,7 @@ public class ExpressionUtils {
         if (StringUtils.isBlank(expression)) {
             return Collections.emptyList();
         }
+        expression = StringEscapeUtils.unescapeJava(expression);
         // 当前是否在处理字符串
         boolean isStr = false;
         // 当前是否为转义符
@@ -85,7 +87,17 @@ public class ExpressionUtils {
             }
             if (isStr && ch != '"') {
                 if (ch == '\\') {
-                    isEscape = true;
+                    //并且下一个是 n
+                    char c = expression.charAt(++i);
+                    if (c == 'n') {
+                        builder.append(ch);
+                        builder.append(c);
+                    } else {
+                        i--;
+                        isEscape = true;
+                    }
+                } else if (ch == '\n') {
+                    builder.append(ch);
                 } else {
                     builder.append(ch);
                 }
@@ -274,6 +286,7 @@ public class ExpressionUtils {
                 }
             }
         }
+
         // 保存剩余参数
         saveParam(builder, operatorStack, postfixExpression, false);
         // 保存剩余的数学运算符
@@ -312,7 +325,7 @@ public class ExpressionUtils {
                     if (postfixExpression.size() == 1) {
                         return value;
                     }
-                    value = ((String) value).replaceAll("\n", "");
+//                    value = ((String) value).replaceAll("\n", "");
                 }
                 calculateStack.push(value);
                 continue;
@@ -402,7 +415,7 @@ public class ExpressionUtils {
         }
         // 字符串, 日期
         if (isStr) {
-            //999999 会被转为日期 
+            //999999 会被转为日期
             return tryParseDate(param);
         }
         // null

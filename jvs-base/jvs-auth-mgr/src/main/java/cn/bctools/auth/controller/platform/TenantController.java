@@ -66,9 +66,6 @@ public class TenantController {
     @ApiOperation(value = "分页", notes = "获取组织只获取当前管理员及以下的子组织, 不设计其它的组织")
     @GetMapping("/page")
     public R<Page<TenantPo>> page(Page<TenantPo> page, TenantPo tenantPo) {
-        if (!UserCurrentUtils.getCurrentUser().getPlatformAdmin()) {
-            return R.ok();
-        }
         String name = tenantPo.getName();
         LambdaQueryWrapper<TenantPo> queryWrapper = Wrappers.<TenantPo>lambdaQuery()
                 //排除自己
@@ -149,23 +146,20 @@ public class TenantController {
         if (ObjectNull.isNull(tenantPo.getAdminUserAccount())) {
             return R.failed("请填写管理员帐号");
         }
-        if (UserCurrentUtils.getCurrentUser().getPlatformAdmin()) {
-            //设置必须设置管理员
-            User one = userService.getOne(Wrappers.query(new User().setAccountName(tenantPo.getAdminUserAccount())));
-            if (ObjectNull.isNull(one)) {
-                return R.failed("管理员帐号不存在");
-            }
-            tenantPo.setAdminUserId(String.valueOf(one.getId()));
-            TenantContextHolder.setTenantId(tenantPo.getId());
-            long count = userTenantService.count(Wrappers.query(new UserTenant().setUserId(one.getId())));
-            if (count == 0) {
-                userTenantService.saveOrUpdate(new UserTenant().setUserId(one.getId()).setRealName(one.getRealName()));
-            }
-            tenantService.updateById(tenantPo);
-            return R.ok(true, "修改成功");
-        } else {
-            return R.failed("非管理员不允许修改组织");
+
+        //设置必须设置管理员
+        User one = userService.getOne(Wrappers.query(new User().setAccountName(tenantPo.getAdminUserAccount())));
+        if (ObjectNull.isNull(one)) {
+            return R.failed("管理员帐号不存在");
         }
+        tenantPo.setAdminUserId(String.valueOf(one.getId()));
+        TenantContextHolder.setTenantId(tenantPo.getId());
+        long count = userTenantService.count(Wrappers.query(new UserTenant().setUserId(one.getId())));
+        if (count == 0) {
+            userTenantService.saveOrUpdate(new UserTenant().setUserId(one.getId()).setRealName(one.getRealName()));
+        }
+        tenantService.updateById(tenantPo);
+        return R.ok(true, "修改成功");
     }
 
     @Log
