@@ -149,7 +149,7 @@ public class ImPacket extends Packet implements ImConst
 	}
 
 	/** 
-	 * @see org.tio.core.intf.Packet#logstr()
+	 * @see Packet#logstr()
 	 * @return
 	 * 2017年2月22日 下午3:15:18
 	 */

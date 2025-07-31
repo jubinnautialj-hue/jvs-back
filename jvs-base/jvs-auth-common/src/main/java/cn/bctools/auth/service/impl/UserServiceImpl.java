@@ -16,6 +16,7 @@ import cn.bctools.common.enums.SysFrameApplyConfig;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.TenantContextHolder;
+import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.web.excel.ArrayListConvert;
 import cn.bctools.web.excel.LocalDateTimeConvert;
 import cn.hutool.cache.CacheUtil;
@@ -63,6 +64,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
     UserTenantMapper userTenantMapper;
     UserExtensionMapper userExtensionMapper;
     UserTenantService userTenantService;
+    UserDeptService userDeptService;
     UserExtensionService userExtensionService;
     DeptMapper deptMapper;
     JobMapper jobMapper;
@@ -323,6 +325,16 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User> implements Us
                         } else {
                             userTenantService.updateBatchById(v);
                         }
+                        v.forEach(a -> {
+                            if (ObjectNull.isNotNull(a.getDeptId())) {
+                                //将部门保存到一个新的表中
+                                String id = a.getUserId();
+                                List<UserDept> collect = a.getDeptId().stream().map(e -> {
+                                    return new UserDept().setUserId(id).setDeptId(e).setTenantId(a.getTenantId());
+                                }).collect(Collectors.toList());
+                                userDeptService.saveBatch(collect);
+                            }
+                        });
                     });
                 }
                 i += batchSize;

@@ -45,6 +45,12 @@
             <version>21.9.0.0</version>
         </dependency>
 
+        <dependency>
+            <groupId>com.microsoft.sqlserver</groupId>
+            <artifactId>mssql-jdbc</artifactId>
+            <version>12.4.2.jre8</version> <!-- 根据Java版本选择 -->
+        </dependency>
+
     </dependencies>
 
 </project>

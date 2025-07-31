@@ -49,6 +49,7 @@ public class UserApiImpl implements AuthUserServiceApi {
     UserService userService;
     TenantService tenantService;
     UserTenantService userTenantService;
+    UserDeptService userDeptService;
     DeptService deptService;
     JobService jobService;
     RoleService roleService;
@@ -517,6 +518,17 @@ public class UserApiImpl implements AuthUserServiceApi {
             UserTenant one = userTenantService.getOne(Wrappers.query(new UserTenant().setUserId(userServiceById.getId())));
             userTenant.setId(one.getId());
             userTenantService.updateById(userTenant);
+        }
+        //将部门保存到一个新的表中
+        if (ObjectNull.isNotNull(userTenant.getDeptId())) {
+            String id = user.getId();
+            String tenantId = UserCurrentUtils.getCurrentUser().getTenantId();
+            //删除历史的用户部门数据
+            userDeptService.remove(Wrappers.query(new UserDept().setUserId(id)));
+            List<UserDept> collect = userTenant.getDeptId().stream().map(e -> {
+                return new UserDept().setUserId(id).setDeptId(e).setTenantId(tenantId);
+            }).collect(Collectors.toList());
+            userDeptService.saveBatch(collect);
         }
         return R.ok(user.getId());
     }

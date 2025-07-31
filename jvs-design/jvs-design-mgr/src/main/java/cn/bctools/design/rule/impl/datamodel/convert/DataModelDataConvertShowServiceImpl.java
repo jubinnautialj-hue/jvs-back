@@ -23,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
@@ -72,6 +73,7 @@ public class DataModelDataConvertShowServiceImpl implements BaseCustomFunctionIn
             if (ObjectNull.isNull(body)) {
                 throw new BusinessException("没有数据");
             }
+            Map<String, Object> data = new HashMap<>();
             //做数据转换
             try {
                 body.forEach(e -> {
@@ -83,7 +85,9 @@ public class DataModelDataConvertShowServiceImpl implements BaseCustomFunctionIn
                             if (ObjectNull.isNotNull(o, handler, fieldBasicsHtml.getDesignJson())) {
                                 FieldBasicsHtml html = handler.toHtml(fieldBasicsHtml);
                                 Object obj = handler.getEcho(html, o, dto.getReplace(), e);
-                                e.put(key, obj);
+                                data.put(key, obj);
+                            } else {
+                                data.put(key, o);
                             }
                         }
                     }

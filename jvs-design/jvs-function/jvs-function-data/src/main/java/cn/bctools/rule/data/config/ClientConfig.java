@@ -9,6 +9,7 @@ import cn.hutool.cache.CacheUtil;
 import cn.hutool.cache.impl.TimedCache;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.SecureUtil;
+import com.alibaba.fastjson.parser.ParserConfig;
 import lombok.Data;
 import org.postgresql.ds.PGSimpleDataSource;
 import org.springframework.dao.DataAccessException;
@@ -36,7 +37,7 @@ public class ClientConfig {
     private JdbcTemplate jdbcTemplate;
 
     static String KINGBASE_URL = "jdbc:kingbase8://{}:{}/{}?currentSchema={}&characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&useJDBCCompliantTimezoneShift=true" +
-            "&useLegacyDatetimeCode=false&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&stringtype=unspecified";
+                                 "&useLegacyDatetimeCode=false&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true&stringtype=unspecified";
 
     public static Function<KingBaseDatasourceSelectedOption, String> KINGBASE_FUNCTION_URL = datasourceSelectedOption -> {
         return StrUtil.format(KINGBASE_URL, datasourceSelectedOption.getIp(), datasourceSelectedOption.getPort(), datasourceSelectedOption.getDatabaseName(), datasourceSelectedOption.getSchema());
@@ -47,12 +48,19 @@ public class ClientConfig {
     static String MYSQL = "jdbc:mysql://{}:{}/{}?characterEncoding=utf8&zeroDateTimeBehavior=convertToNull&useSSL=false&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=GMT%2B8&nullCatalogMeansCurrent=true";
 
     static String PGSQL = "jdbc:postgresql://{}:{}/{}?currentSchema={}&connectTimeout={}";
+
+    static String SQLSERVER = "jdbc:sqlserver://{}:{};databaseName={};user={};password={};encrypt=false;loginTimeout={};";
     /**
      * 通过服务名链接
      */
     private static final String URL_SERVER_NAME = "jdbc:oracle:thin:@//{}:{}/{}";
 
     private static final String URL_SID = "jdbc:oracle:thin:@//{}:{}:{}";
+
+
+    public static final Function<DatasourceSelectedOption, String> SQLSERVER_URL = sqlserverSelectOption -> {
+        return StrUtil.format(SQLSERVER, sqlserverSelectOption.getIp(), sqlserverSelectOption.getPort(), sqlserverSelectOption.getDatabaseName(), sqlserverSelectOption.getUserName(), sqlserverSelectOption.getPassWord(), 5000);
+    };
 
     public static Function<PgsqlSelectOption, String> PGSQL_URL = pgsqlSelectOption -> {
         return StrUtil.format(PGSQL, pgsqlSelectOption.getSourceHost(), pgsqlSelectOption.getSourcePort(), pgsqlSelectOption.getSourceLibraryName(), pgsqlSelectOption.getSchema(), 5000);

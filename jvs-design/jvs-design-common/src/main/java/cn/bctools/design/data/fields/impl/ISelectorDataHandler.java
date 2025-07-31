@@ -367,6 +367,12 @@ public interface ISelectorDataHandler {
         if (FormDataTypeEnum.rule.equals(dataType)) {
             String optionHttp = selectItem.getOptionHttp();
             if (ObjectNull.isNotNull(optionHttp)) {
+                String label = selectItem.getProps().getLabel();
+                String value1 = selectItem.getProps().getValue();
+                if (label.equals(value1)) {
+                    //如果相同，则直接返回
+                    return data;
+                }
                 RunLogService logService = SpringContextUtil.getApplicationContext().getBean(RunLogService.class);
                 RuleStartUtils ruleStartUtils = SpringContextUtil.getApplicationContext().getBean(RuleStartUtils.class);
                 RuleDesignService ruleDesignService = SpringContextUtil.getApplicationContext().getBean(RuleDesignService.class);

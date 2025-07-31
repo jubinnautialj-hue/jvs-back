@@ -97,6 +97,10 @@ public class UserController {
      */
     UserService userService;
     /**
+     * The User dept service.
+     */
+    UserDeptService userDeptService;
+    /**
      * The Password encoder.
      */
     PasswordEncoder passwordEncoder;
@@ -198,8 +202,10 @@ public class UserController {
         Page<UserVo> userVoPage = new Page<>(page.getCurrent(), page.getSize(), page.getTotal(), page.isSearchCount());
 
         List<String> allChildId = null;
+        List<String> userids = null;
         if (ObjectNull.isNotNull(userTenant.getDeptId())) {
-            allChildId = deptService.getAllChildId(userTenant.getDeptId());
+            List<String> list = deptService.getAllChildId(userTenant.getDeptId());
+            userids = userDeptService.list(new LambdaQueryWrapper<UserDept>().in(ObjectNull.isNotNull(list), UserDept::getDeptId, list)).stream().map(e -> e.getUserId()).collect(Collectors.toList());
         }
         QueryWrapper<Object> queryWrapper = Wrappers.query();
         if (ObjectNull.isNotNull(allChildId)) {
@@ -219,6 +225,7 @@ public class UserController {
             }
         } else {
             queryWrapper.eq(ObjectNull.isNotNull(userTenant.getSex()), UserTenantMapper.SYS_USER_ALIAS + ".sex", userTenant.getSex())
+                    .in(ObjectNull.isNotNull(userids), UserTenantMapper.SYS_USER_TENANT_ALIAS + ".user_id", userids)
                     .eq(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".cancel_flag", userTenant.getCancelFlag())
                     .and(ObjectNull.isNotNull(userTenant.getKeywords()), wrapper -> wrapper
                             .like(UserTenantMapper.SYS_USER_TENANT_ALIAS + ".real_name", userTenant.getKeywords())
@@ -405,7 +412,8 @@ public class UserController {
                 .in(ObjectNull.isNotNull(userIds), UserTenant::getUserId, userIds);
         if (ObjectNull.isNotNull(depts)) {
             in.isNotNull(UserTenant::getDeptId);
-            in.apply(ObjectNull.isNotNull(depts), "(" + depts.stream().map(e -> SqlFunctionUtil.jsonContains("dept_id", e, "$")).collect(Collectors.joining(" or ")) + ")");
+            List<String> userids = userDeptService.list(new LambdaQueryWrapper<UserDept>().in(UserDept::getDeptId, depts)).stream().map(UserDept::getUserId).collect(Collectors.toList());
+            in.in(ObjectNull.isNotNull(userids), UserTenant::getUserId, userids);
         }
         page = userTenantService.page(page, in
                 .in(ObjectNull.isNotNull(jobs), UserTenant::getJobId, jobs)
@@ -460,6 +468,7 @@ public class UserController {
      *
      * @param userId the user id
      * @return the r
+     * @throws JsonProcessingException the json processing exception
      */
     @Log
     @ApiOperation(value = "获取用户详情", notes = "组织机构管理，点击用户详情操作")
@@ -552,6 +561,7 @@ public class UserController {
     @Log
     @ApiOperation(value = "新增用户", notes = "后台新增的用户，默认类型为1，另外在租户中间表中进行添加一行处理")
     @PostMapping("/save")
+    @Transactional(rollbackFor = Exception.class)
     public R<UserVo> save(@RequestBody UserVo vo) {
         if (StringUtils.isBlank(vo.getAccountName())) {
             //手机号前面加随机号
@@ -571,6 +581,15 @@ public class UserController {
         }
         userTenant.setAccountLevelId(vo.getLevelId());
         user = userService.saveUser(user, userTenant);
+        //将部门保存到一个新的表中
+        if (ObjectNull.isNotNull(userTenant.getDeptId())) {
+            String id = user.getId();
+            String tenantId = UserCurrentUtils.getCurrentUser().getTenantId();
+            List<UserDept> collect = userTenant.getDeptId().stream().map(e -> {
+                return new UserDept().setUserId(id).setDeptId(e).setTenantId(tenantId);
+            }).collect(Collectors.toList());
+            userDeptService.saveBatch(collect);
+        }
         userRoleComponent.grandDefaultSysRole(user.getId());
         UserVo userVo = BeanCopyUtil.copy(UserVo.class, user, userTenant);
         return R.ok(userVo);
@@ -594,11 +613,11 @@ public class UserController {
         String format = DateUtils.format(date);
         String invite = SysConstant.redisKey("invite", code);
         InviteVo inviteVo = new InviteVo().setCode(code).setStatus(false).setContent(UserCurrentUtils.getRealName() + " 邀请您参加组织\n" +
-                "组织名称：【" + tenantPo.getName() + "】\n" +
-                "有效期：" + format + "\n" +
-                "\n" +
-                "邀请码：\n" +
-                code + "\n");
+                                                                                     "组织名称：【" + tenantPo.getName() + "】\n" +
+                                                                                     "有效期：" + format + "\n" +
+                                                                                     "\n" +
+                                                                                     "邀请码：\n" +
+                                                                                     code + "\n");
         inviteVo.setTenantId(tenantId);
         redisUtils.setExpire(invite, inviteVo, QR_EXPIRED_MIN, TimeUnit.MINUTES);
         return R.ok(inviteVo);
@@ -693,6 +712,16 @@ public class UserController {
         UserTenant updateUserTenant = userTenantService.getOne(Wrappers.query(new UserTenant().setUserId(user.getId()).setTenantId(tenantId)));
         userTenant.setId(updateUserTenant.getId());
         userTenantService.updateById(userTenant);
+        //将部门保存到一个新的表中
+        if (ObjectNull.isNotNull(userTenant.getDeptId())) {
+            String id = user.getId();
+            //删除历史的用户部门数据
+            userDeptService.remove(Wrappers.query(new UserDept().setUserId(id)));
+            List<UserDept> collect = userTenant.getDeptId().stream().map(e -> {
+                return new UserDept().setUserId(id).setDeptId(e).setTenantId(tenantId);
+            }).collect(Collectors.toList());
+            userDeptService.saveBatch(collect);
+        }
         userService.updateById(user);
         return R.ok();
     }

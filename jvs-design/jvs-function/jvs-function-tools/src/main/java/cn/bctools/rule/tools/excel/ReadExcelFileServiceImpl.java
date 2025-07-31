@@ -9,11 +9,13 @@ import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
 import cn.bctools.word.utils.ExcelVariablesReplaceUtil;
 import cn.hutool.core.lang.Dict;
+import cn.hutool.core.lang.hash.Hash;
 import cn.hutool.http.HttpUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayInputStream;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,6 +44,13 @@ public class ReadExcelFileServiceImpl implements BaseCustomFunctionInterface<Rea
             dto.setIgnoreFormat(false);
         }
         List<Dict> dicts = ExcelVariablesReplaceUtil.searchData(new ByteArrayInputStream(HttpUtil.downloadBytes(dto.getFileUrl())), map, dto.getIgnoreFormat());
+        if (ObjectNull.isNull(dicts)) {
+            HashMap<Object, Object> objectObjectHashMap = new HashMap<>();
+            dto.getCell().entrySet().forEach(e -> {
+                objectObjectHashMap.put(e.getValue(), null);
+            });
+            return objectObjectHashMap;
+        }
         Object o = dicts.get(0).get(dto.getSheet());
         return o;
     }
