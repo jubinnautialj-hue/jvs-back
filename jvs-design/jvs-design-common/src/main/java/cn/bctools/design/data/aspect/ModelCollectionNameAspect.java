@@ -63,7 +63,10 @@ public class ModelCollectionNameAspect {
         try {
             obj = point.proceed(args);
         } catch (DuplicateKeyException throwable) {
-            throw new BusinessException("数据唯一性校验不通过,存在重复提交,请检查");
+            String substring = throwable.getCause().getMessage().substring(throwable.getCause().getMessage().indexOf("index: "));
+            String[] split = substring.split(" ");
+            String error = split[1];
+            throw new BusinessException("数据唯一性校验不通过,存在重复提交,请检查," + error + "异常");
         } catch (Throwable throwable) {
             log.error("AOP拦截到错误,数据操作失败", throwable);
             throw new BusinessException("数据操作失败");

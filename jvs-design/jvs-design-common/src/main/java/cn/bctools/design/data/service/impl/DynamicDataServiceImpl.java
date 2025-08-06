@@ -971,11 +971,29 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 .filter(map::containsKey)
                 .filter(e -> ObjectNull.isNotNull(difference.entriesOnlyOnRight().get(e)))
                 .forEach(e -> {
-                    Object echo = dataFieldHandler.echo(map.get(e), difference.entriesOnlyOnRight().get(e), data);
-                    if (!(map.get(e).getFieldName().equals("创建时间") || map.get(e).getFieldName().equals("修改时间"))) {
-                        String s = " 创建了 " + map.get(e).getFieldName() + "为 " + echo;
-                        changes.add(s);
+                    switch (map.get(e).getType()) {
+                        case htmlEditor:
+                        case signature:
+                        case imageUpload:
+                        case file:
+                        case fileUpload:
+                        case flowNode:
+                        case image:
+                        case tableForm:
+                        case tab:
+                        case flowTable:
+                        case jsonEditor:
+                            String s = " 创建了 " + map.get(e).getFieldName();
+                            changes.add(s);
+                            break;
+                        default:
+                            Object echo = dataFieldHandler.echo(map.get(e), difference.entriesOnlyOnRight().get(e), data);
+                            if (!(map.get(e).getFieldName().equals("创建时间") || map.get(e).getFieldName().equals("修改时间"))) {
+                                String b = " 创建了 " + map.get(e).getFieldName() + "为 " + echo;
+                                changes.add(b);
+                            }
                     }
+
                 });
 
         //需要将修改记录,单独存放到一个数据表中,用于数据留痕
@@ -995,9 +1013,25 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     if (difference.entriesDiffering().get(e).leftValue().equals(difference.entriesDiffering().get(e).rightValue())) {
                         return null;
                     } else {
-                        Object right = dataFieldHandler.echo(map.get(e), difference.entriesDiffering().get(e).rightValue(), data);
-                        Object left = dataFieldHandler.echo(map.get(e), difference.entriesDiffering().get(e).leftValue(), data);
-                        return "更新了 \"" + map.get(e).getFieldName() + "\"   " + left + " 为  " + right;
+                        switch (map.get(e).getType()) {
+                            case htmlEditor:
+                            case signature:
+                            case imageUpload:
+                            case file:
+                            case fileUpload:
+                            case flowNode:
+                            case image:
+                            case tableForm:
+                            case tab:
+                            case flowTable:
+                            case jsonEditor:
+                                String s = " 创建了 " + map.get(e).getFieldName();
+                                return s;
+                            default:
+                                Object right = dataFieldHandler.echo(map.get(e), difference.entriesDiffering().get(e).rightValue(), data);
+                                Object left = dataFieldHandler.echo(map.get(e), difference.entriesDiffering().get(e).leftValue(), data);
+                                return "更新了 \"" + map.get(e).getFieldName() + "\"   " + left + " 为  " + right;
+                        }
                     }
                 })
                 .filter(ObjectNull::isNotNull)

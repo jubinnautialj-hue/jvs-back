@@ -1,6 +1,7 @@
 package cn.bctools.design.util;
 
 import cn.bctools.common.utils.BeanCopyUtil;
+import cn.bctools.common.utils.ObjectNull;
 import cn.hutool.core.date.DateTime;
 import cn.hutool.core.date.DateUtil;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
@@ -34,11 +35,16 @@ public class GanttChartUtils {
         pageResult.getRecords().forEach(e -> {
             for (String field : dateField) {
                 if (e.containsKey(field)) {
-                    try {
-                        dateList.add(DateUtil.parseDate(e.get(field).toString()));
-                    } catch (Exception ignored) {
-                        e.put(field, "请配置单个日期");
-                        e.remove(field + DynamicDataUtils.SUFFIX_ECHO);
+                    if (ObjectNull.isNotNull(e.get(field))) {
+                        try {
+                            dateList.add(DateUtil.parseDate(e.get(field).toString()));
+                        } catch (Exception ignored) {
+                            e.put(field, "请配置单个日期");
+                            e.remove(field + DynamicDataUtils.SUFFIX_ECHO);
+                        }
+                    } else {
+                        e.put(field, "-");
+                        e.put(field + DynamicDataUtils.SUFFIX_ECHO, "-");
                     }
                 } else {
                     e.put(field, "-");

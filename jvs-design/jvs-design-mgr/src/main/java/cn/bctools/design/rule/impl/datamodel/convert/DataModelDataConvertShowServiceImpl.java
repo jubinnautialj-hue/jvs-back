@@ -23,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -73,10 +74,11 @@ public class DataModelDataConvertShowServiceImpl implements BaseCustomFunctionIn
             if (ObjectNull.isNull(body)) {
                 throw new BusinessException("没有数据");
             }
-            Map<String, Object> data = new HashMap<>();
+            List<Map<String, Object>> list = new ArrayList<>();
             //做数据转换
             try {
                 body.forEach(e -> {
+                    Map<String, Object> data = new HashMap<>();
                     for (String key : e.keySet()) {
                         FieldBasicsHtml fieldBasicsHtml = typeMaps.get(key);
                         if (ObjectNull.isNotNull(fieldBasicsHtml)) {
@@ -91,12 +93,13 @@ public class DataModelDataConvertShowServiceImpl implements BaseCustomFunctionIn
                             }
                         }
                     }
+                    list.add(data);
                 });
             } catch (Exception e) {
                 log.error("转换数据异常", e);
                 throw new BusinessException("转换数据异常");
             }
-            return body;
+            return list;
         }, RuleStartUtils.EXECUTOR);
         try {
             return resultCompletableFuture.get();

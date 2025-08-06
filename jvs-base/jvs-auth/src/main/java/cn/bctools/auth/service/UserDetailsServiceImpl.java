@@ -140,6 +140,10 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         //获取当前用户在哪些租户下
         Map<String, TenantsDto> map = getTenants(info.getId(), configs);
         userDto.setTenants(map.values().stream().collect(Collectors.toList()));
+        Map<String, Object> body = new HashMap<>();
+        userExtensionService.list(Wrappers.<UserExtension>lambdaQuery().eq(UserExtension::getUserId, info.getId())).forEach(e -> body.putAll(e.getExtension()));
+        //设置扩展参数
+        userDto.setExceptions(body);
         return getCustomUser(info.getId(), userDto, configs, map);
     }
 

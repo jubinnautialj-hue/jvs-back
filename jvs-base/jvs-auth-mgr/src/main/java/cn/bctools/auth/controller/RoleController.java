@@ -366,6 +366,7 @@ public class RoleController {
         //将某个部门添加到某个角色下
         String tenantId = UserCurrentUtils.getCurrentUser().getTenantId();
         Set<DeptRole> collect = deptIds.stream()
+                .distinct()
                 .map(e -> new DeptRole().setDeptId(e).setBelow(Boolean.FALSE).setRoleId(roleId).setTenantId(tenantId))
                 .collect(Collectors.toSet());
         deptRoleService.saveBatch(collect);
@@ -375,11 +376,14 @@ public class RoleController {
     @Log
     @PutMapping("/dept/{roleId}")
     @ApiOperation(value = "角色部门", notes = "角色管理-修改部门")
-    @CacheEvict(value = SysConstant.CACHE_ROLE, allEntries = true)
-    @Transactional(rollbackFor = Exception.class)
     public R<Boolean> updateDept(@PathVariable String roleId, @RequestBody List<DeptRole> depts) {
         Optional.ofNullable(roleService.getById(roleId)).orElseThrow(() -> new BusinessException("角色不存在"));
-        deptRoleService.updateBatchById(depts);
+        String tenantId = UserCurrentUtils.getCurrentUser().getTenantId();
+        if (ObjectNull.isNotNull(depts)) {
+            depts.forEach(e -> {
+                deptRoleService.update(e, Wrappers.query(new DeptRole().setRoleId(roleId).setDeptId(e.getDeptId()).setTenantId(tenantId)));
+            });
+        }
         return R.ok();
     }
 
