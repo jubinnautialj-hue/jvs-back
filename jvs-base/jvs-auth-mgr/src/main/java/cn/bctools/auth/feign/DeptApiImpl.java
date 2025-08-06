@@ -10,7 +10,6 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.context.annotation.Bean;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -38,7 +37,7 @@ public class DeptApiImpl implements AuthDeptServiceApi {
     @Override
     public R<SysDeptDto> getById(String deptId) {
         Dept dept = deptService.getOne(Wrappers.<Dept>lambdaQuery()
-                .select(Dept::getId, Dept::getName, Dept::getType, Dept::getParentId)
+                .select(Dept::getId, Dept::getName, Dept::getType, Dept::getParentId, Dept::getLeaderId, Dept::getDeptCode)
                 .eq(Dept::getId, deptId));
         return R.ok(BeanCopyUtil.copy(dept, SysDeptDto.class));
     }
