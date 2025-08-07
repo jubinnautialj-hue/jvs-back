@@ -42,6 +42,10 @@ public class DesignPermissionHandler implements BasePermissionHandlerHandler {
     public boolean check(UserDto userDto, String appId, JvsApp jvsApp, String requestUri, Map<String, Object> variablesAttribute) throws BusinessException {
         // 校验设计权限
         if (PATH_MATCHER.matchStart(APP_PERMISSION_VERIFICATION_PATTERN, requestUri)) {
+            if (requestUri.endsWith("/data/field/user/list")) {
+                //获取字段默认放开
+                return true;
+            }
             //  是自己创建的应用、作为应用管理员或开发者，则放行
             AppRoleDto appRole = Optional.ofNullable(jvsApp.getRole()).orElseGet(AppRoleDto::new);
             if (UserCurrentUtils.getUserId().equals(jvsApp.getCreateById()) ||
