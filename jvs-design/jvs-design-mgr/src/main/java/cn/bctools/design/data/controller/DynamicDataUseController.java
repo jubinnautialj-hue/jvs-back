@@ -476,8 +476,26 @@ public class DynamicDataUseController {
                                         case cust:
                                             read = e.getValue();
                                             if (e.getEnabledQueryTypes().equals(DataQueryType.eq) && read instanceof List) {
-                                                if (((List<?>) read).size() == 1) {
-                                                    read = ((List<?>) read).get(0);
+                                                Object value = e.getValue();
+                                                if (((List<?>) value).size() == 1) {
+                                                    value = ((List<?>) value).get(0);
+                                                }
+                                                if (fieldsMap.containsKey(e.getFieldKey())) {
+                                                    switch (fieldsMap.get(e.getFieldKey()).getType()) {
+                                                        case inputNumber:
+                                                            return new QueryConditionDto().setFieldKey(e.getFieldKey()).setValue(Integer.valueOf(value.toString())).setEnabledQueryTypes(e.getEnabledQueryTypes());
+                                                        default:
+                                                            return new QueryConditionDto().setFieldKey(e.getFieldKey()).setValue(value).setEnabledQueryTypes(e.getEnabledQueryTypes());
+                                                    }
+                                                } else {
+                                                    Optional<FieldBasicsHtml> first = tableFormItemHtml.getTableColumn().stream().filter(b -> b.getProp().equals(e.getFieldKey())).findFirst();
+                                                    if (first.isPresent()) {
+                                                        switch (first.get().getType()) {
+                                                            case inputNumber:
+                                                                return new QueryConditionDto().setFieldKey(e.getFieldKey()).setValue(Integer.valueOf(value.toString())).setEnabledQueryTypes(e.getEnabledQueryTypes());
+                                                        }
+                                                    }
+                                                    return new QueryConditionDto().setFieldKey(e.getFieldKey()).setValue(value).setEnabledQueryTypes(e.getEnabledQueryTypes());
                                                 }
                                             }
                                             break;
@@ -1087,7 +1105,12 @@ public class DynamicDataUseController {
                     if (ObjectNull.isNotNull(advancedSettings)) {
                         //表示组合显示字段
                         if (ObjectNull.isNotNull(advancedSettings.getCombiningFieldFormulaContent())) {
-                            combiningFieldFormulaContentMap.put(e.getAliasColumnName(), functionBusinessService.getById(e.getAdvancedSettings().getFormula()));
+                            FunctionBusinessPo byId = functionBusinessService.getById(e.getAdvancedSettings().getFormula());
+                            if (ObjectNull.isNotNull(byId)) {
+                                if (byId.getDesignId().equals(designId)) {
+                                    combiningFieldFormulaContentMap.put(e.getAliasColumnName(), byId);
+                                }
+                            }
                         }
                         // 显示方式为关联模型时，将筛选条件加入
                         if (ObjectNull.isNotNull(advancedSettings.getModelDisplay()) && ObjectNull.isNotNull(advancedSettings.getModelDisplay().getDataLinkageList())) {
@@ -1220,7 +1243,8 @@ public class DynamicDataUseController {
                     if (ObjectNull.isNull(queryGroupConditions)) {
                         queryGroupConditions = Collections.singletonList(Collections.singletonList(treeQuery.get()));
                     } else {
-                        queryGroupConditions.get(0).add(treeQuery.get());
+                        // 调整树结构数据查询
+//                        queryGroupConditions.get(0).add(treeQuery.get());
                     }
                 }
             }
@@ -2044,7 +2068,7 @@ public class DynamicDataUseController {
                                         if (dataMap.get(finalFormValueHtml.getSecTitle()).equals(e.get(finalFormValueHtml.getSecTitle()))) {
                                             if (dataMap.get(finalFormValueHtml.getLabel()).equals(e.get(finalFormValueHtml.getLabel()))) {
                                                 if (mapDataList.stream().filter(b -> b.get(finalFormValueHtml.getLabel()).equals(dataMap.get(finalFormValueHtml.getLabel()))
-                                                        && b.get(finalFormValueHtml.getSecTitle()).equals(dataMap.get(finalFormValueHtml.getSecTitle()))
+                                                                                     && b.get(finalFormValueHtml.getSecTitle()).equals(dataMap.get(finalFormValueHtml.getSecTitle()))
                                                 ).findAny().isPresent()) {
                                                     dataMap.put("id", e.get("id"));
                                                     dataMap.put("dataId", e.get("id"));

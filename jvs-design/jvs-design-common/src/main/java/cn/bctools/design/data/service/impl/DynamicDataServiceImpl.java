@@ -328,7 +328,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         log.error(o + " " + html.getLabel() + "组件数据格式不正确:" + o + e.getMessage() + "<br/>");
                         error.append(html.getLabel()).append("组件数据格式不正确:").append(o).append(e.getMessage()).append("<br/>");
                     }
-                } else if (htmlEmptyEnable) {
+                } else if (htmlEmptyEnable && map.containsKey(key)) {
                     //暂时不处理类型为空的情况
                     error.append(html.getLabel()).append("不能为空<br/>");
                 }

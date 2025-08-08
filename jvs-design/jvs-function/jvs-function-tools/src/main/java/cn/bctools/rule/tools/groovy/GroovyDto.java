@@ -24,13 +24,12 @@ public class GroovyDto {
     @NotNull(message = "脚本不能为空")
     public String content;
 
-    @ParameterValue(info = "参数", necessity = false,type = InputType.list)
+    @ParameterValue(info = "参数", explain = "函数顺序参数", necessity = false, type = InputType.list)
     @NotNull(message = "参数不能为空")
     public List<Object> parameters = new ArrayList<>();
 
     @ParameterValue(info = "参数是否为数组", necessity = false, type = InputType.map, explain = "参数类型,参数名:false/true,true表示参数为数组,若不设置系统会自行判断当前函数体参数类型，可能会导致脚本执行失败，请与参数个数保持一致")
-    public Map<String,Boolean> parameterTypes = new HashMap<>();
-
+    public Map<String, Boolean> parameterTypes = new HashMap<>();
 
 
 }

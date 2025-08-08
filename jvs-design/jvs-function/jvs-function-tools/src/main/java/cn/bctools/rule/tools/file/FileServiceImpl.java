@@ -6,6 +6,7 @@ import cn.bctools.rule.entity.enums.RuleGroup;
 import cn.bctools.rule.entity.enums.TestShowEnum;
 import cn.bctools.rule.entity.enums.type.RuleFile;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
+import cn.hutool.core.util.StrUtil;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -32,7 +33,7 @@ public class FileServiceImpl implements BaseCustomFunctionInterface<FileDto> {
         return new RuleFile()
                 .setName(dto.getFileName())
                 .setOutputType(dto.getFileType())
-                .setOriginalName(dto.getFileName())
+                .setOriginalName(dto.getFileName() + StrUtil.DOT + dto.getFileType())
                 .setUrl(dto.getFileUrl());
     }
 

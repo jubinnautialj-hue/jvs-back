@@ -92,7 +92,7 @@ public class WordServiceImpl implements BaseCustomFunctionInterface<WordDto> {
                 .setOutputType(OutputType.download)
                 .setModule(RuleConstant.OSS_BUCKET_NAME_PATH + wordDto.getFileType())
                 .setFileType(StrUtil.DOT + wordDto.getFileType())
-                .setOriginalName(wordDto.getFileName())
+                .setOriginalName(wordDto.getFileName() + StrUtil.DOT + wordDto.getFileType())
                 .setUrl(fileLink);
     }
 

@@ -63,10 +63,9 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
         if (data instanceof List) {
             boolean finalShowPath = showPath;
             List<SysDeptDto> finalDeptList = deptList;
-            return ((List<?>) data).stream().map(e -> dataFieldHandler.handlePathId(e, isMulti, finalShowPath, finalDeptList, SysDeptDto::getId, SysDeptDto::getParentId))
-                    .map(e -> {
-                        return dataFieldHandler.joinFormItems(deptMap, e, isMulti, finalShowPath);
-                    }).collect(Collectors.joining(","));
+            return ((List<?>) data).stream().map(e -> dataFieldHandler.handlePathId(e, isMulti, finalShowPath, finalDeptList, SysDeptDto::getId, SysDeptDto::getParentId)).map(e -> {
+                return dataFieldHandler.joinFormItems(deptMap, e, isMulti, finalShowPath);
+            }).collect(Collectors.joining(","));
         } else {
             data = dataFieldHandler.handlePathId(data, isMulti, showPath, deptList, SysDeptDto::getId, SysDeptDto::getParentId);
             return dataFieldHandler.joinFormItems(deptMap, data, isMulti, showPath);
@@ -106,8 +105,13 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
             Object next = getNextDeptId(data, collect, 0);
             return next;
         } else {
-            String id = deptApi.search(new SysDeptDto().setName(o.toString())).getData().get(0).getId();
-            return id;
+            List<SysDeptDto> data = deptApi.search(new SysDeptDto().setName(o.toString())).getData();
+            if (ObjectNull.isNotNull(data)) {
+                String id = deptApi.search(new SysDeptDto().setName(o.toString())).getData().get(0).getId();
+                return id;
+            } else {
+                throw new BusinessException(o.toString() + " 部门不存在");
+            }
         }
     }
 
@@ -135,44 +139,7 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
 
     @Override
     public Map<String, Object> generate(String name, String field, List<String> dicData) {
-        String str = "{\n" +
-                "    \"prop\": \"" + field + "\",\n" +
-                "    \"type\": \"department\",\n" +
-                "    \"label\": \"" + name + "\",\n" +
-                "    \"span\": 24,\n" +
-                "    \"display\": true,\n" +
-                "    \"status\": \"\",\n" +
-                "    \"tips\": {\n" +
-                "        \"text\": \"\",\n" +
-                "        \"position\": \"right\"\n" +
-                "    },\n" +
-                "    \"multiple\": false,\n" +
-                "    \"showalllevels\": false,\n" +
-                "    \"collapsetags\": false,\n" +
-                "    \"emitPath\": false,\n" +
-                "    \"showFrom\": [\n" +
-                "        \"label\",\n" +
-                "        \"span\",\n" +
-                "        \"multiple\",\n" +
-                "        \"prop\",\n" +
-                "        \"sqlType\",\n" +
-                "        \"showalllevels\",\n" +
-                "        \"collapsetags\",\n" +
-                "        \"emitPath\",\n" +
-                "        \"disabled\",\n" +
-                "        \"isDefault\"\n" +
-                "    ],\n" +
-                "    \"sqlType\": \"array\",\n" +
-                "    \"rules\": [\n" +
-                "        {\n" +
-                "            \"required\": false,\n" +
-                "            \"message\": \"请选择部门\",\n" +
-                "            \"trigger\": \"change\"\n" +
-                "        }\n" +
-                "    ],\n" +
-                "    \"name\": \"" + DataFieldType.department.getDesc() + "\",\n" +
-                "    \"disabled\": false\n" +
-                "}";
+        String str = "{\n" + "    \"prop\": \"" + field + "\",\n" + "    \"type\": \"department\",\n" + "    \"label\": \"" + name + "\",\n" + "    \"span\": 24,\n" + "    \"display\": true,\n" + "    \"status\": \"\",\n" + "    \"tips\": {\n" + "        \"text\": \"\",\n" + "        \"position\": \"right\"\n" + "    },\n" + "    \"multiple\": false,\n" + "    \"showalllevels\": true,\n" + "    \"collapsetags\": false,\n" + "    \"emitPath\": false,\n" + "    \"showFrom\": [\n" + "        \"label\",\n" + "        \"span\",\n" + "        \"multiple\",\n" + "        \"prop\",\n" + "        \"sqlType\",\n" + "        \"showalllevels\",\n" + "        \"collapsetags\",\n" + "        \"emitPath\",\n" + "        \"disabled\",\n" + "        \"isDefault\"\n" + "    ],\n" + "    \"sqlType\": \"array\",\n" + "    \"rules\": [\n" + "        {\n" + "            \"required\": false,\n" + "            \"message\": \"请选择部门\",\n" + "            \"trigger\": \"change\"\n" + "        }\n" + "    ],\n" + "    \"name\": \"" + DataFieldType.department.getDesc() + "\",\n" + "    \"disabled\": false\n" + "}";
         return JSONObject.parseObject(str);
     }
 

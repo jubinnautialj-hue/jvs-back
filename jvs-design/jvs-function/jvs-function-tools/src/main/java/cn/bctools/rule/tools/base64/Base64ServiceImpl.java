@@ -14,6 +14,7 @@ import cn.bctools.rule.entity.enums.type.OutputType;
 import cn.bctools.rule.entity.enums.type.RuleFile;
 import cn.bctools.rule.function.BaseCustomFunctionInterface;
 import cn.hutool.core.codec.Base64;
+import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSON;
@@ -76,7 +77,7 @@ public class Base64ServiceImpl implements BaseCustomFunctionInterface<Base64Dto>
                         .setFileName(baseFile.getFileName())
                         .setName(baseFile.getName())
                         .setOutputType(OutputType.preview)
-                        .setOriginalName(dto.getFileName())
+                        .setOriginalName(dto.getFileName() + StrUtil.DOT + "png")
                         .setUrl(fileUrl);
             }
         } else if (dto.getBody() instanceof JSONObject) {

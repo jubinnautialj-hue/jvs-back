@@ -36,6 +36,7 @@ import java.util.stream.Collectors;
 public class DeptServiceImpl implements BaseCustomFunctionInterface<DeptDto> {
 
     AuthDeptServiceApi deptServiceApi;
+
     @Override
     public Object execute(DeptDto userDto, Map<String, Object> params) {
         if (ObjectNull.isNull(userDto.getDept())) {
@@ -65,7 +66,7 @@ public class DeptServiceImpl implements BaseCustomFunctionInterface<DeptDto> {
             case 部门名称:
                 return deptServiceApi.search(new SysDeptDto().setName(userDto.getDept())).getData();
             case 部门代码:
-                return deptServiceApi.search(new SysDeptDto().setDeptCode(userDto.getDept())).getData();
+                return deptServiceApi.search(new SysDeptDto().setDeptCode(userDto.getDept())).getData().get(0).getDeptCode();
             default:
 
         }

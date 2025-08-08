@@ -211,7 +211,6 @@ public class AppUseController {
     @Log
     @GetMapping("/form/{id}")
     @ApiOperation("表单设计数据")
-    @Transactional(rollbackFor = Exception.class)
     public R<FormPo> form(@PathVariable("id") String id, @PathVariable String appId) {
         FormPo po = formService.getById(id);
         if (Objects.isNull(po)) {

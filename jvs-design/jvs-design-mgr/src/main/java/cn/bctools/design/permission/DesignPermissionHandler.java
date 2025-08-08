@@ -49,8 +49,8 @@ public class DesignPermissionHandler implements BasePermissionHandlerHandler {
             //  是自己创建的应用、作为应用管理员或开发者，则放行
             AppRoleDto appRole = Optional.ofNullable(jvsApp.getRole()).orElseGet(AppRoleDto::new);
             if (UserCurrentUtils.getUserId().equals(jvsApp.getCreateById()) ||
-                    jvsAppService.checkRole(appRole.getAdminMember(), UserCurrentUtils.getCurrentUser()) ||
-                    jvsAppService.checkRole(appRole.getDevMember(), UserCurrentUtils.getCurrentUser())) {
+                jvsAppService.checkRole(appRole.getAdminMember(), UserCurrentUtils.getCurrentUser()) ||
+                jvsAppService.checkRole(appRole.getDevMember(), UserCurrentUtils.getCurrentUser())) {
                 return Boolean.TRUE;
             }
             throw new BusinessException("没有权限操作");
