@@ -308,6 +308,13 @@ public class DynamicDataUseController {
         return R.ok(fields);
     }
 
+    @ApiOperation("获取字段列表")
+    @GetMapping("/fields/form/{modelId}")
+    public R<List<FieldBasicsHtml>> getFormFields(@PathVariable("modelId") String modelId, @PathVariable String appId) {
+        List<FieldBasicsHtml> fields = dataFieldService.getFields(appId, modelId, true, true);
+        return R.ok(fields);
+    }
+
     /**
      * Gets data model name.
      *
@@ -1249,7 +1256,9 @@ public class DynamicDataUseController {
                 }
             }
         }
-
+        if (ObjectNull.isNotNull(dateField)) {
+            collect.addAll(dateField);
+        }
         Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, combiningFieldFormulaContentMap, queryGroupConditions, queryPageDto.getSorts(), collect, true, true, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
         List<List<QueryConditionDto>> queryGroup = Collections.singletonList(Collections.singletonList(treeQuery.get()));
         List<Map<String, Object>> allData = new ArrayList<>();

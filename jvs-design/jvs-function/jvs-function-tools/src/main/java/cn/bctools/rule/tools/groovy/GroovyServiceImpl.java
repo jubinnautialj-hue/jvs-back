@@ -15,8 +15,8 @@ import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import groovy.lang.*;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 
@@ -66,31 +66,49 @@ public class GroovyServiceImpl implements BaseCustomFunctionInterface<GroovyDto>
             }
         } catch (Exception e) {
             e.printStackTrace();
+            throw e;
         }
         return run;
     }
 
     private Script getScript(String functionName,int parameterSize,String functionContent){
-        String scriptCacheKey = functionName+"@"+parameterSize;
         Script groovy;
-        if(scriptCache.containsKey(scriptCacheKey)){
-            groovy = scriptCache.get(scriptCacheKey);
+        String cacheKey = functionContent+"_"+parameterSize;
+        if(scriptCache.containsKey(cacheKey)){
+            groovy = scriptCache.get(cacheKey);
         }else{
-            groovy = buildScript(functionName, functionContent);
+            groovy = buildScript(functionName, functionContent,parameterSize);
+            scriptCache.put(functionContent,groovy);
         }
         return groovy;
     }
 
-    public Script buildScript(String functionName, String functionBody) {
+    public Script buildScript(String functionName, String functionBody, int parameterSize) {
 
         StringBuilder builder = new StringBuilder(functionBody);
         builder.append("\nreturn ");
         builder.append(functionName);
         builder.append('(');
-        AtomicInteger index = new AtomicInteger();
         List<String> argNames = getArgNames(functionBody);
-        String collect = argNames.stream().map(e -> "arg" + index.getAndIncrement()).collect(Collectors.joining(StringPool.COMMA));
-        builder.append(collect);
+
+        List<String> args = new ArrayList<>();
+
+        Iterator<String> iterator = argNames.iterator();
+
+        int index = 0;
+        while(iterator.hasNext()){
+            String argName = iterator.next();
+            if(argName.startsWith("...") && index < parameterSize-1){
+                for (int i = index;i < parameterSize;i++){
+                    args.add( "arg"+i);
+                }
+                break;
+            }
+            args.add( "arg"+index);
+            index++;
+        }
+        String join = String.join(",", args);
+        builder.append(join);
         builder.append(')');
 
         GroovyShell shell = new GroovyShell();

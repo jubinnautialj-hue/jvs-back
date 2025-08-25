@@ -258,7 +258,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                         setHasRelationPropList(table, e.getFieldKey());
                     }
                     e.setDesignJson(BeanToMapUtils.beanToMap(html));
-                    fieldMap.put(e.getFieldKey(), JSON.toJSONString(e));
+                    fieldMap.put(e.getFieldKey(), JSON.toJSONString(html));
                     //记录表格路径
                     tablePath.add(e.getFieldKey());
                     if (ObjectNull.isNotNull(html.getDataFilterGroupList())) {
@@ -306,6 +306,8 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                 }
             }
         }
+        List collect = fieldMap.values().stream().map(JSONObject::parseObject).collect(Collectors.toList());
+        formDesignHtml.getFormdata().get(0).setForms(collect);
         //设置关联的字段
         po.setAssociationSettingsFields(associationSettingsFields);
         formDesignHtml.setTablePath(tablePath);
@@ -335,6 +337,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                             .collect(Collectors.toList());
 
                     String hasRelationPropList = "hasRelationPropList";
+                    e.setHasRelationPropList(linkField);
                     e.setDesignJson((Map<String, Object>) JSONPath.set(e.getDesignJson(), hasRelationPropList, linkField));
                 }
                 break;

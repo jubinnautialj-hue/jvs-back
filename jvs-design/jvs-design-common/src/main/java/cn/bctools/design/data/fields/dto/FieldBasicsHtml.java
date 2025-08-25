@@ -30,6 +30,14 @@ public class FieldBasicsHtml extends FieldPublicHtml {
     @ApiModelProperty("数据模型id")
     private String modelId;
 
+    //todo 在表格中的多选、下拉、单选 、级联组件配置了数据筛选和数据联动或间接公式触发的存在关联的字段全路径key集合 未实现
+    /**
+     * 为了优化表单的网络请求速度，将其把多选，下拉等接口的数据返回存在有筛选时，根据条件触发，如果不存在筛选时，默认触发
+     */
+    @ApiModelProperty("在表格中的多选、下拉、单选 、级联组件配置了数据筛选和数据联动或间接公式触发的存在关联的字段全路径key集合")
+    private List<String> hasRelationPropList;
+
+
     @ApiModelProperty("是否可导出")
     private Boolean isExport;
 

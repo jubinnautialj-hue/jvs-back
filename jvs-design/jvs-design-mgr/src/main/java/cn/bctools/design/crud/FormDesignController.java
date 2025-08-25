@@ -32,6 +32,7 @@ import cn.bctools.design.jvslog.service.impl.JvsLogServiceImpl;
 import cn.bctools.design.menu.entity.AppMenu;
 import cn.bctools.design.menu.service.AppMenuService;
 import cn.bctools.design.menu.util.DesignPermissionUtil;
+import cn.bctools.design.project.dto.ButtonSettingDto;
 import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.rule.entity.RuleDesignPo;
@@ -438,12 +439,13 @@ public class FormDesignController {
             }
             FormDataHtml formDataHtml = formData.get(0);
             //获取所有的按钮
-            List<ButtonDesignHtml> btnSetting = formDataHtml.getFormsetting().getBtnSetting();
+            List<ButtonDesignHtml> btnSetting = formDataHtml.getFormsetting().getBtnSetting().stream().filter(ButtonSettingDto::getEnable).collect(Collectors.toList());
             appMenu.setPermissionJson(JSONArray.parseArray(JSON.toJSONString(btnSetting))).setRole(JSONArray.parseArray(JSON.toJSONString(designDto.getRole()))).setRoleType(designDto.getRoleType()).setPermission(DesignPermissionUtil.parseDesign(DesignType.form, design.getViewJson())).setIcon(StringUtils.defaultString(designDto.getIcon(), ""));
             appMenuService.update(appMenu);
 
             List<Map<String, Object>> forms = formDataHtml.getForms();
             if (ObjectUtils.isEmpty(forms)) {
+                formService.updateById(design);
                 return R.ok();
             }
 

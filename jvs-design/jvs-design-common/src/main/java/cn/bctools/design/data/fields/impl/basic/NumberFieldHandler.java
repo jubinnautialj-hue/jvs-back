@@ -117,54 +117,54 @@ public class NumberFieldHandler implements IDataFieldHandler<InputNumberHtml> {
     @Override
     public Map<String, Object> generate(String name, String field, List<String> dicData) {
         String str = "{\n" +
-                "    \"prop\": \"" + field + "\",\n" +
-                "    \"type\": \"inputNumber\",\n" +
-                "    \"label\": \"" + name + "\",\n" +
-                "    \"span\": 24,\n" +
-                "    \"display\": true,\n" +
-                "    \"status\": \"\",\n" +
-                "    \"tips\": {\n" +
-                "        \"text\": \"\",\n" +
-                "        \"position\": \"right\"\n" +
-                "    },\n" +
-                "    \"showFrom\": [\n" +
-                "        \"label\",\n" +
-                "        \"span\",\n" +
-                "        \"prop\",\n" +
-                "        \"min\",\n" +
-                "        \"max\",\n" +
-                "        \"sqlType\",\n" +
-                "        \"step\",\n" +
-                "        \"stepstrictly\",\n" +
-                "        \"precision\",\n" +
-                "        \"disabled\",\n" +
-                "        \"controlsposition\",\n" +
-                "        \"placeholder\",\n" +
-                "        \"defaultValue\",\n" +
-                "        \"defaultUrl\"\n" +
-                "    ],\n" +
-                "    \"linkbind\": \"\",\n" +
-                "    \"min\": 0,\n" +
-                "    \"max\": 10000,\n" +
-                "    \"step\": 1,\n" +
-                "    \"stepstrictly\": false,\n" +
-                "    \"precision\": 0,\n" +
-                "    \"disabled\": false,\n" +
-                "    \"controlsposition\": \"right\",\n" +
-                "    \"placeholder\": \"请输入" + name + "\",\n" +
-                "    \"defaultValue\": 0,\n" +
-                "    \"defaultUrl\": \"\",\n" +
-                "    \"sqlType\": \"double\",\n" +
-                "    \"rules\": [\n" +
-                "        {\n" +
-                "            \"required\": false,\n" +
-                "            \"message\": \"请输入" + name + "\",\n" +
-                "            \"trigger\": \"change\"\n" +
-                "        }\n" +
-                "    ],\n" +
-                "    \"name\": \"" + DataFieldType.inputNumber.getDesc() + "\",\n" +
-                "    \"defaultOrigin\": \"\"\n" +
-                "}";
+                     "    \"prop\": \"" + field + "\",\n" +
+                     "    \"type\": \"inputNumber\",\n" +
+                     "    \"label\": \"" + name + "\",\n" +
+                     "    \"span\": 24,\n" +
+                     "    \"display\": true,\n" +
+                     "    \"status\": \"\",\n" +
+                     "    \"tips\": {\n" +
+                     "        \"text\": \"\",\n" +
+                     "        \"position\": \"right\"\n" +
+                     "    },\n" +
+                     "    \"showFrom\": [\n" +
+                     "        \"label\",\n" +
+                     "        \"span\",\n" +
+                     "        \"prop\",\n" +
+                     "        \"min\",\n" +
+                     "        \"max\",\n" +
+                     "        \"sqlType\",\n" +
+                     "        \"step\",\n" +
+                     "        \"stepstrictly\",\n" +
+                     "        \"precision\",\n" +
+                     "        \"disabled\",\n" +
+                     "        \"controlsposition\",\n" +
+                     "        \"placeholder\",\n" +
+                     "        \"defaultValue\",\n" +
+                     "        \"defaultUrl\"\n" +
+                     "    ],\n" +
+                     "    \"linkbind\": \"\",\n" +
+                     "    \"min\": 0,\n" +
+                     "    \"max\": 10000,\n" +
+                     "    \"step\": 1,\n" +
+                     "    \"stepstrictly\": false,\n" +
+                     "    \"precision\": 0,\n" +
+                     "    \"disabled\": false,\n" +
+                     "    \"controlsposition\": \"right\",\n" +
+                     "    \"placeholder\": \"请输入" + name + "\",\n" +
+                     "    \"defaultValue\": 0,\n" +
+                     "    \"defaultUrl\": \"\",\n" +
+                     "    \"sqlType\": \"double\",\n" +
+                     "    \"rules\": [\n" +
+                     "        {\n" +
+                     "            \"required\": false,\n" +
+                     "            \"message\": \"请输入" + name + "\",\n" +
+                     "            \"trigger\": \"change\"\n" +
+                     "        }\n" +
+                     "    ],\n" +
+                     "    \"name\": \"" + DataFieldType.inputNumber.getDesc() + "\",\n" +
+                     "    \"defaultOrigin\": \"\"\n" +
+                     "}";
         return JSONObject.parseObject(str);
     }
 }

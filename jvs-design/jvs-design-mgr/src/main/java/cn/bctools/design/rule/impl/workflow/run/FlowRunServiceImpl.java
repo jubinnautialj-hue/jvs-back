@@ -13,6 +13,8 @@ import cn.bctools.design.workflow.dto.startflow.StartFlowResDto;
 import cn.bctools.design.workflow.dto.startflow.StartFlowVariables;
 import cn.bctools.design.workflow.model.Node;
 import cn.bctools.design.workflow.service.TaskService;
+import cn.bctools.design.workflow.support.context.FlowContext;
+import cn.bctools.design.workflow.utils.FlowContextUtil;
 import cn.bctools.oauth2.utils.AuthorityManagementUtils;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.rule.annotations.Rule;
@@ -117,7 +119,10 @@ public class FlowRunServiceImpl implements BaseCustomFunctionInterface<FlowRunDt
             if (ObjectNull.isNull(userDto)) {
                 throw new BusinessException("未登录或未指定发起人不能启动流程");
             }
+            FlowContext flowContext = FlowContextUtil.context().getContext();
             resDto = taskService.start(userDto, startFlowDto);
+            FlowContextUtil.reset();
+            FlowContextUtil.context().refresh(flowContext);
             // 将处理后的数据返回到params
             if (ObjectNull.isNotNull(flowRunDto.getData())) {
                 flowRunDto.getData().putAll(resDto.getData());

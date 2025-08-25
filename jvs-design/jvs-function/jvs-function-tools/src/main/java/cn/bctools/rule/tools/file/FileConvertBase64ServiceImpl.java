@@ -11,8 +11,10 @@ import cn.hutool.core.codec.Base64;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.http.HttpUtil;
 import lombok.AllArgsConstructor;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 
+import java.net.URI;
 import java.util.Map;
 
 /**
@@ -31,6 +33,7 @@ import java.util.Map;
 public class FileConvertBase64ServiceImpl implements BaseCustomFunctionInterface<FileConvertBase64Dto> {
     OssTemplate ossTemplate;
 
+    @SneakyThrows
     @Override
     public Object execute(FileConvertBase64Dto dto, Map<String, Object> params) {
         //直接返回流
@@ -41,9 +44,10 @@ public class FileConvertBase64ServiceImpl implements BaseCustomFunctionInterface
         } else if (dto.getUrl() instanceof RuleFile) {
             url = ossTemplate.fileLink(((RuleFile) dto.getUrl()).getFileName(), ((RuleFile) dto.getUrl()).getBucketName());
         }
-        String mimeType = FileUtil.getMimeType(url);
+
         String encodedData = new String(Base64.encode(HttpUtil.downloadBytes(url)));
-        String encodedFile = "data:" + mimeType + ";base64," + encodedData;
-        return encodedFile;
+        String cleanPath = new URI(url).getPath();
+        String mimeType = FileUtil.getMimeType(cleanPath);
+        return "data:" + mimeType + ";base64," + encodedData;
     }
 }

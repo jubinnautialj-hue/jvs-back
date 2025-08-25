@@ -216,10 +216,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
     /**
      * 不需要回显处理的字段
      */
-    private static final List<String> EXCLUDE_ECHO_FIELDS = Stream.of(
-            FlowDataFieldEnum.TASK_STATE.getFieldKey(),
-            FlowDataFieldEnum.TASK_PROGRESS.getFieldKey()
-    ).collect(Collectors.toList());
+    private static final List<String> EXCLUDE_ECHO_FIELDS = Stream.of(FlowDataFieldEnum.TASK_STATE.getFieldKey(), FlowDataFieldEnum.TASK_PROGRESS.getFieldKey()).collect(Collectors.toList());
 
     @Override
     public DynamicDataPo getById(String modelId, String dataId) {
@@ -966,35 +963,31 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         List<String> changes = new ArrayList<>();
 
         //新增的字段
-        difference.entriesOnlyOnRight().keySet()
-                .stream()
-                .filter(map::containsKey)
-                .filter(e -> ObjectNull.isNotNull(difference.entriesOnlyOnRight().get(e)))
-                .forEach(e -> {
-                    switch (map.get(e).getType()) {
-                        case htmlEditor:
-                        case signature:
-                        case imageUpload:
-                        case file:
-                        case fileUpload:
-                        case flowNode:
-                        case image:
-                        case tableForm:
-                        case tab:
-                        case flowTable:
-                        case jsonEditor:
-                            String s = " 创建了 " + map.get(e).getFieldName();
-                            changes.add(s);
-                            break;
-                        default:
-                            Object echo = dataFieldHandler.echo(map.get(e), difference.entriesOnlyOnRight().get(e), data);
-                            if (!(map.get(e).getFieldName().equals("创建时间") || map.get(e).getFieldName().equals("修改时间"))) {
-                                String b = " 创建了 " + map.get(e).getFieldName() + "为 " + echo;
-                                changes.add(b);
-                            }
+        difference.entriesOnlyOnRight().keySet().stream().filter(map::containsKey).filter(e -> ObjectNull.isNotNull(difference.entriesOnlyOnRight().get(e))).forEach(e -> {
+            switch (map.get(e).getType()) {
+                case htmlEditor:
+                case signature:
+                case imageUpload:
+                case file:
+                case fileUpload:
+                case flowNode:
+                case image:
+                case tableForm:
+                case tab:
+                case flowTable:
+                case jsonEditor:
+                    String s = " 创建了 " + map.get(e).getFieldName();
+                    changes.add(s);
+                    break;
+                default:
+                    Object echo = dataFieldHandler.echo(map.get(e), difference.entriesOnlyOnRight().get(e), data);
+                    if (!(map.get(e).getFieldName().equals("创建时间") || map.get(e).getFieldName().equals("修改时间"))) {
+                        String b = " 创建了 " + map.get(e).getFieldName() + "为 " + echo;
+                        changes.add(b);
                     }
+            }
 
-                });
+        });
 
         //需要将修改记录,单独存放到一个数据表中,用于数据留痕
         //todo 后续添加上是否记录此模型的变化日志，优化数据处理
@@ -1002,8 +995,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     return !DATA_CHANGE.equalsIgnoreCase(e);
                 })
                 //判断字段
-                .filter(map::containsKey)
-                .map(e -> {
+                .filter(map::containsKey).map(e -> {
                     if (ObjectNull.isNull(difference.entriesDiffering().get(e))) {
                         return null;
                     }
@@ -1033,8 +1025,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                 return "更新了 \"" + map.get(e).getFieldName() + "\"   " + left + " 为  " + right;
                         }
                     }
-                })
-                .filter(ObjectNull::isNotNull)
+                }).filter(ObjectNull::isNotNull)
                 //将所有的变化添加起来
                 .forEach(changes::add);
         dataChangePo.setContent(String.join("<br />", changes));
@@ -1078,17 +1069,15 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             //添加动态数据组件
             List<DataTableFieldDesignHtml> pageAutoTableFields = dataFieldDynamicService.getPageAutoTableFields(appId, modelId, getDesignId());
             if (ObjectNull.isNotNull(pageAutoTableFields)) {
-                List<String> dynamicFiled = pageAutoTableFields.stream()
-                        .peek(e -> {
-                            FieldBasicsHtml copy = BeanCopyUtil.copy(e.getDesignJson(), FieldBasicsHtml.class);
-                            copy.setFieldKey(copy.getProp());
-                            copy.setDesignJson(e.getDesignJson());
-                            if (!baseField.contains(copy.getFieldKey())) {
-                                //需要判断是否存在
-                                fieldBasicsHtmls.add(copy);
-                            }
-                        })
-                        .map(DataTableFieldDesignHtml::getAliasColumnName).filter(ObjectNull::isNotNull).collect(Collectors.toList());
+                List<String> dynamicFiled = pageAutoTableFields.stream().peek(e -> {
+                    FieldBasicsHtml copy = BeanCopyUtil.copy(e.getDesignJson(), FieldBasicsHtml.class);
+                    copy.setFieldKey(copy.getProp());
+                    copy.setDesignJson(e.getDesignJson());
+                    if (!baseField.contains(copy.getFieldKey())) {
+                        //需要判断是否存在
+                        fieldBasicsHtmls.add(copy);
+                    }
+                }).map(DataTableFieldDesignHtml::getAliasColumnName).filter(ObjectNull::isNotNull).collect(Collectors.toList());
                 fieldKeyList.addAll(dynamicFiled);
             }
         }
@@ -1106,9 +1095,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         if (ObjectNull.isNotNull(conditions)) {
             //列表过滤条件
             List<QueryConditionDto> collect = conditions.stream().flatMap(Collection::stream).filter(QueryConditionDto::getCrud).collect(Collectors.toList());
-            List<QueryConditionDto> queryConditionDtoList = conditions.stream()
-                    .flatMap(Collection::stream).filter(s -> !s.getCrud())
-                    .collect(Collectors.toList());
+            List<QueryConditionDto> queryConditionDtoList = conditions.stream().flatMap(Collection::stream).filter(s -> !s.getCrud()).collect(Collectors.toList());
             queryConditionDtoList.removeIf(collect::contains);
             //过滤出列表过滤的数据
             if (ObjectNull.isNotNull(collect) && ObjectNull.isNull(queryConditionDtoList)) {
@@ -1182,7 +1169,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     buildDynamicCriteriaList.forEach(e -> e.andOperator(dynamicCriteriaList));
                     authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
                 } else if (ObjectNull.isNotNull(buildDynamicCriteriaList) && ObjectNull.isNull(dynamicCriteriaList)) {
-                    authCriteria = DynamicDataUtils.trueCriteria().andOperator(buildDynamicCriteriaList);
+                    if (andOr) {
+                        authCriteria = DynamicDataUtils.trueCriteria().andOperator(buildDynamicCriteriaList);
+                    } else {
+                        authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
+                    }
                 } else if (ObjectNull.isNull(buildDynamicCriteriaList) && ObjectNull.isNotNull(dynamicCriteriaList)) {
                     authCriteria = DynamicDataUtils.trueCriteria().andOperator(dynamicCriteriaList);
                 }
@@ -1661,8 +1652,17 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             data.put(Get.name(DynamicDataPo::getCreateById), user.getId());
             data.put(Get.name(DynamicDataPo::getCreateBy), user.getRealName());
         }
+        String name = Get.name(DynamicDataPo::getCreateTime);
         // BasalPo
-        data.put(Get.name(DynamicDataPo::getCreateTime), DateUtil.now());
+        if (ObjectNull.isNull(data.containsKey(name))) {
+            data.put(name, DateUtil.now());
+        } else {
+            try {
+                DateTime dateTime = DateUtil.parseDateTime(data.get(name).toString());
+            } catch (Exception e) {
+                data.put(name, DateUtil.now());
+            }
+        }
         return data;
     }
 
@@ -1947,14 +1947,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             return;
         }
 
-        List<FieldBasicsHtml> increasedIdFields = dataFieldService.list(Wrappers.<DataFieldPo>lambdaQuery()
-                        .eq(DataFieldPo::getModelId, modelId)
-                        .eq(DataFieldPo::getJvsAppId, appId)
-                        .eq(DataFieldPo::getFieldType, DataFieldType.serialNumber)
-                        .ne(DataFieldPo::getDesignType, DesignType.data))
-                .stream()
-                .map(e -> BeanCopyUtil.copy(e, FieldBasicsHtml.class))
-                .collect(Collectors.toList());
+        List<FieldBasicsHtml> increasedIdFields = dataFieldService.list(Wrappers.<DataFieldPo>lambdaQuery().eq(DataFieldPo::getModelId, modelId).eq(DataFieldPo::getJvsAppId, appId).eq(DataFieldPo::getFieldType, DataFieldType.serialNumber).ne(DataFieldPo::getDesignType, DesignType.data)).stream().map(e -> BeanCopyUtil.copy(e, FieldBasicsHtml.class)).collect(Collectors.toList());
         if (ObjectUtils.isEmpty(increasedIdFields)) {
             return;
         }
@@ -2359,8 +2352,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      * @param datas 数据集合
      */
     private void removeTask(List<Map> datas) {
-        List<String> dataIds = datas.stream()
-                .filter(data -> ObjectNull.isNotNull(data.get("dataId"))).map(data -> String.valueOf(data.get("dataId"))).collect(Collectors.toList());
+        List<String> dataIds = datas.stream().filter(data -> ObjectNull.isNotNull(data.get("dataId"))).map(data -> String.valueOf(data.get("dataId"))).collect(Collectors.toList());
         if (ObjectNull.isNull(dataIds)) {
             return;
         }
@@ -2558,9 +2550,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     continue;
                 }
                 // 一对一处理数据回显
-                List<String> linkageQueryFieldKeys = modelDisplay.getLinkageFieldKeys().stream()
-                        .map(ModelDisplayLinkageFieldHtml::getProp)
-                        .collect(Collectors.toList());
+                List<String> linkageQueryFieldKeys = modelDisplay.getLinkageFieldKeys().stream().map(ModelDisplayLinkageFieldHtml::getProp).collect(Collectors.toList());
                 // 替换条件值，并查询关联模型数据
                 List<QueryConditionDto> dataLinkageList = BeanCopyUtil.copys(modelDisplay.getDataLinkageList(), QueryConditionDto.class);
                 QueryConditionUtils.replaceConditionValue(dataLinkageList, data);
@@ -2569,9 +2559,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     continue;
                 }
                 // 回显处理
-                List<FieldBasicsHtml> allLinkageDataFieldList = dataFieldService.getFields(appId, modelDisplay.getDataLinkageModelId(), true, true).stream()
-                        .filter(fieldBasicsHtml -> linkageQueryFieldKeys.contains(fieldBasicsHtml.getFieldKey()))
-                        .collect(Collectors.toList());
+                List<FieldBasicsHtml> allLinkageDataFieldList = dataFieldService.getFields(appId, modelDisplay.getDataLinkageModelId(), true, true).stream().filter(fieldBasicsHtml -> linkageQueryFieldKeys.contains(fieldBasicsHtml.getFieldKey())).collect(Collectors.toList());
                 // 只获取一条数据回显
                 Map<String, Object> linkageData = linkageDataList.get(0);
                 echoModelDisplay(data, linkageData, allLinkageDataFieldList, modelDisplay.getLinkageFieldKeys());
@@ -2598,15 +2586,14 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 if (model.getSetting().getEncryption()) {
                     //判断加密字段，
                     Map<String, Object> objectMap = new HashMap<>(model.getSetting().getEncryptionFields().size());
-                    model.getSetting().getEncryptionFields()
-                            .forEach(e -> {
-                                try {
-                                    String o = String.valueOf(oldData.getOrDefault(e.getFieldKey(), ""));
-                                    String desensitized = SensitiveInfoUtils.getSensitiveKey().get(e.getEncryptionExpress()).apply(o);
-                                    objectMap.put(e.getFieldKey(), desensitized);
-                                } catch (Exception ignored) {
-                                }
-                            });
+                    model.getSetting().getEncryptionFields().forEach(e -> {
+                        try {
+                            String o = String.valueOf(oldData.getOrDefault(e.getFieldKey(), ""));
+                            String desensitized = SensitiveInfoUtils.getSensitiveKey().get(e.getEncryptionExpress()).apply(o);
+                            objectMap.put(e.getFieldKey(), desensitized);
+                        } catch (Exception ignored) {
+                        }
+                    });
                     //判断脱敏数据 和原始字段是否一致，如果和加密的结果一致则删除历史的 key
                     objectMap.keySet().forEach(e -> {
                         if (objectMap.get(e).equals(data.get(e))) {

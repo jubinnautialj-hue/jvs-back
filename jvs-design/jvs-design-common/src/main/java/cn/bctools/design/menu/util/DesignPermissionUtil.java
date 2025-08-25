@@ -66,8 +66,8 @@ public class DesignPermissionUtil {
             return null;
         }
         PageDesignHtml pageDesignHtml = DesignUtils.parsePage(viewJson);
-        List<String> operation = Optional.ofNullable(pageDesignHtml.getButtons()).orElseGet(ArrayList::new).stream().map(ButtonSettingDto::getName).collect(Collectors.toList());
-        List<String> treeOperation = Optional.ofNullable(pageDesignHtml.getLeftTreeButton()).orElseGet(ArrayList::new).stream().map(ButtonSettingDto::getName).collect(Collectors.toList());
+        List<String> operation = Optional.ofNullable(pageDesignHtml.getButtons()).orElseGet(ArrayList::new).stream().filter(ButtonSettingDto::getEnable).map(ButtonSettingDto::getName).collect(Collectors.toList());
+        List<String> treeOperation = Optional.ofNullable(pageDesignHtml.getLeftTreeButton()).orElseGet(ArrayList::new).stream().filter(ButtonSettingDto::getEnable).map(ButtonSettingDto::getName).collect(Collectors.toList());
         return new PermissionIdentificationDto()
                 .setOperation(operation)
                 .setTreeOperation(treeOperation);
@@ -86,7 +86,7 @@ public class DesignPermissionUtil {
         FormDesignHtml formDesignHtml = Optional.ofNullable(DesignUtils.parseForm(viewJson)).orElseGet(FormDesignHtml::new);
         FormDataHtml formDataHtml = Optional.ofNullable(formDesignHtml.getFormdata()).map(formDesign -> formDesign.get(0)).orElseGet(FormDataHtml::new);
         List<ButtonDesignHtml> btnSetting = Optional.ofNullable(formDataHtml.getFormsetting()).map(FormSettingHtml::getBtnSetting).orElseGet(ArrayList::new);
-        List<String> operation = btnSetting.stream().map(ButtonSettingDto::getName).collect(Collectors.toList());
+        List<String> operation = btnSetting.stream().filter(ButtonSettingDto::getEnable).map(ButtonSettingDto::getName).collect(Collectors.toList());
         return new PermissionIdentificationDto().setOperation(operation);
     }
 

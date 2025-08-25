@@ -40,10 +40,10 @@ import java.util.concurrent.ConcurrentHashMap;
         value = "Mongo",
         group = RuleGroup.数据插件,
         test = true,
-        enable = false,
         testShowEnum = TestShowEnum.JSON,
         returnType = ClassType.数组,
         order = 21,
+        demoDisabled = true,
 //        iconUrl = "rule-mongodbyunshujukuMongoDB",
         explain = "是非关系数据库当中功能最丰富，最像关系数据库的。它支持的数据结构非常松散，是类似json的bson格式，因此可以存储比较复杂的数据类型。"
 

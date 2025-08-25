@@ -18,6 +18,7 @@ import cn.bctools.word.utils.WordPdfUtil;
 import cn.bctools.word.utils.WordVariableReplaceUtil;
 import cn.hutool.cache.Cache;
 import cn.hutool.cache.CacheUtil;
+import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpUtil;
 import lombok.AllArgsConstructor;
@@ -92,7 +93,7 @@ public class WordServiceImpl implements BaseCustomFunctionInterface<WordDto> {
                 .setOutputType(OutputType.download)
                 .setModule(RuleConstant.OSS_BUCKET_NAME_PATH + wordDto.getFileType())
                 .setFileType(StrUtil.DOT + wordDto.getFileType())
-                .setOriginalName(wordDto.getFileName() + StrUtil.DOT + wordDto.getFileType())
+                .setOriginalName(FileUtil.getName(wordDto.getFileName()))
                 .setUrl(fileLink);
     }
 
