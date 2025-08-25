@@ -166,14 +166,6 @@
 
     </dependencyManagement>
 
-    <!--默认推送地址-->
-    <distributionManagement>
-        <repository>
-            <id>j8s-j8s-jvs</id>
-            <name>jvs</name>
-            <url>https://j8s-maven.pkg.coding.net/repository/j8s/jvs</url>
-        </repository>
-    </distributionManagement>
 
 
 </project>

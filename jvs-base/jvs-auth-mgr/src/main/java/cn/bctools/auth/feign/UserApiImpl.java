@@ -532,4 +532,14 @@ public class UserApiImpl implements AuthUserServiceApi {
         }
         return R.ok(user.getId());
     }
+
+    @Override
+    public R<Boolean> deleteUser(String userId, String tenantId) {
+        TenantContextHolder.setTenantId(tenantId);
+        boolean update = userTenantService.update(Wrappers.<UserTenant>lambdaUpdate()
+                .set(UserTenant::getCancelFlag, true)
+                .eq(UserTenant::getTenantId, tenantId)
+                .eq(UserTenant::getUserId, userId));
+        return R.ok(update);
+    }
 }

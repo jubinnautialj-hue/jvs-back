@@ -272,28 +272,13 @@
         </pluginManagement>
     </build>
 
-    <profiles>
-        <profile>
-            <id>release</id>
-            <!--默认推送地址-->
-            <distributionManagement>
-                <repository>
-                    <!--必须与 settings.xml 的 id 一致-->
-                    <id>j8s-j8s-jvs</id>
-                    <name>jvs</name>
-                    <url>https://j8s-maven.pkg.coding.net/repository/j8s/jvs</url>
-                </repository>
-            </distributionManagement>
-        </profile>
-    </profiles>
-
-    <!--默认推送地址-->
+    <!-- 配置发布仓库 -->
     <distributionManagement>
         <repository>
-            <!--必须与 settings.xml 的 id 一致-->
-            <id>j8s-j8s-jvs</id>
-            <name>jvs</name>
-            <url>https://j8s-maven.pkg.coding.net/repository/j8s/jvs</url>
+            <!-- 须与 settings.xml 中 server 的 id 一致 -->
+            <id>rkqfbctoolsc-j8s/maven</id>
+            <name>rkqfbctoolsc-j8s/maven</name>
+            <url>https://maven.cnb.cool/rkqfbctoolsc/j8s/maven/-/packages/</url>
         </repository>
     </distributionManagement>
 

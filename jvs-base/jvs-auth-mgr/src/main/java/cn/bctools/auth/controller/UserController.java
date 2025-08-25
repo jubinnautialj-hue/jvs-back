@@ -206,6 +206,9 @@ public class UserController {
         if (ObjectNull.isNotNull(userTenant.getDeptId())) {
             List<String> list = deptService.getAllChildId(userTenant.getDeptId());
             userids = userDeptService.list(new LambdaQueryWrapper<UserDept>().in(ObjectNull.isNotNull(list), UserDept::getDeptId, list)).stream().map(e -> e.getUserId()).collect(Collectors.toList());
+            if (ObjectNull.isNull(userids)) {
+                return R.ok(userVoPage);
+            }
         }
         QueryWrapper<Object> queryWrapper = Wrappers.query();
         if (ObjectNull.isNotNull(allChildId)) {
@@ -413,6 +416,9 @@ public class UserController {
         if (ObjectNull.isNotNull(depts)) {
             in.isNotNull(UserTenant::getDeptId);
             List<String> userids = userDeptService.list(new LambdaQueryWrapper<UserDept>().in(UserDept::getDeptId, depts)).stream().map(UserDept::getUserId).collect(Collectors.toList());
+            if (ObjectNull.isNull(userids)) {
+                return R.ok(page);
+            }
             in.in(ObjectNull.isNotNull(userids), UserTenant::getUserId, userids);
         }
         page = userTenantService.page(page, in

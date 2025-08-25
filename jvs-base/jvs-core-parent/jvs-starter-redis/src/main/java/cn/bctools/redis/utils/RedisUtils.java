@@ -12,6 +12,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.TimeoutUtils;
 import org.springframework.data.redis.serializer.RedisSerializer;
 import org.springframework.data.redis.serializer.SerializationUtils;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 import org.springframework.util.Assert;
 
 import java.time.Duration;
@@ -20,8 +21,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * 可以使用${@link cn.bctools.common.constant.SysConstant#redisKey(java.lang.String, java.lang.String) 方法规范redis的key }
- * 或者使用${@link RedisUtils#setPrefix(java.lang.String)} 设置统一的key前缀
+ * 可以使用${@link cn.bctools.common.constant.SysConstant#redisKey(String, String) 方法规范redis的key }
+ * 或者使用${@link RedisUtils#setPrefix(String)} 设置统一的key前缀
  * 1. Key的命名应该具有可读性，方便开发者理解和维护。可以使用类似于命名空间的方式，将相关的key放在同一个前缀下，例如"user:id"和"order:id"。
  * <p>
  * 2. Key的命名应该尽量简短，以减少内存占用和提高查询效率。
@@ -667,6 +668,32 @@ public class RedisUtils {
         }
     }
 
+    /**
+     * 将list放入缓存
+     *
+     * @param key   键
+     * @param value 值
+     * @return Boolean
+     */
+    public Boolean lSetListAllRight(String key, List<?> value) {
+        try {
+            redisTemplate.executePipelined((RedisCallback<Object>) connection -> {
+                for (Object item : value) {
+                    // 将每个元素单独添加到列表
+                    byte[] serializedValue = ((RedisSerializer<Object>)redisTemplate.getValueSerializer())
+                            .serialize(item);
+                    StringRedisSerializer stringSerializer = new StringRedisSerializer();
+                    byte[] serializedKey = stringSerializer.serialize(prefix + key);
+                    connection.rPush(serializedKey, serializedValue);
+                }
+                return null;
+            });
+            return true;
+        } catch (Exception e) {
+            log.error("Exception: {}", e.getMessage());
+            return false;
+        }
+    }
 
     /**
      * 将list放入缓存

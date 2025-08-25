@@ -233,4 +233,13 @@ public interface AuthUserServiceApi {
     @PostMapping(value = "/user/saveOrUpdate")
     R<String> saveOrUpdate(@RequestBody SaveUserDto dto);
 
+    /**
+     * 删除用户
+     *
+     * @param userId 删除用户
+     * @return
+     */
+    @PostMapping(value = "/user/delete")
+    R<Boolean> deleteUser(@RequestParam("userId") String userId, @RequestParam("tenantId") String tenantId);
+
 }

@@ -62,4 +62,14 @@ public class JvsSystemConfig {
      */
     public String designDefaultMode = "GA";
 
+    /**
+     * 自定义的 http 超时时间
+     */
+    private int connectTimeout = 30 * 10 * 1000;
+
+    /**
+     * 自定义的 http 超时时间
+     */
+    private int socketTimeout = 30 * 10 * 1000;
+
 }

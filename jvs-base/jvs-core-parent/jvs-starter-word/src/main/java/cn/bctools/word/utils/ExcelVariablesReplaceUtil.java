@@ -13,6 +13,7 @@ import com.alibaba.fastjson2.JSONObject;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
+import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellReference;
 import org.apache.poi.xssf.usermodel.*;
 
@@ -173,18 +174,51 @@ public class ExcelVariablesReplaceUtil {
     }
 
 
-    private static void copyRow(Row sourceRow, Row newRow) {
-        for (int i = 0; i <= sourceRow.getPhysicalNumberOfCells(); i++) {
+    public static void copyRow(Row sourceRow, Row newRow) {
+        // 复制单元格内容
+        for (int i = 0; i <= sourceRow.getLastCellNum(); i++) {
             Cell sourceCell = sourceRow.getCell(i);
             if (sourceCell != null) {
-                // 复制单元格的样式
+                // 复制单元格样式
                 CellStyle newCellStyle = newRow.getSheet().getWorkbook().createCellStyle();
-                CellStyle cellStyle = sourceCell.getCellStyle();
-                newCellStyle.cloneStyleFrom(cellStyle);
-                sourceCell.setBlank();
+                newCellStyle.cloneStyleFrom(sourceCell.getCellStyle());
+
                 Cell newCell = newRow.createCell(i);
                 newCell.setCellStyle(newCellStyle);
-                newCell.setBlank();
+
+                // 根据单元格类型复制内容
+                switch (sourceCell.getCellType()) {
+                    case STRING:
+                        newCell.setCellValue(sourceCell.getStringCellValue());
+                        break;
+                    case NUMERIC:
+                        newCell.setCellValue(sourceCell.getNumericCellValue());
+                        break;
+                    case BOOLEAN:
+                        newCell.setCellValue(sourceCell.getBooleanCellValue());
+                        break;
+                    case FORMULA:
+                        newCell.setCellFormula(sourceCell.getCellFormula());
+                        break;
+                    default:
+                        newCell.setBlank();
+                }
+            }
+        }
+
+        // 处理合并区域
+        Sheet sheet = newRow.getSheet();
+        for (int i = 0; i < sheet.getNumMergedRegions(); i++) {
+            CellRangeAddress region = sheet.getMergedRegion(i);
+            if (region.getFirstRow() == sourceRow.getRowNum()) {
+                // 创建新的合并区域，调整行号
+                CellRangeAddress newRegion = new CellRangeAddress(
+                        newRow.getRowNum(),
+                        newRow.getRowNum() + (region.getLastRow() - region.getFirstRow()),
+                        region.getFirstColumn(),
+                        region.getLastColumn()
+                );
+                sheet.addMergedRegion(newRegion);
             }
         }
     }

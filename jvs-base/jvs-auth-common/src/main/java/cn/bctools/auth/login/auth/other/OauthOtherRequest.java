@@ -7,6 +7,7 @@ import cn.bctools.auth.login.LoginHandler;
 import cn.bctools.auth.login.dto.SyncUserDto;
 import cn.bctools.auth.util.SyncOrgUtils;
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.JvsJsonPath;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.web.utils.HttpRequestUtils;
@@ -201,43 +202,43 @@ public class OauthOtherRequest extends AuthDefaultRequest {
 
     public OtherAuthUser getUser(JSONObject object, AuthToken authToken) {
         log.info("映射字段关系:{}", JSONObject.toJSONString(field));
-        String string = object.getString(field.getUuid());
+        String string = JvsJsonPath.read(object, field.getUuid()).toString();
         if (ObjectNull.isNull(string)) {
             throw new BusinessException("获取三方用户对象失败,未获取到用户id,三方返回信息为:{}", JSONObject.toJSONString(object) + " \n 示例结构: {\n" +
-                    "\"uuid\":\"xx\",\n" +
-                    "\"name\":\"张三\"\n" +
-                    "}");
+                                                                                                 "\"uuid\":\"xx\",\n" +
+                                                                                                 "\"name\":\"张三\"\n" +
+                                                                                                 "}");
         }
         SexTypeEnum sexTypeEnum = null;
         try {
-            sexTypeEnum = SexTypeEnum.getByDesc(object.getString(field.getGender().getDesc()));
+            sexTypeEnum = SexTypeEnum.getByDesc(JvsJsonPath.read(object, field.getGender().getDesc()).toString().trim());
         } catch (Exception e) {
             log.error("获取性别异常");
         }
         OtherAuthUser otherAuthUser = new OtherAuthUser();
         otherAuthUser.setRawUserInfo(com.alibaba.fastjson.JSONObject.parseObject(JSON.toJSONString(object)));
-        otherAuthUser.setUuid(object.getString(field.getUuid()));
-        otherAuthUser.setUsername(object.getString(field.getUsername()));
-        otherAuthUser.setNickname(object.getString(field.getNickname()));
-        String headImg = object.getString(field.getAvatar());
+        otherAuthUser.setUuid(JvsJsonPath.read(object, field.getUuid().trim()).toString());
+        otherAuthUser.setUsername(JvsJsonPath.read(object, field.getUsername().trim()).toString());
+        otherAuthUser.setNickname(JvsJsonPath.read(object, field.getNickname().trim()).toString());
+        String headImg = JvsJsonPath.read(object, field.getAvatar().trim()).toString();
         String avatar = LoginHandler.getDurableAvatar(otherAuthUser.getNickname(), headImg);
         otherAuthUser.setAvatar(avatar);
         try {
-            otherAuthUser.setEnable(object.getBoolean(field.getEnable().toString()));
+            otherAuthUser.setEnable(JvsJsonPath.read(object, field.getEnable().toString()));
         } catch (Exception e) {
 
         }
-        otherAuthUser.setBlog(object.getString(field.getBlog()));
-        otherAuthUser.setCompany(JSONObject.toJSONString(object.get(field.getCompany())));
-        otherAuthUser.setLocation(object.getString(field.getLocation()));
-        otherAuthUser.setEmail(object.getString(field.getEmail()));
-        otherAuthUser.setRemark(object.getString(field.getRemark()));
+        otherAuthUser.setBlog(JvsJsonPath.read(object, field.getBlog().trim()).toString());
+        otherAuthUser.setCompany(JSONObject.toJSONString(JvsJsonPath.read(object, field.getCompany().trim())));
+        otherAuthUser.setLocation(JvsJsonPath.read(object, field.getLocation().trim()).toString());
+        otherAuthUser.setEmail(JvsJsonPath.read(object, field.getEmail().trim()).toString());
+        otherAuthUser.setRemark(JvsJsonPath.read(object, field.getRemark().trim()).toString());
         otherAuthUser.setSex(sexTypeEnum);
         otherAuthUser.setToken(authToken);
         otherAuthUser.setSource(oauthOther.getType());
-        otherAuthUser.setAccount(object.getString(field.getAccount()));
-        otherAuthUser.setDeptIds(object.get(field.getDeptIds()));
-        otherAuthUser.setPhone(object.getString(field.getPhone()));
+        otherAuthUser.setAccount(JvsJsonPath.read(object, field.getAccount().trim()).toString());
+        otherAuthUser.setDeptIds(JvsJsonPath.read(object, field.getDeptIds().toString()));
+        otherAuthUser.setPhone(JvsJsonPath.read(object, field.getPhone().trim()).toString());
         return otherAuthUser;
     }
 

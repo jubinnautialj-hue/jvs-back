@@ -22,15 +22,6 @@
 
     </dependencies>
 
-    <!--为了公开开发使用，需要推送到public公开私服中-->
-    <distributionManagement>
-        <repository>
-            <!--必须与 settings.xml 的 id 一致-->
-            <id>j8s-j8s-jvs</id>
-            <name>jvs</name>
-            <url>https://j8s-maven.pkg.coding.net/repository/j8s/jvs</url>
-        </repository>
-    </distributionManagement>
 
     <build>
         <plugins>

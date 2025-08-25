@@ -6,6 +6,7 @@ import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.SpringContextUtil;
+import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.hutool.core.io.IoUtil;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.SneakyThrows;
@@ -91,8 +92,9 @@ public class HttpRequestUtils {
             CloseableHttpClient httpClient = httpClientBuilder.build();
             HttpComponentsClientHttpRequestFactory factory = new HttpComponentsClientHttpRequestFactory();
             factory.setHttpClient(httpClient);
-            factory.setConnectTimeout(10 * 1000);
-            factory.setReadTimeout(30 * 1000);
+            JvsSystemConfig bean = SpringContextUtil.getBean(JvsSystemConfig.class);
+            factory.setConnectTimeout(bean.getConnectTimeout());
+            factory.setReadTimeout(bean.getSocketTimeout());
             return factory;
         } catch (Exception e) {
             log.error("创建HttpsRestTemplate失败", e);
@@ -103,7 +105,7 @@ public class HttpRequestUtils {
     /**
      * 发送GET请求
      * <p>
-     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
+     * 响应数据结构为: {@link R<T>}
      * <p>
      * 请求方式: GET
      * 请求格式: application/json
@@ -120,7 +122,7 @@ public class HttpRequestUtils {
     /**
      * 发送请求
      * <p>
-     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
+     * 响应数据结构为: {@link R<T>}
      * <p>
      * 请求方式: POST
      * 请求格式: application/json
@@ -138,7 +140,7 @@ public class HttpRequestUtils {
     /**
      * 发送GET请求
      * <p>
-     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
+     * 响应数据结构为: {@link R<T>}
      * <p>
      * 请求方式: GET
      * 请求格式: application/json
@@ -156,7 +158,7 @@ public class HttpRequestUtils {
     /**
      * 发送请求
      * <p>
-     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
+     * 响应数据结构为: {@link R<T>}
      * <p>
      * 请求方式: POST
      * 请求格式: application/json
