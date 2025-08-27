@@ -1655,12 +1655,12 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         String name = Get.name(DynamicDataPo::getCreateTime);
         // BasalPo
         if (ObjectNull.isNull(data.containsKey(name))) {
-            data.put(name, DateUtil.now());
+            data.put(name, LocalDateTime.now());
         } else {
             try {
                 DateTime dateTime = DateUtil.parseDateTime(data.get(name).toString());
             } catch (Exception e) {
-                data.put(name, DateUtil.now());
+                data.put(name, LocalDateTime.now());
             }
         }
         return data;
@@ -2376,6 +2376,80 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         authCriteria.addAll(list);
         Criteria criteria = DynamicDataUtils.trueCriteria().andOperator(authCriteria);
         return aggregate(criteria, collectionName, type, aggregateField, Fields.from(Fields.field(groupBy)));
+    }
+
+    @Override
+    public List aggregate(Criteria criteria, String collectionName, AggregateEnumType type, Object aggregateField, Fields groupBy) {
+        //根据数据权限和查询条件过滤数据
+        GroupOperation groupOperation = ObjectNull.isNotNull(groupBy) ? Aggregation.group(groupBy) : Aggregation.group();
+        Aggregation aggregation;
+
+        //根据分组进行处理，是按计数，还是平均，还是求和
+        switch (type) {
+            case max:
+                if (aggregateField instanceof String) {
+                    groupOperation.max(((String) aggregateField).trim()).as("value");
+                } else if (aggregateField instanceof List) {
+                    for (Object e : ((List<?>) aggregateField)) {
+                        groupOperation = groupOperation.max(e.toString()).as(e.toString());
+                    }
+                }
+                break;
+            case min:
+                if (aggregateField instanceof String) {
+                    groupOperation.min(((String) aggregateField).trim()).as("value");
+                } else if (aggregateField instanceof List) {
+                    for (Object e : ((List<?>) aggregateField)) {
+                        groupOperation = groupOperation.min(e.toString()).as(e.toString());
+                    }
+                }
+                break;
+            case count:
+                groupOperation = groupOperation.count().as("value");
+                break;
+            case ave:
+                if (aggregateField instanceof String) {
+                    groupOperation.avg(((String) aggregateField).trim()).as("value");
+                } else if (aggregateField instanceof List) {
+                    for (Object e : ((List<?>) aggregateField)) {
+                        groupOperation = groupOperation.avg(e.toString()).as(e.toString());
+                    }
+                }
+                break;
+            case sum:
+                if (aggregateField instanceof String) {
+                    groupOperation.sum(((String) aggregateField).trim()).as("value");
+                } else if (aggregateField instanceof List) {
+                    for (Object e : ((List<?>) aggregateField)) {
+                        groupOperation = groupOperation.sum(e.toString()).as(e.toString());
+                    }
+                }
+            default:
+
+        }
+        aggregation = Aggregation.newAggregation(Aggregation.match(criteria), groupOperation);
+        List<Map> mappedResults = dataModelHandler.aggregate(aggregation, collectionName);
+        mappedResults.forEach(e -> {
+            if (ObjectNull.isNotNull(groupBy)) {
+                if (groupBy.asList().size() == 1) {
+                    e.put("name", e.get("_id"));
+                } else {
+                    e.putAll((Map) e.get("_id"));
+                }
+                e.remove(("_id"));
+                if (aggregateField instanceof List) {
+                    Set<Map.Entry> set = e.entrySet();
+                    set.forEach((a) -> {
+                        if (ObjectNull.isNull(a.getValue())) {
+                            a.setValue(0);
+                        }
+                    });
+                }
+            } else {
+                e.remove(("_id"));
+            }
+        });
+        return mappedResults;
     }
 
     @Override

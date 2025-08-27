@@ -155,7 +155,8 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
         //判断
         //获取所有字段,做两次遍历， 然后将属性进行判断是否重复，如果重复，表示已经存在
         List<Map<String, Object>> forms = formDesignHtml.getFormdata().get(0).getForms();
-        Map<String, String> fieldMap = forms.stream().collect(Collectors.toMap(e -> e.get("prop").toString(), JSON::toJSONString));
+        Map<String, String> fieldMap = new LinkedHashMap<>();
+        forms.forEach(e -> fieldMap.put(e.get("prop").toString(), JSON.toJSONString(e)));
         fields.forEach(e -> {
             if (DataFieldType.CONTAINER.contains(e.getFieldType())) {
                 //如果是选项卡，需要判断是否配置了 key

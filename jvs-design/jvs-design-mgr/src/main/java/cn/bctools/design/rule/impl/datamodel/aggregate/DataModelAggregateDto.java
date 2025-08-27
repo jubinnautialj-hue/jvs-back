@@ -41,8 +41,8 @@ public class DataModelAggregateDto {
     public AggregateEnumType type;
 
     @NotNull(message = "聚合字段不能为空")
-    @ParameterValue(info = "聚合字段", type = InputType.selected)
-    public String fields;
+    @ParameterValue(info = "聚合字段", type = InputType.multipleSelected, necessity = false)
+    public Object fields;
 
 
 }

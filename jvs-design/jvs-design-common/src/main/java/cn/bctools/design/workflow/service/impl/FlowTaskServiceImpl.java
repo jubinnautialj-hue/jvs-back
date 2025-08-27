@@ -31,6 +31,7 @@ import cn.bctools.design.workflow.service.*;
 import cn.bctools.design.workflow.support.listener.notify.FlowNotifyEvent;
 import cn.bctools.design.workflow.utils.FlowUtil;
 import cn.bctools.oss.dto.BaseFile;
+import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.LocalDateTimeUtil;
@@ -74,6 +75,7 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
     private final RedisUtils redisUtils;
     private final FlowDesignVersionService flowDesignVersionService;
     private final JvsAppVersionService appVersionService;
+    private final OssTemplate ossTemplate;
 
     /**
      * 构造保存工作流任务数据
@@ -468,7 +470,17 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
                                     }
                                     if (ObjectNull.isNotNull(approve.getOpinion())) {
                                         dto.setOpinionContent(approve.getOpinion().getContent());
-                                        dto.setOpinionSign(Optional.ofNullable(approve.getOpinion().getSign()).map(sign -> BeanCopyUtil.copys(sign, BaseFile.class)).orElse(null));
+                                        dto.setOpinionSign(Optional.ofNullable(approve.getOpinion().getSign())
+                                                .map(signs -> {
+                                                    return signs.stream()
+                                                            .map(sign -> {
+                                                                BaseFile baseFile = BeanCopyUtil.copy(sign, BaseFile.class);
+                                                                baseFile.setUrl(ossTemplate.fileLink(baseFile.getFileName(), Optional.ofNullable(baseFile.getBucketName()).orElseGet(() -> "jvs-form-design")));
+                                                                return baseFile;
+                                                            })
+                                                            .collect(Collectors.toList());
+                                                })
+                                                .orElse(null));
                                     }
                                     return dto;
                                 }).collect(Collectors.toList());
@@ -530,7 +542,6 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
                 // 无表单，不显示
                 .isNotNull("t.form_id")
                 .like(StringUtils.isNotBlank(dto.getFlowName()), "t.name", dto.getFlowName())
-                .like(StringUtils.isNotBlank(dto.getTitle()), "t.title", dto.getTitle())
                 .like(StringUtils.isNotBlank(dto.getSendUser()), "t.create_by", dto.getSendUser())
                 .like(StringUtils.isNotBlank(dto.getTaskCode()), "t.task_code", dto.getTaskCode());
         baseMapper.pendingApprovePage(page, queryWrapper);

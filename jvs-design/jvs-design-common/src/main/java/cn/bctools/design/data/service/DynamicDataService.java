@@ -697,6 +697,7 @@ public interface DynamicDataService {
      * @return list
      */
     List aggregate(Criteria criteria, String dataModelId, AggregateEnumType type, String aggregateField, Fields group);
+    List aggregate(Criteria criteria, String dataModelId, AggregateEnumType type, Object aggregateField, Fields group);
 
     /**
      * Gets string object map.

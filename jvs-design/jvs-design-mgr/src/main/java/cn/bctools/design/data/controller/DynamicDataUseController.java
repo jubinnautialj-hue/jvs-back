@@ -16,6 +16,7 @@ import cn.bctools.design.crud.service.FormService;
 import cn.bctools.design.crud.service.JvsTreeService;
 import cn.bctools.design.crud.utils.Decimal128ListConvert;
 import cn.bctools.design.crud.utils.DesignUtils;
+import cn.bctools.design.crud.utils.LinkedHashMapConvert;
 import cn.bctools.design.data.component.DataModelHandler;
 import cn.bctools.design.data.dto.SaveRelationAndRunRuleDto;
 import cn.bctools.design.data.entity.DataFieldPo;
@@ -259,6 +260,7 @@ public class DynamicDataUseController {
      * The Decimal 128 list convert.
      */
     Decimal128ListConvert decimal128ListConvert;
+    LinkedHashMapConvert linkedHashMapConvert;
     /**
      * The Local date time convert.
      */
@@ -2363,6 +2365,7 @@ public class DynamicDataUseController {
                     new ExcelWriterBuilder().file(outputStream)
                             .registerWriteHandler(new EasyExcelCustomCellWriteHandler())
                             .head(fieldNameList)
+                            .registerConverter(linkedHashMapConvert)
                             .registerConverter(decimal128ListConvert)
                             .registerConverter(arrayListConvert).registerConverter(localDateTimeConvert).sheet(fileName).doWrite(excelData);
                 } catch (Exception ex) {
@@ -2391,6 +2394,7 @@ public class DynamicDataUseController {
                 new ExcelWriterBuilder().file(excel)
                         .registerWriteHandler(new EasyExcelCustomCellWriteHandler())
                         .head(fieldNameList)
+                        .registerConverter(linkedHashMapConvert)
                         .registerConverter(decimal128ListConvert)
                         .registerConverter(arrayListConvert)
                         .registerConverter(localDateTimeConvert)

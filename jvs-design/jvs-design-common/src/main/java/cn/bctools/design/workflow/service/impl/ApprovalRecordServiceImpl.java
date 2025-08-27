@@ -17,6 +17,7 @@ import cn.bctools.design.workflow.service.FlowTaskPathService;
 import cn.bctools.design.workflow.service.FlowTaskService;
 import cn.bctools.design.workflow.utils.FlowUtil;
 import cn.bctools.oss.dto.BaseFile;
+import cn.bctools.oss.template.OssTemplate;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
@@ -40,6 +41,7 @@ public class ApprovalRecordServiceImpl implements ApprovalRecordService {
     private final FlowDesignService flowDesignService;
     private final FlowTaskService flowTaskService;
     private final FlowTaskPathService flowTaskPathService;
+    private final OssTemplate ossTemplate;
 
     @Override
     public List<ApprovalRecordFieldDto> getApprovalRecordFields(String flowDesignId) {
@@ -239,7 +241,11 @@ public class ApprovalRecordServiceImpl implements ApprovalRecordService {
                 .map(re -> re.getOpinion().getSign())
                 .filter(ObjectNull::isNotNull)
                 .flatMap(Collection::stream)
-                .map(sign -> BeanCopyUtil.copy(sign, BaseFile.class))
+                .map(sign -> {
+                    BaseFile baseFile = BeanCopyUtil.copy(sign, BaseFile.class);
+                    baseFile.setUrl(ossTemplate.fileLink(baseFile.getFileName(), Optional.ofNullable(baseFile.getBucketName()).orElseGet(() -> "jvs-form-design")));
+                    return baseFile;
+                })
                 .collect(Collectors.toList());
         recordMap.put(key, data);
     }
