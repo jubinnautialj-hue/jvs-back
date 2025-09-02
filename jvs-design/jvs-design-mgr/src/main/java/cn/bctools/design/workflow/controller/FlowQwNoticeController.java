@@ -55,7 +55,7 @@ public class FlowQwNoticeController {
 
     @Log
     @ApiOperation("测试关闭消息通知")
-    @GetMapping("/create")
+    @GetMapping("/close")
     @Transactional(rollbackFor = Exception.class)
     public R<String> close() throws Exception{
 
