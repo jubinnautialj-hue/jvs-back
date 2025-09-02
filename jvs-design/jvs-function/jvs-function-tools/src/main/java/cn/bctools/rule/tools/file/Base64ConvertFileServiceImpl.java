@@ -52,7 +52,7 @@ public class Base64ConvertFileServiceImpl implements BaseCustomFunctionInterface
                 .setOutputType(OutputType.download)
                 .setModule(module)
                 .setFileType(prefix)
-                .setOriginalName(dto.getName())
+                .setOriginalName(baseFile.getOriginalName())
                 .setName(dto.getName())
                 .setPreviewUrl(s)
                 .setUrl(url);

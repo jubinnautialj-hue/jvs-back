@@ -33,7 +33,8 @@ public class FieldPublicHtml extends FieldJsonHtml {
 
     @ApiModelProperty("显示名称")
     private String fieldName;
-
+    @ApiModelProperty("请求方式")
+    private String method;
     @ApiModelProperty("显示名称")
     private String label;
 
