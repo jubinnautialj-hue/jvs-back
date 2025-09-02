@@ -40,7 +40,7 @@ public class FormDesignHtml {
     @ApiModelProperty(value = "所有表格的数据，用于公式的数据返回优化")
     private List<String> tablePath = new ArrayList<>();
     @ApiModelProperty(value = "是否开启嵌套选项卡")
-    private Boolean recursionTabs;
+    private Boolean isRecursionTabs;
 
 
 }
