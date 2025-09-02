@@ -276,6 +276,12 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                                         })
                                         .map(as -> as.stream().collect(Collectors.joining(".")))
                                         .map(Object::toString))
+                                .peek(a -> {
+                                    //是选择项里面或表格里面
+                                    if (a.contains(".")) {
+                                        associationSettingsFields.add(a.substring(a.lastIndexOf(".") + 1));
+                                    }
+                                })
                                 .forEach(associationSettingsFields::add);
                     }
                 }
@@ -307,8 +313,8 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                 }
             }
         }
-        List collect = fieldMap.values().stream().map(JSONObject::parseObject).collect(Collectors.toList());
-        formDesignHtml.getFormdata().get(0).setForms(collect);
+//        List collect = fieldMap.values().stream().map(JSONObject::parseObject).collect(Collectors.toList());
+//        formDesignHtml.getFormdata().get(0).setForms(collect);
         //设置关联的字段
         po.setAssociationSettingsFields(associationSettingsFields);
         formDesignHtml.setTablePath(tablePath);

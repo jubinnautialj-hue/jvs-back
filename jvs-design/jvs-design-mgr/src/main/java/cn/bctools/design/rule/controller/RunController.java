@@ -246,7 +246,7 @@ public class RunController {
         HttpHeaders headers = new HttpHeaders();
         headers.set("output_format", URLUtil.encode(value.getOriginalName()));
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
-        headers.setContentDisposition(ContentDisposition.formData().filename(URLUtil.encode(value.getOriginalName())).build());
+        headers.setContentDisposition(ContentDisposition.formData().filename(URLUtil.encode(value.getOriginalName() + value.getFileType())).build());
         headers.set("Access-Control-Expose-Headers", "Content-Disposition");
         return new ResponseEntity<byte[]>(HttpUtil.downloadBytes(value.getUrl()), headers, HttpStatus.OK);
     }
