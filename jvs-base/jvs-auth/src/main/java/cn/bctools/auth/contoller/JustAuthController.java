@@ -1,8 +1,5 @@
 package cn.bctools.auth.contoller;
 
-import cn.bctools.common.constant.SysConstant;
-import cn.bctools.common.utils.jvs.JvsServiceConfig;
-import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.auth.entity.OauthOther;
 import cn.bctools.auth.entity.enums.OAuthTypeEnum;
 import cn.bctools.auth.login.AuthRequestCustomFactory;
@@ -10,14 +7,18 @@ import cn.bctools.auth.login.LoginHandler;
 import cn.bctools.auth.login.auth.OtherLoginHandler;
 import cn.bctools.auth.service.OauthOtherService;
 import cn.bctools.auth.service.SysConfigsService;
+import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.enums.*;
 import cn.bctools.common.utils.*;
+import cn.bctools.common.utils.jvs.JvsServiceConfig;
+import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.database.util.IdGenerator;
 import cn.bctools.gateway.entity.SysConfigs;
 import cn.bctools.log.annotation.Log;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.lang.Dict;
 import cn.hutool.http.HttpUtil;
+import cn.hutool.http.useragent.UserAgentUtil;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
@@ -33,8 +34,10 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.time.Duration;
-import java.util.*;
-import java.util.function.Function;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -116,7 +119,7 @@ public class JustAuthController {
      * @return 登录类型集合
      */
     @GetMapping
-    public R<List<String>> index() {
+    public R<List<String>> index(@RequestHeader("User-Agent")String userAgent) {
         List<OAuthTypeEnum> loginTypes = new ArrayList<>();
         // 密码登录
         loginTypes.add(OAuthTypeEnum.password);
@@ -151,6 +154,18 @@ public class JustAuthController {
                 }
             }
         });
+        //2025.09.04 钉钉和微信企业微信的兼容性处理  不要替换
+        switch (UserAgentUtil.parse(userAgent).getBrowser().getName()) {
+            case "wxwork":{
+                //如果是企业微信，则只返回三方登录。
+                loginTypes.removeIf(e->!e.equals(OAuthTypeEnum.wxenterprise));
+            }
+            case "DingTalk":{
+                //如果是钉钉，则只返回三方登录。
+                loginTypes.removeIf(e->!e.equals(OAuthTypeEnum.dd));
+            }
+        }
+        //2025.09.04 钉钉和微信企业微信的兼容性处理  不要替换
         List<String> collect = loginTypes.stream().map(Enum::toString).distinct().collect(Collectors.toList());
 
         oauthOtherService.list(new LambdaQueryWrapper<OauthOther>().select(OauthOther::getType).isNotNull(OauthOther::getType)).stream().map(OauthOther::getType).forEach(collect::add);

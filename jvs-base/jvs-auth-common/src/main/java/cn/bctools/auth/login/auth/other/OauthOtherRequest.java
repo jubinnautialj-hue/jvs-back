@@ -7,9 +7,7 @@ import cn.bctools.auth.login.LoginHandler;
 import cn.bctools.auth.login.dto.SyncUserDto;
 import cn.bctools.auth.util.SyncOrgUtils;
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.JvsJsonPath;
-import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.common.utils.TenantContextHolder;
+import cn.bctools.common.utils.*;
 import cn.bctools.web.utils.HttpRequestUtils;
 import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.ObjectUtil;
@@ -42,7 +40,10 @@ import org.springframework.http.MediaType;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 
@@ -82,7 +83,13 @@ public class OauthOtherRequest extends AuthDefaultRequest {
         });
         this.scope = oauthOther.getScope();
         this.authStateCache = authStateCache;
-        this.field = oauthOther.getFiledJson();
+        Map<String, Object> body = BeanCopyUtil.beanToMap(oauthOther.getFiledJson());
+        body.keySet().forEach(e -> {
+            if (ObjectNull.isNull(body.get(e))) {
+                body.put(e, e);
+            }
+        });
+        this.field = BeanCopyUtil.copy(body, OtherAuthUser.class);
         this.oauthOther = oauthOther;
         if (!AuthChecker.isSupportedAuth(config, source)) {
             throw new AuthException(AuthResponseStatus.PARAMETER_INCOMPLETE, source);
@@ -217,10 +224,10 @@ public class OauthOtherRequest extends AuthDefaultRequest {
         }
         OtherAuthUser otherAuthUser = new OtherAuthUser();
         otherAuthUser.setRawUserInfo(com.alibaba.fastjson.JSONObject.parseObject(JSON.toJSONString(object)));
-        otherAuthUser.setUuid(JvsJsonPath.read(object, field.getUuid().trim()).toString());
-        otherAuthUser.setUsername(JvsJsonPath.read(object, field.getUsername().trim()).toString());
-        otherAuthUser.setNickname(JvsJsonPath.read(object, field.getNickname().trim()).toString());
-        String headImg = JvsJsonPath.read(object, field.getAvatar().trim()).toString();
+        otherAuthUser.setUuid(Optional.ofNullable(JvsJsonPath.read(object, field.getUuid().trim())).orElseThrow(()->new BusinessException("uuid未获取成功")).toString());
+        otherAuthUser.setUsername(Optional.ofNullable(JvsJsonPath.read(object, field.getUsername().trim())).orElseGet(()->"").toString());
+        otherAuthUser.setNickname(Optional.ofNullable(JvsJsonPath.read(object, field.getNickname().trim())).orElseGet(()-> IdGenerator.getIdStr(32)).toString());
+        String headImg = Optional.ofNullable(JvsJsonPath.read(object, field.getAvatar().trim())).orElseGet(()->"").toString();
         String avatar = LoginHandler.getDurableAvatar(otherAuthUser.getNickname(), headImg);
         otherAuthUser.setAvatar(avatar);
         try {
@@ -228,17 +235,30 @@ public class OauthOtherRequest extends AuthDefaultRequest {
         } catch (Exception e) {
 
         }
-        otherAuthUser.setBlog(JvsJsonPath.read(object, field.getBlog().trim()).toString());
+        otherAuthUser.setBlog(Optional.ofNullable(JvsJsonPath.read(object, field.getBlog().trim())).orElseGet(()->"").toString());
         otherAuthUser.setCompany(JSONObject.toJSONString(JvsJsonPath.read(object, field.getCompany().trim())));
-        otherAuthUser.setLocation(JvsJsonPath.read(object, field.getLocation().trim()).toString());
-        otherAuthUser.setEmail(JvsJsonPath.read(object, field.getEmail().trim()).toString());
-        otherAuthUser.setRemark(JvsJsonPath.read(object, field.getRemark().trim()).toString());
+        otherAuthUser.setLocation(Optional.ofNullable(JvsJsonPath.read(object, field.getLocation().trim())).orElseGet(()->"").toString());
+        Object read = JvsJsonPath.read(object, field.getEmail().trim());
+        if(ObjectNull.isNotNull(read)) {
+            otherAuthUser.setEmail(read.toString());
+        }
+        otherAuthUser.setRemark(Optional.ofNullable(JvsJsonPath.read(object, field.getRemark().trim())).orElseGet(()->"").toString());
         otherAuthUser.setSex(sexTypeEnum);
         otherAuthUser.setToken(authToken);
         otherAuthUser.setSource(oauthOther.getType());
-        otherAuthUser.setAccount(JvsJsonPath.read(object, field.getAccount().trim()).toString());
-        otherAuthUser.setDeptIds(JvsJsonPath.read(object, field.getDeptIds().toString()));
-        otherAuthUser.setPhone(JvsJsonPath.read(object, field.getPhone().trim()).toString());
+        Object account = JvsJsonPath.read(object, field.getAccount().trim());
+        if(ObjectNull.isNotNull(account)) {
+            otherAuthUser.setAccount(account.toString());
+        }
+        try {
+            otherAuthUser.setDeptIds(JvsJsonPath.read(object, field.getDeptIds().toString()));
+        } catch (Exception e) {
+
+        }
+        Object phone = JvsJsonPath.read(object, field.getPhone().trim());
+        if(ObjectNull.isNotNull(phone)) {
+            otherAuthUser.setPhone(phone.toString());
+        }
         return otherAuthUser;
     }
 
