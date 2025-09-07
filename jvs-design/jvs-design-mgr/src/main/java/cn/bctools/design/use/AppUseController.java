@@ -177,6 +177,11 @@ public class AppUseController {
                     e.setEnabledQueryTypes(enabledQueryTypes);
                     List<DataQueryType> collect = e.getEnabledQueryTypes().stream().distinct().collect(Collectors.toList());
                     e.setEnabledQueryTypes(collect);
+                } else {
+                    if (e.getEnabledQueryTypes().contains(DataQueryType.eq)) {
+                        e.getEnabledQueryTypes().remove(DataQueryType.eq);
+                        e.getEnabledQueryTypes().add(0, DataQueryType.eq);
+                    }
                     e.getEnabledQueryTypes().remove(DataQueryType.isNull);
                     e.getEnabledQueryTypes().add(DataQueryType.isNull);
                 }

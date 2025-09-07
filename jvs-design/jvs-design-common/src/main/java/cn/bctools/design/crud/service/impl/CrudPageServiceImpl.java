@@ -459,9 +459,9 @@ public class CrudPageServiceImpl extends ServiceImpl<CrudPageMapper, CrudPage> i
                     });
             if (ObjectNull.isNull(e.getEnabledQueryTypes())) {
                 ArrayList<DataQueryType> dataQueryTypes = new ArrayList<>();
+                dataQueryTypes.add(DataQueryType.eq);
                 dataQueryTypes.add(DataQueryType.isNull);
                 dataQueryTypes.add(DataQueryType.like);
-                dataQueryTypes.add(DataQueryType.eq);
                 dataQueryTypes.add(DataQueryType.ne);
                 e.setEnabledQueryTypes(dataQueryTypes);
                 e.setComponentType(DataFieldType.input);

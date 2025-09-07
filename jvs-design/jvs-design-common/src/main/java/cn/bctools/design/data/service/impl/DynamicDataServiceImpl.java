@@ -1117,9 +1117,9 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             }
             if (ObjectNull.isNotNull(collect, queryConditionDtoList)) {
                 List<QueryConditionDto> conditionDtos = queryConditionDtoList.stream().filter(e -> !DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
+                List<QueryConditionDto> conditionDtoList = queryConditionDtoList.stream().filter(e -> DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
                 //将列表过滤和数据权限添加上组合查询
                 List<Criteria> crud = buildDynamicCriteriaList(collect);
-                List<QueryConditionDto> conditionDtoList = queryConditionDtoList.stream().filter(e -> DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
                 if (ObjectNull.isNotNull(conditionDtos)) {
                     List<Criteria> criteria = buildDynamicCriteriaList(conditionDtos);
                     if (ObjectNull.isNotNull(criteria)) {
@@ -1160,7 +1160,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         authCriteria = DynamicDataUtils.trueCriteria().andOperator(crud);
                     }
                 }
-            } else if (ObjectNull.isNull(collect) && ObjectNull.isNotNull(queryConditionDtoList)) {
+            } else if (ObjectNull.isNull(collect) && ObjectNull.isNull(criteriaList) && ObjectNull.isNotNull(queryConditionDtoList)) {
                 List<QueryConditionDto> conditionDtos = queryConditionDtoList.stream().filter(e -> !DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
                 List<QueryConditionDto> conditionDtoList = queryConditionDtoList.stream().filter(e -> DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
                 List<Criteria> buildDynamicCriteriaList = buildDynamicCriteriaList(conditionDtoList);
@@ -1180,7 +1180,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             } else if (ObjectNull.isNull(collect) && ObjectNull.isNull(queryConditionDtoList)) {
 
             } else if (ObjectNull.isNotNull(criteriaList, queryConditionDtoList)) {
-
+                List<QueryConditionDto> conditionDtos = queryConditionDtoList.stream().filter(e -> !DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
+                List<QueryConditionDto> conditionDtoList = queryConditionDtoList.stream().filter(e -> DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
+                List<Criteria> criteria = buildDynamicCriteriaList(conditionDtos);
+                criteriaList.addAll(criteria);
+                authCriteria = DynamicDataUtils.trueCriteria().andOperator(criteriaList);
             }
         } else if (ObjectNull.isNotNull(criteriaList)) {
             authCriteria = DynamicDataUtils.trueCriteria().orOperator(criteriaList);
