@@ -9,6 +9,7 @@ import cn.bctools.design.workflow.entity.dto.TransferDto;
 import cn.bctools.design.workflow.entity.enums.ProcessStatusEnum;
 import cn.bctools.design.workflow.model.Node;
 import cn.bctools.design.workflow.model.enums.NodePropertiesModeEnum;
+import cn.bctools.design.workflow.service.FlowTaskNoticeService;
 import cn.bctools.design.workflow.service.FlowTaskPersonService;
 import cn.bctools.design.workflow.service.TaskPersonService;
 import cn.bctools.design.workflow.support.RuntimeData;
@@ -43,6 +44,7 @@ public class TaskPersonServiceImpl implements TaskPersonService {
     private final TransferFunction transferFunction;
     private final TimeLimitMessageHandler timeLimitMessageHandler;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final FlowTaskNoticeService flowTaskNoticeService;
 
     @Override
     public void saveTaskPerson(Node nextNode, RuntimeData runtimeData, List<FlowApprovalUserDTO> users) {
@@ -71,8 +73,6 @@ public class TaskPersonServiceImpl implements TaskPersonService {
             person.setUserName(user.getRealName());
             person.setProcessStatus(ProcessStatusEnum.PENDING);
             person.setTest(runtimeData.getFlowTask().getTest());
-            //2025.09.05 新增账号字段，用于待办提醒使用
-            person.setAccountName(user.getAccountName());
             // 依次审批
             if (NodePropertiesModeEnum.NEXT.equals(nextNode.getProps().getMode())) {
                 if (ObjectNull.isNull(user.getApprovalSequence())) {
@@ -107,7 +107,7 @@ public class TaskPersonServiceImpl implements TaskPersonService {
             applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, removeTaskPersonIds));
             flowTaskPersonService.saveBatch(flowTaskPersons);
         }
-
+        flowTaskNoticeService.create(nextNode, runtimeData.getFlowTask(), flowTaskPersons);
         // 发送延时任务（校验审核是否超时等功能）
         timeLimitMessageHandler.delayedTask(nextNode, runtimeData.getFlowTask(), flowTaskPersons);
     }
@@ -129,7 +129,5 @@ public class TaskPersonServiceImpl implements TaskPersonService {
         }
         person.setUserId(transferDto.getProxyUserId());
         person.setUserName(transferDto.getProxyUserName());
-        //2025.09.05 新增账号字段，用于待办提醒使用
-        //person.setAccountName(transferDto.getAccountName());
     }
 }

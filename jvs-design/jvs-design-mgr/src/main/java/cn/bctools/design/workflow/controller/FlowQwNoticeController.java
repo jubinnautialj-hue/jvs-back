@@ -36,7 +36,8 @@ public class FlowQwNoticeController {
 
         Map flowParam = new HashMap();
         //结果格式:  {"bizTaskAndTaskId":{"1253038444628619298":"1827966645317992450_1253038444628619298"}}}
-        String s = flowTaskNoticeService.create(flowParam);
+        //String s = flowTaskNoticeService.create();
+        String s = "";
         //入库保存结果,与请求参数关联.
 
         return R.ok(s);
@@ -54,7 +55,8 @@ public class FlowQwNoticeController {
         List<String> bb=new ArrayList<>();
         bb.add("1827966645317992450_1253038444628619298");
 
-       String res= flowTaskNoticeService.close(params);
+//       String res= flowTaskNoticeService.close(params);
+       String res= "";
 
 
         return R.ok(res);

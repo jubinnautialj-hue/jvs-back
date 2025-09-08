@@ -68,8 +68,4 @@ public class FlowTaskPerson implements Serializable {
     @ApiModelProperty(value = "应用id")
     @TableField(value = "jvs_app_id")
     private String jvsAppId;
-
-    @ApiModelProperty(value = "人员账号，待办需要使用")
-    @TableField(exist = false)
-    private String accountName;
 }

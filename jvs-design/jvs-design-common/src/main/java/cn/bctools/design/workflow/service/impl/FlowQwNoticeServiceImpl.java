@@ -1,5 +1,7 @@
 package cn.bctools.design.workflow.service.impl;
 
+import cn.bctools.auth.api.api.AuthUserServiceApi;
+import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.design.project.entity.dto.AppTaskDto;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.workflow.dto.FlowQwNoticeDto;
@@ -14,6 +16,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
@@ -37,6 +40,8 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 /**
 企微消息
  */
@@ -47,6 +52,7 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
     JvsAppService jvsAppService;
     FlowTaskNoticeLogService flowTaskNoticeLogService;
     static AppTaskDto appTaskDto;
+   AuthUserServiceApi authUserServiceApi;
     /**
      * 初始化应用的待办提醒配置信息
      * @param appId 应用ID
@@ -56,21 +62,25 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
         appTaskDto = jvsAppService.getAppById(appId).getTaskSetting();
     }
     @Override
-    public Boolean create(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons) throws Exception {
+    public Boolean create(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons){
        initTaskSettings(flowTask.getJvsAppId());
         if (appTaskDto.getEnableTask()){
+            List<String> userIds = flowTaskPersons.stream().map(FlowTaskPerson::getUserId).collect(Collectors.toList());
+            List<UserDto> users = authUserServiceApi.getByIds(userIds).getData();
+            Map<String,String> userMap = users.stream().collect(Collectors.toMap(UserDto::getId, UserDto::getAccountName));
             List<FlowQwNoticeDto> flowTaskList = new ArrayList<>();
             flowTaskPersons.forEach(flowTaskPerson -> {
                 FlowQwNoticeDto flowQwNoticeDto = new FlowQwNoticeDto();
-                flowQwNoticeDto.setWorkNum("");
+                flowQwNoticeDto.setWorkNum(flowTask.getId());
                 flowQwNoticeDto.setBizInstanceId(flowTask.getId());
-                flowQwNoticeDto.setBizTaskId("");
                 flowQwNoticeDto.setBizNodeId(nextNode.getId());
-                flowQwNoticeDto.setTitle(flowTask.getTitle());
+                flowQwNoticeDto.setBizTaskId(flowTaskPerson.getId());
+                flowQwNoticeDto.setCurrentNode(nextNode.getName());
+                flowQwNoticeDto.setTitle(StringUtils.isEmpty(flowTask.getTitle()) ? flowTask.getName() : flowTask.getTitle());
                 flowQwNoticeDto.setTaskType(0);
-                flowQwNoticeDto.setHandler("");
+                flowQwNoticeDto.setHandler(userMap.get(flowTaskPerson.getUserId()));
                 flowQwNoticeDto.setHandlerName(flowTaskPerson.getUserName());
-                flowQwNoticeDto.setApplicantName("");
+                flowQwNoticeDto.setApplicantName(flowTask.getCreateBy());
                 flowQwNoticeDto.setFormUrl("");
                 flowQwNoticeDto.setPriority(0);
                 flowQwNoticeDto.setCreateDate(System. currentTimeMillis());
@@ -143,9 +153,9 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
     }
 
     @Override
-    public Boolean close(List<String> ids) throws Exception{
+    public Boolean close(List<String> ids){
 
-        String appId = "1827966645317992450";
+       /* String appId = "1827966645317992450";
         String appSecret = "c2352cae-b1f2-4475-8602-407b42ba2f60";
 //        String appId = "1937072455152041986";
 //        String appSecret = "7e62d5bd-2807-46a4-ba5d-4546ef5d1ef8";
@@ -184,7 +194,7 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
         CloseableHttpResponse response=client.execute(httpPost);
         // 4. 资源关闭（避免泄漏）
         response.close();
-        client.close();
+        client.close();*/
 
         //return EntityUtils.toString(response.getEntity(), "UTF-8");
         return true;
@@ -192,12 +202,12 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
     }
 
     @Override
-    public Boolean recall(List<String> bizTaskAndTaskIds) throws Exception {
+    public Boolean recall(List<String> bizTaskAndTaskIds){
         return true;
     }
 
     @Override
-    public Boolean update(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons) throws Exception {
+    public Boolean update(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons){
         return true;
     }
 
