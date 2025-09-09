@@ -4,6 +4,7 @@ import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.design.project.entity.JvsApp;
+import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.util.ModeUtils;
 import cn.bctools.web.utils.IpUtil;
@@ -13,15 +14,9 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -45,14 +40,14 @@ public class UseController {
      */
     @GetMapping("/menu")
     @ApiOperation("获取轻应用菜单")
-    public R<List<Tree<Object>>> menu(@RequestHeader(value = "host", required = false) String host) {
+    public R<List<Tree<Object>>> menu(@RequestHeader(value = "host", required = false) String host,
+                                      @RequestParam(value = "mode", required = false) AppVersionTypeEnum mode) {
         //获取域名匹配的应用
         JvsApp jvsApp = null;
         if (ObjectNull.isNotNull(host)) {
             List<String> identificationDomain = jvsSystemConfig.getIdentificationDomain();
             if (ObjectNull.isNotNull(identificationDomain)) {
-                for (int i = 0; i < identificationDomain.size(); i++) {
-                    String e = identificationDomain.get(i);
+                for (String e : identificationDomain) {
                     if (e.equals(host)) {
                         //匹配域名,如果匹配到查询应用是哪一个
                         String key = host.replaceAll(jvsSystemConfig.getDomain(), "").replaceAll("\\.", "");
@@ -61,7 +56,12 @@ public class UseController {
                 }
             }
         }
-        List<Tree<Object>> tree = useComponent.menu("", ModeUtils.getRealUser().getId(), IpUtil.isMobile(), ModeUtils.getMode(), jvsApp).getKey();
+        //模式判断
+        if (ObjectNull.isNull(mode)) {
+            mode = ModeUtils.getMode();
+        }
+        AppVersionTypeEnum finalMode = mode;
+        List<Tree<Object>> tree = useComponent.menu("", ModeUtils.getRealUser().getId(), IpUtil.isMobile(), finalMode, jvsApp).getKey();
         //树结构二次处理
         //获取应用
         String finalAppid = Optional.ofNullable(jvsApp).map(JvsApp::getId).orElseGet(() -> "");
@@ -88,17 +88,13 @@ public class UseController {
                     }
                 })
                 .filter(e -> {
-                    switch (ModeUtils.getMode()) {
-                        case DEV:
-                            //如果是开发，返回所有
-                            return true;
-                        default:
-                            //如果是其它模式， 判断是否有下级，是否返回应用
-                            return ObjectNull.isNotNull(e.getChildren());
-                    }
+                    if (Objects.requireNonNull(finalMode) == AppVersionTypeEnum.DEV) {//如果是开发，返回所有
+                        return true;
+                    }//如果是其它模式， 判断是否有下级，是否返回应用
+                    return ObjectNull.isNotNull(e.getChildren());
                 })
                 .collect(Collectors.toList());
-        return R.ok(Optional.ofNullable(tree).orElseGet(ArrayList::new));
+        return R.ok(Optional.of(tree).orElseGet(ArrayList::new));
     }
 
     /**

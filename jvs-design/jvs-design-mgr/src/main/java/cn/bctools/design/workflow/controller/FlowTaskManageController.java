@@ -101,12 +101,15 @@ public class FlowTaskManageController {
             return R.ok();
         }
         LambdaQueryWrapper<FlowTask> wrapper = Wrappers.<FlowTask>lambdaQuery()
-                .eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PENDING)
+                .and(wa->
+                        wa.eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PENDING)
+                        .or().eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PASSED))
                 .in(FlowTask::getJvsAppId, appIds)
                 .like(ObjectNull.isNotNull(dto.getTaskCode()), FlowTask::getTaskCode, dto.getTaskCode())
                 .like(ObjectNull.isNotNull(dto.getFlowName()), FlowTask::getName, dto.getFlowName())
                 .like(ObjectNull.isNotNull(dto.getTitle()), FlowTask::getTitle, dto.getTitle())
                 .like(ObjectNull.isNotNull(dto.getJvsAppId()), FlowTask::getJvsAppId, dto.getJvsAppId())
+                .like(ObjectNull.isNotNull(dto.getTaskStatus()), FlowTask::getTaskStatus, dto.getTaskStatus())
                 .orderByDesc(FlowTask::getCreateTime);
         flowTaskService.page(page, wrapper);
         // 填充工作流任务使用的设计
@@ -197,7 +200,7 @@ public class FlowTaskManageController {
     @Log
     @ApiOperation("流程导出")
     @GetMapping("/exportTaskManage")
-    public void exportTaskManage(TaskManagePageDto dto, HttpServletResponse response) throws IOException {
+    public void exportTaskManage(TaskManagePageDto dto, HttpServletResponse response) {
         // 获取模式
         AppVersionTypeEnum mode = ObjectNull.isNotNull(dto.getMode()) ? dto.getMode() : ModeUtils.getMode();
         //获取该用户该模式下的所有应用
@@ -205,12 +208,16 @@ public class FlowTaskManageController {
         List<String> appIds = tree.stream().map(x -> String.valueOf(x.getId())).collect(Collectors.toList());
         //组装查询条件
         LambdaQueryWrapper<FlowTask> wrapper = Wrappers.<FlowTask>lambdaQuery()
-                .eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PENDING)
+                .and(wa->
+                        wa.eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PENDING)
+                                .or()
+                                .eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PASSED))
                 .in(FlowTask::getJvsAppId, appIds)
                 .like(ObjectNull.isNotNull(dto.getTaskCode()), FlowTask::getTaskCode, dto.getTaskCode())
                 .like(ObjectNull.isNotNull(dto.getFlowName()), FlowTask::getName, dto.getFlowName())
                 .like(ObjectNull.isNotNull(dto.getTitle()), FlowTask::getTitle, dto.getTitle())
                 .like(ObjectNull.isNotNull(dto.getJvsAppId()), FlowTask::getJvsAppId, dto.getJvsAppId())
+                .like(ObjectNull.isNotNull(dto.getTaskStatus()), FlowTask::getTaskStatus, dto.getTaskStatus())
                 .orderByDesc(FlowTask::getCreateTime);
         List<FlowTask> records = flowTaskService.list(wrapper);
         List<TaskManageExcelDto> taskManageExcelDtos = this.handleData(records);
