@@ -1494,7 +1494,7 @@ public class DynamicDataUseController {
     @ApiOperation("查询所有数据")
     @GetMapping("/query/list/{modelId}")
     @Transactional(rollbackFor = Exception.class)
-    public R<List<Map<String, Object>>> queryList(@PathVariable String appId, @PathVariable("modelId") String modelId, @ApiParam(name = "需要查询的字段", required = true) @RequestParam("fieldKey") String fieldKey) {
+    public R<List<Map<String, Object>>> queryList(@PathVariable String appId, @PathVariable("modelId") String modelId, @ApiParam(name = "需要查询的字段", required = true) @RequestParam(value = "fieldKey", required = false) String fieldKey) {
         DataModelPo one = dataModelService.getOne(Wrappers.query(new DataModelPo().setAppId(appId).setId(modelId)));
         if (ObjectNull.isNull(one)) {
             throw new BusinessException("应用错误或设计不存在");
@@ -1502,13 +1502,22 @@ public class DynamicDataUseController {
         //判断模型
         DynamicDataUtils.dataModelScope(modelId);
         List<String> fieldKey1 = null;
-        try {
-            fieldKey1 = JSONArray.parseArray(URLDecoder.decode(fieldKey, "UTF-8"), String.class);
-            //兼容2.1.4的关联数据
-        } catch (Exception e) {
-            fieldKey1 = new ArrayList<String>() {{
-                add(fieldKey);
-            }};
+
+        if (ObjectNull.isNull(fieldKey)) {
+            fieldKey1 = dataFieldService.getFieldKeys(appId, modelId);
+        } else {
+            try {
+                fieldKey1 = JSONArray.parseArray(URLDecoder.decode(fieldKey, "UTF-8"), String.class);
+                //兼容2.1.4的关联数据
+            } catch (Exception e) {
+                try {
+                    fieldKey1 = new ArrayList<String>() {{
+                        add(fieldKey);
+                    }};
+                } catch (Exception ex) {
+
+                }
+            }
         }
         List<Map<String, Object>> result = dynamicDataService.queryList(modelId, fieldKey1);
         //如果不为空,转树形
