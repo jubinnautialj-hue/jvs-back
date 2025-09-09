@@ -4,6 +4,7 @@ import cn.bctools.ai.api.JvsAiDatasetApi;
 import cn.bctools.ai.dto.AiDocumentDto;
 import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.auth.api.dto.PersonnelDto;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
@@ -14,7 +15,6 @@ import cn.bctools.design.common.OrderFormat;
 import cn.bctools.design.config.DesignConfig;
 import cn.bctools.design.constant.DynamicDataConstant;
 import cn.bctools.design.crud.entity.FormPo;
-import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.design.crud.mapper.FormMapper;
 import cn.bctools.design.crud.utils.DesignUtils;
 import cn.bctools.design.data.component.DataModelHandler;
@@ -1182,9 +1182,29 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             } else if (ObjectNull.isNotNull(criteriaList, queryConditionDtoList)) {
                 List<QueryConditionDto> conditionDtos = queryConditionDtoList.stream().filter(e -> !DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
                 List<QueryConditionDto> conditionDtoList = queryConditionDtoList.stream().filter(e -> DataQueryType.like.equals(e.getEnabledQueryTypes())).collect(Collectors.toList());
-                List<Criteria> criteria = buildDynamicCriteriaList(conditionDtos);
-                criteriaList.addAll(criteria);
-                authCriteria = DynamicDataUtils.trueCriteria().andOperator(criteriaList);
+                if (ObjectNull.isNotNull(conditionDtos) && ObjectNull.isNull(conditionDtoList)) {
+                    List<Criteria> criteria = buildDynamicCriteriaList(conditionDtos);
+                    criteriaList.forEach(e -> e.andOperator(criteria));
+                    authCriteria = DynamicDataUtils.trueCriteria().orOperator(criteriaList);
+                } else if (ObjectNull.isNull(conditionDtos) && ObjectNull.isNotNull(conditionDtoList)) {
+                    Set<String> field = criteriaList.stream().map(Criteria::getKey).filter(ObjectNull::isNotNull).collect(Collectors.toSet());
+                    //这里需要将数据权限中的流程权限给删除掉，重新设置
+                    criteriaList.removeIf(e -> ObjectNull.isNull(e.getKey()));
+                    conditionDtoList.removeIf(e -> field.contains(e.getFieldKey()));
+                    List<Criteria> criteria = buildDynamicCriteriaList(conditionDtoList);
+                    criteria.forEach(e -> e.orOperator(criteriaList));
+                    authCriteria = DynamicDataUtils.trueCriteria().orOperator(criteria);
+                } else if (ObjectNull.isNotNull(conditionDtos) && ObjectNull.isNotNull(conditionDtoList)) {
+                    Set<String> field = criteriaList.stream().map(Criteria::getKey).filter(ObjectNull::isNotNull).collect(Collectors.toSet());
+                    conditionDtos.removeIf(e -> field.contains(e.getFieldKey()));
+                    List<Criteria> criteria = buildDynamicCriteriaList(conditionDtos);
+                    conditionDtoList.removeIf(e -> field.contains(e.getFieldKey()));
+                    List<Criteria> dynamicCriteriaList = buildDynamicCriteriaList(conditionDtoList);
+                    Criteria dynamic1 = new Criteria().orOperator(dynamicCriteriaList);
+                    Criteria dynamic2 = new Criteria().orOperator(criteria);
+                    Criteria dynamic3 = new Criteria().orOperator(criteriaList);
+                    authCriteria = DynamicDataUtils.trueCriteria().andOperator(dynamic1, dynamic2, dynamic3);
+                }
             }
         } else if (ObjectNull.isNotNull(criteriaList)) {
             authCriteria = DynamicDataUtils.trueCriteria().orOperator(criteriaList);
