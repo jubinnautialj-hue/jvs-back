@@ -407,8 +407,8 @@ public class DataFieldServiceImpl extends ServiceImpl<DataFieldMapper, DataField
                 fieldDto.setEnabledQueryTypes(Collections.singletonList(DataQueryType.eq));
             } else {
                 List<DataQueryType> collect = (List<DataQueryType>) enabledQueryTypes.stream().map(e -> DataQueryType.valueOf(e.toString())).collect(Collectors.toList());
-                collect.add(DataQueryType.isNull);
                 fieldDto.setEnabledQueryTypes(collect.stream().distinct().collect(Collectors.toList()));
+                fieldDto.getEnabledQueryTypes().add(DataQueryType.isNull);
             }
             if (defaultFields.containsKey(fieldDto.getFieldKey())) {
                 //如果是默认字段不能使用用户设计的字段类型
