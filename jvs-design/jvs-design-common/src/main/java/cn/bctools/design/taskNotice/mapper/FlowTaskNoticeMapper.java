@@ -1,7 +1,7 @@
-package cn.bctools.design.workflow.mapper;
+package cn.bctools.design.taskNotice.mapper;
 
 import cn.bctools.database.interceptor.cache.JvsRedisCache;
-import cn.bctools.design.workflow.entity.FlowTaskNoticeLog;
+import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.CacheNamespace;
 import org.apache.ibatis.annotations.Mapper;
@@ -12,5 +12,5 @@ import org.apache.ibatis.annotations.Mapper;
  */
 @Mapper
 @CacheNamespace(implementation = JvsRedisCache.class, eviction = JvsRedisCache.class)
-public interface FlowTaskNoticeLogMapper extends BaseMapper<FlowTaskNoticeLog> {
+public interface FlowTaskNoticeMapper extends BaseMapper<FlowTaskNotice> {
 }

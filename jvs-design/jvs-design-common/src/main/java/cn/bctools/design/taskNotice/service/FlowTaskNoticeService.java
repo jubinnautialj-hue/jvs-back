@@ -1,4 +1,4 @@
-package cn.bctools.design.workflow.service;
+package cn.bctools.design.taskNotice.service;
 
 import cn.bctools.design.workflow.entity.FlowTask;
 import cn.bctools.design.workflow.entity.FlowTaskPerson;
@@ -17,8 +17,8 @@ public interface FlowTaskNoticeService {
      * @return
      * @throws Exception
      */
-    Boolean create(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons);
-    Boolean close(List<String> bizTaskAndTaskIds);
-    Boolean recall(List<String> bizTaskAndTaskIds);
-    Boolean update(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons);
+    boolean create(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons);
+    boolean close(List<String> bizTaskAndTaskIds);
+    boolean recall(List<String> bizTaskAndTaskIds);
+    boolean update(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons);
 }

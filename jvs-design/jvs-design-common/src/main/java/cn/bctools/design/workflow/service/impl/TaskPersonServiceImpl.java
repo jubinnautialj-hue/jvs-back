@@ -2,6 +2,7 @@ package cn.bctools.design.workflow.service.impl;
 
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
 import cn.bctools.design.workflow.dto.FlowApprovalUserDTO;
 import cn.bctools.design.workflow.entity.FlowTaskPerson;
 import cn.bctools.design.workflow.entity.dto.ProxyDto;
@@ -9,7 +10,6 @@ import cn.bctools.design.workflow.entity.dto.TransferDto;
 import cn.bctools.design.workflow.entity.enums.ProcessStatusEnum;
 import cn.bctools.design.workflow.model.Node;
 import cn.bctools.design.workflow.model.enums.NodePropertiesModeEnum;
-import cn.bctools.design.workflow.service.FlowTaskNoticeService;
 import cn.bctools.design.workflow.service.FlowTaskPersonService;
 import cn.bctools.design.workflow.service.TaskPersonService;
 import cn.bctools.design.workflow.support.RuntimeData;

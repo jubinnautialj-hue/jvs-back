@@ -1,7 +1,7 @@
 package cn.bctools.design.workflow.controller;
 
 import cn.bctools.common.utils.R;
-import cn.bctools.design.workflow.service.FlowTaskNoticeService;
+import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
 import cn.bctools.log.annotation.Log;
 import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;

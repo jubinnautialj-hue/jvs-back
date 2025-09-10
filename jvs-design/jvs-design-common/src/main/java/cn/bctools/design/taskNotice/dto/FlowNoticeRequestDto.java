@@ -1,4 +1,4 @@
-package cn.bctools.design.workflow.dto;
+package cn.bctools.design.taskNotice.dto;
 
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -7,7 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Data
 @Accessors(chain = true)
-public class FlowQwNoticeDto {
+public class FlowNoticeRequestDto {
     private String bizTaskId;//;// 1553038444628619299,
     private String workNum;// B2888220700114,
     private String flowId;// 1522872123143737345,

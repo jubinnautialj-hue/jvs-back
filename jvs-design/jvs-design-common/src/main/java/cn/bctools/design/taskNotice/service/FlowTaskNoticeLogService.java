@@ -1,6 +1,6 @@
-package cn.bctools.design.workflow.service;
+package cn.bctools.design.taskNotice.service;
 
-import cn.bctools.design.workflow.entity.FlowTaskNoticeLog;
+import cn.bctools.design.taskNotice.entity.FlowTaskNoticeLog;
 import com.baomidou.mybatisplus.extension.service.IService;
 
 /**

@@ -1,7 +1,9 @@
-package cn.bctools.design.workflow.entity;
+package cn.bctools.design.taskNotice.entity;
 
 import cn.bctools.database.entity.po.BasalPo;
 import cn.bctools.database.handler.Fastjson2TypeHandler;
+import cn.bctools.design.taskNotice.dto.FlowNoticeRequestDto;
+import cn.bctools.design.taskNotice.dto.FlowNoticeResponseDto;
 import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
@@ -9,7 +11,6 @@ import lombok.Data;
 import lombok.experimental.Accessors;
 
 import java.util.List;
-import java.util.Map;
 
 /**
  * @author wayne
@@ -30,17 +31,18 @@ public class FlowTaskNoticeLog extends BasalPo {
     @TableField("type")
     private String type;
 
-    @ApiModelProperty(value = "工作流任务id")
-    @TableField("task_id")
-    private String taskId;
+    @ApiModelProperty(value = "业务实例ID")
+    @TableField("instance_id")
+    private String instanceId;
 
     @ApiModelProperty(value = "工作流节点id")
     @TableField("node_id")
     private String nodeId;
 
-    @ApiModelProperty(value = "数据ID")
-    @TableField("data_id")
-    private String dataId;
+    //用不到
+    @ApiModelProperty(value = "单据ID")
+    @TableField("task_id")
+    private String taskId;
 
     @ApiModelProperty(value = "请求接口地址")
     @TableField("api_url")
@@ -48,11 +50,11 @@ public class FlowTaskNoticeLog extends BasalPo {
 
     @ApiModelProperty(value = "请求入参")
     @TableField(value = "request_data", typeHandler = Fastjson2TypeHandler.class)
-    private List<Map<String, Object>> requestData;
+    private List<FlowNoticeRequestDto> requestData;
 
     @ApiModelProperty(value = "返回结果")
     @TableField(value = "response_data", typeHandler = Fastjson2TypeHandler.class)
-    private Map<String, Object> responseData;
+    private FlowNoticeResponseDto responseData;
 
     @ApiModelProperty(value = "应用id")
     @TableField(value = "jvs_app_id")

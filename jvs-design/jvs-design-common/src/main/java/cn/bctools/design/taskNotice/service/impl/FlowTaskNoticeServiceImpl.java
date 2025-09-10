@@ -1,34 +1,38 @@
-package cn.bctools.design.workflow.service.impl;
+package cn.bctools.design.taskNotice.service.impl;
 
+import cn.bctools.auth.api.api.AuthTenantConfigServiceApi;
 import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.common.entity.dto.UserDto;
+import cn.bctools.common.enums.ConfigsTypeEnum;
+import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.design.project.entity.dto.AppTaskDto;
 import cn.bctools.design.project.service.JvsAppService;
-import cn.bctools.design.workflow.dto.FlowQwNoticeDto;
+import cn.bctools.design.taskNotice.dto.FlowNoticeRequestDto;
+import cn.bctools.design.taskNotice.dto.FlowNoticeResponseDto;
+import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
+import cn.bctools.design.taskNotice.entity.FlowTaskNoticeLog;
+import cn.bctools.design.taskNotice.mapper.FlowTaskNoticeMapper;
+import cn.bctools.design.taskNotice.service.FlowTaskNoticeLogService;
+import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
 import cn.bctools.design.workflow.entity.FlowTask;
-import cn.bctools.design.workflow.entity.FlowTaskNoticeLog;
 import cn.bctools.design.workflow.entity.FlowTaskPerson;
 import cn.bctools.design.workflow.model.Node;
-import cn.bctools.design.workflow.service.FlowTaskNoticeLogService;
-import cn.bctools.design.workflow.service.FlowTaskNoticeService;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.http.Header;
 import org.apache.http.HttpEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.conn.ssl.NoopHostnameVerifier;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContextBuilder;
 import org.apache.http.util.EntityUtils;
-import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 
 import javax.net.ssl.SSLContext;
@@ -36,23 +40,22 @@ import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
-企微消息
+   待办提醒服务实现类
+ * @author jerry_su
  */
 @Slf4j
 @Service
 @AllArgsConstructor
-public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
-    JvsAppService jvsAppService;
-    FlowTaskNoticeLogService flowTaskNoticeLogService;
-    static AppTaskDto appTaskDto;
-   AuthUserServiceApi authUserServiceApi;
+public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper, FlowTaskNotice> implements FlowTaskNoticeService {
+    private final JvsAppService jvsAppService;
+    private final FlowTaskNoticeLogService flowTaskNoticeLogService;
+    private static AppTaskDto appTaskDto;
+    private final AuthUserServiceApi authUserServiceApi;
+    private final AuthTenantConfigServiceApi configServiceApi;
     /**
      * 初始化应用的待办提醒配置信息
      * @param appId 应用ID
@@ -62,35 +65,47 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
         appTaskDto = jvsAppService.getAppById(appId).getTaskSetting();
     }
     @Override
-    public Boolean create(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons){
+    public boolean create(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons){
+        System.out.println(flowTask);
        initTaskSettings(flowTask.getJvsAppId());
-        if (appTaskDto.getEnableTask()){
+        System.out.println(appTaskDto);
+        if (!Objects.isNull(appTaskDto) && appTaskDto.getEnableTask()){
             List<String> userIds = flowTaskPersons.stream().map(FlowTaskPerson::getUserId).collect(Collectors.toList());
             List<UserDto> users = authUserServiceApi.getByIds(userIds).getData();
             Map<String,String> userMap = users.stream().collect(Collectors.toMap(UserDto::getId, UserDto::getAccountName));
-            List<FlowQwNoticeDto> flowTaskList = new ArrayList<>();
+            List<FlowNoticeRequestDto> flowTaskList = new ArrayList<>();
+            String domain = configServiceApi.domain(TenantContextHolder.getTenantId(), ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION).getData();
             flowTaskPersons.forEach(flowTaskPerson -> {
-                FlowQwNoticeDto flowQwNoticeDto = new FlowQwNoticeDto();
-                flowQwNoticeDto.setWorkNum(flowTask.getId());
-                flowQwNoticeDto.setBizInstanceId(flowTask.getId());
-                flowQwNoticeDto.setBizNodeId(nextNode.getId());
-                flowQwNoticeDto.setBizTaskId(flowTaskPerson.getId());
-                flowQwNoticeDto.setCurrentNode(nextNode.getName());
-                flowQwNoticeDto.setTitle(StringUtils.isEmpty(flowTask.getTitle()) ? flowTask.getName() : flowTask.getTitle());
-                flowQwNoticeDto.setTaskType(0);
-                flowQwNoticeDto.setHandler(userMap.get(flowTaskPerson.getUserId()));
-                flowQwNoticeDto.setHandlerName(flowTaskPerson.getUserName());
-                flowQwNoticeDto.setApplicantName(flowTask.getCreateBy());
-                flowQwNoticeDto.setFormUrl("");
-                flowQwNoticeDto.setPriority(0);
-                flowQwNoticeDto.setCreateDate(System. currentTimeMillis());
-                flowTaskList.add(flowQwNoticeDto);
+                FlowNoticeRequestDto flowNoticeRequestDto = new FlowNoticeRequestDto();
+                //访问URL按需进行拼接  需要拼接 jvsAppId
+                String formUrl = domain+appTaskDto.getTaskFormUrl();
+
+                flowNoticeRequestDto.setWorkNum(flowTask.getId());
+                flowNoticeRequestDto.setBizInstanceId(flowTask.getId());
+                flowNoticeRequestDto.setBizNodeId(nextNode.getId());
+                flowNoticeRequestDto.setBizTaskId(flowTaskPerson.getId());
+                flowNoticeRequestDto.setCurrentNode(nextNode.getName());
+                flowNoticeRequestDto.setTitle(StringUtils.isEmpty(flowTask.getTitle()) ? flowTask.getName() : flowTask.getTitle());
+                flowNoticeRequestDto.setTaskType(0);
+                flowNoticeRequestDto.setHandler(userMap.get(flowTaskPerson.getUserId()));
+                flowNoticeRequestDto.setHandlerName(flowTaskPerson.getUserName());
+                flowNoticeRequestDto.setApplicantName(flowTask.getCreateBy());
+                flowNoticeRequestDto.setFormUrl(formUrl);
+                flowNoticeRequestDto.setPriority(0);
+                flowNoticeRequestDto.setCreateDate(System. currentTimeMillis());
+                flowTaskList.add(flowNoticeRequestDto);
             });
-            sendRequest(appTaskDto.getTaskPushApi(), flowTaskList, nextNode, flowTask, "create");
+           FlowNoticeResponseDto response = sendRequest(appTaskDto.getTaskPushApi(), flowTaskList, nextNode, flowTask, "create");
+           if (response.isSuccess()){
+               JSONObject result = (JSONObject)response.getData();
+               Map<String,String> resultMap = (Map<String,String>)result.get("bizTaskAndTaskId");
+               saveTaskNotice(resultMap,nextNode, flowTask);
+               return true;
+           }
         }
         return false;
     }
-    public Boolean create(Map flowParam) throws Exception {
+    public boolean create(Map flowParam) throws Exception {
         //String createUrl = qwNoticeConfig.getCreate();
 //        String appId = qwNoticeConfig.getAppId();
 //        String appSecret = qwNoticeConfig.getAppSecret();
@@ -110,7 +125,7 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
         String sign = getMD5(SHA256(appSecret + nonce + timestamp));
 
         // 请求接口的示例参数
-        FlowQwNoticeDto a = new FlowQwNoticeDto();
+        FlowNoticeRequestDto a = new FlowNoticeRequestDto();
         a.setWorkNum("B288822070000912");
         a.setBizInstanceId("15530384446286192906");
         a.setBizNodeId("15530384446286192905");
@@ -123,7 +138,7 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
         a.setFormUrl("https://www.baidu.com");
         a.setPriority(0);
         a.setCreateDate(new Date().getTime());
-        List<FlowQwNoticeDto> bb=new ArrayList<>();
+        List<FlowNoticeRequestDto> bb=new ArrayList<>();
         bb.add(a);
         String params = JSONArray.toJSONString(bb);
         SSLContext sslContext = new SSLContextBuilder()
@@ -153,7 +168,7 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
     }
 
     @Override
-    public Boolean close(List<String> ids){
+    public boolean close(List<String> ids){
 
        /* String appId = "1827966645317992450";
         String appSecret = "c2352cae-b1f2-4475-8602-407b42ba2f60";
@@ -202,44 +217,62 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
     }
 
     @Override
-    public Boolean recall(List<String> bizTaskAndTaskIds){
+    public boolean recall(List<String> bizTaskAndTaskIds){
         return true;
     }
 
     @Override
-    public Boolean update(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons){
+    public boolean update(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons){
         return true;
     }
 
-    private boolean sendRequest(String apiUrl, List<FlowQwNoticeDto> requestData, Node nextNode, FlowTask task, String type) {
+    /**
+     * 批量保存待办对照信息
+     * @param result
+     * @param nextNode
+     * @param task
+     */
+    private void saveTaskNotice(Map<String,String> result,Node nextNode, FlowTask task){
+        List<FlowTaskNotice> flowTaskNoticeList = new ArrayList<>();
+        for(Map.Entry<String,String> entry:result.entrySet()){
+            FlowTaskNotice flowTaskNotice = new FlowTaskNotice();
+            flowTaskNotice.setInstanceId(task.getId());
+            flowTaskNotice.setNodeId(nextNode.getId());
+            flowTaskNotice.setTaskId(entry.getKey());
+            flowTaskNotice.setBizTaskId(entry.getValue());
+            flowTaskNotice.setJvsAppId(task.getJvsAppId());
+            flowTaskNotice.setAppId(appTaskDto.getTaskAppId());
+            flowTaskNoticeList.add(flowTaskNotice);
+        }
+        saveBatch(flowTaskNoticeList);
+    }
+    private FlowNoticeResponseDto sendRequest(String apiUrl, List<FlowNoticeRequestDto> requestData, Node nextNode, FlowTask task, String type) {
         String jsonRequest = JSONArray.toJSONString(requestData);
-        boolean isSucceed = false;
+        FlowNoticeResponseDto responseDto = new FlowNoticeResponseDto();
+        responseDto.setSuccess(false);
         FlowTaskNoticeLog flowTaskNoticeLog = new FlowTaskNoticeLog();
         flowTaskNoticeLog.setApiUrl(apiUrl);
-        flowTaskNoticeLog.setTaskId(task.getId());
+        flowTaskNoticeLog.setInstanceId(task.getId());
         flowTaskNoticeLog.setType(type);
         flowTaskNoticeLog.setNodeId(nextNode.getId());
-        flowTaskNoticeLog.setDataId(task.getDataId());
         flowTaskNoticeLog.setJvsAppId(task.getJvsAppId());
-        List<Map<String,Object>> requestDataList = new ArrayList<>();
-        BeanUtils.copyProperties(requestData, requestDataList);
-        flowTaskNoticeLog.setRequestData(requestDataList);
+        flowTaskNoticeLog.setRequestData(requestData);
         try {
             String response = sendRequest(apiUrl, jsonRequest, appTaskDto.getTaskAppId(), appTaskDto.getTaskAppSecret());
             log.info("打印统一待办response:{}", response);
             if (response != null) {
-                Map apiResponse = JSON.parseObject(response, Map.class);
-                flowTaskNoticeLog.setResponseData(apiResponse);
-                JSONObject data = (JSONObject) apiResponse.get("data");
+                responseDto = JSON.parseObject(response, FlowNoticeResponseDto.class);
+                flowTaskNoticeLog.setResponseData(responseDto);
                 // 执行成功
-                if ("0".equals(apiResponse.get("code"))) {
-                    isSucceed = true;
+                if (responseDto.getCode()==0) {
+                    responseDto.setSuccess(true);
                 }
             }
         } catch (Exception e) {
+            log.error("统一待办发送失败", e);
         }
         flowTaskNoticeLogService.save(flowTaskNoticeLog);
-        return isSucceed;
+        return responseDto;
     }
 
     /**
@@ -260,7 +293,7 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
         String sign = getMD5(SHA256(appSecret + nonce + timestamp));
         //创建CloseableHttpClient
         CloseableHttpResponse response;
-        try (CloseableHttpClient client = HttpClientBuilder.create().build()) {
+        try{
             HttpPost httpPost = new HttpPost(serverUrl);
             httpPost.setHeader("x-gw-signature", sign);
             httpPost.setHeader("x-gw-timestamp", timestamp);
@@ -269,9 +302,20 @@ public class FlowQwNoticeServiceImpl implements FlowTaskNoticeService {
             httpPost.setHeader("Content-Type", "application/json;charset=UTF-8");
             httpPost.setHeader("Cache-Control", "no-cache");
             HttpEntity entity = new StringEntity(params, "UTF-8");
-            Header[] allHeaders = httpPost.getAllHeaders();
+            SSLContext sslContext = new SSLContextBuilder()
+                    // 信任所有证书（临时方案核心）
+                    .loadTrustMaterial(null, (X509Certificate[] chain, String authType) -> true)
+                    .build();
+            CloseableHttpClient client = HttpClients.custom()
+                    .setSSLContext(sslContext)
+                    // 关闭主机名验证（避免证书域名不匹配报错）
+                    .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                    .build();
             httpPost.setEntity(entity);
             response = client.execute(httpPost);
+        }catch (Exception e) {
+            log.error("统一待办发送失败", e);
+            return null;
         }
         return EntityUtils.toString(response.getEntity());
     }
