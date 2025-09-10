@@ -2,7 +2,6 @@ package cn.bctools.design.taskNotice.entity;
 
 import cn.bctools.database.entity.po.BasalPo;
 import cn.bctools.database.handler.Fastjson2TypeHandler;
-import cn.bctools.design.taskNotice.dto.FlowNoticeRequestDto;
 import cn.bctools.design.taskNotice.dto.FlowNoticeResponseDto;
 import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.annotations.ApiModel;
@@ -50,7 +49,7 @@ public class FlowTaskNoticeLog extends BasalPo {
 
     @ApiModelProperty(value = "请求入参")
     @TableField(value = "request_data", typeHandler = Fastjson2TypeHandler.class)
-    private List<FlowNoticeRequestDto> requestData;
+    private List requestData;
 
     @ApiModelProperty(value = "返回结果")
     @TableField(value = "response_data", typeHandler = Fastjson2TypeHandler.class)

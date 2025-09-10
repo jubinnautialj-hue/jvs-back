@@ -11,6 +11,7 @@ import cn.bctools.design.taskNotice.dto.FlowNoticeRequestDto;
 import cn.bctools.design.taskNotice.dto.FlowNoticeResponseDto;
 import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
 import cn.bctools.design.taskNotice.entity.FlowTaskNoticeLog;
+import cn.bctools.design.taskNotice.enums.FlowTaskNoticeEnum;
 import cn.bctools.design.taskNotice.mapper.FlowTaskNoticeMapper;
 import cn.bctools.design.taskNotice.service.FlowTaskNoticeLogService;
 import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
@@ -20,6 +21,7 @@ import cn.bctools.design.workflow.model.Node;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -64,11 +66,17 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
     private void initTaskSettings(String appId){
         appTaskDto = jvsAppService.getAppById(appId).getTaskSetting();
     }
+
+    /**
+     * 创建单据
+     * @param flowTask 工作流信息
+     * @param nextNode 节点内容
+     * @param flowTaskPersons 待办人员集合
+     * @return
+     */
     @Override
-    public boolean create(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons){
-        System.out.println(flowTask);
-       initTaskSettings(flowTask.getJvsAppId());
-        System.out.println(appTaskDto);
+    public boolean create(FlowTask flowTask, Node nextNode, List<FlowTaskPerson> flowTaskPersons){
+        initTaskSettings(flowTask.getJvsAppId());
         if (!Objects.isNull(appTaskDto) && appTaskDto.getEnableTask()){
             List<String> userIds = flowTaskPersons.stream().map(FlowTaskPerson::getUserId).collect(Collectors.toList());
             List<UserDto> users = authUserServiceApi.getByIds(userIds).getData();
@@ -78,8 +86,9 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
             flowTaskPersons.forEach(flowTaskPerson -> {
                 FlowNoticeRequestDto flowNoticeRequestDto = new FlowNoticeRequestDto();
                 //访问URL按需进行拼接  需要拼接 jvsAppId
-                String formUrl = domain+appTaskDto.getTaskFormUrl();
-
+                String routeUrl = appTaskDto.getTaskFormUrl();
+                routeUrl = String.format(routeUrl,flowTaskPerson.getId(), flowTask.getJvsAppId());
+                String formUrl = domain+routeUrl;
                 flowNoticeRequestDto.setWorkNum(flowTask.getId());
                 flowNoticeRequestDto.setBizInstanceId(flowTask.getId());
                 flowNoticeRequestDto.setBizNodeId(nextNode.getId());
@@ -95,144 +104,64 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
                 flowNoticeRequestDto.setCreateDate(System. currentTimeMillis());
                 flowTaskList.add(flowNoticeRequestDto);
             });
-           FlowNoticeResponseDto response = sendRequest(appTaskDto.getTaskPushApi(), flowTaskList, nextNode, flowTask, "create");
+           FlowNoticeResponseDto response = sendRequest(FlowTaskNoticeEnum.CREATE, flowTask, flowTaskList, nextNode);
            if (response.isSuccess()){
                JSONObject result = (JSONObject)response.getData();
                Map<String,String> resultMap = (Map<String,String>)result.get("bizTaskAndTaskId");
-               saveTaskNotice(resultMap,nextNode, flowTask);
+               addTaskNotice(resultMap,nextNode, flowTask,FlowTaskNoticeEnum.CREATE);
                return true;
            }
         }
         return false;
     }
-    public boolean create(Map flowParam) throws Exception {
-        //String createUrl = qwNoticeConfig.getCreate();
-//        String appId = qwNoticeConfig.getAppId();
-//        String appSecret = qwNoticeConfig.getAppSecret();
-//        String appId = "1827966645317992450";
-//        String appSecret = "c2352cae-b1f2-4475-8602-407b42ba2f60";
-//        String apiPath = "/iuap-ipaas-runtime/cwgx2mh/tasks/push"; //待办具体接口
-//        String serverUrl="https://busi.powerbeijing.com"; //待办接口地址
-
-        String appId = "1935266555846426625";
-        String appSecret = "fb77eb2a-a266-4c0f-ac50-790e758bdd27";
-        String apiPath = "/iuap-ipaas-runtime/cwgx2mh/tasks/push"; //待办具体接口
-        String serverUrl="https://esbtest.powerbeijing.com"; //待办接口地址
-
-        long now = new Date().getTime();
-        String timestamp = Long.toString((long) Math.floor(now/1000));         //当前时间戳，单位秒
-        String nonce = Long.toHexString(now) + "-" + Long.toHexString((long) Math.floor(Math.random() * 0xFFFFFF)); //随机字符串
-        String sign = getMD5(SHA256(appSecret + nonce + timestamp));
-
-        // 请求接口的示例参数
-        FlowNoticeRequestDto a = new FlowNoticeRequestDto();
-        a.setWorkNum("B288822070000912");
-        a.setBizInstanceId("15530384446286192906");
-        a.setBizNodeId("15530384446286192905");
-        a.setBizTaskId("15530384446286192907");
-        a.setTitle("请假申请7777");
-        a.setTaskType(0);
-        a.setHandler("WANGYQ4716");
-        a.setHandlerName("王月强");
-        a.setApplicantName("测试");
-        a.setFormUrl("https://www.baidu.com");
-        a.setPriority(0);
-        a.setCreateDate(new Date().getTime());
-        List<FlowNoticeRequestDto> bb=new ArrayList<>();
-        bb.add(a);
-        String params = JSONArray.toJSONString(bb);
-        SSLContext sslContext = new SSLContextBuilder()
-                // 信任所有证书（临时方案核心）
-                .loadTrustMaterial(null, (X509Certificate[] chain, String authType) -> true)
-                .build();
-
-        CloseableHttpClient client = HttpClients.custom()
-                .setSSLContext(sslContext)
-                // 关闭主机名验证（避免证书域名不匹配报错）
-                .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                .build();
-        HttpPost httpPost = new HttpPost(serverUrl+apiPath);
-        httpPost.setHeader("x-gw-signature", sign);
-        httpPost.setHeader("x-gw-timestamp", timestamp);
-        httpPost.setHeader("x-gw-nonce", nonce);
-        httpPost.setHeader("x-gw-appid", appId);
-        httpPost.setHeader("Content-Type", "application/json");
-        httpPost.setHeader("Cache-Control", "no-cache");
-        HttpEntity entity=new StringEntity(params,"UTF-8");
-        httpPost.setEntity(entity);
-        CloseableHttpResponse response=client.execute(httpPost);
-        response.close();
-        client.close();
-        return true;
-        //return EntityUtils.toString(response.getEntity(), "UTF-8");
+    /**
+     * 关闭单据
+     * @param flowTask 工作流信息
+     * @param bizTaskAndTaskIds 单据ID集合
+     * @return
+     */
+    @Override
+    public boolean close(FlowTask flowTask, List<String> bizTaskAndTaskIds){
+        initTaskSettings(flowTask.getJvsAppId());
+        if (!Objects.isNull(appTaskDto) && appTaskDto.getEnableTask()){
+            FlowNoticeResponseDto response = sendRequest(FlowTaskNoticeEnum.CLOSE, flowTask, bizTaskAndTaskIds, null);
+            if (response.isSuccess()){
+                updateTaskNotice(bizTaskAndTaskIds,flowTask,FlowTaskNoticeEnum.CLOSE);
+            }
+            return response.isSuccess();
+        }
+        return false;
+    }
+    /**
+     * 撤回单据
+     * @param flowTask 工作流信息
+     * @param bizTaskAndTaskIds 单据ID集合
+     * @return
+     */
+    @Override
+    public boolean recall(FlowTask flowTask, List<String> bizTaskAndTaskIds){
+        initTaskSettings(flowTask.getJvsAppId());
+        if (!Objects.isNull(appTaskDto) && appTaskDto.getEnableTask()){
+            FlowNoticeResponseDto response = sendRequest(FlowTaskNoticeEnum.RECALL, flowTask, bizTaskAndTaskIds, null);
+            if (response.isSuccess()){
+                updateTaskNotice(bizTaskAndTaskIds,flowTask,FlowTaskNoticeEnum.RECALL);
+            }
+            return response.isSuccess();
+        }
+        return false;
     }
 
     @Override
-    public boolean close(List<String> ids){
-
-       /* String appId = "1827966645317992450";
-        String appSecret = "c2352cae-b1f2-4475-8602-407b42ba2f60";
-//        String appId = "1937072455152041986";
-//        String appSecret = "7e62d5bd-2807-46a4-ba5d-4546ef5d1ef8";
-        long now = new Date().getTime();
-        String timestamp = Long.toString((long) Math.floor(now/1000));         //当前时间戳，单位秒
-        String nonce = Long.toHexString(now) + "-" + Long.toHexString((long) Math.floor(Math.random() * 0xFFFFFF)); //随机字符串
-        String sign = getMD5(SHA256(appSecret + nonce + timestamp));
-
-        String apiPath = "/iuap-ipaas-runtime/cwgx2mh/task/close"; //待办具体接口
-        String serverUrl="https://busi.powerbeijing.com"; //待办接口地址
-
-        String params = JSONArray.toJSONString(ids);
-
-        //创建CloseableHttpClient
-//        CloseableHttpClient client =  HttpClientBuilder.create().build();
-        // 2. 核心修改：创建绕过SSL验证的HttpClient
-        SSLContext sslContext = new SSLContextBuilder()
-                // 信任所有证书（临时方案核心）
-                .loadTrustMaterial(null, (X509Certificate[] chain, String authType) -> true)
-                .build();
-
-        CloseableHttpClient client = HttpClients.custom()
-                .setSSLContext(sslContext)
-                // 关闭主机名验证（避免证书域名不匹配报错）
-                .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
-                .build();
-        HttpPost httpPost = new HttpPost(serverUrl+apiPath);
-        httpPost.setHeader("x-gw-signature", sign);
-        httpPost.setHeader("x-gw-timestamp", timestamp);
-        httpPost.setHeader("x-gw-nonce", nonce);
-        httpPost.setHeader("x-gw-appid", appId);
-        httpPost.setHeader("Content-Type", "application/json");
-        httpPost.setHeader("Cache-Control", "no-cache");
-        HttpEntity entity=new StringEntity(params,"UTF-8");
-        httpPost.setEntity(entity);
-        CloseableHttpResponse response=client.execute(httpPost);
-        // 4. 资源关闭（避免泄漏）
-        response.close();
-        client.close();*/
-
-        //return EntityUtils.toString(response.getEntity(), "UTF-8");
-        return true;
-
+    public boolean update(FlowTask flowTask, Node nextNode, List<FlowTaskPerson> flowTaskPersons){
+        return false;
     }
-
-    @Override
-    public boolean recall(List<String> bizTaskAndTaskIds){
-        return true;
-    }
-
-    @Override
-    public boolean update(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons){
-        return true;
-    }
-
     /**
      * 批量保存待办对照信息
      * @param result
      * @param nextNode
      * @param task
      */
-    private void saveTaskNotice(Map<String,String> result,Node nextNode, FlowTask task){
+    private void addTaskNotice(Map<String,String> result,Node nextNode, FlowTask task,FlowTaskNoticeEnum flowTaskNoticeEnum){
         List<FlowTaskNotice> flowTaskNoticeList = new ArrayList<>();
         for(Map.Entry<String,String> entry:result.entrySet()){
             FlowTaskNotice flowTaskNotice = new FlowTaskNotice();
@@ -242,19 +171,62 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
             flowTaskNotice.setBizTaskId(entry.getValue());
             flowTaskNotice.setJvsAppId(task.getJvsAppId());
             flowTaskNotice.setAppId(appTaskDto.getTaskAppId());
+            flowTaskNotice.setStatus(flowTaskNoticeEnum.ordinal());
             flowTaskNoticeList.add(flowTaskNotice);
         }
         saveBatch(flowTaskNoticeList);
     }
-    private FlowNoticeResponseDto sendRequest(String apiUrl, List<FlowNoticeRequestDto> requestData, Node nextNode, FlowTask task, String type) {
+    /**
+     * 批量更新待办对照信息
+     * @param bizTaskAndTaskIds 单据ID集合
+     * @param task 工作流信息
+     * @param flowTaskNoticeEnum 待办类型
+     */
+    private void updateTaskNotice(List<String>bizTaskAndTaskIds, FlowTask task,FlowTaskNoticeEnum flowTaskNoticeEnum){
+        update(new LambdaUpdateWrapper<FlowTaskNotice>()
+            .set(FlowTaskNotice::getStatus, flowTaskNoticeEnum.ordinal())
+            .eq(FlowTaskNotice::getInstanceId, task.getId())
+            .eq(FlowTaskNotice::getAppId, appTaskDto.getTaskAppId())
+            .in(FlowTaskNotice::getBizTaskId, bizTaskAndTaskIds)
+        );
+    }
+
+    /**
+     *
+     * @param flowTaskNoticeEnum 待办类型
+     * @param requestData 请求入参
+     * @param task 工作流信息
+     * @param nextNode 下一个节点
+     * @return
+     */
+    private FlowNoticeResponseDto sendRequest(FlowTaskNoticeEnum flowTaskNoticeEnum, FlowTask task, List requestData, Node nextNode) {
         String jsonRequest = JSONArray.toJSONString(requestData);
         FlowNoticeResponseDto responseDto = new FlowNoticeResponseDto();
         responseDto.setSuccess(false);
         FlowTaskNoticeLog flowTaskNoticeLog = new FlowTaskNoticeLog();
+        String apiUrl = "";
+        switch (flowTaskNoticeEnum){
+            case CREATE:
+                apiUrl = appTaskDto.getTaskPushApi();
+                break;
+            case CLOSE:
+                apiUrl = appTaskDto.getTaskCloseApi();
+                break;
+            case RECALL:
+                apiUrl = appTaskDto.getTaskRecallApi();
+                break;
+            case UPDATE:
+                apiUrl = appTaskDto.getTaskUpdateApi();
+                break;
+            default:
+                break;
+        }
         flowTaskNoticeLog.setApiUrl(apiUrl);
         flowTaskNoticeLog.setInstanceId(task.getId());
-        flowTaskNoticeLog.setType(type);
-        flowTaskNoticeLog.setNodeId(nextNode.getId());
+        flowTaskNoticeLog.setType(flowTaskNoticeEnum.name());
+        if (!Objects.isNull(nextNode)){
+            flowTaskNoticeLog.setNodeId(nextNode.getId());
+        }
         flowTaskNoticeLog.setJvsAppId(task.getJvsAppId());
         flowTaskNoticeLog.setRequestData(requestData);
         try {
@@ -376,5 +348,116 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
             strHexString.append(hex);
         }
         return strHexString.toString();
+    }
+
+    public boolean create(Map flowParam) throws Exception {
+        //String createUrl = qwNoticeConfig.getCreate();
+//        String appId = qwNoticeConfig.getAppId();
+//        String appSecret = qwNoticeConfig.getAppSecret();
+//        String appId = "1827966645317992450";
+//        String appSecret = "c2352cae-b1f2-4475-8602-407b42ba2f60";
+//        String apiPath = "/iuap-ipaas-runtime/cwgx2mh/tasks/push"; //待办具体接口
+//        String serverUrl="https://busi.powerbeijing.com"; //待办接口地址
+
+        String appId = "1935266555846426625";
+        String appSecret = "fb77eb2a-a266-4c0f-ac50-790e758bdd27";
+        String apiPath = "/iuap-ipaas-runtime/cwgx2mh/tasks/push"; //待办具体接口
+        String serverUrl="https://esbtest.powerbeijing.com"; //待办接口地址
+
+        long now = new Date().getTime();
+        String timestamp = Long.toString((long) Math.floor(now/1000));         //当前时间戳，单位秒
+        String nonce = Long.toHexString(now) + "-" + Long.toHexString((long) Math.floor(Math.random() * 0xFFFFFF)); //随机字符串
+        String sign = getMD5(SHA256(appSecret + nonce + timestamp));
+
+        // 请求接口的示例参数
+        FlowNoticeRequestDto a = new FlowNoticeRequestDto();
+        a.setWorkNum("B288822070000912");
+        a.setBizInstanceId("15530384446286192906");
+        a.setBizNodeId("15530384446286192905");
+        a.setBizTaskId("15530384446286192907");
+        a.setTitle("请假申请7777");
+        a.setTaskType(0);
+        a.setHandler("WANGYQ4716");
+        a.setHandlerName("王月强");
+        a.setApplicantName("测试");
+        a.setFormUrl("https://www.baidu.com");
+        a.setPriority(0);
+        a.setCreateDate(new Date().getTime());
+        List<FlowNoticeRequestDto> bb=new ArrayList<>();
+        bb.add(a);
+        String params = JSONArray.toJSONString(bb);
+        SSLContext sslContext = new SSLContextBuilder()
+                // 信任所有证书（临时方案核心）
+                .loadTrustMaterial(null, (X509Certificate[] chain, String authType) -> true)
+                .build();
+
+        CloseableHttpClient client = HttpClients.custom()
+                .setSSLContext(sslContext)
+                // 关闭主机名验证（避免证书域名不匹配报错）
+                .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                .build();
+        HttpPost httpPost = new HttpPost(serverUrl+apiPath);
+        httpPost.setHeader("x-gw-signature", sign);
+        httpPost.setHeader("x-gw-timestamp", timestamp);
+        httpPost.setHeader("x-gw-nonce", nonce);
+        httpPost.setHeader("x-gw-appid", appId);
+        httpPost.setHeader("Content-Type", "application/json");
+        httpPost.setHeader("Cache-Control", "no-cache");
+        HttpEntity entity=new StringEntity(params,"UTF-8");
+        httpPost.setEntity(entity);
+        CloseableHttpResponse response=client.execute(httpPost);
+        response.close();
+        client.close();
+        return true;
+        //return EntityUtils.toString(response.getEntity(), "UTF-8");
+    }
+
+    // @Override
+    public boolean close(){
+
+       /* String appId = "1827966645317992450";
+        String appSecret = "c2352cae-b1f2-4475-8602-407b42ba2f60";
+//        String appId = "1937072455152041986";
+//        String appSecret = "7e62d5bd-2807-46a4-ba5d-4546ef5d1ef8";
+        long now = new Date().getTime();
+        String timestamp = Long.toString((long) Math.floor(now/1000));         //当前时间戳，单位秒
+        String nonce = Long.toHexString(now) + "-" + Long.toHexString((long) Math.floor(Math.random() * 0xFFFFFF)); //随机字符串
+        String sign = getMD5(SHA256(appSecret + nonce + timestamp));
+
+        String apiPath = "/iuap-ipaas-runtime/cwgx2mh/task/close"; //待办具体接口
+        String serverUrl="https://busi.powerbeijing.com"; //待办接口地址
+
+        String params = JSONArray.toJSONString(ids);
+
+        //创建CloseableHttpClient
+//        CloseableHttpClient client =  HttpClientBuilder.create().build();
+        // 2. 核心修改：创建绕过SSL验证的HttpClient
+        SSLContext sslContext = new SSLContextBuilder()
+                // 信任所有证书（临时方案核心）
+                .loadTrustMaterial(null, (X509Certificate[] chain, String authType) -> true)
+                .build();
+
+        CloseableHttpClient client = HttpClients.custom()
+                .setSSLContext(sslContext)
+                // 关闭主机名验证（避免证书域名不匹配报错）
+                .setSSLHostnameVerifier(NoopHostnameVerifier.INSTANCE)
+                .build();
+        HttpPost httpPost = new HttpPost(serverUrl+apiPath);
+        httpPost.setHeader("x-gw-signature", sign);
+        httpPost.setHeader("x-gw-timestamp", timestamp);
+        httpPost.setHeader("x-gw-nonce", nonce);
+        httpPost.setHeader("x-gw-appid", appId);
+        httpPost.setHeader("Content-Type", "application/json");
+        httpPost.setHeader("Cache-Control", "no-cache");
+        HttpEntity entity=new StringEntity(params,"UTF-8");
+        httpPost.setEntity(entity);
+        CloseableHttpResponse response=client.execute(httpPost);
+        // 4. 资源关闭（避免泄漏）
+        response.close();
+        client.close();*/
+
+        //return EntityUtils.toString(response.getEntity(), "UTF-8");
+        return true;
+
     }
 }

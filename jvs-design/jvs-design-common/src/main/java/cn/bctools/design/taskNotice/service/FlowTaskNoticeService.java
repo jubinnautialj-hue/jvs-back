@@ -17,8 +17,8 @@ public interface FlowTaskNoticeService {
      * @return
      * @throws Exception
      */
-    boolean create(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons);
-    boolean close(List<String> bizTaskAndTaskIds);
-    boolean recall(List<String> bizTaskAndTaskIds);
-    boolean update(Node nextNode, FlowTask flowTask, List<FlowTaskPerson> flowTaskPersons);
+    boolean create(FlowTask flowTask, Node nextNode, List<FlowTaskPerson> flowTaskPersons);
+    boolean close(FlowTask flowTask, List<String> bizTaskAndTaskIds);
+    boolean recall(FlowTask flowTask, List<String> bizTaskAndTaskIds);
+    boolean update(FlowTask flowTask, Node nextNode, List<FlowTaskPerson> flowTaskPersons);
 }

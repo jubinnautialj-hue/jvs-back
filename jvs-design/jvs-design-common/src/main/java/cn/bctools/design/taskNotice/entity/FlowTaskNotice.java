@@ -46,6 +46,10 @@ public class FlowTaskNotice extends BasalPo {
     @TableField(value = "jvs_app_id")
     private String jvsAppId;
 
+    @ApiModelProperty(value = "处理状态：0待处理，1已关闭，2撤回")
+    @TableField(value = "status")
+    private Integer status;
+
     @ApiModelProperty(value = "是否删除 0未删除  1已删除")
     @TableField("del_flag")
     @TableLogic
