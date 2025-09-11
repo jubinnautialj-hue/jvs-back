@@ -811,7 +811,7 @@ public class WordVariableReplaceUtil {
      * @param variable 变量
      * @return 变量参数
      */
-    private static String getVariableParam(String variable) {
+    static String getVariableParam(String variable) {
         String[] arr = getVariable(variable).split("\\?");
         return arr.length == 1 ? null : arr[1];
     }
@@ -865,7 +865,7 @@ public class WordVariableReplaceUtil {
      * @param variableParam 图片变量
      * @return 图片自定义参数
      */
-    private static WordImageUtil.ImgParam parseImgParam(String variableParam) {
+    public static WordImageUtil.ImgParam parseImgParam(String variableParam) {
         WordImageUtil.ImgParam imgParam = new WordImageUtil.ImgParam();
         if (ObjectNull.isNull(variableParam)) {
             return imgParam;

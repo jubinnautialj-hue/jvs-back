@@ -76,6 +76,7 @@ public class ExcelVariable {
         Boolean(CellType.BOOLEAN),
 
         List(CellType._NONE),
+        IMAGE(CellType._NONE),
         ;
 
         public final CellType type;
