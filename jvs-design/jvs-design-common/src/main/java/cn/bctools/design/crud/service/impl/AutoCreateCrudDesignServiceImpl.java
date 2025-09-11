@@ -1,5 +1,7 @@
 package cn.bctools.design.crud.service.impl;
 
+import cn.bctools.auth.api.enums.PersonnelTypeEnum;
+import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.database.util.IdGenerator;
@@ -24,9 +26,17 @@ import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.data.fields.enums.FormTypeEnum;
 import cn.bctools.design.data.service.DataFieldService;
+import cn.bctools.design.menu.entity.AppMenu;
+import cn.bctools.design.menu.entity.dto.PermissionIdentificationDto;
+import cn.bctools.design.menu.service.AppMenuService;
+import cn.bctools.design.menu.util.DesignPermissionUtil;
+import cn.bctools.design.project.dto.ButtonSettingDto;
+import com.alibaba.fastjson2.JSON;
+import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import lombok.AllArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -44,6 +54,7 @@ public class AutoCreateCrudDesignServiceImpl implements AutoCreateCrudDesignServ
 
     private final CrudPageService pageService;
     private final FormService formService;
+    private final AppMenuService appMenuService;
     private final DataFieldService fieldService;
     private final Map<String, IDataFieldHandler> fieldHandlerMap;
 
@@ -51,23 +62,23 @@ public class AutoCreateCrudDesignServiceImpl implements AutoCreateCrudDesignServ
      * 列表按钮表单基础信息
      */
     private static final String PATE_DESIGN_BUTTON_FORM_TEMPLATE = "{\n" +
-            "        \"formdata\":[\n" +
-            "          {\n" +
-            "            \"forms\":[\n" +
-            "            ],\n" +
-            "            \"formsetting\":{\n" +
-            "              \"labelposition\":\"top\",\n" +
-            "              \"labelwidth\":80,\n" +
-            "              \"formsize\":\"mini\",\n" +
-            "              \"btnSetting\":[\n" +
-            "              ],\n" +
-            "              \"fullscreen\":false\n" +
-            "            },\n" +
-            "            \"autoTableFields\":[\n" +
-            "            ]\n" +
-            "          }],\n" +
-            "        \"formType\":\"normalForm\"\n" +
-            "      }";
+                                                                   "        \"formdata\":[\n" +
+                                                                   "          {\n" +
+                                                                   "            \"forms\":[\n" +
+                                                                   "            ],\n" +
+                                                                   "            \"formsetting\":{\n" +
+                                                                   "              \"labelposition\":\"top\",\n" +
+                                                                   "              \"labelwidth\":80,\n" +
+                                                                   "              \"formsize\":\"mini\",\n" +
+                                                                   "              \"btnSetting\":[\n" +
+                                                                   "              ],\n" +
+                                                                   "              \"fullscreen\":false\n" +
+                                                                   "            },\n" +
+                                                                   "            \"autoTableFields\":[\n" +
+                                                                   "            ]\n" +
+                                                                   "          }],\n" +
+                                                                   "        \"formType\":\"normalForm\"\n" +
+                                                                   "      }";
 
 
     @Override
@@ -189,9 +200,9 @@ public class AutoCreateCrudDesignServiceImpl implements AutoCreateCrudDesignServ
             }
             {
                 ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                buttonDesignHtml.setEnable(false);
-                buttonDesignHtml.setIsDefault(false);
-                buttonDesignHtml.setMobileEnable(false);
+                buttonDesignHtml.setEnable(true);
+                buttonDesignHtml.setIsDefault(true);
+                buttonDesignHtml.setMobileEnable(true);
                 buttonDesignHtml.setName("导入");
                 buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                 buttonDesignHtml.setPosition("top");
@@ -200,9 +211,9 @@ public class AutoCreateCrudDesignServiceImpl implements AutoCreateCrudDesignServ
             }
             {
                 ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                buttonDesignHtml.setEnable(false);
-                buttonDesignHtml.setIsDefault(false);
-                buttonDesignHtml.setMobileEnable(false);
+                buttonDesignHtml.setEnable(true);
+                buttonDesignHtml.setIsDefault(true);
+                buttonDesignHtml.setMobileEnable(true);
                 buttonDesignHtml.setName("导出");
                 buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                 buttonDesignHtml.setPosition("top");
@@ -212,9 +223,9 @@ public class AutoCreateCrudDesignServiceImpl implements AutoCreateCrudDesignServ
             }
             {
                 ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                buttonDesignHtml.setEnable(false);
-                buttonDesignHtml.setIsDefault(false);
-                buttonDesignHtml.setMobileEnable(false);
+                buttonDesignHtml.setEnable(true);
+                buttonDesignHtml.setIsDefault(true);
+                buttonDesignHtml.setMobileEnable(true);
                 buttonDesignHtml.setName("下载模板");
                 buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                 buttonDesignHtml.setPosition("top");
@@ -308,14 +319,30 @@ public class AutoCreateCrudDesignServiceImpl implements AutoCreateCrudDesignServ
                         .setFormsize("mini")
                         .setFullscreen(false)
                         .setSubmitBtn(true)
-                        .setEmptyBtn(false)
+                        .setEmptyBtn(true)
                         .setCancal(false)
                         .setBtnSetting(btnSetting)
                         .setPopupWidth(50)
-                        .setPopupType("dialog"));
+                        .setPopupType("drawer"));
 
         formDesignHtml.setFormType(FormTypeEnum.normalForm);
         formPo.setViewJson(JSONObject.toJSONString(formDesignHtml));
+        if (ObjectNull.isNotNull(btnSetting)) {
+            List<String> operation = btnSetting.stream().filter(ButtonSettingDto::getEnable).map(ButtonSettingDto::getName).collect(Collectors.toList());
+            PermissionIdentificationDto permissionIdentificationDto = new PermissionIdentificationDto().setOperation(operation);
+            // 保存
+            AppMenu appMenu = new AppMenu()
+                    .setDesignType(DesignType.form)
+                    .setDesignId(formId)
+                    .setJvsAppId(autoDto.getAppId())
+                    .setDataModelId(autoDto.getModelId())
+                    .setName(formPo.getName())
+                    .setRole(JSONArray.of(JSONObject.parseObject(JSON.toJSONString(new DesignRole().setPersonType(PersonnelTypeEnum.all)))))
+                    .setRoleType(Boolean.TRUE)
+                    .setPermissionJson(JSONArray.parseArray(JSON.toJSONString(btnSetting)))
+                    .setPermission(permissionIdentificationDto);
+            appMenuService.update(appMenu);
+        }
         formService.updateById(formPo);
     }
 
