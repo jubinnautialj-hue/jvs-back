@@ -183,6 +183,7 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
                 try {
                     DateTime dateTime = DateUtil.parseDate(o.toString());
                     dateTime.toLocalDateTime();
+                    return dateTime;
                 } catch (Exception e) {
                     throw new RuntimeException("正确格式为" + NORM_DATE_PATTERN);
                 }
@@ -192,18 +193,18 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
             case month:
                 try {
                     DatePattern.createFormatter("yyyy-MM").parse(o.toString());
+                    return o.toString();
                 } catch (Exception e) {
                     throw new RuntimeException("正确格式为yyyy-MM");
                 }
-                break;
             case year:
                 try {
                     DatePattern.createFormatter("yyyy").parse(o.toString());
+                    return o.toString();
                 } catch (Exception e) {
                     throw new RuntimeException("正确格式为yyyy");
 
                 }
-                break;
             case dates:
                 //不校验
                 break;
@@ -254,55 +255,55 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
     @Override
     public Map<String, Object> generate(String name, String field, List<String> dicData) {
         String str = "{\n" +
-                "    \"prop\": \"" + field + "\",\n" +
-                "    \"type\": \"datePicker\",\n" +
-                "    \"label\": \"" + name + "\",\n" +
-                "    \"span\": 24,\n" +
-                "    \"display\": true,\n" +
-                "    \"status\": \"\",\n" +
-                "    \"tips\": {\n" +
-                "        \"text\": \"\",\n" +
-                "        \"position\": \"right\"\n" +
-                "    },\n" +
-                "    \"showFrom\": [\n" +
-                "        \"label\",\n" +
-                "        \"span\",\n" +
-                "        \"prop\",\n" +
-                "        \"disabled\",\n" +
-                "        \"placeholder\",\n" +
-                "        \"clearable\",\n" +
-                "        \"startLimit\",\n" +
-                "        \"prefixicon\",\n" +
-                "        \"datetype\",\n" +
-                "        \"startplaceholder\",\n" +
-                "        \"endplaceholder\",\n" +
-                "        \"rangeseparator\",\n" +
-                "        \"endLimit\",\n" +
-                "        \"sqlType\",\n" +
-                "        \"defaultDate\"\n" +
-                "    ],\n" +
-                "    \"placeholder\": \"请输入" + name + "\",\n" +
-                "    \"clearable\": false,\n" +
-                "    \"disabled\": false,\n" +
-                "    \"prefixicon\": \"el-icon-time\",\n" +
-                "    \"datetype\": \"date\",\n" +
-                "    \"startplaceholder\": \"开始时间\",\n" +
-                "    \"endplaceholder\": \"结束时间\",\n" +
-                "    \"rangeseparator\": \"至\",\n" +
-                "    \"startLimit\": \"\",\n" +
-                "    \"endLimit\": \"\",\n" +
-                "    \"defaultValue\": \"\",\n" +
-                "    \"sqlType\": \"date\",\n" +
-                "    \"linkbind\": \"\",\n" +
-                "    \"rules\": [\n" +
-                "        {\n" +
-                "            \"required\": false,\n" +
-                "            \"message\": \"请输入" + name + "\",\n" +
-                "            \"trigger\": \"change\"\n" +
-                "        }\n" +
-                "    ],\n" +
-                "    \"name\": \"" + DataFieldType.datePicker.getDesc() + "\"\n" +
-                "}";
+                     "    \"prop\": \"" + field + "\",\n" +
+                     "    \"type\": \"datePicker\",\n" +
+                     "    \"label\": \"" + name + "\",\n" +
+                     "    \"span\": 24,\n" +
+                     "    \"display\": true,\n" +
+                     "    \"status\": \"\",\n" +
+                     "    \"tips\": {\n" +
+                     "        \"text\": \"\",\n" +
+                     "        \"position\": \"right\"\n" +
+                     "    },\n" +
+                     "    \"showFrom\": [\n" +
+                     "        \"label\",\n" +
+                     "        \"span\",\n" +
+                     "        \"prop\",\n" +
+                     "        \"disabled\",\n" +
+                     "        \"placeholder\",\n" +
+                     "        \"clearable\",\n" +
+                     "        \"startLimit\",\n" +
+                     "        \"prefixicon\",\n" +
+                     "        \"datetype\",\n" +
+                     "        \"startplaceholder\",\n" +
+                     "        \"endplaceholder\",\n" +
+                     "        \"rangeseparator\",\n" +
+                     "        \"endLimit\",\n" +
+                     "        \"sqlType\",\n" +
+                     "        \"defaultDate\"\n" +
+                     "    ],\n" +
+                     "    \"placeholder\": \"请输入" + name + "\",\n" +
+                     "    \"clearable\": false,\n" +
+                     "    \"disabled\": false,\n" +
+                     "    \"prefixicon\": \"el-icon-time\",\n" +
+                     "    \"datetype\": \"date\",\n" +
+                     "    \"startplaceholder\": \"开始时间\",\n" +
+                     "    \"endplaceholder\": \"结束时间\",\n" +
+                     "    \"rangeseparator\": \"至\",\n" +
+                     "    \"startLimit\": \"\",\n" +
+                     "    \"endLimit\": \"\",\n" +
+                     "    \"defaultValue\": \"\",\n" +
+                     "    \"sqlType\": \"date\",\n" +
+                     "    \"linkbind\": \"\",\n" +
+                     "    \"rules\": [\n" +
+                     "        {\n" +
+                     "            \"required\": false,\n" +
+                     "            \"message\": \"请输入" + name + "\",\n" +
+                     "            \"trigger\": \"change\"\n" +
+                     "        }\n" +
+                     "    ],\n" +
+                     "    \"name\": \"" + DataFieldType.datePicker.getDesc() + "\"\n" +
+                     "}";
         return JSONObject.parseObject(str);
     }
 }

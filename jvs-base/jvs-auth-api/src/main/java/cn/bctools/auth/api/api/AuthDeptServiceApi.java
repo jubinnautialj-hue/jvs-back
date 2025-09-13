@@ -4,10 +4,7 @@ import cn.bctools.auth.api.dto.SysDeptDto;
 import cn.bctools.common.utils.R;
 import io.swagger.annotations.ApiParam;
 import org.springframework.cloud.openfeign.FeignClient;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
@@ -107,6 +104,15 @@ public interface AuthDeptServiceApi {
      */
     @PostMapping(value = "/dept/saveOrUpdate")
     R<String> saveOrUpdate(@RequestBody SysDeptDto dto);
+
+    /**
+     * 删除部门
+     *
+     * @param deptId
+     * @return
+     */
+    @DeleteMapping(value = "/dept/{deptId}")
+    R<String> delete(@PathVariable("deptId") String deptId);
 
     @PostMapping(value = "/dept/search")
     R<List<SysDeptDto>> search(@RequestBody SysDeptDto dto);

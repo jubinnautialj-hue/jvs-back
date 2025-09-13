@@ -104,28 +104,29 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
 
     @Override
     public void initAllSwaggerRuleApi() {
-        log.info("初始化所有逻辑API填充swagger缓存 begin");
-        Map<String, JvsApp> jvsAppMap = jvsAppService.list().stream().collect(Collectors.toMap(JvsApp::getId, Function.identity()));
-        if (ObjectNull.isNotNull(jvsAppMap)) {
-            List<String> appIdList = new ArrayList<>(jvsAppMap.keySet());
-            Map<String, String> appIdentifierMap = identificationService.list(Wrappers.<Identification>lambdaQuery()
-                            .eq(Identification::getDesignType, DesignType.app)
-                            .in(Identification::getDesignId, appIdList))
-                    .stream()
-                    .collect(Collectors.toMap(Identification::getDesignId, Identification::getIdentifier, (k1, k2) -> k1));
-            Map<AppVersionTypeEnum, Set<String>> modeAppIdMap = jvsAppVersionService.groupAppIdByVersionType(appIdList);
-            modeAppIdMap.forEach((modeType, appIds) -> {
-                String mode = modeType.getValue();
-                appIds.forEach(appId -> {
-                    List<RuleDesignPo> ruleDesignPoList = ruleDesignService.list(Wrappers.<RuleDesignPo>lambdaQuery()
-                            .eq(RuleDesignPo::getJvsAppId, appId)
-                            .eq(RuleDesignPo::getReqType, RuleType.External_API_logic));
-                    String appIdentifier = appIdentifierMap.get(appId);
-                    ruleDesignPoList.forEach(rule -> addOrUpdateRuleApiSwaggerCache(mode, jvsAppMap.get(appId), appIdentifier, rule));
-                });
-            });
-        }
-        log.info("初始化所有逻辑API填充swagger缓存 end");
+        //不再初始化 swagger,
+//        log.info("初始化所有逻辑API填充swagger缓存 begin");
+//        Map<String, JvsApp> jvsAppMap = jvsAppService.list().stream().collect(Collectors.toMap(JvsApp::getId, Function.identity()));
+//        if (ObjectNull.isNotNull(jvsAppMap)) {
+//            List<String> appIdList = new ArrayList<>(jvsAppMap.keySet());
+//            Map<String, String> appIdentifierMap = identificationService.list(Wrappers.<Identification>lambdaQuery()
+//                            .eq(Identification::getDesignType, DesignType.app)
+//                            .in(Identification::getDesignId, appIdList))
+//                    .stream()
+//                    .collect(Collectors.toMap(Identification::getDesignId, Identification::getIdentifier, (k1, k2) -> k1));
+//            Map<AppVersionTypeEnum, Set<String>> modeAppIdMap = jvsAppVersionService.groupAppIdByVersionType(appIdList);
+//            modeAppIdMap.forEach((modeType, appIds) -> {
+//                String mode = modeType.getValue();
+//                appIds.forEach(appId -> {
+//                    List<RuleDesignPo> ruleDesignPoList = ruleDesignService.list(Wrappers.<RuleDesignPo>lambdaQuery()
+//                            .eq(RuleDesignPo::getJvsAppId, appId)
+//                            .eq(RuleDesignPo::getReqType, RuleType.External_API_logic));
+//                    String appIdentifier = appIdentifierMap.get(appId);
+//                    ruleDesignPoList.forEach(rule -> addOrUpdateRuleApiSwaggerCache(mode, jvsAppMap.get(appId), appIdentifier, rule));
+//                });
+//            });
+//        }
+//        log.info("初始化所有逻辑API填充swagger缓存 end");
     }
 
     @Override

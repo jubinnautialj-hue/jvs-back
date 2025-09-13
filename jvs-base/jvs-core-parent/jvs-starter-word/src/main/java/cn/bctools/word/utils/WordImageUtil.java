@@ -247,10 +247,10 @@ public class WordImageUtil {
         /**
          * 宽
          */
-        private Integer w;
+        private Integer w=50;
         /**
          * 高
          */
-        private Integer h;
+        private Integer h=50;
     }
 }

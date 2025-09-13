@@ -183,6 +183,9 @@ public class AppUseController {
                         e.getEnabledQueryTypes().add(0, DataQueryType.eq);
                     }
                     e.getEnabledQueryTypes().remove(DataQueryType.isNull);
+                }
+                if (e.getEnabledQueryTypes().contains(DataQueryType.isNull)) {
+                    e.getEnabledQueryTypes().remove(DataQueryType.isNull);
                     e.getEnabledQueryTypes().add(DataQueryType.isNull);
                 }
             });
