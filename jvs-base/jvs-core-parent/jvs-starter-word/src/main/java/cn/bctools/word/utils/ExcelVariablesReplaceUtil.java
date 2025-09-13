@@ -1,6 +1,7 @@
 package cn.bctools.word.utils;
 
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.JvsJsonPath;
 import cn.bctools.common.utils.ObjectNull;
 import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.ss.util.CellReference;
+import org.apache.poi.util.Units;
 import org.apache.poi.xssf.usermodel.*;
 
 import java.io.*;
@@ -25,6 +27,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import static cn.bctools.word.utils.WordVariableReplaceUtil.getVariableParam;
 import static cn.hutool.poi.excel.cell.CellUtil.getCellValue;
 
 
@@ -123,8 +126,19 @@ public class ExcelVariablesReplaceUtil {
                         //设置空
                         sheet.getRow(e.getRow()).getCell(e.getColumn()).setBlank();
                     });
-            listMap.get(sheetI).stream().filter(e -> variableMap.containsKey(e.getName())).map(e -> {
-                ExcelVariable excelVariable = variableMap.get(e.getName());
+            listMap.get(sheetI).stream().filter(e -> {
+                //需要兼容图片
+                return variableMap.containsKey(e.getName()) || e.getName().startsWith("${IMAGE#");
+            }).map(e -> {
+                ExcelVariable excelVariable = null;
+                if (e.getName().startsWith("${IMAGE#")) {
+                    excelVariable = variableMap.get("${" + e.getName().substring("${IMAGE#".length(), e.getName().lastIndexOf("?")) + "}");
+                    if (ObjectNull.isNull(excelVariable)) {
+                        excelVariable = variableMap.get("${" + e.getName().substring("${IMAGE#".length(), e.getName().lastIndexOf("?")) + ".url}");
+                    }
+                } else {
+                    excelVariable = variableMap.get(e.getName());
+                }
                 return new ExcelVariable()
                         .setListKey(excelVariable.getListKey())
                         .setValue(excelVariable.getValue()).setType(excelVariable.getType()).setSheet(e.getSheet()).setRow(e.getRow()).setColumn(e.getColumn()).setName(e.getName());
@@ -151,11 +165,18 @@ public class ExcelVariablesReplaceUtil {
                     for (int i = 0; i < rowList.size(); i++) {
                         Row line = sheet.getRow(e.getRow() + i);
                         Cell cell = line.getCell(e.getColumn());
+                        if (cell == null) {
+                            continue;
+                        }
                         Object e1 = rowList.get(i);
                         if (ObjectNull.isNotNull(e1)) {
                             // 2. 创建样式并启用自动换行
                             cell.getCellStyle().setWrapText(true);
-                            writeValue(cell, e1);
+                            if (e.getName().startsWith("${IMAGE#")) {
+                                write(cell, new ExcelVariable().setValue(e1).setName(e.getName()).setType(ExcelVariable.ExcelType.IMAGE).setRow(cell.getRowIndex()).setColumn(cell.getColumnIndex()), workbook, sheet);
+                            } else {
+                                writeValue(cell, e1);
+                            }
                         } else {
                             cell.setBlank();
                         }
@@ -164,13 +185,50 @@ public class ExcelVariablesReplaceUtil {
                     Cell cell = sheet.getRow(e.getRow()).getCell(e.getColumn());
                     // 2. 创建样式并启用自动换行
                     cell.getCellStyle().setWrapText(true);
-                    write(cell, e);
+                    write(cell, e, workbook, sheet);
                 }
             });
         }
         // 强制公式重新计算
         workbook.setForceFormulaRecalculation(true);
         workbook.write(fos);
+    }
+
+    /**
+     * 插入图片
+     *
+     * @param workbook 文档
+     * @param sheet
+     * @param row      行
+     * @param column   列
+     * @param value    图片对象
+     * @param name     变量 key
+     */
+    private static void insert(XSSFWorkbook workbook, Sheet sheet, int row, int column, String name, Object value) {
+        byte[] imageBytes = null;
+        if (value instanceof List) {
+            imageBytes = HttpUtil.downloadBytes(JvsJsonPath.read(((List<?>) value).get(0), "url").toString());
+        } else if (value instanceof String) {
+            imageBytes = HttpUtil.downloadBytes(value.toString());
+        } else {
+            imageBytes = HttpUtil.downloadBytes(JvsJsonPath.read(value, "url").toString());
+        }
+        // 3. 添加图片到工作簿图片库
+        int pictureIdx = workbook.addPicture(imageBytes, Workbook.PICTURE_TYPE_PNG);
+        // 4. 创建绘图对象
+        Drawing<?> drawing = sheet.createDrawingPatriarch();
+        // 5. 创建锚点定位到B2单元格（行索引1, 列索引1）
+        ClientAnchor anchor = workbook.getCreationHelper().createClientAnchor();
+        // 5. 创建锚点（B2单元格）
+        anchor.setCol1(column); // B列
+        anchor.setRow1(row); // 第二行
+        anchor.setCol2(column); // 结束列
+        anchor.setRow2(row);  // 结束行
+        WordImageUtil.ImgParam imgParam = WordVariableReplaceUtil.parseImgParam(getVariableParam(name));
+        anchor.setDx2(Units.toEMU(imgParam.getW()));
+        anchor.setDy2(Units.toEMU(imgParam.getH()));
+        // 6. 插入图片
+        drawing.createPicture(anchor, pictureIdx);
     }
 
 
@@ -223,7 +281,7 @@ public class ExcelVariablesReplaceUtil {
         }
     }
 
-    private static void write(Cell cell, ExcelVariable e) {
+    private static void write(Cell cell, ExcelVariable e, XSSFWorkbook workbook, Sheet sheet) {
         try {
             switch (e.getType()) {
                 //不存在写入 list数据，这里应该根据值的类型进行写入而不是根据单元格的类型写入
@@ -242,6 +300,14 @@ public class ExcelVariablesReplaceUtil {
                         return;
                     }
                     cell.setCellValue(e.getValue().toString());
+                    break;
+                case IMAGE:
+                    //如果是图片，就插入图片
+                    try {
+                        insert(workbook, sheet, e.getRow(), e.getColumn(), e.getName(), e.getValue());
+                    } catch (Exception ex) {
+                        writeValue(cell, "图片插入失败");
+                    }
                     break;
                 case Boolean:
                 default:
@@ -688,7 +754,12 @@ public class ExcelVariablesReplaceUtil {
                     if (!list.isEmpty()) {
                         list.forEach(a -> {
                             Arrays.stream(a.split(" ")).forEach(e -> {
-                                variables.add(new ExcelVariable().setName(e).setCellStyle(cell.getCellStyle()).setType(ExcelVariable.ExcelType.String).setSheet(sheetI).setRow(row.getRowNum()).setColumn(cell.getColumnIndex()));
+                                ExcelVariable e1 = new ExcelVariable().setName(e).setCellStyle(cell.getCellStyle()).setType(ExcelVariable.ExcelType.String).setSheet(sheetI).setRow(row.getRowNum()).setColumn(cell.getColumnIndex());
+                                if (e.startsWith("${IMAGE")) {
+                                    //表示图片
+                                    e1.setType(ExcelVariable.ExcelType.IMAGE);
+                                }
+                                variables.add(e1);
                             });
                         });
                     }

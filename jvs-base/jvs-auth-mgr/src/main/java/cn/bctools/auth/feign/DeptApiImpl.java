@@ -4,12 +4,16 @@ import cn.bctools.auth.api.api.AuthDeptServiceApi;
 import cn.bctools.auth.api.dto.SysDeptDto;
 import cn.bctools.auth.api.enums.DeptEnum;
 import cn.bctools.auth.entity.Dept;
+import cn.bctools.auth.entity.UserTenant;
 import cn.bctools.auth.service.DeptService;
+import cn.bctools.auth.service.UserTenantService;
 import cn.bctools.common.utils.*;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.springframework.context.annotation.Bean;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -27,6 +31,8 @@ import java.util.*;
 public class DeptApiImpl implements AuthDeptServiceApi {
 
     DeptService deptService;
+    UserTenantService userTenantService;
+
 
     @Override
     public R<List<SysDeptDto>> getAll() {
@@ -37,7 +43,7 @@ public class DeptApiImpl implements AuthDeptServiceApi {
     @Override
     public R<SysDeptDto> getById(String deptId) {
         Dept dept = deptService.getOne(Wrappers.<Dept>lambdaQuery()
-                .select(Dept::getId, Dept::getName, Dept::getType, Dept::getParentId, Dept::getLeaderId, Dept::getDeptCode)
+                .select(Dept::getId, Dept::getName, Dept::getType, Dept::getParentId)
                 .eq(Dept::getId, deptId));
         return R.ok(BeanCopyUtil.copy(dept, SysDeptDto.class));
     }
@@ -151,6 +157,17 @@ public class DeptApiImpl implements AuthDeptServiceApi {
         }
         deptService.saveOrUpdate(BeanCopyUtil.copy(dto, Dept.class));
         return R.ok();
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    @Override
+    public R delete(String deptId) {
+        //删除部门
+        List<UserTenant> list = userTenantService.list(new LambdaQueryWrapper<UserTenant>().like(UserTenant::getDeptId, deptId));
+        list.forEach(e -> e.getDeptId().removeIf(s -> s.equals(deptId)));
+        userTenantService.updateBatchById(list);
+        deptService.removeById(deptId);
+        return R.ok(true, "删除成功");
     }
 
     @Override

@@ -163,7 +163,7 @@ public class JustAuthController {
             case "DingTalk":{
                 //如果是钉钉，则只返回三方登录。
                 loginTypes.removeIf(e->!e.equals(OAuthTypeEnum.dd));
-            }
+        }
         }
         //2025.09.04 钉钉和微信企业微信的兼容性处理  不要替换
         List<String> collect = loginTypes.stream().map(Enum::toString).distinct().collect(Collectors.toList());

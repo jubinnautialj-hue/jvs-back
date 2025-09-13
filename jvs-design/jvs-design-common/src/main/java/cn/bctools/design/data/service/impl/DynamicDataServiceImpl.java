@@ -4,7 +4,6 @@ import cn.bctools.ai.api.JvsAiDatasetApi;
 import cn.bctools.ai.dto.AiDocumentDto;
 import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.auth.api.dto.PersonnelDto;
-import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
@@ -15,6 +14,7 @@ import cn.bctools.design.common.OrderFormat;
 import cn.bctools.design.config.DesignConfig;
 import cn.bctools.design.constant.DynamicDataConstant;
 import cn.bctools.design.crud.entity.FormPo;
+import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.design.crud.mapper.FormMapper;
 import cn.bctools.design.crud.utils.DesignUtils;
 import cn.bctools.design.data.component.DataModelHandler;
@@ -272,14 +272,18 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         if (ObjectNull.isNull(app)) {
             CurrentAppUtils.setApp(appMapper.selectById(appId));
         }
-        List<FieldBasicsHtml> fields = dataFieldService.getFields(appId, modelId, designId, true, true);
-        List<FieldBasicsHtml> designField = fields.stream().filter(e -> ObjectNull.isNotNull(e.getDesignId())).filter(e -> e.getDesignId().equals(getDesignId())).collect(Collectors.toList());
+        List<FieldBasicsHtml> fields = dataFieldService.getFields(appId, modelId, null, true, true);
+        //查询出有哪些有字段设计的
+        List<FieldBasicsHtml> designField = fields.stream()
+                .filter(e -> ObjectNull.isNotNull(e.getDesignId()))
+                .filter(e -> DesignType.form.equals(e.getFieldType()) || e.getDesignId().equals(getDesignId()))
+                .collect(Collectors.toList());
         //设计 id如果存在，则直接只使用这个设计id相同的字段，如果没有，则使用模型的字段,避免不同设计中可能存在不同的设计结果
         Map<String, FieldBasicsHtml> fieldBasicsHtmlMap;
         if (ObjectNull.isNull(designField)) {
             fieldBasicsHtmlMap = fields.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity()));
         } else {
-            fieldBasicsHtmlMap = designField.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity()));
+            fieldBasicsHtmlMap = designField.stream().collect(Collectors.toMap(FieldPublicHtml::getFieldKey, e -> e, (e1, e2) -> e1));
         }
         StringBuffer error = new StringBuffer();
         for (String key : fieldBasicsHtmlMap.keySet()) {

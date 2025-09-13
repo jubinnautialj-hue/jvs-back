@@ -21,8 +21,10 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -62,8 +64,8 @@ public class SysFileController {
     @GetMapping("/sys/file/list")
     public R<Page<OssFile>> list(Page<OssFile> page,
                                  @RequestParam(value = "fileType", required = false) String fileType,
-                                 @RequestParam(value = "startTime", required = false) Long startTime,
-                                 @RequestParam(value = "endTime", required = false) Long endTime,
+                                 @RequestParam(value = "startTime", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate startTime,
+                                 @RequestParam(value = "endTime", required = false) @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate endTime,
                                  @RequestParam(value = "label", required = false) String label,
                                  @RequestParam(value = "bucketName", required = false) String bucketName,
                                  @RequestParam(value = "fileName", required = false) String fileName) {
@@ -77,7 +79,9 @@ public class SysFileController {
             queryWrapper.in(OssFile::getLabel, stringSet);
         }
         queryWrapper.like(StrUtil.isNotBlank(fileName), OssFile::getFileName, fileName);
-        queryWrapper.between(ObjectUtil.isNotNull(startTime) && ObjectUtil.isNotNull(endTime), OssFile::getCreateTime, startTime, endTime);
+        if (ObjectUtil.isNotNull(startTime) && ObjectUtil.isNotNull(endTime)) {
+            queryWrapper.between(OssFile::getCreateTime, startTime.atTime(0,0,0), endTime.atTime(23,59,59));
+        }
         if ("bctools.cn".equals(jvsSystemConfig.getDomain())) {
             queryWrapper.ne(OssFile::getLabel, "默认");
         }

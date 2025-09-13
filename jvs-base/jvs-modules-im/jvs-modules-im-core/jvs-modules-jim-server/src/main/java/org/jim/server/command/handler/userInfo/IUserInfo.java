@@ -11,5 +11,5 @@ public interface IUserInfo {
      * @param imChannelContext
      * @return
      */
-    User getUserInfo (UserReqBody userReqBody, ImChannelContext imChannelContext);
+    User getUserInfo(UserReqBody userReqBody, ImChannelContext imChannelContext);
 }
