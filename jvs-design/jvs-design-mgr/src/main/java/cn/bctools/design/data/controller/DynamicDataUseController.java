@@ -84,6 +84,7 @@ import cn.bctools.rule.utils.html.RuleExecuteDto;
 import cn.bctools.web.excel.ArrayListConvert;
 import cn.bctools.web.excel.LocalDateTimeConvert;
 import cn.bctools.web.utils.WebUtils;
+import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.tree.Tree;
 import cn.hutool.core.lang.tree.TreeNodeConfig;
@@ -1587,7 +1588,18 @@ public class DynamicDataUseController {
             }
             tree.setName(orDefault.toString());
             //排序是根据时间毫秒排序
-            tree.setWeight(-1 * LocalDateTime.parse(treeNode.get(createTime).toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).toEpochSecond(ZoneOffset.UTC));
+
+            try {
+                Object o = treeNode.get(createTime);
+                if (o instanceof Date) {
+                    long time = ((Date) o).getTime();
+                    tree.setWeight(-1 * time);
+                } else {
+                    long time = LocalDateTime.parse(o.toString(), DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")).toEpochSecond(ZoneOffset.UTC);
+                    tree.setWeight(-1 * time);
+                }
+            } catch (Exception e) {
+            }
             tree.put("value", treeNode.get(fieldTreeDto.getValue()).toString());
             tree.put("extend", treeNode);
         });
@@ -2399,7 +2411,7 @@ public class DynamicDataUseController {
                     }
                 }
                 ByteArrayOutputStream excel = new ByteArrayOutputStream();
-                excelData.add(0, fieldNameList.stream().map(e -> e.get(0)).collect(Collectors.toList()));
+//                excelData.add(0, fieldNameList.stream().map(e -> e.get(0)).collect(Collectors.toList()));
                 new ExcelWriterBuilder().file(excel)
                         .registerWriteHandler(new EasyExcelCustomCellWriteHandler())
                         .head(fieldNameList)
