@@ -102,7 +102,7 @@ public interface AuthDeptServiceApi {
      * @param dto 部门
      * @return
      */
-    @PostMapping(value = "/dept/saveOrUpdate")
+    @PostMapping(value = PREFIX + "/dept/saveOrUpdate")
     R<String> saveOrUpdate(@RequestBody SysDeptDto dto);
 
     /**
@@ -111,9 +111,9 @@ public interface AuthDeptServiceApi {
      * @param deptId
      * @return
      */
-    @DeleteMapping(value = "/dept/{deptId}")
+    @DeleteMapping(value = PREFIX + "/dept/{deptId}")
     R<String> delete(@PathVariable("deptId") String deptId);
 
-    @PostMapping(value = "/dept/search")
+    @PostMapping(value = PREFIX + "/dept/search")
     R<List<SysDeptDto>> search(@RequestBody SysDeptDto dto);
 }
