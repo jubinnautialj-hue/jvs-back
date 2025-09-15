@@ -101,9 +101,9 @@ public class FlowTaskManageController {
             return R.ok();
         }
         LambdaQueryWrapper<FlowTask> wrapper = Wrappers.<FlowTask>lambdaQuery()
-                .and(wa->
+                .and(wa ->
                         wa.eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PENDING)
-                        .or().eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PASSED))
+                                .or().eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PASSED))
                 .in(FlowTask::getJvsAppId, appIds)
                 .like(ObjectNull.isNotNull(dto.getTaskCode()), FlowTask::getTaskCode, dto.getTaskCode())
                 .like(ObjectNull.isNotNull(dto.getFlowName()), FlowTask::getName, dto.getFlowName())
@@ -208,7 +208,7 @@ public class FlowTaskManageController {
         List<String> appIds = tree.stream().map(x -> String.valueOf(x.getId())).collect(Collectors.toList());
         //组装查询条件
         LambdaQueryWrapper<FlowTask> wrapper = Wrappers.<FlowTask>lambdaQuery()
-                .and(wa->
+                .and(wa ->
                         wa.eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PENDING)
                                 .or()
                                 .eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PASSED))
@@ -257,7 +257,7 @@ public class FlowTaskManageController {
                     .registerWriteHandler(horizontalCellStyleStrategy)
                     .registerWriteHandler(new ConditionMergeStrategy<>(
                             taskManageExcelDtos,
-                            new int[]{0, 1, 2},  // 合并前两列
+                            new int[]{0, 1, 2, 3, 4},  // 合并前两列
                             TaskManageExcelDto::getId, // 动态获取ID
                             1
                     ))
@@ -269,6 +269,12 @@ public class FlowTaskManageController {
         }
     }
 
+    /**
+     * 导出数据处理
+     *
+     * @param records
+     * @return
+     */
     private List<TaskManageExcelDto> handleData(List<FlowTask> records) {
         List<TaskManageExcelDto> res = new ArrayList<>();
         // 填充工作流任务使用的设计
@@ -309,15 +315,21 @@ public class FlowTaskManageController {
                     excel.setCreateDeptName(deptName);
                     ApproveOpinionDto opinion = approveResultDto.getOpinion();
                     excel.setContent(opinion != null ? opinion.getContent() : "");
-                    excel.setTime(DateUtil.parse(approveResultDto.getTime(), DateUtil.PATTERN_DATETIME));
+                    excel.setTime(approveResultDto.getTime());
                     if (finalI == 0) {
-                        excel.setArrivalTime(DateUtil.parse(approveResultDto.getTime(), DateUtil.PATTERN_DATETIME));
+                        excel.setArrivalTime(approveResultDto.getTime());
                     } else {
-                        excel.setArrivalTime(DateUtil.parse(courses.get(finalI - 1).getTime(), DateUtil.PATTERN_DATETIME));
+                        excel.setArrivalTime(courses.get(finalI - 1).getTime());
                     }
-                    excel.setHandleTime(DateUtil.between(excel.getArrivalTime(), excel.getTime()).toHours());
+                    if (ObjectNull.isNotNull(excel.getArrivalTime()) && ObjectNull.isNotNull(excel.getTime())){
+                        excel.setHandleTime(
+                                DateUtil.between(
+                                        DateUtil.parse(excel.getArrivalTime(),DateUtil.PATTERN_DATETIME), DateUtil.parse(excel.getTime(),DateUtil.PATTERN_DATETIME)
+                                ).toHours());
+                    }
                     NodeOperationTypeEnum nodeOperationTypeEnum = approveResultDto.getNodeOperationTypeEnum();
                     excel.setNodeOperation(nodeOperationTypeEnum != null ? nodeOperationTypeEnum.getName() : "");
+                    excel.setTaskStatusName(task.getTaskStatus().getValue() == 1 ? "待审批" : "已通过");
                     res.add(excel);
                 });
             }
@@ -356,8 +368,9 @@ public class FlowTaskManageController {
             excel.setCreateDeptName(deptName);
             excel.setId(task.getId());
             excel.setNodeName(currentNodeName.deleteCharAt(currentNodeName.length() - 1).toString());
-            excel.setArrivalTime(Date.from(task.getUpdateTime().atZone(ZoneId.systemDefault()).toInstant()));
+            excel.setArrivalTime(DateUtil.format(task.getUpdateTime(),DateUtil.PATTERN_DATETIME));
             excel.setUserName(!nodes.isEmpty() ? nodes.get(0).getUsers().stream().map(UserDto::getRealName).collect(Collectors.joining(",")) : "");
+            excel.setTaskStatusName(task.getTaskStatus().getValue() == 1 ? "待审批" : "已通过");
             res.add(excel);
         }
         return res;

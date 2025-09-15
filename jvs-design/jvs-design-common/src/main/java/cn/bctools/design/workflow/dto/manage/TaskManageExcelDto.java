@@ -28,14 +28,14 @@ public class TaskManageExcelDto {
     @ExcelProperty(value = "流程名称")
     private String name;
 
-    @ApiModelProperty(value = "流程编号")
-    @ExcelProperty(value = "流程编号")
+    @ApiModelProperty(value = "流程状态")
+    @ExcelProperty(value = "流程状态")
     @ColumnWidth(7)
-    private String taskCode;
+    private String taskStatusName;
 
-//    @ApiModelProperty(value = "流程标题")
-//    @ExcelProperty(value = "流程标题")
-//    private String title;
+    @ApiModelProperty(value = "流程标题")
+    @ExcelProperty(value = "流程标题")
+    private String title;
 
     @ApiModelProperty(value = "发起人单位名称")
     @ExcelProperty(value = "发起人单位名称")
@@ -43,6 +43,7 @@ public class TaskManageExcelDto {
 
     @ApiModelProperty(value = "发起人")
     @ExcelProperty(value = "发起人")
+    @ColumnWidth(7)
     private String createBy;
 
     @ApiModelProperty(value = "节点名称")
@@ -66,18 +67,15 @@ public class TaskManageExcelDto {
 
     @ApiModelProperty(value = "到达时间")
     @ExcelProperty(value = "到达时间")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @JsonFormat(pattern="yyyy-MM-dd",timezone="GMT+8")
-    private Date arrivalTime;
+    private String arrivalTime;
 
     @ApiModelProperty(value = "处理时间")
     @ExcelProperty(value = "处理时间")
-    @DateTimeFormat(pattern="yyyy-MM-dd")
-    @JsonFormat(pattern="yyyy-MM-dd",timezone="GMT+8")
-    private Date time;
+    private String time;
 
     @ApiModelProperty(value = "处理时长")
     @ExcelProperty(value = "处理时长")
+    @ColumnWidth(7)
     private Long handleTime;
 
 
