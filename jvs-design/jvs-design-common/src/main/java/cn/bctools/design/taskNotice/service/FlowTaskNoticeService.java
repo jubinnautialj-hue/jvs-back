@@ -1,14 +1,16 @@
 package cn.bctools.design.taskNotice.service;
 
+import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
 import cn.bctools.design.workflow.entity.FlowTask;
 import cn.bctools.design.workflow.entity.FlowTaskPerson;
 import cn.bctools.design.workflow.model.Node;
+import com.baomidou.mybatisplus.extension.service.IService;
 
 import java.util.List;
 /**
  * 待办提醒通知
  */
-public interface FlowTaskNoticeService {
+public interface FlowTaskNoticeService extends IService<FlowTaskNotice> {
     /**
      * 创建单据
      * @param nextNode 节点内容
