@@ -109,8 +109,7 @@ public class TaskPersonServiceImpl implements TaskPersonService {
                             .stream().map(FlowTaskPerson::getId).collect(Collectors.toList());
             applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, removeTaskPersonIds));
             flowTaskPersonService.saveBatch(flowTaskPersons);
-            List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery().eq(FlowTaskNotice::getTaskId, runtimeData.getFlowTask().getId())
-                            .eq(FlowTaskNotice::getNodeId, runtimeData.getCurrentNode().getId()))
+            List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery().in(FlowTaskNotice::getTaskId, removeTaskPersonIds))
                     .stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
             //2025.09.10 关闭已完成的待办提醒通知
             flowTaskNoticeService.close(runtimeData.getFlowTask(),removeBizTaskIds);
