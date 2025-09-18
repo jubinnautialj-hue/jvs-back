@@ -88,7 +88,7 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
                 //访问URL按需进行拼接  需要拼接 jvsAppId
                 String routeUrl = appTaskDto.getTaskFormUrl();
                 routeUrl = String.format(routeUrl,flowTaskPerson.getId(), flowTask.getJvsAppId());
-                String formUrl = domain+routeUrl+"?processId="+flowTask.getId();
+                String formUrl = domain+routeUrl+"?processId="+flowTask.getId()+"&nodeId="+nextNode.getId();
                 flowNoticeRequestDto.setWorkNum(flowTask.getId());
                 flowNoticeRequestDto.setBizInstanceId(flowTask.getId());
                 flowNoticeRequestDto.setBizNodeId(nextNode.getId());
