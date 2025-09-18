@@ -9,6 +9,8 @@ import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.data.service.DataIdService;
 import cn.bctools.design.notice.handler.enums.TriggerTypeEnum;
 import cn.bctools.design.notice.handler.util.NoticeVariableUtils;
+import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
+import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
 import cn.bctools.design.util.OrderUtils;
 import cn.bctools.design.workflow.constant.SystemConstant;
 import cn.bctools.design.workflow.entity.FlowTask;
@@ -32,6 +34,7 @@ import cn.bctools.design.workflow.utils.FlowContextUtil;
 import cn.bctools.design.workflow.utils.FlowTaskNodeUtil;
 import cn.hutool.core.date.DateUtil;
 import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -40,6 +43,7 @@ import org.springframework.stereotype.Component;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * @author zhuxiaokang
@@ -61,6 +65,8 @@ public class CompositeFlowHandler extends AbstractCompositeFlowHandler {
     private final ApplicationEventPublisher applicationEventPublisher;
     private final DataIdService dataIdService;
     private final FlowDynamicDataService flowDynamicDataService;
+    private final FlowTaskNoticeService flowTaskNoticeService;
+
 
     @Override
     protected void processNode(Node currentNode, RuntimeData runtimeData) {
@@ -138,6 +144,13 @@ public class CompositeFlowHandler extends AbstractCompositeFlowHandler {
                     flowTaskNodeService.removeTaskAll(flowTask.getId());
                     // 删除待办人所有信息
                     flowTaskPersonService.removeTaskAll(flowTask.getId());
+                    List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
+                                    .eq(FlowTaskNotice::getInstanceId, flowTask.getId())
+                                    .eq(FlowTaskNotice::getStatus,0))
+                            .stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
+                    if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
+                        flowTaskNoticeService.close(flowTask,removeBizTaskIds);
+                    }
                 }
                 // 删除并行任务信息
                 if (Boolean.TRUE.equals(flowContext.getExistsParallel())) {
