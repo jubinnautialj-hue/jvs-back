@@ -94,7 +94,7 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
                 flowNoticeRequestDto.setWorkNum((type != null && "2".equals(type))?flowTask.getId()+"$"+String.valueOf(randomNum):flowTask.getId());
                 flowNoticeRequestDto.setBizInstanceId(flowTask.getId());
                 flowNoticeRequestDto.setBizNodeId(nextNode.getId());
-                flowNoticeRequestDto.setBizTaskId((type != null && "2".equals(type))?flowTaskPerson.getId()+"$"+String.valueOf(randomNum):flowTask.getId());
+                flowNoticeRequestDto.setBizTaskId((type != null && "2".equals(type))?flowTaskPerson.getId()+"$"+String.valueOf(randomNum):flowTaskPerson.getId());
                 flowNoticeRequestDto.setCurrentNode(nextNode.getName());
                 flowNoticeRequestDto.setTitle(StringUtils.isEmpty(flowTask.getTitle()) ? flowTask.getName() : flowTask.getTitle());
                 flowNoticeRequestDto.setTaskType(0);
