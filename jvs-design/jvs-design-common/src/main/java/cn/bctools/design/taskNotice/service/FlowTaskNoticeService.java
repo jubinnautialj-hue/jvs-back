@@ -19,7 +19,7 @@ public interface FlowTaskNoticeService extends IService<FlowTaskNotice> {
      * @return
      * @throws Exception
      */
-    boolean create(FlowTask flowTask, Node nextNode, List<FlowTaskPerson> flowTaskPersons);
+    boolean create(FlowTask flowTask, Node nextNode, List<FlowTaskPerson> flowTaskPersons,String type);
     boolean close(FlowTask flowTask, List<String> bizTaskAndTaskIds);
     boolean recall(FlowTask flowTask, List<String> bizTaskAndTaskIds);
     boolean update(FlowTask flowTask, Node nextNode, List<FlowTaskPerson> flowTaskPersons);

@@ -72,10 +72,11 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
      * @param flowTask 工作流信息
      * @param nextNode 节点内容
      * @param flowTaskPersons 待办人员集合
+      * @param type  1普通流程  2转办
      * @return
      */
     @Override
-    public boolean create(FlowTask flowTask, Node nextNode, List<FlowTaskPerson> flowTaskPersons){
+    public boolean create(FlowTask flowTask, Node nextNode, List<FlowTaskPerson> flowTaskPersons,String type){
         initTaskSettings(flowTask.getJvsAppId());
         if (!Objects.isNull(appTaskDto) && appTaskDto.getEnableTask()){
             List<String> userIds = flowTaskPersons.stream().map(FlowTaskPerson::getUserId).collect(Collectors.toList());
@@ -89,10 +90,11 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
                 String routeUrl = appTaskDto.getTaskFormUrl();
                 routeUrl = String.format(routeUrl,flowTaskPerson.getId(), flowTask.getJvsAppId());
                 String formUrl = domain+routeUrl+"?processId="+flowTask.getId()+"&nodeId="+nextNode.getId();
-                flowNoticeRequestDto.setWorkNum(flowTask.getId());
+                int randomNum = (int) (Math.random() * 100000) + 1;
+                flowNoticeRequestDto.setWorkNum((type != null && "2".equals(type))?flowTask.getId()+"$"+String.valueOf(randomNum):flowTask.getId());
                 flowNoticeRequestDto.setBizInstanceId(flowTask.getId());
                 flowNoticeRequestDto.setBizNodeId(nextNode.getId());
-                flowNoticeRequestDto.setBizTaskId(flowTaskPerson.getId());
+                flowNoticeRequestDto.setBizTaskId((type != null && "2".equals(type))?flowTaskPerson.getId()+"$"+String.valueOf(randomNum):flowTask.getId());
                 flowNoticeRequestDto.setCurrentNode(nextNode.getName());
                 flowNoticeRequestDto.setTitle(StringUtils.isEmpty(flowTask.getTitle()) ? flowTask.getName() : flowTask.getTitle());
                 flowNoticeRequestDto.setTaskType(0);

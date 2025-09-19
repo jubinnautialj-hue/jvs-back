@@ -187,7 +187,7 @@ public class TransferFunction extends AbstractFunctionHandler<List<ProxyDto>, Tr
         });
         flowTaskPersonService.updateBatchById(flowTaskPersons);
         //2025.09.08 发送待办提醒通知
-        flowTaskNoticeService.create(dto.getFlowTask(), node, flowTaskPersons);
+        flowTaskNoticeService.create(dto.getFlowTask(), node, flowTaskPersons,"2");
         // 保存转交记录
         ProxyDto proxyDto = BeanCopyUtil.copy(transfer, ProxyDto.class);
         proxyDto.setProxy(Boolean.FALSE);
