@@ -4,6 +4,8 @@ import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
+import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
 import cn.bctools.design.workflow.entity.FlowTaskPerson;
 import cn.bctools.design.workflow.entity.FlowTaskProxy;
 import cn.bctools.design.workflow.entity.dto.ProxyDto;
@@ -43,6 +45,7 @@ public class TransferFunction extends AbstractFunctionHandler<List<ProxyDto>, Tr
     private final FlowTaskProxyService flowTaskProxyService;
     private final TimeLimitMessageHandler timeLimitMessageHandler;
     private final FlowTaskNodeService flowTaskNodeService;
+    private final FlowTaskNoticeService flowTaskNoticeService;
 
     /**
      * 任务转交
@@ -57,7 +60,7 @@ public class TransferFunction extends AbstractFunctionHandler<List<ProxyDto>, Tr
         TransferDto transferDto = transferRuntime.getTransfer();
         // 有转交配置，则转交给指定代理人（审核人选择指定人员转交任务）
         if (ObjectNull.isNotNull(transferDto)) {
-            List<FlowTaskPerson> flowTaskPersons = transferUpdatePerson(time, transferRuntime, node.getId());
+            List<FlowTaskPerson> flowTaskPersons = transferUpdatePerson(time, transferRuntime, node);
             // 发送延时任务（校验审核是否超时等功能）
             timeLimitMessageHandler.delayedTask(node, transferRuntime.getFlowTask(), flowTaskPersons);
             return Collections.emptyList();
@@ -138,9 +141,10 @@ public class TransferFunction extends AbstractFunctionHandler<List<ProxyDto>, Tr
      *
      * @param transferTime 转交时间
      * @param dto 转交参数
-     * @param nodeId 转交节点
+     * @param node 转交节点
      */
-    private List<FlowTaskPerson> transferUpdatePerson(String transferTime, TransferRuntimeDto dto, String nodeId) {
+    private List<FlowTaskPerson> transferUpdatePerson(String transferTime, TransferRuntimeDto dto, Node node) {
+        String nodeId = node.getId();
         UserDto userDto = dto.getUserDto();
         TransferDto transfer = dto.getTransfer();
         transfer.setTime(transferTime);
@@ -161,6 +165,15 @@ public class TransferFunction extends AbstractFunctionHandler<List<ProxyDto>, Tr
         if (CollectionUtils.isEmpty(flowTaskPersons)) {
             return Collections.emptyList();
         }
+        //关闭待办消息
+        List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
+                .eq(FlowTaskNotice::getInstanceId, flowTaskId)
+                .eq(FlowTaskNotice::getNodeId, nodeId)
+                .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
+        //2025.09.10 关闭已完成的待办提醒通知
+        if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
+            flowTaskNoticeService.close(dto.getFlowTask(),removeBizTaskIds);
+        }
         // 若转交人已存在代理配置，则根据代理配置设置转交人
         FlowTaskProxy proxy = flowTaskProxyService.getEffectiveProxyByUserId(transfer.getProxyUserId());
         if (ObjectNull.isNotNull(proxy)) {
@@ -173,6 +186,8 @@ public class TransferFunction extends AbstractFunctionHandler<List<ProxyDto>, Tr
             person.setUserName(transfer.getProxyUserName());
         });
         flowTaskPersonService.updateBatchById(flowTaskPersons);
+        //2025.09.08 发送待办提醒通知
+        flowTaskNoticeService.create(dto.getFlowTask(), node, flowTaskPersons);
         // 保存转交记录
         ProxyDto proxyDto = BeanCopyUtil.copy(transfer, ProxyDto.class);
         proxyDto.setProxy(Boolean.FALSE);
