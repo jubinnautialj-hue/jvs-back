@@ -2,6 +2,8 @@ package cn.bctools.design.workflow.service.impl;
 
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
+import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
 import cn.bctools.design.workflow.dto.FlowApprovalUserDTO;
 import cn.bctools.design.workflow.entity.FlowTaskPerson;
 import cn.bctools.design.workflow.entity.dto.ProxyDto;
@@ -43,6 +45,7 @@ public class TaskPersonServiceImpl implements TaskPersonService {
     private final TransferFunction transferFunction;
     private final TimeLimitMessageHandler timeLimitMessageHandler;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final FlowTaskNoticeService flowTaskNoticeService;
 
     @Override
     public void saveTaskPerson(Node nextNode, RuntimeData runtimeData, List<FlowApprovalUserDTO> users) {
@@ -100,11 +103,23 @@ public class TaskPersonServiceImpl implements TaskPersonService {
         } else {
             // 先删除当前节点的所有审批人，再保存下一节点的审批人
             List<String> removeTaskPersonIds = flowTaskPersonService
-                    .list(Wrappers.<FlowTaskPerson>lambdaQuery().eq(FlowTaskPerson::getFlowTaskId, runtimeData.getFlowTask().getId()).eq(FlowTaskPerson::getNodeId, runtimeData.getCurrentNode().getId()))
+                    .list(Wrappers.<FlowTaskPerson>lambdaQuery()
+                            .eq(FlowTaskPerson::getFlowTaskId, runtimeData.getFlowTask().getId())
+                            .eq(FlowTaskPerson::getNodeId, runtimeData.getCurrentNode().getId()))
                             .stream().map(FlowTaskPerson::getId).collect(Collectors.toList());
             applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, removeTaskPersonIds));
             flowTaskPersonService.saveBatch(flowTaskPersons);
+            List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
+                            .eq(FlowTaskNotice::getInstanceId, runtimeData.getFlowTask().getId())
+                            .eq(FlowTaskNotice::getNodeId, runtimeData.getFlowTaskNode().getNodeId())
+                            .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
+            //2025.09.10 关闭已完成的待办提醒通知
+            if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
+                flowTaskNoticeService.close(runtimeData.getFlowTask(),removeBizTaskIds);
+            }
         }
+        //2025.09.08 发送待办提醒通知
+        flowTaskNoticeService.create(runtimeData.getFlowTask(), nextNode, flowTaskPersons,null);
         // 发送延时任务（校验审核是否超时等功能）
         timeLimitMessageHandler.delayedTask(nextNode, runtimeData.getFlowTask(), flowTaskPersons);
     }

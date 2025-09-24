@@ -24,4 +24,7 @@ public class PendingApprovesReqDto {
 
     @ApiModelProperty(value = "流程编号")
     private String taskCode;
+
+    @ApiModelProperty(value = "流程ID")
+    private String taskId;
 }

@@ -3,6 +3,8 @@ package cn.bctools.design.workflow.service.impl;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
+import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
 import cn.bctools.design.workflow.dto.StopTaskReqDto;
 import cn.bctools.design.workflow.entity.FlowTask;
 import cn.bctools.design.workflow.entity.FlowTaskNode;
@@ -44,6 +46,7 @@ public class TaskStopServiceImpl implements TaskStopService {
     private final FlowDesignService flowDesignService;
     private final FlowTaskNodeService flowTaskNodeService;
     private final ApplicationEventPublisher applicationEventPublisher;
+    private final FlowTaskNoticeService flowTaskNoticeService;
 
     @Transactional(rollbackFor = Exception.class)
     @Override
@@ -131,5 +134,12 @@ public class TaskStopServiceImpl implements TaskStopService {
         flowTaskService.updateById(task);
         // 清除工作流执行过程数据
         flowTaskService.cleanTaskExecutiveProcess(task.getId());
+        List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
+                        .eq(FlowTaskNotice::getInstanceId, task.getId())
+                        .eq(FlowTaskNotice::getStatus,0))
+                .stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
+        if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
+            flowTaskNoticeService.close(task,removeBizTaskIds);
+        }
     }
 }

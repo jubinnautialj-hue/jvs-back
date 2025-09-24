@@ -70,6 +70,7 @@ public class FlowTaskApprovalRecordServiceImpl extends ServiceImpl<FlowTaskAppro
         QueryWrapper queryWrapper = Wrappers.query()
                 .eq("ar.user_id", userDto.getId())
                 .in("ar.jvs_app_id", appIds)
+                .eq(StringUtils.isNotBlank(dto.getTaskId()), "t.id", dto.getTaskId())
                 .like(StringUtils.isNotBlank(dto.getTaskCode()), "t.task_code", dto.getTaskCode())
                 .like(ObjectNull.isNotNull(dto.getTaskStatus()), "t.task_status", dto.getTaskStatus())
                 .like(StringUtils.isNotBlank(dto.getFlowName()), "t.name", dto.getFlowName())

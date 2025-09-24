@@ -39,6 +39,8 @@ public class FormDesignHtml {
     private List<String> execs;
     @ApiModelProperty(value = "所有表格的数据，用于公式的数据返回优化")
     private List<String> tablePath = new ArrayList<>();
+    @ApiModelProperty(value = "是否开启选项卡")
+    private Boolean isRecursionTabs;
 
 
 }

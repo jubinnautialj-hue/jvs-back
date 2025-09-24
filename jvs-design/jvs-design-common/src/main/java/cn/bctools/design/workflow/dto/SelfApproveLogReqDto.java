@@ -28,4 +28,7 @@ public class SelfApproveLogReqDto {
     @ApiModelProperty(value = "状态：1-待审批，2-已通过，3-已拒绝，4-已终止")
     private FlowTaskStatusEnum taskStatus;
 
+    @ApiModelProperty(value = "流程ID")
+    private String taskId;
+
 }

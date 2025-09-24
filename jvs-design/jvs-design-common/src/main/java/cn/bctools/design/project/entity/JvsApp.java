@@ -5,6 +5,7 @@ import cn.bctools.auth.api.enums.PersonnelTypeEnum;
 import cn.bctools.database.entity.po.BasePo;
 import cn.bctools.database.handler.Fastjson2TypeHandler;
 import cn.bctools.design.project.entity.dto.AppRoleDto;
+import cn.bctools.design.project.entity.dto.AppTaskDto;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.annotations.ApiModel;
@@ -78,6 +79,8 @@ public class JvsApp extends BasePo implements Serializable {
     private String useVersion;
     @ApiModelProperty("是否推荐")
     private Boolean recommend;
+    @TableField(typeHandler = Fastjson2TypeHandler.class)
+    private AppTaskDto taskSetting;
 
     /**
      * 创建应用时，设置默认权限
