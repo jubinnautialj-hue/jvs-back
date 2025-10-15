@@ -9,6 +9,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  *
@@ -19,6 +20,7 @@ import org.springframework.stereotype.Service;
 public class JvsCrudAssociationServiceImpl extends ServiceImpl<JvsCrudAssociationMapper, CrudAssociationPo> implements JvsCrudAssociationService, IJvsDesigner {
     private final MapperMethodHandler mapperMethodHandler;
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<CrudAssociationPo>lambdaQuery().eq(CrudAssociationPo::getJvsAppId, appId));

@@ -89,8 +89,12 @@ public class BaseInterceptor implements HandlerInterceptor {
             //将其标识转换一下
             String appidentification = Optional.ofNullable(variablesAttribute.get(APPIDENTIFICATION_ID)).map(String::valueOf).orElseGet(() -> null);
             if (ObjectNull.isNotNull(appidentification)) {
+                String tenantId = TenantContextHolder.getTenantId();
+                if (ObjectNull.isNull(tenantId)) {
+                    //如果为空设置为主租户
+                    tenantId = "1";
+                }
                 //清除租户
-                TenantContextHolder.clear();
                 //根据标识获取 appid
                 Identification byIdentifierApp = identificationService.getByIdentifierApp(appidentification);
                 if (ObjectNull.isNotNull(byIdentifierApp)) {

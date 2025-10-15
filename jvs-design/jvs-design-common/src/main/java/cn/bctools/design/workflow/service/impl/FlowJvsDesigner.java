@@ -7,6 +7,7 @@ import cn.bctools.design.workflow.service.*;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author zhuxiaokang
@@ -35,6 +36,7 @@ public class FlowJvsDesigner implements IJvsDesigner {
         flowDesignService.remove(Wrappers.<FlowDesign>lambdaQuery().eq(FlowDesign::getJvsAppId, appId).eq(FlowDesign::getId, designId));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(flowDesignService, Wrappers.<FlowDesign>lambdaQuery().eq(FlowDesign::getJvsAppId, appId));

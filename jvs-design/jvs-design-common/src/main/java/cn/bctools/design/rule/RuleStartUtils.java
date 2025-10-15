@@ -142,6 +142,73 @@ public class RuleStartUtils {
         return r;
     }
 
+    /**
+     * The constant threadLocalCache.
+     * 添加线程本地变量用于缓存
+     */
+    public static ThreadLocal<Map<String, RuleExecDto>> threadLocalCache = ThreadLocal.withInitial(() -> new HashMap<>());
+
+    /**
+     * Generate cache key string.
+     *
+     * @param id     the id
+     * @param secret the secret
+     * @param data   the data
+     * @return the string
+     */
+    static String generateCacheKey(String id, String secret, RuleExecDto data) {
+        StringBuilder keyBuilder = new StringBuilder();
+        keyBuilder.append(id).append(":");
+        keyBuilder.append(secret).append(":");
+        keyBuilder.append(JSON.toJSONString(data.getExecuteDto().getReqVariableMap()));
+        return keyBuilder.toString();
+    }
+
+    /**
+     * Clone rule exec dto rule exec dto.
+     *
+     * @param data the data
+     * @return the rule exec dto
+     */
+    static RuleExecDto cloneRuleExecDto(RuleExecDto data) {
+        RuleExecDto cloned = new RuleExecDto();
+        cloned.setGraph(data.getGraph());
+        cloned.setSecret(data.getSecret());
+        cloned.setOpenLogRecording(data.getOpenLogRecording());
+        cloned.setTid(data.getTid());
+        cloned.setPath(data.getPath());
+        cloned.setType(data.getType());
+
+        RuleExecuteDto executeDto = new RuleExecuteDto();
+        executeDto.setStats(data.getExecuteDto().getStats());
+        executeDto.setEndResult(data.getExecuteDto().getEndResult());
+        executeDto.setErrorMessage(data.getExecuteDto().getErrorMessage());
+        executeDto.setMessageResult(data.getExecuteDto().getMessageResult());
+        executeDto.setSyncMessageTips(data.getExecuteDto().getSyncMessageTips());
+
+        cloned.setExecuteDto(executeDto);
+        return cloned;
+    }
+
+    public void startCache(RuleDesignPo po, RunLogPo logPo, RuleExecDto data) {
+        // 添加线程内缓存检查
+        String cacheKey = generateCacheKey(po.getId(), po.getSecret(), data);
+        Map<String, RuleExecDto> cache = threadLocalCache.get();
+        if (cache.containsKey(cacheKey)) {
+            RuleExecDto cachedData = cache.get(cacheKey);
+            // 复制缓存结果到当前data对象
+            data.getExecuteDto().setStats(cachedData.getExecuteDto().getStats());
+            data.getExecuteDto().setEndResult(cachedData.getExecuteDto().getEndResult());
+            data.getExecuteDto().setErrorMessage(cachedData.getExecuteDto().getErrorMessage());
+            data.getExecuteDto().setMessageResult(cachedData.getExecuteDto().getMessageResult());
+            data.getExecuteDto().setSyncMessageTips(cachedData.getExecuteDto().getSyncMessageTips());
+            return;
+        }
+        this.start(po, logPo, data);
+        // 将结果缓存到线程本地
+        cache.put(cacheKey, cloneRuleExecDto(data));
+    }
+
     public void start(RuleDesignPo po, RunLogPo logPo, RuleExecDto data) {
         //添加执行缓存， 根据类型判断是否有缓存，如果有缓存直接返回数据,不能测试类型
         if (ObjectNull.isNotNull(po.getCacheMinute()) && po.getCacheMinute() > 0 && !data.getType().equals(RunType.TEST)) {

@@ -14,7 +14,8 @@ import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.fields.impl.IMultipleTypeHandler;
 import cn.bctools.design.data.fields.impl.ISelectorDataHandler;
 import cn.bctools.redis.utils.RedisUtils;
-import cn.hutool.core.util.ObjUtil;
+import cn.hutool.cache.Cache;
+import cn.hutool.cache.CacheUtil;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -49,6 +50,9 @@ public class UserFieldHandler extends IMultipleTypeHandler implements IDataField
         USER_FIELD_LIST.add(Get.name(UserDto::getRealName));
     }
 
+    private final Cache<String, String> userNameMapCache = CacheUtil.newTimedCache(1000 * 60 * 10);
+
+
     @Override
     public Object getEchoValue(MultipleHtml fieldDto, Object data, boolean override, Map<String, Object> lineData, String... paths) {
         if (ObjectNull.isNull(data)) {
@@ -65,7 +69,22 @@ public class UserFieldHandler extends IMultipleTypeHandler implements IDataField
         if (userIds.stream().allMatch(ObjectNull::isNull)) {
             return "";
         }
-        Map<String, Object> userMap = userApi.getBasicInfoById(userIds, USER_FIELD_LIST).getData().stream().collect(Collectors.toMap(UserDto::getId, user -> StringUtils.defaultIfBlank(user.getRealName(), "")));
+        Map<String, Object> userMap = new HashMap<>();
+        List<String> queryUserId = new ArrayList<>();
+        userIds.forEach(e -> {
+            String value = userNameMapCache.get(e, () -> "");
+            if (ObjectNull.isNull(value)) {
+                queryUserId.add(e);
+            }
+            userMap.put(e, value);
+        });
+        if (ObjectNull.isNotNull(queryUserId)) {
+            Map<String, String> queryMap = userApi.getBasicInfoById(queryUserId, USER_FIELD_LIST).getData().stream().collect(Collectors.toMap(UserDto::getId, user -> StringUtils.defaultIfBlank(user.getRealName(), "")));
+            queryMap.entrySet().forEach(e ->
+                    userNameMapCache.put(e.getKey(), e.getValue())
+            );
+            userMap.putAll(queryMap);
+        }
         DataFieldHandler dataFieldHandler = SpringContextUtil.getBean(DataFieldHandler.class);
         boolean isMulti = ObjectNull.isNull(fieldDto.getMultiple()) ? false : fieldDto.getMultiple();
         return dataFieldHandler.joinFormItems(userMap, data, isMulti, false);
@@ -117,39 +136,39 @@ public class UserFieldHandler extends IMultipleTypeHandler implements IDataField
     @Override
     public Map<String, Object> generate(String name, String field, List<String> dicData) {
         String str = "{\n" +
-                "    \"prop\": \"" + field + "\",\n" +
-                "    \"type\": \"user\",\n" +
-                "    \"label\": \"" + name + "\",\n" +
-                "    \"span\": 24,\n" +
-                "    \"display\": true,\n" +
-                "    \"status\": \"\",\n" +
-                "    \"tips\": {\n" +
-                "        \"text\": \"\",\n" +
-                "        \"position\": \"right\"\n" +
-                "    },\n" +
-                "    \"multiple\": false,\n" +
-                "    \"allowinput\": false,\n" +
-                "    \"showFrom\": [\n" +
-                "        \"label\",\n" +
-                "        \"span\",\n" +
-                "        \"multiple\",\n" +
-                "        \"prop\",\n" +
-                "        \"sqlType\",\n" +
-                "        \"allowinput\",\n" +
-                "        \"disabled\",\n" +
-                "        \"isDefault\"\n" +
-                "    ],\n" +
-                "    \"rules\": [\n" +
-                "        {\n" +
-                "            \"required\": false,\n" +
-                "            \"message\": \"请选择用户\",\n" +
-                "            \"trigger\": \"change\"\n" +
-                "        }\n" +
-                "    ],\n" +
-                "    \"sqlType\": \"array\",\n" +
-                "    \"name\": \"" + DataFieldType.user.getDesc() + "\",\n" +
-                "    \"disabled\": false\n" +
-                "}";
+                     "    \"prop\": \"" + field + "\",\n" +
+                     "    \"type\": \"user\",\n" +
+                     "    \"label\": \"" + name + "\",\n" +
+                     "    \"span\": 24,\n" +
+                     "    \"display\": true,\n" +
+                     "    \"status\": \"\",\n" +
+                     "    \"tips\": {\n" +
+                     "        \"text\": \"\",\n" +
+                     "        \"position\": \"right\"\n" +
+                     "    },\n" +
+                     "    \"multiple\": false,\n" +
+                     "    \"allowinput\": false,\n" +
+                     "    \"showFrom\": [\n" +
+                     "        \"label\",\n" +
+                     "        \"span\",\n" +
+                     "        \"multiple\",\n" +
+                     "        \"prop\",\n" +
+                     "        \"sqlType\",\n" +
+                     "        \"allowinput\",\n" +
+                     "        \"disabled\",\n" +
+                     "        \"isDefault\"\n" +
+                     "    ],\n" +
+                     "    \"rules\": [\n" +
+                     "        {\n" +
+                     "            \"required\": false,\n" +
+                     "            \"message\": \"请选择用户\",\n" +
+                     "            \"trigger\": \"change\"\n" +
+                     "        }\n" +
+                     "    ],\n" +
+                     "    \"sqlType\": \"array\",\n" +
+                     "    \"name\": \"" + DataFieldType.user.getDesc() + "\",\n" +
+                     "    \"disabled\": false\n" +
+                     "}";
         return JSONObject.parseObject(str);
     }
 }

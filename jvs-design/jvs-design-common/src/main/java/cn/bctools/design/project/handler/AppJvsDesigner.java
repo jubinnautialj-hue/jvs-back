@@ -12,6 +12,7 @@ import cn.bctools.oss.template.OssTemplate;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Set;
@@ -35,6 +36,7 @@ public class AppJvsDesigner implements IJvsDesigner {
     private final JvsAppTemplateService appTemplateService;
 
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         // 删除应用日志

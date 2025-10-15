@@ -14,6 +14,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Map;
@@ -46,6 +47,7 @@ public class RuleDesignServiceImpl extends ServiceImpl<RuleDesignDao, RuleDesign
                 .collect(Collectors.toMap(RuleDesignPo::getSecret, RuleDesignPo::getFlowDesignIds));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<RuleDesignPo>lambdaQuery().eq(RuleDesignPo::getJvsAppId, appId));

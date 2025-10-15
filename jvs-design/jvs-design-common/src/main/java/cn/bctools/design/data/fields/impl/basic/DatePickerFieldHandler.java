@@ -183,7 +183,7 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
                 try {
                     DateTime dateTime = DateUtil.parseDate(o.toString());
                     dateTime.toLocalDateTime();
-                    return dateTime;
+                    return o.toString();
                 } catch (Exception e) {
                     throw new RuntimeException("正确格式为" + NORM_DATE_PATTERN);
                 }

@@ -15,11 +15,13 @@ import cn.bctools.design.menu.service.AppMenuTypeService;
 import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.entity.JvsAppVersion;
+import cn.bctools.design.project.entity.JvsAppVersionMapping;
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.design.project.handler.DesignHandler;
 import cn.bctools.design.project.handler.UpgradeFeatureVersionHandler;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.project.service.JvsAppTemplateService;
+import cn.bctools.design.project.service.JvsAppVersionMappingService;
 import cn.bctools.design.project.service.JvsAppVersionService;
 import cn.bctools.design.rule.swagger.SwaggerRuleApiCacheService;
 import cn.bctools.design.util.CurrentAppUtils;
@@ -65,6 +67,7 @@ public class JvsAppController {
     AppMenuService appMenuService;
     UpgradeFeatureVersionHandler upgradeFeatureVersionHandler;
     JvsAppVersionService appVersionService;
+    JvsAppVersionMappingService appVersionMappingService;
     SwaggerRuleApiCacheService swaggerRuleApiCacheService;
 
     @Log(callBackClass = JvsLogServiceImpl.class)
@@ -180,6 +183,9 @@ public class JvsAppController {
         }
         versionApps.forEach(app -> service.removeById(app.getJvsAppId()));
         designHandler.appDataDeleted(versionApps);
+        // 删除应用版本、应用映射
+        appVersionService.remove(Wrappers.<JvsAppVersion>lambdaQuery().eq(JvsAppVersion::getAffiliationApp, affiliationAppByAppId));
+        appVersionMappingService.remove(Wrappers.<JvsAppVersionMapping>lambdaQuery().eq(JvsAppVersionMapping::getAffiliationApp, affiliationAppByAppId));
         // 发布逻辑API swagger缓存变更事件
         swaggerRuleApiCacheService.publishSwaggerRuleApiEvent(true, appId);
         return R.ok();

@@ -3,6 +3,7 @@ package cn.bctools.design.rule.impl.datamodel.select.id;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
 import cn.bctools.design.data.fields.dto.QueryConditionDto;
 import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
@@ -25,6 +26,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 /**
  * @author guojing
@@ -64,6 +66,10 @@ public class DataModelSelectServiceImpl implements BaseCustomFunctionInterface<D
         Criteria criteria = DynamicDataUtils.buildDynamicCriteria(queryConditions);
         criteria = DynamicDataUtils.initCriteria(criteria);
         List<Map<String, Object>> maps = dynamicDataService.queryList(dataModelId, criteria, fieldList);
+        String appId = dataModelService.getById(dataModelDto.getDataModelId()).getAppId();
+        List<FieldBasicsHtml> dataFieldList = fieldService.getAllFieldDefault(appId, dataModelDto.getDataModelId(), e -> fieldList.contains(e));
+        maps = maps.stream().map(e -> dynamicDataService.echo(e, dataFieldList, false)).collect(Collectors.toList());
+
         if (ObjectNull.isNotNull(maps)) {
             maps.forEach(e -> e.put("modelId", dataModelId));
             if (maps.size() == 1) {

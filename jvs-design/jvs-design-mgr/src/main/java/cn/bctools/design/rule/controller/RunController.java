@@ -149,7 +149,7 @@ public class RunController {
         // 获取逻辑流程运行时参数
         // 1.获取数据库参数
         Map<String, Object> ruleVariable = new HashMap<>(16);
-        if (po.getParameterPos() != null) {
+        if (po.getParameterPos() != null && ObjectNull.isNull(variableMap)) {
             ruleVariable.putAll((po.getParameterPos()));
         }
         // 2.获取请求体参数

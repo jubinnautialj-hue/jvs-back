@@ -2,6 +2,7 @@ package cn.bctools.design.notice.handler.send.mq;
 
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;
+import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.design.notice.dto.QueryDataNoticeRespDto;
 import cn.bctools.design.notice.handler.NoticeReceiverHandler;
 import cn.bctools.design.notice.handler.bo.NoticeDataExtendBo;
@@ -62,6 +63,7 @@ public class SendNoticeConsumer {
                 List<String> taskNodeIds = msg.getTaskNodeIds();
                 List<QueryDataNoticeRespDto> noticePos = msg.getNoticePos();
                 for (QueryDataNoticeRespDto n : noticePos) {
+                    TenantContextHolder.setTenantId(tenantId);
                     parse(tenantId, n, storeData, flowTask, taskNodeIds);
                 }
             }

@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Collections;
 import java.util.List;
@@ -153,6 +154,7 @@ public class DataNoticeServiceImpl extends ServiceImpl<DataNoticeMapper, DataNot
         return JSONObject.parseObject((String) data, SysNoticeConfig.class);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<DataNoticePo>lambdaQuery().eq(DataNoticePo::getJvsAppId, appId));

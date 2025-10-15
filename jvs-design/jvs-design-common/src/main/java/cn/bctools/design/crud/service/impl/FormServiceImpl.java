@@ -448,6 +448,7 @@ public class FormServiceImpl extends ServiceImpl<FormMapper, FormPo> implements 
                 .getDataModelId();
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<FormPo>lambdaQuery().eq(FormPo::getJvsAppId, appId));

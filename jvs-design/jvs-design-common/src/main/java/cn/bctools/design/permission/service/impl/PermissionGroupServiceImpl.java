@@ -10,6 +10,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * @author zhuxiaokang
@@ -21,6 +22,7 @@ public class PermissionGroupServiceImpl extends ServiceImpl<PermissionGroupMappe
 
     private final MapperMethodHandler mapperMethodHandler;
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<PermissionGroup>lambdaQuery().eq(PermissionGroup::getJvsAppId, appId));
