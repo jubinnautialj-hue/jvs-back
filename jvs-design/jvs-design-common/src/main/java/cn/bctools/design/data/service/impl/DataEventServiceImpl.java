@@ -233,6 +233,7 @@ public class DataEventServiceImpl extends ServiceImpl<DataEventMapper, DataEvent
         return Boolean.TRUE;
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<DataEventPo>lambdaQuery().eq(DataEventPo::getAppId, appId));

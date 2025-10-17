@@ -4,6 +4,7 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.function.Get;
 import cn.bctools.design.data.entity.DynamicDataPo;
+import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
 import cn.bctools.design.data.fields.dto.QueryConditionDto;
 import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
@@ -69,10 +70,13 @@ public class DataModelListServiceImpl implements BaseCustomFunctionInterface<Dat
             sort = Sort.by(collect);
         }
         LOG.info("查询条件" + dataModelId + "," + ModeUtils.getMode() + " ," + JSONObject.toJSONString(dataModelDto));
-        return dynamicDataService.queryList(dataModelId, criteria, fieldList, sort, dataModelDto.getTop())
+        List<Map<String, Object>> collect = dynamicDataService.queryList(dataModelId, criteria, fieldList, sort, dataModelDto.getTop())
                 .stream()
                 .peek(e -> e.put("modelId", dataModelId))
                 .collect(Collectors.toList());
+        List<FieldBasicsHtml> dataFieldList = fieldService.getFields(dataModelId, dataModelId, true, true);
+        collect = collect.stream().map(e -> dynamicDataService.echo(e, dataFieldList, false)).collect(Collectors.toList());
+        return collect;
     }
 
     /**

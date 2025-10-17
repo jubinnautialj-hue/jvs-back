@@ -18,6 +18,7 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.PathMatcher;
 
@@ -128,6 +129,7 @@ public class IdentificationServiceImpl extends ServiceImpl<IdentificationMapper,
         remove(Wrappers.query(new Identification().setDesignId(designId).setJvsAppId(appId)));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<Identification>lambdaQuery().eq(Identification::getJvsAppId, appId));

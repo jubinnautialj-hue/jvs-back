@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.Nullable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 
 /**
@@ -44,6 +45,7 @@ public class AppUrlServiceImpl extends ServiceImpl<AppUrlMapper, AppUrlPo> imple
                 .eq(StringUtils.isNotBlank(designId), AppUrlPo::getId, designId));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<AppUrlPo>lambdaQuery().eq(AppUrlPo::getJvsAppId, appId));

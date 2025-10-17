@@ -67,6 +67,7 @@ import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletResponse;
@@ -364,6 +365,7 @@ public class PrintTemplateServiceImpl extends ServiceImpl<PrintTemplateMapper, P
         }
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<PrintTemplate>lambdaQuery().eq(PrintTemplate::getJvsAppId, appId));

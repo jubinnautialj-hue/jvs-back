@@ -34,5 +34,4 @@ public class GatewayApplication {
     public ReactiveLoadBalancerClientFilter gatewayLoadBalancerClientFilter(DiscoveryClient discoveryClient, GatewayLoadBalancerProperties loadBalancerProperties, VersionLoadBalancer versionLoadBalancer) {
         return new GrayReactiveLoadBalancerClientFilter(loadBalancerProperties, discoveryClient, versionLoadBalancer);
     }
-
 }

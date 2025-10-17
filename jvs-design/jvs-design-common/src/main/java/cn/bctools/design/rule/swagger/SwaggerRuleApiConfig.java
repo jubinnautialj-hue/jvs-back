@@ -28,23 +28,23 @@ public class SwaggerRuleApiConfig {
     @Getter
     protected static final Set<String> CONSUMES = Stream.of("application/json").collect(Collectors.toSet());
 
-    private final DocumentationCache documentationCache;
-    private final SwaggerRuleApiCacheService swaggerRuleApiCacheService;
+//    private final DocumentationCache documentationCache;
+//    private final SwaggerRuleApiCacheService swaggerRuleApiCacheService;
 
 
     /**
      * 初始化模式对应的Swagger API组
      */
-    @PostConstruct
-    public void initDocumentation() {
-        for (SwaggerApiGroupEnum group : SwaggerApiGroupEnum.values()) {
-            Documentation documentation = new Documentation(group.getGroupName(), ROOT, new HashSet<>(),
-                    new HashMap<>(), null, PRODUCES,
-                    CONSUMES, "",
-                    new HashSet<>(), new ArrayList<>(),
-                    null, new ArrayList<>());
-            documentationCache.addDocumentation(documentation);
-        }
-        new Thread(swaggerRuleApiCacheService::initAllSwaggerRuleApi).start();
-    }
+//    @PostConstruct
+//    public void initDocumentation() {
+//        for (SwaggerApiGroupEnum group : SwaggerApiGroupEnum.values()) {
+//            Documentation documentation = new Documentation(group.getGroupName(), ROOT, new HashSet<>(),
+//                    new HashMap<>(), null, PRODUCES,
+//                    CONSUMES, "",
+//                    new HashSet<>(), new ArrayList<>(),
+//                    null, new ArrayList<>());
+//            documentationCache.addDocumentation(documentation);
+//        }
+//        new Thread(swaggerRuleApiCacheService::initAllSwaggerRuleApi).start();
+//    }
 }

@@ -1,7 +1,9 @@
 package cn.bctools.design.filter;
 
 import cn.bctools.auth.api.enums.ModeTypeEnum;
+import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.design.util.DynamicDataUtils;
@@ -37,6 +39,7 @@ public class DesignFilter extends GenericFilterBean {
     @Override
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
+        String tenantId = request.getHeader(SysConstant.TENANTID);
         String designId = URLUtil.decode(request.getHeader(HEADER_DESIGN_ID));
         String operator = URLUtil.decode(request.getHeader(HEADER_DESIGN_OPERATOR));
         String pageDesignId = URLUtil.decode(request.getHeader(HEADER_PAGE_DESIGN_ID));
@@ -44,6 +47,9 @@ public class DesignFilter extends GenericFilterBean {
         if (ObjectNull.isNull(mode)) {
             //如果请求头没有可以通过 url参数
             mode = URLUtil.encode(request.getParameter(HEADER_MODE));
+        }
+        if (ObjectNull.isNotNull(tenantId)) {
+            TenantContextHolder.setTenantId(tenantId);
         }
         // 记录设计id与操作类型
         DynamicDataUtils.setDesignId(designId);

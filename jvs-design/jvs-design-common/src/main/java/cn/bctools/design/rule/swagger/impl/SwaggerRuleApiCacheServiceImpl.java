@@ -164,7 +164,7 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
             }
             ruleId = rule.getId();
         }
-        applicationEventPublisher.publishEvent(new RefreshRuleSwaggerApiEvent(this, delete, appId, ruleId, mode));
+//        applicationEventPublisher.publishEvent(new RefreshRuleSwaggerApiEvent(this, delete, appId, ruleId, mode));
     }
 
     /**
@@ -176,42 +176,43 @@ public class SwaggerRuleApiCacheServiceImpl implements SwaggerRuleApiCacheServic
     @SneakyThrows
     @RabbitListener(queues = RefreshSwaggerApiMqConfig.QUEUE)
     public void refreshSwaggerApi(Channel channel, Message message) {
-        try {
-            RefreshSwaggerApiMessage msg = objectMapper.readValue(message.getBody(), RefreshSwaggerApiMessage.class);
-            String appId = msg.getAppId();
-            String ruleId = msg.getRuleId();
-            Boolean delete = msg.getDelete();
-            String mode = msg.getMode();
-            JvsApp app = jvsAppService.getById(appId);
-            if (ObjectNull.isNull(ruleId)) {
-                if (delete) {
-                    // 删除指定应用所有逻辑接口缓存
-                    removeRuleApiSwaggerTagCache(mode, appId);
-                } else {
-                    // 刷新指定应用所有逻辑接口
-                    List<RuleDesignPo> ruleDesignPoList = ruleDesignService.list(Wrappers.<RuleDesignPo>lambdaQuery()
-                            .eq(RuleDesignPo::getJvsAppId, appId)
-                            .eq(RuleDesignPo::getReqType, RuleType.External_API_logic));
-                    String appIdentifier = Optional.ofNullable(identificationService.getOne(Wrappers.query(new Identification().setDesignType(DesignType.app).setDesignId(appId))))
-                            .map(Identification::getIdentifier).orElseGet(() -> null);
-                    ruleDesignPoList.forEach(ruleDesignPo -> addOrUpdateRuleApiSwaggerCache(mode, app, appIdentifier, ruleDesignPo));
-                }
-            } else {
-                // 刷新指定逻辑接口
-                if (delete) {
-                    removeRuleApiSwaggerSingleCache(mode, ruleId);
-                } else {
-                    RuleDesignPo ruleDesignPo = ruleDesignService.getOne(Wrappers.query(new RuleDesignPo().setJvsAppId(appId).setId(ruleId)));
-                    String appIdentifier = Optional.ofNullable(identificationService.getOne(Wrappers.query(new Identification().setDesignType(DesignType.app).setDesignId(appId))))
-                            .map(Identification::getIdentifier).orElseGet(() -> null);
-                    addOrUpdateRuleApiSwaggerCache(mode, app, appIdentifier, ruleDesignPo);
-                }
-            }
-            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
-        } catch (Exception e) {
-            log.error("刷新Swagger中的逻辑API事件通知消息，MQ消费异常：", e);
-            channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, false);
-        }
+        //忽略刷新 swagger文档
+//        try {
+//            RefreshSwaggerApiMessage msg = objectMapper.readValue(message.getBody(), RefreshSwaggerApiMessage.class);
+//            String appId = msg.getAppId();
+//            String ruleId = msg.getRuleId();
+//            Boolean delete = msg.getDelete();
+//            String mode = msg.getMode();
+//            JvsApp app = jvsAppService.getById(appId);
+//            if (ObjectNull.isNull(ruleId)) {
+//                if (delete) {
+//                    // 删除指定应用所有逻辑接口缓存
+//                    removeRuleApiSwaggerTagCache(mode, appId);
+//                } else {
+//                    // 刷新指定应用所有逻辑接口
+//                    List<RuleDesignPo> ruleDesignPoList = ruleDesignService.list(Wrappers.<RuleDesignPo>lambdaQuery()
+//                            .eq(RuleDesignPo::getJvsAppId, appId)
+//                            .eq(RuleDesignPo::getReqType, RuleType.External_API_logic));
+//                    String appIdentifier = Optional.ofNullable(identificationService.getOne(Wrappers.query(new Identification().setDesignType(DesignType.app).setDesignId(appId))))
+//                            .map(Identification::getIdentifier).orElseGet(() -> null);
+//                    ruleDesignPoList.forEach(ruleDesignPo -> addOrUpdateRuleApiSwaggerCache(mode, app, appIdentifier, ruleDesignPo));
+//                }
+//            } else {
+//                // 刷新指定逻辑接口
+//                if (delete) {
+//                    removeRuleApiSwaggerSingleCache(mode, ruleId);
+//                } else {
+//                    RuleDesignPo ruleDesignPo = ruleDesignService.getOne(Wrappers.query(new RuleDesignPo().setJvsAppId(appId).setId(ruleId)));
+//                    String appIdentifier = Optional.ofNullable(identificationService.getOne(Wrappers.query(new Identification().setDesignType(DesignType.app).setDesignId(appId))))
+//                            .map(Identification::getIdentifier).orElseGet(() -> null);
+//                    addOrUpdateRuleApiSwaggerCache(mode, app, appIdentifier, ruleDesignPo);
+//                }
+//            }
+//            channel.basicAck(message.getMessageProperties().getDeliveryTag(), false);
+//        } catch (Exception e) {
+//            log.error("刷新Swagger中的逻辑API事件通知消息，MQ消费异常：", e);
+//            channel.basicNack(message.getMessageProperties().getDeliveryTag(), false, false);
+//        }
     }
 
 

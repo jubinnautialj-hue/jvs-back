@@ -282,7 +282,15 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
                     if ((!map.containsKey(e.getProp())) && DataFieldType.flowNode.equals(e.getType())) {
                         setValue(appId, e.getDataLinkageModelId(), e, map, collect, Collections.singletonList(queryConditionDtos), parentPath);
                     } else {
-                        setValue(appId, e.getDataLinkageModelId(), e, map, collect, Collections.singletonList(queryConditionDtos), parentPath);
+                        boolean o = false;
+                        try {
+                            o = SystemThreadLocal.get("designSkip");
+                        } catch (Exception ex) {
+
+                        }
+                        if (!o) {
+                            setValue(appId, e.getDataLinkageModelId(), e, map, collect, Collections.singletonList(queryConditionDtos), parentPath);
+                        }
                     }
                 } else {
                     //如果触发器为空,则关联值为默认值

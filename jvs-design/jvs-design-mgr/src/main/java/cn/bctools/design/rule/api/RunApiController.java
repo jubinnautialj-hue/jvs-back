@@ -128,7 +128,11 @@ public class RunApiController {
     @ApiOperation("通过标识发起逻辑引擎")
     @RequestMapping(value = "/rule/openapi/{appIdentification}/**", consumes = {"multipart/form-data", "application/json"}, method = {RequestMethod.POST, RequestMethod.PUT})
     public R identification(@PathVariable("appIdentification") String appIdentification, Map<String, Object> map, HttpServletRequest request, HttpServletResponse response) {
-        TenantContextHolder.clear();
+        String tenantId = TenantContextHolder.getTenantId();
+        if (ObjectNull.isNull(tenantId)) {
+            //如果为空设置为主租户
+            tenantId = "1";
+        }
         map = JSONObject.parseObject(IoUtil.read(request.getInputStream()).toString());
         if (ObjectNull.isNull(map)) {
             map = new HashMap<>(8);
@@ -315,7 +319,7 @@ public class RunApiController {
         // 获取逻辑流程运行时参数
         // 1.获取数据库参数
         Map<String, Object> ruleVariable = new HashMap<>(16);
-        if (po.getParameterPos() != null) {
+        if (po.getParameterPos() != null && ObjectNull.isNull(variableMap)) {
             ruleVariable.putAll((po.getParameterPos()));
         }
         // 2.获取请求体参数

@@ -410,6 +410,9 @@ public class DataFieldServiceImpl extends ServiceImpl<DataFieldMapper, DataField
                 fieldDto.setEnabledQueryTypes(collect.stream().distinct().collect(Collectors.toList()));
                 fieldDto.getEnabledQueryTypes().add(DataQueryType.isNull);
             }
+            if (fieldDto.getType().equals(DataFieldType.input)) {
+                fieldDto.getEnabledQueryTypes().remove(DataQueryType.in);
+            }
             if (defaultFields.containsKey(fieldDto.getFieldKey())) {
                 //如果是默认字段不能使用用户设计的字段类型
                 fieldDto.setType(defaultFields.get(fieldKey).getFieldType());
@@ -481,6 +484,7 @@ public class DataFieldServiceImpl extends ServiceImpl<DataFieldMapper, DataField
         return evaluate.toString();
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<DataFieldPo>lambdaQuery().eq(DataFieldPo::getJvsAppId, appId));

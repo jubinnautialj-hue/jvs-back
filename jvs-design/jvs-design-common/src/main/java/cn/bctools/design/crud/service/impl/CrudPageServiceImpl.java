@@ -262,7 +262,7 @@ public class CrudPageServiceImpl extends ServiceImpl<CrudPageMapper, CrudPage> i
         }
         //
         //把删除按钮移到最后去
-        Optional<ButtonDesignHtml> first = buttons.stream().filter(e -> e.getType().equals(ButtonTypeEnum.btn_delete)).findFirst();
+        Optional<ButtonDesignHtml> first = buttons.stream().filter(e -> ButtonTypeEnum.btn_delete.equals(e.getType())).findFirst();
         //添加默认办理按钮
         List<ButtonDesignHtml> defaultButtonDesignHtmls = getSystemDefaultButtons();
 
@@ -391,6 +391,7 @@ public class CrudPageServiceImpl extends ServiceImpl<CrudPageMapper, CrudPage> i
                 .getDataModelId();
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<CrudPage>lambdaQuery().eq(CrudPage::getJvsAppId, appId));

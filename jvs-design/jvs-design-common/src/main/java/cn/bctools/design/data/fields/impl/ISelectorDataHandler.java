@@ -3,10 +3,7 @@ package cn.bctools.design.data.fields.impl;
 import cn.bctools.auth.api.api.DictApi;
 import cn.bctools.auth.api.dto.SysDictItemDto;
 import cn.bctools.common.exception.BusinessException;
-import cn.bctools.common.utils.BeanCopyUtil;
-import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.common.utils.SpringContextUtil;
-import cn.bctools.common.utils.SystemThreadLocal;
+import cn.bctools.common.utils.*;
 import cn.bctools.design.data.fields.DataFieldHandler;
 import cn.bctools.design.data.fields.dto.QueryConditionDto;
 import cn.bctools.design.data.fields.dto.enums.FormDataTypeEnum;
@@ -30,6 +27,8 @@ import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.IdWorker;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.mongodb.core.query.Criteria;
 
 import java.util.*;
@@ -45,6 +44,8 @@ import static cn.bctools.design.data.fields.impl.advance.CascaderFieldHandler.ge
  * @Author: GuoZi
  */
 public interface ISelectorDataHandler {
+
+    Logger log = LoggerFactory.getLogger(ISelectorDataHandler.class);
 
     /**
      * 分割符
@@ -140,7 +141,10 @@ public interface ISelectorDataHandler {
                                 .setType(RunType.REAL)
                                 .setSecret(po.getSecret())
                                 .setGraph(JSONObject.parseObject(po.getDesignDrawingJson(), HtmlGraph.class));
-                        ruleStartUtils.start(po, logPo, ruleExecDto);
+                        ruleStartUtils.startCache(po, logPo, ruleExecDto);
+                        if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getErrorMessage())) {
+                            return "字典未匹配," + po.getName() + " 逻辑出错" + JSONObject.toJSONString(ruleExecDto);
+                        }
                         if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getEndResult())) {
                             Object value = ruleExecDto.getExecuteDto().getEndResult().getValue();
                             if (value instanceof List) {
@@ -269,7 +273,10 @@ public interface ISelectorDataHandler {
                     .setType(RunType.REAL)
                     .setSecret(po.getSecret())
                     .setGraph(JSONObject.parseObject(po.getDesignDrawingJson(), HtmlGraph.class));
-            ruleStartUtils.start(po, logPo, ruleExecDto);
+            ruleStartUtils.startCache(po, logPo, ruleExecDto);
+            if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getErrorMessage())) {
+                return "字典未匹配," + po.getName() + " 逻辑出错" + JSONObject.toJSONString(data);
+            }
             if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getEndResult())) {
                 Object value = ruleExecDto.getExecuteDto().getEndResult().getValue();
                 if (value instanceof List) {
@@ -387,7 +394,10 @@ public interface ISelectorDataHandler {
                             .setSecret(po.getSecret())
                             .setGraph(JSONObject.parseObject(po.getDesignDrawingJson(), HtmlGraph.class));
                     RuleExecDto rule = RuleSystemThreadLocal.getRule();
-                    ruleStartUtils.start(po, logPo, ruleExecDto);
+                    ruleStartUtils.startCache(po, logPo, ruleExecDto);
+                    if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getErrorMessage())) {
+                        return "字典未匹配," + po.getName() + " 逻辑出错" + JSONObject.toJSONString(data);
+                    }
                     RuleSystemThreadLocal.set(rule);
                     if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getEndResult())) {
                         Object value = ruleExecDto.getExecuteDto().getEndResult().getValue();

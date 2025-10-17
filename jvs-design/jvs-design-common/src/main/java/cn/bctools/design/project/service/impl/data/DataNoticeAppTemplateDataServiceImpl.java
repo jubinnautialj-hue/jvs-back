@@ -48,6 +48,6 @@ public class DataNoticeAppTemplateDataServiceImpl extends AppTemplateDataBase im
         }
         // 清空默认数据
         dataNoticePos.forEach(this::clearDefaultData);
-        saveOrUpdate(dataNoticeService, existsIds, dataNoticePos, DataNoticePo::getId);
+        saveBatch(dataNoticeService, dataNoticePos);
     }
 }

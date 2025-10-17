@@ -153,6 +153,7 @@ public class AppMenuServiceImpl extends ServiceImpl<AppMenuMapper, AppMenu> impl
         updateBatchById(updateAppMenus);
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         mapperMethodHandler.deletePhysical(this, Wrappers.<AppMenu>lambdaQuery().eq(AppMenu::getJvsAppId, appId));

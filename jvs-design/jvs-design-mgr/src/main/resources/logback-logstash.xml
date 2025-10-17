@@ -11,7 +11,8 @@
             <charset>utf8</charset>
         </encoder>
     </appender>
-
+    <logger name="o.d.fonts.fop.fonts.truetype.TTFFile" level="WARN" />
+    <logger name="org.docx4j.fonts.PhysicalFonts" level="WARN" />
     <!-- 按照每天生成日志文件 -->
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">

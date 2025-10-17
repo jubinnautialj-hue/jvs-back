@@ -68,6 +68,7 @@ import cn.bctools.design.workflow.service.impl.FlowDynamicDataServiceImpl;
 import cn.bctools.function.entity.dto.ExecDto;
 import cn.bctools.function.entity.dto.TableType;
 import cn.bctools.function.entity.po.FunctionBusinessPo;
+import cn.bctools.function.enums.JvsParamType;
 import cn.bctools.function.handler.ExpressionAfterHandler;
 import cn.bctools.function.handler.IJvsFunction;
 import cn.bctools.function.mapper.FunctionBusinessMapper;
@@ -157,6 +158,7 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
+import static cn.bctools.design.constant.DynamicDataConstant.DATA_EMPTY;
 import static cn.bctools.design.util.DynamicDataUtils.KEY_AUTH_CRITERIA;
 
 /**
@@ -391,6 +393,13 @@ public class DynamicDataUseController {
         SystemThreadLocal.set("tableType", tableType);
         //跳过模拟用户操作,让公式可以自己进行一次更新。
         SystemThreadLocal.set("designSkip", init);
+        if (tableType.equals(TableType.add)) {
+            //如果是选项卡删除前面两个数据
+            if (body.getParentKey().size() == 3) {
+                body.getParentKey().remove(0);
+                body.getParentKey().remove(0);
+            }
+        }
         //获取所有的字段
         List<FieldBasicsHtml> collect = dataFieldService.getFields(appId, modelId, designId, true, true).stream().filter(e -> ObjectNull.isNotNull(e.getType())).collect(Collectors.toList());
         Map<String, FieldBasicsHtml> fieldsMap = collect.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity()));
@@ -407,7 +416,6 @@ public class DynamicDataUseController {
                 .forEach(e -> {
                     //如果有将所有的 key字段添加到字段解析中
                     TabItemHtml html = tabFieldHandler.toHtml(e.getDesignJson());
-
                     for (FormValueHtml dicDatum : html.getDicData()) {
                         List<FieldBasicsHtml> fieldBasicsHtmls = html.getColumn().get(dicDatum.getName());
                         if (ObjectNull.isNull(fieldBasicsHtmls)) {
@@ -751,7 +759,16 @@ public class DynamicDataUseController {
             if (setEmpty) {
                 //处理分割线和小标题，不属于数据
                 if (ObjectNull.isNotNull(publicHtml.getType().getAClass()) && !publicHtml.getType().equals(DataFieldType.tab) && !publicHtml.getType().equals(DataFieldType.cascader)) {
-                    data.put(publicHtml.getProp(), DynamicDataConstant.getEmpty(publicHtml.getType().getAClass()));
+                    switch (publicHtml.getType()) {
+                        case department:
+                        case job:
+                        case role:
+                        case user:
+                            data.put(publicHtml.getProp(), DATA_EMPTY);
+                            break;
+                        default:
+                            data.put(publicHtml.getProp(), DynamicDataConstant.getEmpty(publicHtml.getType().getAClass()));
+                    }
                 }
             }
             if (DataFieldType.select.equals(publicHtml.getType()) || DataFieldType.cascader.equals(publicHtml.getType())) {

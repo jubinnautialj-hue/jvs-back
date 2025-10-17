@@ -179,6 +179,7 @@ public class DataModelServiceImpl extends ServiceImpl<DataModelMapper, DataModel
         fieldService.remove(Wrappers.<DataFieldPo>lambdaQuery().eq(DataFieldPo::getDesignId, designId));
     }
 
+    @Transactional(rollbackFor = Exception.class)
     @Override
     public void beforeAppDeleted(String appId) {
         List<DataModelPo> dataModelPoList = list(Wrappers.<DataModelPo>lambdaQuery()

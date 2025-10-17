@@ -33,7 +33,7 @@ public class FileServiceImpl implements BaseCustomFunctionInterface<FileDto> {
         return new RuleFile()
                 .setName(dto.getFileName())
                 .setOutputType(dto.getFileType())
-                .setOriginalName(dto.getFileName() + StrUtil.DOT + dto.getFileType())
+                .setOriginalName(dto.getFileName())
                 .setUrl(dto.getFileUrl());
     }
 

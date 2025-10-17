@@ -47,6 +47,7 @@ import cn.bctools.design.project.handler.DesignHandler;
 import cn.bctools.design.project.mapper.JvsAppMapper;
 import cn.bctools.design.project.service.JvsAppLogService;
 import cn.bctools.design.rule.RuleRunService;
+import cn.bctools.design.rule.RuleStartUtils;
 import cn.bctools.design.util.CurrentAppUtils;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.design.util.OrderUtils;
@@ -60,6 +61,7 @@ import cn.bctools.function.handler.ExpressionHandler;
 import cn.bctools.function.utils.ExpressionParam;
 import cn.bctools.function.utils.ExpressionUtils;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
+import cn.bctools.redis.utils.RedisUtils;
 import cn.bctools.rule.utils.html.RuleExecuteDto;
 import cn.bctools.web.utils.WebUtils;
 import cn.hutool.cache.Cache;
@@ -96,8 +98,13 @@ import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.data.mongodb.core.query.Update;
 import org.springframework.data.util.Pair;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -276,7 +283,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         //查询出有哪些有字段设计的
         List<FieldBasicsHtml> designField = fields.stream()
                 .filter(e -> ObjectNull.isNotNull(e.getDesignId()))
-                .filter(e -> DesignType.form.equals(e.getFieldType()) || e.getDesignId().equals(getDesignId()))
+                .filter(e -> DesignType.form.equals(e.getDesignType()) || e.getDesignId().equals(getDesignId()))
                 .collect(Collectors.toList());
         //设计 id如果存在，则直接只使用这个设计id相同的字段，如果没有，则使用模型的字段,避免不同设计中可能存在不同的设计结果
         Map<String, FieldBasicsHtml> fieldBasicsHtmlMap;
@@ -1140,15 +1147,16 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     } else {
                         if (ObjectNull.isNotNull(conditionDtoList)) {
                             List<Criteria> buildDynamicCriteriaList = buildDynamicCriteriaList(conditionDtoList);
-                            if (ObjectNull.isNotNull(criteria, crud)) {
+                            if (ObjectNull.isNotNull(criteria, crud) && ObjectNull.isNull(buildDynamicCriteriaList)) {
                                 criteria.forEach(e -> e.andOperator(crud));
-                                authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
+                                authCriteria = DynamicDataUtils.trueCriteria().orOperator(criteria);
                             } else if (ObjectNull.isNotNull(criteriaList) && ObjectNull.isNull(crud)) {
                                 authCriteria = DynamicDataUtils.trueCriteria().andOperator(buildDynamicCriteriaList);
                             } else if (ObjectNull.isNotNull(crud) && ObjectNull.isNull(buildDynamicCriteriaList)) {
                                 authCriteria = DynamicDataUtils.trueCriteria().andOperator(crud);
                             } else if (ObjectNull.isNotNull(crud) && ObjectNull.isNotNull(buildDynamicCriteriaList)) {
-                                buildDynamicCriteriaList.forEach(e -> e.andOperator(crud));
+                                criteria.addAll(crud);
+                                buildDynamicCriteriaList.forEach(e -> e.andOperator(criteria));
                                 authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
                             }
                         }
@@ -1268,7 +1276,47 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         // 获取设计字段
         DataModelPo byId = dataModelService.getById(modelId);
         if (echo) {
-            dataList = dataList.stream().map(e -> echo(e, fieldBasicsHtmls, false)).collect(Collectors.toList());
+            RequestAttributes context = null;
+            Authentication authenticationAuthentication = null;
+            try {
+                context = RequestContextHolder.currentRequestAttributes();
+                SecurityContext authentication = SecurityContextHolder.getContext();
+                authenticationAuthentication = authentication.getAuthentication();
+            } catch (IllegalStateException e) {
+            }
+            String tenantId = TenantContextHolder.getTenantId();
+            Map<String, Object> systemThreadLocalMap = SystemThreadLocal.get();
+            Map<String, Object> map = new HashMap<>();
+            systemThreadLocalMap.entrySet()
+                    .forEach(e -> {
+                        if (ObjectNull.isNotNull(e.getValue())) {
+                            try {
+                                map.put(e.getKey(), BeanCopyUtil.deepCopy(e.getValue()));
+                            } catch (Exception ex) {
+
+                            }
+                        }
+                    });
+            Authentication finalAuthenticationAuthentication = authenticationAuthentication;
+            RequestAttributes finalContext = context;
+            Map<String, FieldBasicsHtml> fieldMap = fieldBasicsHtmls.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity(), (e1, e2) -> e1));
+
+            dataList = dataList.parallelStream().map(e -> {
+                SystemThreadLocal.setAll(map);
+                TenantContextHolder.setTenantId(tenantId);
+                if (ObjectNull.isNotNull(finalContext)) {
+                    //设置上下文user对象
+                    RequestContextHolder.setRequestAttributes(finalContext);
+                    Object principal = finalAuthenticationAuthentication.getPrincipal();
+                    if (!(principal instanceof String)) {
+                        SystemThreadLocal.set("user", principal);
+                    }
+                    SecurityContextHolder.getContext().setAuthentication(finalAuthenticationAuthentication);
+                }
+                return echo(e, fieldMap, false);
+            }).collect(Collectors.toList());
+            //清理逻辑 可能会存在缓存
+            RuleStartUtils.threadLocalCache.remove();
         }
         if (addButtonInfo) {
             designHandler.handleButtonInfo(dataList, EnvConstant.PAGE_BUTTON_DISPLAY);
@@ -1713,10 +1761,15 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             data.put(Get.name(DynamicDataPo::getModelId), modelId);
         }
         // BasalPo
-        data.put(Get.name(DynamicDataPo::getUpdateTime), DateUtil.now());
+        data.put(Get.name(DynamicDataPo::getUpdateTime), LocalDateTime.now());
         if (ObjectNull.isNotNull(user)) {
             data.put(Get.name(DynamicDataPo::getUpdateBy), user.getRealName());
             data.put("updateById", user.getId());
+        }
+        //如果不删除的情况可能会导致时间格式出错
+        String name = Get.name(DynamicDataPo::getCreateTime);
+        if (data.containsKey(name)) {
+            data.remove(name);
         }
         return data;
     }
@@ -1908,7 +1961,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         // 处理回显数据
         data.entrySet().stream().collect(Collectors.toList()).stream()
                 //有key的存在
-                .filter(e -> fieldMap.containsKey(e.getKey())).forEach(entry -> {
+                .filter(e -> fieldMap.containsKey(e.getKey()))
+                .forEach(entry -> {
                     try {
                         if (ObjectNull.isNull(entry.getValue())) {
                             //可能是空数组 ，或空对象。当选择了用户部门，后又取消。
@@ -2419,7 +2473,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     groupOperation.max(((String) aggregateField).trim()).as("value");
                 } else if (aggregateField instanceof List) {
                     for (Object e : ((List<?>) aggregateField)) {
-                        groupOperation = groupOperation.max(e.toString()).as(e.toString());
+                        groupOperation = groupOperation.max(e.toString()).as("value");
                     }
                 }
                 break;
@@ -2428,7 +2482,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     groupOperation.min(((String) aggregateField).trim()).as("value");
                 } else if (aggregateField instanceof List) {
                     for (Object e : ((List<?>) aggregateField)) {
-                        groupOperation = groupOperation.min(e.toString()).as(e.toString());
+                        groupOperation = groupOperation.min(e.toString()).as("value");
                     }
                 }
                 break;
@@ -2440,7 +2494,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     groupOperation.avg(((String) aggregateField).trim()).as("value");
                 } else if (aggregateField instanceof List) {
                     for (Object e : ((List<?>) aggregateField)) {
-                        groupOperation = groupOperation.avg(e.toString()).as(e.toString());
+                        groupOperation = groupOperation.avg(e.toString()).as("value");
                     }
                 }
                 break;
@@ -2449,7 +2503,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     groupOperation.sum(((String) aggregateField).trim()).as("value");
                 } else if (aggregateField instanceof List) {
                     for (Object e : ((List<?>) aggregateField)) {
-                        groupOperation = groupOperation.sum(e.toString()).as(e.toString());
+                        groupOperation = groupOperation.sum(e.toString()).as("value");
                     }
                 }
             default:
