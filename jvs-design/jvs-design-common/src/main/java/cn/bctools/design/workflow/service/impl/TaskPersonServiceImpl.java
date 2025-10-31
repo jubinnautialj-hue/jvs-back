@@ -109,13 +109,15 @@ public class TaskPersonServiceImpl implements TaskPersonService {
                             .stream().map(FlowTaskPerson::getId).collect(Collectors.toList());
             applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, removeTaskPersonIds));
             flowTaskPersonService.saveBatch(flowTaskPersons);
-            List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
-                            .eq(FlowTaskNotice::getInstanceId, runtimeData.getFlowTask().getId())
-                            .eq(FlowTaskNotice::getNodeId, runtimeData.getFlowTaskNode().getNodeId())
-                            .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
-            //2025.09.10 关闭已完成的待办提醒通知
-            if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
-                flowTaskNoticeService.close(runtimeData.getFlowTask(),removeBizTaskIds);
+            if(runtimeData.getFlowTaskNode() != null && runtimeData.getFlowTask() != null){
+                List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
+                        .eq(FlowTaskNotice::getInstanceId, runtimeData.getFlowTask().getId())
+                        .eq(FlowTaskNotice::getNodeId, runtimeData.getFlowTaskNode().getNodeId())
+                        .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
+                //2025.09.10 关闭已完成的待办提醒通知
+                if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
+                    flowTaskNoticeService.close(runtimeData.getFlowTask(),removeBizTaskIds);
+                }
             }
         }
         //2025.09.08 发送待办提醒通知
