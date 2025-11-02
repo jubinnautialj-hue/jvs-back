@@ -1240,9 +1240,9 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         }
         long total;
         //判断数据权限, 如果跳过数据权限，则查询数据
-        if (Boolean.TRUE.equals(isFree)) {
+        if (Boolean.TRUE.equals(isFree) && current == 1) {
             total = dataModelHandler.estimatedCount(modelId);
-        } else if (ObjectNull.isNull(list) && ObjectNull.isNotNull(isFree)) {
+        } else if (ObjectNull.isNull(list) && ObjectNull.isNotNull(isFree) && current == 1) {
             //如果条件为空，跳过权限也为空
             total = dataModelHandler.estimatedCount(modelId);
         } else {
