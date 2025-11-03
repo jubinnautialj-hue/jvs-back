@@ -1238,18 +1238,10 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             String[] fields = new String[fieldKeys.size()];
             query.fields().include(fieldKeys.toArray(fields));
         }
-        long total;
-        //判断数据权限, 如果跳过数据权限，则查询数据
-        if (Boolean.TRUE.equals(isFree) && current == 1) {
-            total = dataModelHandler.estimatedCount(modelId);
-        } else if (ObjectNull.isNull(list) && ObjectNull.isNotNull(isFree) && current == 1) {
-            //如果条件为空，跳过权限也为空
-            total = dataModelHandler.estimatedCount(modelId);
-        } else {
-            //如果没有跳过
-            // 查询总页数
-            total = dataModelHandler.count(query, modelId);
-        }
+        //如果没有跳过
+        // 查询总页数
+        long total = dataModelHandler.count(query, modelId);
+
         long skip = size * (current - 1);
         mapPage.setTotal(total);
         if (total == 0 || skip >= total || size < 1 || current < 1) {
