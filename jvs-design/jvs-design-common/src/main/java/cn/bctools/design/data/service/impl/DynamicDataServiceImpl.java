@@ -2482,7 +2482,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     groupOperation.min(((String) aggregateField).trim()).as("value");
                 } else if (aggregateField instanceof List) {
                     for (Object e : ((List<?>) aggregateField)) {
-                        groupOperation = groupOperation.min(e.toString()).as("value");
+                        groupOperation = groupOperation.min(e.toString()).as(e.toString());
                     }
                 }
                 break;
@@ -2494,7 +2494,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     groupOperation.avg(((String) aggregateField).trim()).as("value");
                 } else if (aggregateField instanceof List) {
                     for (Object e : ((List<?>) aggregateField)) {
-                        groupOperation = groupOperation.avg(e.toString()).as("value");
+                        groupOperation = groupOperation.avg(e.toString()).as(e.toString());
                     }
                 }
                 break;
@@ -2503,7 +2503,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     groupOperation.sum(((String) aggregateField).trim()).as("value");
                 } else if (aggregateField instanceof List) {
                     for (Object e : ((List<?>) aggregateField)) {
-                        groupOperation = groupOperation.sum(e.toString()).as("value");
+                        groupOperation = groupOperation.sum(e.toString()).as(e.toString());
                     }
                 }
             default:
