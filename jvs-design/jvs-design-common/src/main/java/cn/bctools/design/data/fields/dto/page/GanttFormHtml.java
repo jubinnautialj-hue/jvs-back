@@ -26,6 +26,9 @@ public class GanttFormHtml {
     @ApiModelProperty(value = "实际结束时间字段")
     private String reallyEnd;
 
+    @ApiModelProperty(value = "实际百分比")
+    private String actualPlanPercent;
+
     @ApiModelProperty(value = "计划颜色")
     private String plainColor;
 
