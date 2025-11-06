@@ -36,10 +36,16 @@ public class GanttChartUtils {
             for (String field : dateField) {
                 if (e.containsKey(field)) {
                     if (ObjectNull.isNotNull(e.get(field))) {
-                        try {
-                            dateList.add(DateUtil.parseDate(e.get(field).toString()));
-                        } catch (Exception ignored) {
-                            e.put(field, "请配置单个日期");
+                        String dva = e.get(field).toString();
+                        if(!dva.trim().equals("") && dva.contains("-")) {
+                            try {
+                                dateList.add(DateUtil.parseDate(dva));
+                            } catch (Exception ignored) {
+                                e.put(field, "请配置单个日期");
+                                e.remove(field + DynamicDataUtils.SUFFIX_ECHO);
+                            }
+                        } else {
+                            e.put(field, dva);
                             e.remove(field + DynamicDataUtils.SUFFIX_ECHO);
                         }
                     } else {
