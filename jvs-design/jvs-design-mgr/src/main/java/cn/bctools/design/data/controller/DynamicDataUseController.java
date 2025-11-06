@@ -958,6 +958,9 @@ public class DynamicDataUseController {
                     dateField.add(pageDesignHtml.getGanttForm().getPlainEnd());
                     dateField.add(pageDesignHtml.getGanttForm().getReallyStart());
                     dateField.add(pageDesignHtml.getGanttForm().getReallyEnd());
+                    if(pageDesignHtml.getGanttForm().getActualPlanPercent() != null){
+                        dateField.add(pageDesignHtml.getGanttForm().getActualPlanPercent());
+                    }
                 }
                 List<QueryConditionDto> finalQueryConditions = queryConditions;
                 retrievalKey = pageDesignHtml.getDataPage().getAutoTableFields().stream()
