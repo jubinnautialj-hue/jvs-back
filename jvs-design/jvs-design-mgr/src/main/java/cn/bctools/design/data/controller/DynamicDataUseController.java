@@ -54,7 +54,6 @@ import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.handler.DesignHandler;
 import cn.bctools.design.rule.RuleRunService;
 import cn.bctools.design.rule.RuleStartUtils;
-import cn.bctools.design.rule.api.RunApiController;
 import cn.bctools.design.rule.entity.RuleDesignPo;
 import cn.bctools.design.rule.entity.RunLogPo;
 import cn.bctools.design.rule.service.RuleDesignService;
@@ -68,7 +67,6 @@ import cn.bctools.design.workflow.service.impl.FlowDynamicDataServiceImpl;
 import cn.bctools.function.entity.dto.ExecDto;
 import cn.bctools.function.entity.dto.TableType;
 import cn.bctools.function.entity.po.FunctionBusinessPo;
-import cn.bctools.function.enums.JvsParamType;
 import cn.bctools.function.handler.ExpressionAfterHandler;
 import cn.bctools.function.handler.IJvsFunction;
 import cn.bctools.function.mapper.FunctionBusinessMapper;
@@ -285,10 +283,6 @@ public class DynamicDataUseController {
      */
     RuleStartUtils ruleStartUtils;
     /**
-     * The Run api controller.
-     */
-    RunApiController runApiController;
-    /**
      * The Run log service.
      */
     RunLogService runLogService;
@@ -360,7 +354,7 @@ public class DynamicDataUseController {
         byId.getJsonData().put("userId", UserCurrentUtils.getUserId());
         byId.getJsonData().put("token", token);
 
-        Document document = NoticeVariableUtils.replacement(address.replaceAll("nbsp;", ""), byId.getJsonData());
+        Document document = NoticeVariableUtils.replacement(address.replaceAll("&nbsp;", "").replaceAll("&amp;",""), byId.getJsonData());
         StringBuilder text = new StringBuilder();
         document.getElementsByTag("p").forEach(p -> text.append(p.text()));
 
@@ -958,9 +952,6 @@ public class DynamicDataUseController {
                     dateField.add(pageDesignHtml.getGanttForm().getPlainEnd());
                     dateField.add(pageDesignHtml.getGanttForm().getReallyStart());
                     dateField.add(pageDesignHtml.getGanttForm().getReallyEnd());
-                    if(pageDesignHtml.getGanttForm().getActualPlanPercent() != null){
-                        dateField.add(pageDesignHtml.getGanttForm().getActualPlanPercent());
-                    }
                 }
                 List<QueryConditionDto> finalQueryConditions = queryConditions;
                 retrievalKey = pageDesignHtml.getDataPage().getAutoTableFields().stream()
@@ -2120,7 +2111,7 @@ public class DynamicDataUseController {
                                         if (dataMap.get(finalFormValueHtml.getSecTitle()).equals(e.get(finalFormValueHtml.getSecTitle()))) {
                                             if (dataMap.get(finalFormValueHtml.getLabel()).equals(e.get(finalFormValueHtml.getLabel()))) {
                                                 if (mapDataList.stream().filter(b -> b.get(finalFormValueHtml.getLabel()).equals(dataMap.get(finalFormValueHtml.getLabel()))
-                                                                                     && b.get(finalFormValueHtml.getSecTitle()).equals(dataMap.get(finalFormValueHtml.getSecTitle()))
+                                                        && b.get(finalFormValueHtml.getSecTitle()).equals(dataMap.get(finalFormValueHtml.getSecTitle()))
                                                 ).findAny().isPresent()) {
                                                     dataMap.put("id", e.get("id"));
                                                     dataMap.put("dataId", e.get("id"));
