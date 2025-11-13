@@ -1,6 +1,9 @@
 package cn.bctools.design.workflow.support.process.impl;
 
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
+import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
+import cn.bctools.design.workflow.entity.FlowTask;
 import cn.bctools.design.workflow.entity.FlowTaskPerson;
 import cn.bctools.design.workflow.entity.enums.ProcessStatusEnum;
 import cn.bctools.design.workflow.enums.NodeOperationTypeEnum;
@@ -21,8 +24,10 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * @author zhuxiaokang
@@ -35,14 +40,14 @@ public class PendingProcess implements ProcessInterface {
 
     private final FlowTaskPersonService flowTaskPersonService;
     private final TimeLimitMessageHandler timeLimitMessageHandler;
-
+    private final FlowTaskNoticeService flowTaskNoticeService;
     @Override
     public FlowNextTypeEnum getType() {
         return FlowNextTypeEnum.PENDING;
     }
 
     @Override
-    public void execute(FlowResult flowResult) {
+    public void execute(FlowResult flowResult){
         RuntimeData runtimeData = FlowContextUtil.context().getRuntimeData();
         log.debug("【阶段结果处理】节点：{}", runtimeData.getNodeId());
         // 设置待办人已处理
@@ -57,7 +62,7 @@ public class PendingProcess implements ProcessInterface {
      *
      * @param runtimeData 运行时数据
      */
-    private void updateFlowTaskPersonStatus(RuntimeData runtimeData) {
+    private void updateFlowTaskPersonStatus(RuntimeData runtimeData){
         if (Boolean.FALSE.equals(runtimeData.getChangePersonProcessStatus())) {
             return;
         }
@@ -77,6 +82,25 @@ public class PendingProcess implements ProcessInterface {
         FlowTaskPerson flowTaskPerson = flowTaskPersons.get(0);
         flowTaskPerson.setProcessStatus(ProcessStatusEnum.PROCESSED);
         flowTaskPersonService.updateById(flowTaskPerson);
+        if(flowTaskPerson.getUserId() != null){
+            List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
+                    .eq(FlowTaskNotice::getTaskId, flowTaskPerson.getId())
+                    .eq(FlowTaskNotice::getUserId,flowTaskPerson.getUserId())
+                    .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
+            FlowTask flowTask = runtimeData.getFlowTask();
+            if(removeBizTaskIds != null && removeBizTaskIds.size() > 0) {
+                if(removeBizTaskIds.size() == 1){
+                    flowTaskNoticeService.close(flowTask,removeBizTaskIds);
+                }else {
+                    log.info("消息结果大于一01:{}",removeBizTaskIds.toString());
+                    List<String> newList = new ArrayList<String>();
+                    newList.add(removeBizTaskIds.get(0));
+                    flowTaskNoticeService.close(runtimeData.getFlowTask(),newList);
+                }
+            }
+        }
+
+
     }
 
     /**

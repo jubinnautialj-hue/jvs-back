@@ -46,6 +46,10 @@ public class FlowTaskNotice extends BasalPo {
     @TableField(value = "jvs_app_id")
     private String jvsAppId;
 
+    @ApiModelProperty(value = "应用id")
+    @TableField(value = "user_id")
+    private String userId;
+
     @ApiModelProperty(value = "处理状态：0待处理，1已关闭，2撤回")
     @TableField(value = "status")
     private Integer status;

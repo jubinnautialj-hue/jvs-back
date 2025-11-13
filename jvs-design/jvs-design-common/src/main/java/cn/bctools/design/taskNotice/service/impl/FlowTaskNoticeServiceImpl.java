@@ -84,7 +84,9 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
             Map<String,String> userMap = users.stream().collect(Collectors.toMap(UserDto::getId, UserDto::getAccountName));
             List<FlowNoticeRequestDto> flowTaskList = new ArrayList<>();
             String domain = configServiceApi.domain(TenantContextHolder.getTenantId(), ConfigsTypeEnum.BACKGROUND_PERSONALIZED_CONFIGURATION).getData();
+            Map updateUserIdMap = new HashMap();
             flowTaskPersons.forEach(flowTaskPerson -> {
+
                 FlowNoticeRequestDto flowNoticeRequestDto = new FlowNoticeRequestDto();
                 //访问URL按需进行拼接  需要拼接 jvsAppId
                 String routeUrl = appTaskDto.getTaskFormUrl();
@@ -94,23 +96,27 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
                 flowNoticeRequestDto.setWorkNum(flowTask.getId());
                 flowNoticeRequestDto.setBizInstanceId(flowTask.getId());
                 flowNoticeRequestDto.setBizNodeId(nextNode.getId());
-                flowNoticeRequestDto.setBizTaskId((type != null && "2".equals(type))?flowTaskPerson.getId()+String.valueOf(randomNum):flowTaskPerson.getId());
+                String taskPersonId = (type != null && "2".equals(type))?flowTaskPerson.getId()+"trs"+String.valueOf(randomNum):flowTaskPerson.getId();
+                flowNoticeRequestDto.setBizTaskId(taskPersonId);
                 flowNoticeRequestDto.setCurrentNode(nextNode.getName());
                 flowNoticeRequestDto.setTitle(StringUtils.isEmpty(flowTask.getTitle()) ? flowTask.getName() : flowTask.getTitle());
                 flowNoticeRequestDto.setTaskType(0);
-                flowNoticeRequestDto.setHandler(userMap.get(flowTaskPerson.getUserId()));
+                String personUserId = userMap.get(flowTaskPerson.getUserId());
+                flowNoticeRequestDto.setHandler(personUserId);
                 flowNoticeRequestDto.setHandlerName(flowTaskPerson.getUserName());
                 flowNoticeRequestDto.setApplicantName(flowTask.getCreateBy());
                 flowNoticeRequestDto.setFormUrl(formUrl);
                 flowNoticeRequestDto.setPriority(0);
                 flowNoticeRequestDto.setCreateDate(System. currentTimeMillis());
+                updateUserIdMap.put(taskPersonId,personUserId);
                 flowTaskList.add(flowNoticeRequestDto);
+
             });
            FlowNoticeResponseDto response = sendRequest(FlowTaskNoticeEnum.CREATE, flowTask, flowTaskList, nextNode);
            if (response.isSuccess()){
                JSONObject result = (JSONObject)response.getData();
                Map<String,String> resultMap = (Map<String,String>)result.get("bizTaskAndTaskId");
-               addTaskNotice(resultMap,nextNode, flowTask,FlowTaskNoticeEnum.CREATE);
+               addTaskNotice(resultMap,nextNode, flowTask,FlowTaskNoticeEnum.CREATE,updateUserIdMap);
                return true;
            }
         }
@@ -163,17 +169,21 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
      * @param nextNode
      * @param task
      */
-    private void addTaskNotice(Map<String,String> result,Node nextNode, FlowTask task,FlowTaskNoticeEnum flowTaskNoticeEnum){
+    private void addTaskNotice(Map<String,String> result,Node nextNode, FlowTask task,FlowTaskNoticeEnum flowTaskNoticeEnum,Map updateUserIdMap){
         List<FlowTaskNotice> flowTaskNoticeList = new ArrayList<>();
         for(Map.Entry<String,String> entry:result.entrySet()){
             FlowTaskNotice flowTaskNotice = new FlowTaskNotice();
             flowTaskNotice.setInstanceId(task.getId());
             flowTaskNotice.setNodeId(nextNode.getId());
-            flowTaskNotice.setTaskId(entry.getKey());
+            String resTaskId = entry.getKey();
+            flowTaskNotice.setTaskId(resTaskId);
             flowTaskNotice.setBizTaskId(entry.getValue());
             flowTaskNotice.setJvsAppId(task.getJvsAppId());
             flowTaskNotice.setAppId(appTaskDto.getTaskAppId());
             flowTaskNotice.setStatus(flowTaskNoticeEnum.ordinal());
+            if(updateUserIdMap != null && resTaskId !=null){
+                flowTaskNotice.setUserId(updateUserIdMap.get(resTaskId)==null?"":(String)updateUserIdMap.get(resTaskId));
+            }
             flowTaskNoticeList.add(flowTaskNotice);
         }
         saveBatch(flowTaskNoticeList);

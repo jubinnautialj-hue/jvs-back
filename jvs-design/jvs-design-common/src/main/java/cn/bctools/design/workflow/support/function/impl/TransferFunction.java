@@ -165,26 +165,30 @@ public class TransferFunction extends AbstractFunctionHandler<List<ProxyDto>, Tr
         if (CollectionUtils.isEmpty(flowTaskPersons)) {
             return Collections.emptyList();
         }
-        //关闭待办消息
-        List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
-                .eq(FlowTaskNotice::getInstanceId, flowTaskId)
-                .eq(FlowTaskNotice::getNodeId, nodeId)
-                .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
-        //2025.09.10 关闭已完成的待办提醒通知
-        if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
-            flowTaskNoticeService.close(dto.getFlowTask(),removeBizTaskIds);
-        }
+
         // 若转交人已存在代理配置，则根据代理配置设置转交人
         FlowTaskProxy proxy = flowTaskProxyService.getEffectiveProxyByUserId(transfer.getProxyUserId());
         if (ObjectNull.isNotNull(proxy)) {
             throw new BusinessException("您选择的用户已将任务转交他人请重新选择");
         }
 
+
+
         // 任务转交
         flowTaskPersons.forEach(person -> {
+            //关闭转交人的待办消息
+            List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
+                    .eq(FlowTaskNotice::getTaskId, person.getId())
+                    .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
+            //关闭已完成的待办提醒通知
+            if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
+                flowTaskNoticeService.close(dto.getFlowTask(),removeBizTaskIds);
+            }
             person.setUserId(transfer.getProxyUserId());
             person.setUserName(transfer.getProxyUserName());
         });
+
+
         flowTaskPersonService.updateBatchById(flowTaskPersons);
         //2025.09.08 发送待办提醒通知
         flowTaskNoticeService.create(dto.getFlowTask(), node, flowTaskPersons,"2");

@@ -24,6 +24,7 @@ import cn.bctools.design.workflow.support.timelimit.TimeLimitMessageHandler;
 import cn.bctools.design.workflow.utils.FlowContextUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
  * @author zhuxiaokang
  * 工作流任务审批人服务
  */
+@Slf4j
 @Service
 @AllArgsConstructor
 public class TaskPersonServiceImpl implements TaskPersonService {
@@ -102,21 +104,33 @@ public class TaskPersonServiceImpl implements TaskPersonService {
             flowTaskPersonService.saveBatch(flowTaskPersons);
         } else {
             // 先删除当前节点的所有审批人，再保存下一节点的审批人
-            List<String> removeTaskPersonIds = flowTaskPersonService
+            List<FlowTaskPerson> personList = flowTaskPersonService
                     .list(Wrappers.<FlowTaskPerson>lambdaQuery()
                             .eq(FlowTaskPerson::getFlowTaskId, runtimeData.getFlowTask().getId())
-                            .eq(FlowTaskPerson::getNodeId, runtimeData.getCurrentNode().getId()))
-                            .stream().map(FlowTaskPerson::getId).collect(Collectors.toList());
+                            .eq(FlowTaskPerson::getNodeId, runtimeData.getCurrentNode().getId()));
+            List<String> removeTaskPersonIds =
+                    personList.stream().map(FlowTaskPerson::getId).collect(Collectors.toList());
             applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, removeTaskPersonIds));
             flowTaskPersonService.saveBatch(flowTaskPersons);
-            if(runtimeData.getFlowTaskNode() != null && runtimeData.getFlowTask() != null){
-                List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
-                        .eq(FlowTaskNotice::getInstanceId, runtimeData.getFlowTask().getId())
-                        .eq(FlowTaskNotice::getNodeId, runtimeData.getFlowTaskNode().getNodeId())
-                        .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
-                //2025.09.10 关闭已完成的待办提醒通知
-                if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
-                    flowTaskNoticeService.close(runtimeData.getFlowTask(),removeBizTaskIds);
+
+            if(personList != null && personList.size() > 0) {
+                for (FlowTaskPerson person : personList) {
+                    List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
+                            .eq(FlowTaskNotice::getTaskId, person.getId())
+                            .eq(FlowTaskNotice::getUserId,person.getUserId())
+                            .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
+                    //2025.09.10 关闭已完成的待办提醒通知
+                    if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
+                        if(removeBizTaskIds.size() == 1){
+                            flowTaskNoticeService.close(runtimeData.getFlowTask(),removeBizTaskIds);
+                        }else {
+                            log.info("消息结果大于一02:{}",removeBizTaskIds.toString());
+                            List<String> newList = new ArrayList<String>();
+                            newList.add(removeBizTaskIds.get(0));
+                            flowTaskNoticeService.close(runtimeData.getFlowTask(),newList);
+                        }
+
+                    }
                 }
             }
         }
