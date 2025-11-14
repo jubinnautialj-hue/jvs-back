@@ -110,10 +110,10 @@ public class TaskPersonServiceImpl implements TaskPersonService {
                             .eq(FlowTaskPerson::getNodeId, runtimeData.getCurrentNode().getId()));
             List<String> removeTaskPersonIds =
                     personList.stream().map(FlowTaskPerson::getId).collect(Collectors.toList());
-            applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, removeTaskPersonIds));
-            flowTaskPersonService.saveBatch(flowTaskPersons);
-
+            List<String> userIds =
+                    personList.stream().map(FlowTaskPerson::getUserId).collect(Collectors.toList());
             if(personList != null && personList.size() > 0) {
+                log.info("代码移除审批人:{} . {}",removeTaskPersonIds,userIds);
                 for (FlowTaskPerson person : personList) {
                     List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
                             .eq(FlowTaskNotice::getTaskId, person.getId())
@@ -133,6 +133,11 @@ public class TaskPersonServiceImpl implements TaskPersonService {
                     }
                 }
             }
+
+            applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, removeTaskPersonIds));
+            flowTaskPersonService.saveBatch(flowTaskPersons);
+
+
         }
         //2025.09.08 发送待办提醒通知
         flowTaskNoticeService.create(runtimeData.getFlowTask(), nextNode, flowTaskPersons,null);
