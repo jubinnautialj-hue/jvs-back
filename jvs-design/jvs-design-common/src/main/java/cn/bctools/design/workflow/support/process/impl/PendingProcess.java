@@ -84,7 +84,7 @@ public class PendingProcess implements ProcessInterface {
         flowTaskPersonService.updateById(flowTaskPerson);
         if(flowTaskPerson.getUserId() != null){
             List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
-                    .eq(FlowTaskNotice::getTaskId, flowTaskPerson.getId())
+                    .like(FlowTaskNotice::getTaskId, flowTaskPerson.getId())
                     .eq(FlowTaskNotice::getUserId,flowTaskPerson.getUserId())
                     .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
             FlowTask flowTask = runtimeData.getFlowTask();

@@ -142,8 +142,7 @@ public class CompositeFlowHandler extends AbstractCompositeFlowHandler {
                 if (ObjectNull.isNotNull(runtimeData.getFlowTaskNodes())) {
                     // 删除工作流流转节点数据
                     flowTaskNodeService.removeTaskAll(flowTask.getId());
-                    // 删除待办人所有信息
-                    flowTaskPersonService.removeTaskAll(flowTask.getId());
+                    //消息待办
                     List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
                                     .eq(FlowTaskNotice::getInstanceId, flowTask.getId())
                                     .eq(FlowTaskNotice::getStatus,0))
@@ -151,6 +150,9 @@ public class CompositeFlowHandler extends AbstractCompositeFlowHandler {
                     if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
                         flowTaskNoticeService.close(flowTask,removeBizTaskIds);
                     }
+                    // 删除待办人所有信息
+                    flowTaskPersonService.removeTaskAll(flowTask.getId());
+
                 }
                 // 删除并行任务信息
                 if (Boolean.TRUE.equals(flowContext.getExistsParallel())) {

@@ -178,7 +178,8 @@ public class TransferFunction extends AbstractFunctionHandler<List<ProxyDto>, Tr
         flowTaskPersons.forEach(person -> {
             //关闭转交人的待办消息
             List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
-                    .eq(FlowTaskNotice::getTaskId, person.getId())
+                    .like(FlowTaskNotice::getTaskId, person.getId())
+                    .eq(FlowTaskNotice::getUserId,person.getUserId())
                     .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
             //关闭已完成的待办提醒通知
             if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){

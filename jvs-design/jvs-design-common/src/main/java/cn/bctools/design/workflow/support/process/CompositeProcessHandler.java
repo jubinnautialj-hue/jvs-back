@@ -99,10 +99,10 @@ public class CompositeProcessHandler {
             FlowTaskNode flowTaskNode = runtimeTaskNodeService.saveResult(ProcessStatusEnum.PROCESSED);
             if (flowTaskNode != null) {
                 // 删除当前节点待办人信息
-                List<String> removeTaskPersonIds = flowTaskPersonService
-                        .list(Wrappers.<FlowTaskPerson>lambdaQuery().eq(FlowTaskPerson::getFlowTaskId, runtimeData.getFlowTask().getId()).eq(FlowTaskPerson::getNodeId, runtimeData.getCurrentNode().getId()))
-                        .stream().map(FlowTaskPerson::getId).collect(Collectors.toList());
-                applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, removeTaskPersonIds));
+                List<FlowTaskPerson> personList = flowTaskPersonService
+                        .list(Wrappers.<FlowTaskPerson>lambdaQuery().eq(FlowTaskPerson::getFlowTaskId, runtimeData.getFlowTask().getId()).eq(FlowTaskPerson::getNodeId, runtimeData.getCurrentNode().getId()));
+                List<String> removeTaskPersonIds = personList.stream().map(p-> p.getId()+","+p.getUserId()).collect(Collectors.toList());
+                applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, flowTask,removeTaskPersonIds));
                 // 变更任务表最新信息
                 LinkedList<CourseDto> courseDtos = Optional.ofNullable(flowTask.getCourses()).orElse(new LinkedList<>());
                 courseDtos.add(flowTaskNode.getCourse());

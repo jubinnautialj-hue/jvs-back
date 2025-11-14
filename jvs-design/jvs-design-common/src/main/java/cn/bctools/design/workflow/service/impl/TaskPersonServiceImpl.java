@@ -109,32 +109,8 @@ public class TaskPersonServiceImpl implements TaskPersonService {
                             .eq(FlowTaskPerson::getFlowTaskId, runtimeData.getFlowTask().getId())
                             .eq(FlowTaskPerson::getNodeId, runtimeData.getCurrentNode().getId()));
             List<String> removeTaskPersonIds =
-                    personList.stream().map(FlowTaskPerson::getId).collect(Collectors.toList());
-            List<String> userIds =
-                    personList.stream().map(FlowTaskPerson::getUserId).collect(Collectors.toList());
-            if(personList != null && personList.size() > 0) {
-                log.info("代码移除审批人:{} . {}",removeTaskPersonIds,userIds);
-                for (FlowTaskPerson person : personList) {
-                    List<String> removeBizTaskIds= flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
-                            .eq(FlowTaskNotice::getTaskId, person.getId())
-                            .eq(FlowTaskNotice::getUserId,person.getUserId())
-                            .eq(FlowTaskNotice::getStatus, 0)).stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
-                    //2025.09.10 关闭已完成的待办提醒通知
-                    if(removeBizTaskIds != null && removeBizTaskIds.size() > 0){
-                        if(removeBizTaskIds.size() == 1){
-                            flowTaskNoticeService.close(runtimeData.getFlowTask(),removeBizTaskIds);
-                        }else {
-                            log.info("消息结果大于一02:{}",removeBizTaskIds.toString());
-                            List<String> newList = new ArrayList<String>();
-                            newList.add(removeBizTaskIds.get(0));
-                            flowTaskNoticeService.close(runtimeData.getFlowTask(),newList);
-                        }
-
-                    }
-                }
-            }
-
-            applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, removeTaskPersonIds));
+                    personList.stream().map(p-> p.getId()+","+p.getUserId()).collect(Collectors.toList());
+            applicationEventPublisher.publishEvent(new RemoveTaskPersonEvent(this, runtimeData.getFlowTask(),removeTaskPersonIds));
             flowTaskPersonService.saveBatch(flowTaskPersons);
 
 
