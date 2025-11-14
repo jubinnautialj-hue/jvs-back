@@ -101,14 +101,15 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
                 flowNoticeRequestDto.setCurrentNode(nextNode.getName());
                 flowNoticeRequestDto.setTitle(StringUtils.isEmpty(flowTask.getTitle()) ? flowTask.getName() : flowTask.getTitle());
                 flowNoticeRequestDto.setTaskType(0);
-                String personUserId = userMap.get(flowTaskPerson.getUserId());
-                flowNoticeRequestDto.setHandler(personUserId);
+                String userId = flowTaskPerson.getUserId();
+                String userAccountName = userMap.get(userId);
+                flowNoticeRequestDto.setHandler(userAccountName);
                 flowNoticeRequestDto.setHandlerName(flowTaskPerson.getUserName());
                 flowNoticeRequestDto.setApplicantName(flowTask.getCreateBy());
                 flowNoticeRequestDto.setFormUrl(formUrl);
                 flowNoticeRequestDto.setPriority(0);
                 flowNoticeRequestDto.setCreateDate(System. currentTimeMillis());
-                updateUserIdMap.put(taskPersonId,personUserId);
+                updateUserIdMap.put(taskPersonId,userId);
                 flowTaskList.add(flowNoticeRequestDto);
 
             });
