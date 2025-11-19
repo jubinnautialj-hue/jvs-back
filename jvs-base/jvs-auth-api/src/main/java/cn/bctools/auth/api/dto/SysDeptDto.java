@@ -1,6 +1,6 @@
 package cn.bctools.auth.api.dto;
 
-import cn.bctools.auth.api.enums.DeptEnum;
+import cn.bctools.common.enums.DeptEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

@@ -539,7 +539,6 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
                 .eq("taskPerson.hang", Boolean.FALSE)
                 .eq("t.task_status", FlowTaskStatusEnum.PENDING)
                 .eq("t.test", Boolean.FALSE)
-                .eq(StringUtils.isNotBlank(dto.getTaskId()), "t.id", dto.getTaskId())
                 // 无表单，不显示
                 .isNotNull("t.form_id")
                 .like(StringUtils.isNotBlank(dto.getFlowName()), "t.name", dto.getFlowName())
@@ -747,6 +746,7 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
     public void fillTaskDesignBody(FlowTask flowTask) {
         if (ObjectNull.isNotNull(flowTask.getFlowDesign())) {
             flowTask.setDesignBody(flowTask.getFlowDesign());
+            return;
         }
         // 没保存设计，则根据设计版本id获取工作流设计
         setFlowDesignBody(flowTask);

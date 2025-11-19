@@ -44,7 +44,7 @@ public class GroupUserUpdateReqHandler extends AbstractCmdHandler {
 
         // 推送
         ImPacket updatePacket = new ImPacket(Command.COMMAND_GROUP_USER_UPDATE_RESP, new RespBody(Command.COMMAND_GROUP_USER_UPDATE_RESP, JSON.toJSONString(groupUserUpdateReqBody)).toByte());
-        JimServerAPI.sendToGroup(mark, updatePacket);
+        JimServerAPI.sendToGroup(mark, updatePacket,channelContext.getTioChannelContext().userid);
 
         // 修改组用户信息(当前仅支持修改扩展信息)
         ImServerConfig imServerConfig = ImConfig.Global.get();

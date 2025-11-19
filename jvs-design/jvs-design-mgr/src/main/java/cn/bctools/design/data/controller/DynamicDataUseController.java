@@ -2111,7 +2111,7 @@ public class DynamicDataUseController {
                                         if (dataMap.get(finalFormValueHtml.getSecTitle()).equals(e.get(finalFormValueHtml.getSecTitle()))) {
                                             if (dataMap.get(finalFormValueHtml.getLabel()).equals(e.get(finalFormValueHtml.getLabel()))) {
                                                 if (mapDataList.stream().filter(b -> b.get(finalFormValueHtml.getLabel()).equals(dataMap.get(finalFormValueHtml.getLabel()))
-                                                        && b.get(finalFormValueHtml.getSecTitle()).equals(dataMap.get(finalFormValueHtml.getSecTitle()))
+                                                                                     && b.get(finalFormValueHtml.getSecTitle()).equals(dataMap.get(finalFormValueHtml.getSecTitle()))
                                                 ).findAny().isPresent()) {
                                                     dataMap.put("id", e.get("id"));
                                                     dataMap.put("dataId", e.get("id"));

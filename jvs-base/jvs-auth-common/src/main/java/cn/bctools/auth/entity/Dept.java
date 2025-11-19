@@ -1,6 +1,6 @@
 package cn.bctools.auth.entity;
 
-import cn.bctools.auth.api.enums.DeptEnum;
+import cn.bctools.common.enums.DeptEnum;
 import com.baomidou.mybatisplus.annotation.*;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;

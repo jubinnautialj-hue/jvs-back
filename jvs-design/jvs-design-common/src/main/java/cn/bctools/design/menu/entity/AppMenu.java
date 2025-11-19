@@ -6,6 +6,7 @@ import cn.bctools.database.handler.Fastjson2TypeHandler;
 import cn.bctools.design.crud.entity.DesignRole;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.menu.entity.dto.PermissionIdentificationDto;
+import cn.bctools.design.menu.entity.handler.PermissionIdentificationHandler;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -97,7 +98,7 @@ public class AppMenu extends BasalPo implements Serializable {
     private JSONArray permissionJson;
 
     @ApiModelProperty(value = "设计相关的资源", notes = "2.1.9")
-    @TableField(value = "permission", typeHandler = Fastjson2TypeHandler.class)
+    @TableField(typeHandler = Fastjson2TypeHandler.class)
     private PermissionIdentificationDto permission;
 
     @ApiModelProperty("数据模型ID")

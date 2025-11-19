@@ -2,7 +2,7 @@ package cn.bctools.auth.feign;
 
 import cn.bctools.auth.api.api.AuthDeptServiceApi;
 import cn.bctools.auth.api.dto.SysDeptDto;
-import cn.bctools.auth.api.enums.DeptEnum;
+import cn.bctools.common.enums.DeptEnum;
 import cn.bctools.auth.entity.Dept;
 import cn.bctools.auth.entity.UserTenant;
 import cn.bctools.auth.service.DeptService;
@@ -13,7 +13,6 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.context.annotation.Bean;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -36,14 +35,13 @@ public class DeptApiImpl implements AuthDeptServiceApi {
 
     @Override
     public R<List<SysDeptDto>> getAll() {
-        List<Dept> list = deptService.list(Wrappers.<Dept>lambdaQuery().select(Dept::getId, Dept::getName, Dept::getSort, Dept::getParentId, Dept::getLeaderId));
+        List<Dept> list = deptService.list(Wrappers.<Dept>lambdaQuery());
         return R.ok(BeanCopyUtil.copys(list, SysDeptDto.class));
     }
 
     @Override
     public R<SysDeptDto> getById(String deptId) {
         Dept dept = deptService.getOne(Wrappers.<Dept>lambdaQuery()
-                .select(Dept::getId, Dept::getName, Dept::getType, Dept::getParentId)
                 .eq(Dept::getId, deptId));
         return R.ok(BeanCopyUtil.copy(dept, SysDeptDto.class));
     }
@@ -54,7 +52,6 @@ public class DeptApiImpl implements AuthDeptServiceApi {
             return R.ok(Collections.emptyList());
         }
         List<Dept> list = deptService.list(Wrappers.<Dept>lambdaQuery()
-                .select(Dept::getId, Dept::getName, Dept::getParentId)
                 .in(Dept::getId, deptIds));
         return R.ok(BeanCopyUtil.copys(list, SysDeptDto.class));
     }

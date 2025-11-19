@@ -102,7 +102,7 @@ public class CrudPageController {
         return R.ok(formPo.getId());
     }
 
-    @Log
+    @Log(callBackClass = JvsLogServiceImpl.class)
     @PostMapping("/update/{id}")
     @ApiOperation("更新")
     @Transactional(rollbackFor = Exception.class)
