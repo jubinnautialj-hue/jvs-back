@@ -254,8 +254,9 @@ public class SpringContextUtil implements ApplicationContextAware {
      * @return
      */
     public static boolean thisServerStats() {
-        String ip = getBean(NacosDiscoveryProperties.class).getIp();
-        return SpringContextUtil.getBean(NacosDiscoveryClient.class).getInstances(SpringContextUtil.getApplicationContextName()).stream().anyMatch(e -> e.getHost().equals(ip) && e.getMetadata().containsValue(random));
+        NacosDiscoveryProperties bean = getBean(NacosDiscoveryProperties.class);
+        String ip = bean.getIp();
+        return SpringContextUtil.getBean(NacosDiscoveryClient.class).getInstances(SpringContextUtil.getApplicationContextName()).stream().anyMatch(e -> e.getHost().equals(ip) && e.getPort() == bean.getPort());
     }
 
     /**

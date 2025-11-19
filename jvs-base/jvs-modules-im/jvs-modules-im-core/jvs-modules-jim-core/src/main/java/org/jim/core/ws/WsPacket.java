@@ -17,7 +17,7 @@ public class WsPacket extends ImPacket {
 	public static final int MAX_LENGTH_OF_BODY = (int) (1024 * 1024 * 2.1); //只支持多少M数据
 	public static final int MINIMUM_HEADER_LENGTH = 2;
 
-	public static final int MAX_BODY_LENGTH = 1024 * 512; //最多接受的1024 * 512(半M)数据
+	public static final int MAX_BODY_LENGTH = 1024 * 512*5; //最多接受的1024 * 512(半M)数据
 
 	public static final String CHARSET_NAME = "utf-8";
 

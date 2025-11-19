@@ -5,7 +5,6 @@ import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
-import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.design.config.DesignConfig;
 import cn.bctools.design.constant.DynamicDataConstant;
 import cn.bctools.design.crud.mapper.FormMapper;
@@ -27,6 +26,8 @@ import cn.bctools.design.data.service.*;
 import cn.bctools.design.identification.entity.Identification;
 import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.notice.handler.enums.TriggerTypeEnum;
+import cn.bctools.design.permission.service.DesignPermissionService;
+import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.handler.DesignHandler;
 import cn.bctools.design.project.mapper.JvsAppMapper;
 import cn.bctools.design.project.service.JvsAppLogService;
@@ -89,6 +90,7 @@ public class DynamicAppIdentificationUseController {
      * The Data field service.
      */
     DataFieldService dataFieldService;
+    DesignPermissionService designPermissionService;
     JvsAppMapper appMapper;
     /**
      * The Form mapper.
@@ -180,6 +182,7 @@ public class DynamicAppIdentificationUseController {
             }
             queryGroupConditions = Collections.singletonList(queryConditions);
         }
+        designPermissionService.handleDesignDataScope(modelId);
         Map<String, FieldBasicsHtml> collectMap = dataFieldService.getAllField(appId, modelId, true, true, e -> false).stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity(), (e1, e2) -> e1));
         List<String> collect = new ArrayList<>(collectMap.keySet());
         Set<String> stringSet = new HashSet<>();
@@ -198,7 +201,7 @@ public class DynamicAppIdentificationUseController {
     @PostMapping("/save/{modelIdentification}")
     public R saveDynamicData(@PathVariable("modelIdentification") String modelIdentification, @RequestBody Map<String, Object> data) {
         Identification byIdentifierApp = identificationService.getByIdentifierApp(modelIdentification);
-        DynamicDataUtils.checkPermit();
+        //DynamicDataUtils.checkPermit();
         DynamicDataUtils.clearEcho(data);
         dynamicDataService.checkDataModel(data, byIdentifierApp.getDesignId());
         RuleExecuteDto executeDto = dynamicDataService.save(byIdentifierApp.getJvsAppId(), byIdentifierApp.getDesignId(), data);
@@ -210,6 +213,9 @@ public class DynamicAppIdentificationUseController {
     @DeleteMapping("/delete/{modelIdentification}/{dataId}")
     public R deleteDynamicData(@PathVariable("modelIdentification") String modelIdentification, @PathVariable("dataId") String dataId) {
         Identification byIdentifierApp = identificationService.getByIdentifierApp(modelIdentification);
+        DesignRoleSettingDto dataModelPermission = designPermissionService.getDataModelPermission(byIdentifierApp.getDesignId());
+        //获取这个模型的数据权限有哪些
+        DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
         Map<String, Object> data = dynamicDataService.querySingle(byIdentifierApp.getJvsAppId(), byIdentifierApp.getDesignId(), dataId);
         RuleExecuteDto executeDto = dynamicDataService.remove(byIdentifierApp.getDesignId(), dataId);
         return R.ok().setMsg("删除成功");
@@ -220,6 +226,9 @@ public class DynamicAppIdentificationUseController {
     @PostMapping("/batch/delete/{modelIdentification}")
     public R batchDeleteDynamicData(@PathVariable("modelIdentification") String modelIdentification, @RequestBody List<String> ids) {
         Identification byIdentifierApp = identificationService.getByIdentifierApp(modelIdentification);
+        DesignRoleSettingDto dataModelPermission = designPermissionService.getDataModelPermission(byIdentifierApp.getDesignId());
+        //获取这个模型的数据权限有哪些
+        DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
         List<Map> maps = dynamicDataService.getByIds(byIdentifierApp.getDesignId(), ids);
         for (Map<String, Object> map : maps) {
             String id = String.valueOf(map.get("id"));
@@ -233,8 +242,10 @@ public class DynamicAppIdentificationUseController {
     @PostMapping("/update/{modelIdentification}/{dataId}")
     public R updateDynamicData(@PathVariable("modelIdentification") String modelIdentification, @PathVariable("dataId") String dataId, @RequestBody Map<String, Object> data) {
         Identification byIdentifierApp = identificationService.getByIdentifierApp(modelIdentification);
-
-        DynamicDataUtils.checkPermit();
+        DesignRoleSettingDto dataModelPermission = designPermissionService.getDataModelPermission(byIdentifierApp.getDesignId());
+        //获取这个模型的数据权限有哪些
+        DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
+        //DynamicDataUtils.checkPermit();
         DynamicDataUtils.clearEcho(data);
         String designId = DynamicDataUtils.getDesignId();
         Map<String, FieldBasicsHtml> fieldsMap =
@@ -310,7 +321,9 @@ public class DynamicAppIdentificationUseController {
     @GetMapping("/query/list/{modelIdentification}")
     public R<List<Map<String, Object>>> queryList(@PathVariable("modelIdentification") String modelIdentification, @ApiParam(name = "需要查询的字段", required = true) @RequestParam("fieldKey") String fieldKey) {
         Identification byIdentifierApp = identificationService.getByIdentifierApp(modelIdentification);
-
+        DesignRoleSettingDto dataModelPermission = designPermissionService.getDataModelPermission(byIdentifierApp.getDesignId());
+        //获取这个模型的数据权限有哪些
+        DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
         DataModelPo one = dataModelService.getOne(Wrappers.query(new DataModelPo().setAppId(byIdentifierApp.getJvsAppId()).setId(byIdentifierApp.getDesignId())));
         if (ObjectNull.isNull(one)) {
             throw new BusinessException("应用错误或设计不存在");
@@ -336,6 +349,9 @@ public class DynamicAppIdentificationUseController {
     @Transactional(rollbackFor = Exception.class)
     public R<List<Map<String, Object>>> postQueryList(@PathVariable("modelIdentification") String modelIdentification, @RequestBody QueryListDto queryPageDto) {
         Identification byIdentifierApp = identificationService.getByIdentifierApp(modelIdentification);
+        DesignRoleSettingDto dataModelPermission = designPermissionService.getDataModelPermission(byIdentifierApp.getDesignId());
+        //获取这个模型的数据权限有哪些
+        DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
         if (ObjectNull.isNull(queryPageDto.getFieldList())) {
             List<String> fieldKeys = dataFieldService.getFieldKeys(byIdentifierApp.getJvsAppId(), byIdentifierApp.getDesignId());
             queryPageDto.setFieldList(fieldKeys);
@@ -355,6 +371,9 @@ public class DynamicAppIdentificationUseController {
         Identification byIdentifierApp = identificationService.getByIdentifierApp(modelIdentification);
         //设置数据权限
         DynamicDataUtils.dataModelScope(byIdentifierApp.getDesignId());
+        DesignRoleSettingDto dataModelPermission = designPermissionService.getDataModelPermission(byIdentifierApp.getDesignId());
+        //获取这个模型的数据权限有哪些
+        DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
         //查询单条数据，并处理数据权限，并添加默认按钮,不做转换
         Map<String, Object> data = dynamicDataService.querySingle(byIdentifierApp.getJvsAppId(), byIdentifierApp.getDesignId(), dataId, true);
         List<FieldBasicsHtml> allField = dataFieldService.getAllField(byIdentifierApp.getJvsAppId(), byIdentifierApp.getDesignId(), true, true);
@@ -370,9 +389,10 @@ public class DynamicAppIdentificationUseController {
     @GetMapping("/query/single/{modelIdentification}/{dataId}")
     public R<Map<String, Object>> querySingle(@PathVariable("modelIdentification") String modelIdentification, @PathVariable("dataId") String dataId) {
         Identification byIdentifierApp = identificationService.getByIdentifierApp(modelIdentification);
-
         //设置数据权限
-        DynamicDataUtils.dataModelScope(byIdentifierApp.getDesignId());
+        DesignRoleSettingDto dataModelPermission = designPermissionService.getDataModelPermission(byIdentifierApp.getDesignId());
+        //获取这个模型的数据权限有哪些
+        DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
         //查询单条数据，并处理数据权限，并添加默认按钮,不做转换
         Map<String, Object> data = dynamicDataService.querySingle(byIdentifierApp.getJvsAppId(), byIdentifierApp.getDesignId(), dataId, true);
         //做数据转换操作
@@ -390,7 +410,11 @@ public class DynamicAppIdentificationUseController {
     @GetMapping("/query/field/{modelId}/{dataId}/{fieldId}")
     public R<Object> queryField(@PathVariable("modelIdentification") String modelIdentification, @PathVariable("dataId") String dataId, @PathVariable("fieldId") String fieldId) {
         Identification byIdentifierApp = identificationService.getByIdentifierApp(modelIdentification);
-        DynamicDataUtils.dataModelScope(byIdentifierApp.getDesignId());
+        //设置数据权限
+        DesignRoleSettingDto dataModelPermission = designPermissionService.getDataModelPermission(byIdentifierApp.getDesignId());
+        //获取这个模型的数据权限有哪些
+        DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
+//        DynamicDataUtils.dataModelScope(byIdentifierApp.getDesignId());
         return R.ok(dynamicDataService.queryField(byIdentifierApp.getJvsAppId(), byIdentifierApp.getDesignId(), dataId, fieldId));
     }
 

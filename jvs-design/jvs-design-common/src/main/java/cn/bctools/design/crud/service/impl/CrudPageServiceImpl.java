@@ -290,7 +290,7 @@ public class CrudPageServiceImpl extends ServiceImpl<CrudPageMapper, CrudPage> i
             Set<String> permit = RoleUtils.getPermitOperation(designRoles, buttons);
             // 操作按钮权限过滤
             buttons.removeIf(button -> !permit.contains(button.getName()));
-            first = buttons.stream().filter(e -> e.getType().equals(ButtonTypeEnum.btn_delete)).findFirst();
+            first = buttons.stream().filter(e -> ButtonTypeEnum.btn_delete.equals(e.getType())).findFirst();
             buttons.addAll(defaultButtonDesignHtmls);
             if (first.isPresent()) {
                 ButtonDesignHtml o = first.get();

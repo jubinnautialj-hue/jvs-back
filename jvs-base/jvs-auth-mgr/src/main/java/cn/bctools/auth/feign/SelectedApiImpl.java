@@ -83,7 +83,7 @@ public class SelectedApiImpl implements SelectedServiceApi {
             }
         } else {
             list = deptService.list(new LambdaQueryWrapper<Dept>()
-                    .select(Dept::getId, Dept::getName, Dept::getParentId, Dept::getSort)
+                    .select(Dept::getId, Dept::getName, Dept::getParentId, Dept::getSort, Dept::getType)
                     .like(deptBoolean, Dept::getName, searchDto.getValue())
                     .orderByDesc(Dept::getCreateTime));
         }

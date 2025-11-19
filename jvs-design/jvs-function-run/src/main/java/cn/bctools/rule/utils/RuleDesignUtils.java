@@ -594,7 +594,7 @@ public class RuleDesignUtils {
                 try {
                     execute = bean.execute(req, variableMap);
                 } catch (Exception e) {
-                    log.error("节点执行异常", e);
+                    log.error("节点执行异常", StackTraceElementUtils.logThrowableToString(e));
                     throw new RunParameterException(e.getMessage(), body);
                 }
                 if (ObjectNull.isNotNull(bind)) {

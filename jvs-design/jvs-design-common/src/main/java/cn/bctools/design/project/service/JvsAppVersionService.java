@@ -111,4 +111,12 @@ public interface JvsAppVersionService extends IService<JvsAppVersion> {
      * @return Map<模式, 模式下的应用id集合>
      */
     Map<AppVersionTypeEnum, Set<String>> groupAppIdByVersionType(Collection<String> appIds);
+
+    /**
+     * 根据所属应用唯一标识获取所属租户id
+     *
+     * @param affiliationApp 所属应用唯一标识
+     * @return 租户id
+     */
+    String getTenantIdByAffiliationId(String affiliationApp);
 }

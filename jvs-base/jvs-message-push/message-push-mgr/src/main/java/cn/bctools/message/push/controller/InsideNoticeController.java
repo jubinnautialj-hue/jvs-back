@@ -139,8 +139,9 @@ public class InsideNoticeController {
                 .eq(StrUtil.isNotBlank(dto.getClientCode()), InsideNotice::getClientCode, dto.getClientCode())
                 .eq(ObjectUtil.isNotNull(dto.getLargeCategories()), InsideNotice::getLargeCategories, dto.getLargeCategories())
                 .eq(ObjectUtil.isNotNull(dto.getSubClass()), InsideNotice::getSubClass, dto.getSubClass())
+                .orderByDesc(InsideNotice::getCreateTime)
                 .orderByAsc(InsideNotice::getReadIs)
-                .orderByDesc(InsideNotice::getCreateTime);
+                ;
     }
 
     /**

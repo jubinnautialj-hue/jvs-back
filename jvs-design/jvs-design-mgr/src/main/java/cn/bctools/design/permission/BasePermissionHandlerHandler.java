@@ -28,9 +28,10 @@ public interface BasePermissionHandlerHandler {
      * @param jvsApp             应用
      * @param requestUri         请求对象
      * @param variablesAttribute 请求参数
+     * @param method
      * @return the boolean
      * @throws BusinessException the business exception
      */
-    boolean check(UserDto userDto, String appId, JvsApp jvsApp, String requestUri, Map<String, Object> variablesAttribute) throws BusinessException;
+    boolean check(UserDto userDto, String appId, JvsApp jvsApp, String requestUri, Map<String, Object> variablesAttribute, String method) throws BusinessException;
 
 }

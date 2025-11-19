@@ -9,6 +9,8 @@ import cn.bctools.design.data.fields.dto.QueryConditionDto;
 import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
+import cn.bctools.design.permission.ResourcePermissionHandler;
+import cn.bctools.design.permission.service.DesignPermissionService;
 import cn.bctools.design.rule.impl.datamodel.FieldStructureUtils;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.design.util.ModeUtils;
@@ -51,13 +53,19 @@ public class DataModelListServiceImpl implements BaseCustomFunctionInterface<Dat
     DynamicDataService dynamicDataService;
     DataFieldService fieldService;
     DataModelService dataModelService;
-
+    DesignPermissionService designPermissionService;
 
     @Override
     @SneakyThrows
     public Object execute(DataModelListDto dataModelDto, Map<String, Object> params) {
         String dataModelId = dataModelDto.getDataModelId();
-        DynamicDataUtils.freePermit();
+            //判断请求入口是否是模型入口
+        if (ResourcePermissionHandler.matcher()) {
+            //如果是那这里需要根据设计 id重新获取数据权限
+            designPermissionService.handleDesignDataScope(dataModelId);
+        } else {
+            DynamicDataUtils.freePermit();
+        }
         List<String> fieldList = dataModelDto.getFields();
         List<QueryConditionDto> queryConditions = dataModelDto.getBody();
         Criteria criteria = DynamicDataUtils.buildDynamicCriteria(queryConditions);

@@ -55,6 +55,7 @@ import io.swagger.annotations.Api;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.oauth2.server.authorization.OAuth2Authorization;
 import org.springframework.security.oauth2.server.authorization.OAuth2AuthorizationService;
 import org.springframework.security.oauth2.server.authorization.OAuth2TokenType;
 import org.springframework.transaction.annotation.Transactional;
@@ -211,8 +212,8 @@ public class JvsAppBaseController {
         AppRoleDto appRole = Optional.ofNullable(appDto.getRole()).orElseGet(AppRoleDto::new);
         // 当前用户是否是应用管理员
         if (userDto.getId().equals(appDto.getCreateById()) ||
-                userDto.getAdminFlag() ||
-                service.checkRole(appRole.getAdminMember(), UserCurrentUtils.getCurrentUser())) {
+            userDto.getAdminFlag() ||
+            service.checkRole(appRole.getAdminMember(), UserCurrentUtils.getCurrentUser())) {
             appDto.getAppRoles().add(Get.name(AppRoleDto::getAdminMember));
         }
         // 当前用户是否是开发人员
@@ -220,6 +221,15 @@ public class JvsAppBaseController {
             appDto.getAppRoles().add(Get.name(AppRoleDto::getDevMember));
         }
         return appDto;
+    }
+
+    @ApiOperation("获取用户信息,包含模拟用户")
+    @GetMapping("/user/info")
+    public R<UserDto> userInfo() {
+        if (ModeUtils.whetherAnalogUser()) {
+            return R.ok(ModeUtils.getSwitchMode().getAnalogUser());
+        }
+        return R.ok(UserCurrentUtils.getCurrentUser());
     }
 
     @ApiOperation("模式切换")
@@ -331,23 +341,23 @@ public class JvsAppBaseController {
                     buttonDesignHtml.setPosition("top");
                     buttonDesignHtml.setType(ButtonTypeEnum.btn_add);
                     String stra = "{\n" +
-                            "        \"formdata\":[\n" +
-                            "          {\n" +
-                            "            \"forms\":[\n" +
-                            "            ],\n" +
-                            "            \"formsetting\":{\n" +
-                            "              \"labelposition\":\"top\",\n" +
-                            "              \"labelwidth\":80,\n" +
-                            "              \"formsize\":\"mini\",\n" +
-                            "              \"btnSetting\":[\n" +
-                            "              ],\n" +
-                            "              \"fullscreen\":false\n" +
-                            "            },\n" +
-                            "            \"autoTableFields\":[\n" +
-                            "            ]\n" +
-                            "          }],\n" +
-                            "        \"formType\":\"normalForm\"\n" +
-                            "      }";
+                                  "        \"formdata\":[\n" +
+                                  "          {\n" +
+                                  "            \"forms\":[\n" +
+                                  "            ],\n" +
+                                  "            \"formsetting\":{\n" +
+                                  "              \"labelposition\":\"top\",\n" +
+                                  "              \"labelwidth\":80,\n" +
+                                  "              \"formsize\":\"mini\",\n" +
+                                  "              \"btnSetting\":[\n" +
+                                  "              ],\n" +
+                                  "              \"fullscreen\":false\n" +
+                                  "            },\n" +
+                                  "            \"autoTableFields\":[\n" +
+                                  "            ]\n" +
+                                  "          }],\n" +
+                                  "        \"formType\":\"normalForm\"\n" +
+                                  "      }";
                     buttonDesignHtml.setForm(JSONObject.parseObject(stra, HashMap.class));
                     buttons.add(buttonDesignHtml);
                 }
@@ -362,23 +372,23 @@ public class JvsAppBaseController {
                     buttonDesignHtml.setPosition("line");
                     buttonDesignHtml.setType(ButtonTypeEnum.btn_modify);
                     String stra = "{\n" +
-                            "        \"formdata\":[\n" +
-                            "          {\n" +
-                            "            \"forms\":[\n" +
-                            "            ],\n" +
-                            "            \"formsetting\":{\n" +
-                            "              \"labelposition\":\"top\",\n" +
-                            "              \"labelwidth\":80,\n" +
-                            "              \"formsize\":\"mini\",\n" +
-                            "              \"btnSetting\":[\n" +
-                            "              ],\n" +
-                            "              \"fullscreen\":false\n" +
-                            "            },\n" +
-                            "            \"autoTableFields\":[\n" +
-                            "            ]\n" +
-                            "          }],\n" +
-                            "        \"formType\":\"normalForm\"\n" +
-                            "      }";
+                                  "        \"formdata\":[\n" +
+                                  "          {\n" +
+                                  "            \"forms\":[\n" +
+                                  "            ],\n" +
+                                  "            \"formsetting\":{\n" +
+                                  "              \"labelposition\":\"top\",\n" +
+                                  "              \"labelwidth\":80,\n" +
+                                  "              \"formsize\":\"mini\",\n" +
+                                  "              \"btnSetting\":[\n" +
+                                  "              ],\n" +
+                                  "              \"fullscreen\":false\n" +
+                                  "            },\n" +
+                                  "            \"autoTableFields\":[\n" +
+                                  "            ]\n" +
+                                  "          }],\n" +
+                                  "        \"formType\":\"normalForm\"\n" +
+                                  "      }";
                     buttonDesignHtml.setForm(JSONObject.parseObject(stra, HashMap.class));
                     buttons.add(buttonDesignHtml);
                 }
@@ -393,32 +403,32 @@ public class JvsAppBaseController {
                     buttonDesignHtml.setPosition("line");
                     buttonDesignHtml.setType(ButtonTypeEnum.btn_detail);
                     String stra = "{\n" +
-                            "        \"formdata\":[\n" +
-                            "          {\n" +
-                            "            \"forms\":[\n" +
-                            "            ],\n" +
-                            "            \"formsetting\":{\n" +
-                            "              \"labelposition\":\"top\",\n" +
-                            "              \"labelwidth\":80,\n" +
-                            "              \"formsize\":\"mini\",\n" +
-                            "              \"btnSetting\":[\n" +
-                            "              ],\n" +
-                            "              \"fullscreen\":false\n" +
-                            "            },\n" +
-                            "            \"autoTableFields\":[\n" +
-                            "            ]\n" +
-                            "          }],\n" +
-                            "        \"formType\":\"normalForm\"\n" +
-                            "      }";
+                                  "        \"formdata\":[\n" +
+                                  "          {\n" +
+                                  "            \"forms\":[\n" +
+                                  "            ],\n" +
+                                  "            \"formsetting\":{\n" +
+                                  "              \"labelposition\":\"top\",\n" +
+                                  "              \"labelwidth\":80,\n" +
+                                  "              \"formsize\":\"mini\",\n" +
+                                  "              \"btnSetting\":[\n" +
+                                  "              ],\n" +
+                                  "              \"fullscreen\":false\n" +
+                                  "            },\n" +
+                                  "            \"autoTableFields\":[\n" +
+                                  "            ]\n" +
+                                  "          }],\n" +
+                                  "        \"formType\":\"normalForm\"\n" +
+                                  "      }";
                     buttonDesignHtml.setForm(JSONObject.parseObject(stra, HashMap.class));
                     buttons.add(buttonDesignHtml);
                 }
                 {
                     ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                    buttonDesignHtml.setEnable(false);
+                    buttonDesignHtml.setEnable(true);
                     buttonDesignHtml.setFormType("normalForm");
-                    buttonDesignHtml.setIsDefault(false);
-                    buttonDesignHtml.setMobileEnable(false);
+                    buttonDesignHtml.setIsDefault(true);
+                    buttonDesignHtml.setMobileEnable(true);
                     buttonDesignHtml.setName("导入");
                     buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                     buttonDesignHtml.setPosition("top");
@@ -427,10 +437,10 @@ public class JvsAppBaseController {
                 }
                 {
                     ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                    buttonDesignHtml.setEnable(false);
+                    buttonDesignHtml.setEnable(true);
                     buttonDesignHtml.setFormType("normalForm");
-                    buttonDesignHtml.setIsDefault(false);
-                    buttonDesignHtml.setMobileEnable(false);
+                    buttonDesignHtml.setIsDefault(true);
+                    buttonDesignHtml.setMobileEnable(true);
                     buttonDesignHtml.setName("导出");
                     buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                     buttonDesignHtml.setPosition("top");
@@ -440,10 +450,10 @@ public class JvsAppBaseController {
                 }
                 {
                     ButtonDesignHtml buttonDesignHtml = new ButtonDesignHtml();
-                    buttonDesignHtml.setEnable(false);
+                    buttonDesignHtml.setEnable(true);
                     buttonDesignHtml.setFormType("normalForm");
-                    buttonDesignHtml.setIsDefault(false);
-                    buttonDesignHtml.setMobileEnable(false);
+                    buttonDesignHtml.setIsDefault(true);
+                    buttonDesignHtml.setMobileEnable(true);
                     buttonDesignHtml.setName("下载模板");
                     buttonDesignHtml.setPermissionFlag(IdWorker.get32UUID());
                     buttonDesignHtml.setPosition("top");
@@ -526,7 +536,7 @@ public class JvsAppBaseController {
                                 .setCancal(false)
                                 .setBtnSetting(btnSetting)
                                 .setPopupWidth(50)
-                                .setPopupType("dialog"));
+                                .setPopupType("drawer"));
                 formDesignHtml.setFormType(FormTypeEnum.normalForm);
                 formPo.setViewJson(JSONObject.toJSONString(formDesignHtml));
                 List<DataFieldPo> datafields =
@@ -573,7 +583,7 @@ public class JvsAppBaseController {
                                 .setCancal(false)
                                 .setBtnSetting(btnSetting)
                                 .setPopupWidth(50)
-                                .setPopupType("dialog"));
+                                .setPopupType("drawer"));
                 formDesignHtml.setFormType(FormTypeEnum.normalForm);
                 formPo.setViewJson(JSONObject.toJSONString(formDesignHtml));
                 formService.updateById(formPo);
@@ -609,7 +619,7 @@ public class JvsAppBaseController {
                                 .setCancal(false)
                                 .setBtnSetting(btnSetting)
                                 .setPopupWidth(50)
-                                .setPopupType("dialog"));
+                                .setPopupType("drawer"));
                 formDesignHtml.setFormType(FormTypeEnum.normalForm);
                 formPo.setViewJson(JSONObject.toJSONString(formDesignHtml));
                 formService.updateById(formPo);

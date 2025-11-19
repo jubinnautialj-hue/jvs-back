@@ -4,7 +4,6 @@ package cn.bctools.function.service.impl;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.function.entity.po.BaseFunctionPo;
-import cn.bctools.function.entity.vo.FunctionBusinessTestVo;
 import cn.bctools.function.entity.vo.Parameter;
 import cn.bctools.function.enums.JvsParamType;
 import cn.bctools.function.handler.impl.BaseFunctionImpl;
@@ -97,6 +96,78 @@ public class SysFunctionServiceImpl extends ServiceImpl<SysFunctionMapper, BaseF
                 .setBody(functionBody)
                 .setInParamTypes(inParamTypes)
                 .setJvsParamType(jvsParamType)
+                .setEnableCache(true)
+                .setParamCount(paramCount)
+                .setParameters(parameters)
+                .setDynamicParam(dynamicParam)
+                .setShortName(shortName)
+                .setName(functionName);
+        if (ObjectNull.isNotNull(entity.getId())) {
+            updateById(entity);
+        } else {
+            save(entity);
+        }
+    }
+
+
+    @Override
+    public void checkAndSave(String functionName,
+                             String shortName,
+                             String info,
+                             String type,
+                             String functionBody,
+                             JvsParamType resultType,
+                             List<Parameter> parameters,
+                             List<Object> params,
+                             Boolean dynamicParam) {
+
+        int testParamCount = params.size();
+        BaseFunctionPo entity = Optional.ofNullable(getOne(Wrappers.query(new BaseFunctionPo().setName(functionName)))).orElse(new BaseFunctionPo());
+        Script groovy = BaseFunctionImpl.buildScript(functionName, functionBody,dynamicParam, testParamCount,testParamCount);
+        List<Object> collect = parameters.stream().map(e -> {
+            switch (e.getType()) {
+                case any:
+                    //判断是否任意类型，判断对象和数据
+                    if (JSONUtil.isTypeJSONObject(e.getValue().toString())) {
+                        if (JSONUtil.isTypeJSONArray(e.getValue().toString())) {
+                            return JSONArray.parseArray(e.getValue().toString());
+                        } else if (JSONUtil.isTypeJSONObject(e.getValue().toString())) {
+                            return JSONObject.parseObject(e.getValue().toString());
+                        }
+                    }
+                    return e.getValue();
+                case array:
+                    return JSONArray.parseArray(e.getValue().toString());
+                case object:
+                    return JSONObject.parseObject(e.getValue().toString());
+                case bool:
+                    return Boolean.valueOf(e.getValue().toString());
+                case number:
+                    if (NumberUtil.isNumber(e.toString())) {
+                        return NumberUtil.parseNumber(e.toString());
+                    }
+                default:
+                    return e.getValue();
+            }
+        }).collect(Collectors.toList());
+        Binding binding = BaseFunctionImpl.buildBinding(dynamicParam,testParamCount, params.toArray(new Object[0]));
+        groovy.setBinding(binding);
+        Object run = groovy.run();
+        JvsParamType byClass = JvsParamType.getByClass(run.getClass());
+        if (!resultType.equals(byClass)) {
+            throw new BusinessException("返回类型不一致,值为:" + run + ",类型为:" + byClass.getAClass().getSimpleName());
+        }
+        List inParamTypes = new ArrayList();
+        if (ObjectNull.isNotNull(parameters)) {
+            inParamTypes = parameters.stream().map(Parameter::getType).collect(Collectors.toList());
+        }
+        HashSet<Integer> paramCount = new HashSet<>();
+        paramCount.add(inParamTypes.size());
+        entity.setInfo(info)
+                .setType(type)
+                .setBody(functionBody)
+                .setInParamTypes(inParamTypes)
+                .setJvsParamType(resultType)
                 .setEnableCache(true)
                 .setParamCount(paramCount)
                 .setParameters(parameters)

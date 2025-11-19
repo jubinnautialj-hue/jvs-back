@@ -2,6 +2,7 @@ package cn.bctools.design.project.service.impl;
 
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.design.project.entity.JvsAppVersion;
 import cn.bctools.design.project.entity.enums.AppVersionStatusEnum;
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
@@ -157,4 +158,21 @@ public class JvsAppVersionServiceImpl extends ServiceImpl<JvsAppVersionMapper, J
         }
         return group;
     }
+
+    @Override
+    public String getTenantIdByAffiliationId(String affiliationApp) {
+        String contextTenantId = TenantContextHolder.getTenantId();
+        TenantContextHolder.setTenantId(null);
+        String tenantId = list(Wrappers.<JvsAppVersion>lambdaQuery()
+                .select(JvsAppVersion::getTenantId)
+                .eq(JvsAppVersion::getAffiliationApp, affiliationApp))
+                .stream()
+                .map(JvsAppVersion::getTenantId)
+                .findFirst()
+                .orElse(null);
+        TenantContextHolder.setTenantId(contextTenantId);
+        return tenantId;
+    }
+
+
 }

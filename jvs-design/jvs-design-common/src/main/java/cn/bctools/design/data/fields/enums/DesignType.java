@@ -27,6 +27,7 @@ public enum DesignType {
     data("数据模型"),
     report("报表"),
     rule("逻辑引擎"),
+    permission("权限标识请求地址"),
     other("其它"),
     ;
 

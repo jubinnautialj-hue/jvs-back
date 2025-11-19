@@ -136,7 +136,8 @@ public class FieldPublicHtml extends FieldJsonHtml {
     @ApiModelProperty("关联表单扩展显示字段key")
     private List<String> others;
 
-    @ApiModelProperty(value = "允许为空", notes = "默认都可以为空")
+    @ApiModelProperty(value = "允许为空", notes = "默认都可以为空-置空回写,注:如果字段中存在内容清空后，会\n" +
+                                                  "将空值回写模型!")
     private Boolean emptyEnable = true;
 
 

@@ -7,6 +7,7 @@ import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.common.utils.jvs.JvsSystemConfig;
+import cn.hutool.core.io.IoUtil;
 import com.alibaba.fastjson2.JSONObject;
 import lombok.SneakyThrows;
 import lombok.experimental.UtilityClass;
@@ -19,13 +20,17 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
+import org.apache.poi.ss.formula.functions.T;
 import org.springframework.cloud.client.ServiceInstance;
 import org.springframework.cloud.client.discovery.DiscoveryClient;
 import org.springframework.http.*;
+import org.springframework.http.client.ClientHttpRequestExecution;
 import org.springframework.http.client.ClientHttpRequestInterceptor;
+import org.springframework.http.client.ClientHttpResponse;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.util.MultiValueMap;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.context.request.RequestContextHolder;
@@ -33,6 +38,10 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 
 import javax.net.ssl.SSLContext;
 import javax.servlet.http.HttpServletRequest;
+import java.io.BufferedReader;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Objects;
@@ -96,7 +105,7 @@ public class HttpRequestUtils {
     /**
      * 发送GET请求
      * <p>
-     * 响应数据结构为: {@link R<T>}
+     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
      * <p>
      * 请求方式: GET
      * 请求格式: application/json
@@ -113,7 +122,7 @@ public class HttpRequestUtils {
     /**
      * 发送请求
      * <p>
-     * 响应数据结构为: {@link R<T>}
+     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
      * <p>
      * 请求方式: POST
      * 请求格式: application/json
@@ -131,7 +140,7 @@ public class HttpRequestUtils {
     /**
      * 发送GET请求
      * <p>
-     * 响应数据结构为: {@link R<T>}
+     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
      * <p>
      * 请求方式: GET
      * 请求格式: application/json
@@ -149,7 +158,7 @@ public class HttpRequestUtils {
     /**
      * 发送请求
      * <p>
-     * 响应数据结构为: {@link R<T>}
+     * 响应数据结构为: {@link cn.bctools.common.utils.R<T>}
      * <p>
      * 请求方式: POST
      * 请求格式: application/json
