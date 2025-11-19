@@ -21,8 +21,8 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 /**
- * 可以使用${@link cn.bctools.common.constant.SysConstant#redisKey(java.lang.String, java.lang.String) 方法规范redis的key }
- * 或者使用${@link RedisUtils#setPrefix(java.lang.String)} 设置统一的key前缀
+ * 可以使用${@link cn.bctools.common.constant.SysConstant#redisKey(String, String) 方法规范redis的key }
+ * 或者使用${@link RedisUtils#setPrefix(String)} 设置统一的key前缀
  * 1. Key的命名应该具有可读性，方便开发者理解和维护。可以使用类似于命名空间的方式，将相关的key放在同一个前缀下，例如"user:id"和"order:id"。
  * <p>
  * 2. Key的命名应该尽量简短，以减少内存占用和提高查询效率。

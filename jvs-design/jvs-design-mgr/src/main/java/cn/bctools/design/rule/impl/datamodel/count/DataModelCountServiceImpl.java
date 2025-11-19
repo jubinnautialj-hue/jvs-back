@@ -4,8 +4,6 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.data.fields.dto.QueryConditionDto;
 import cn.bctools.design.data.service.DynamicDataService;
-import cn.bctools.design.permission.ResourcePermissionHandler;
-import cn.bctools.design.permission.service.DesignPermissionService;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
@@ -43,19 +41,13 @@ import java.util.Map;
 public class DataModelCountServiceImpl implements BaseCustomFunctionInterface<DataModelCountDto> {
 
     DynamicDataService dynamicDataService;
-    DesignPermissionService designPermissionService;
 
     @Override
     @SneakyThrows
     public Object execute(DataModelCountDto dataModelDto, Map<String, Object> params) {
         String dataModelId = dataModelDto.getDataModelId();
-        //判断请求入口是否是模型入口
-        if (ResourcePermissionHandler.matcher()) {
-            //如果是那这里需要根据设计 id重新获取数据权限
-            designPermissionService.handleDesignDataScope(dataModelId);
-        } else {
-            DynamicDataUtils.freePermit();
-        }
+
+        DynamicDataUtils.freePermit();
         List<String> fieldList = new ArrayList<>();
         fieldList.add("id");
         List<QueryConditionDto> queryConditions = dataModelDto.getBody();

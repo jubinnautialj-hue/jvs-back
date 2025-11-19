@@ -90,7 +90,7 @@ public class InputFieldHandler implements IDataFieldHandler<FieldBasicsHtml> {
                 "    ],\n" +
                 "    \"linkbind\": \"\",\n" +
                 "    \"minlength\": 0,\n" +
-                "    \"maxlength\": 100,\n" +
+                "    \"maxlength\": 200,\n" +
                 "    \"showwordlimit\": false,\n" +
                 "    \"placeholder\": \"请输入" + name + "\",\n" +
                 "    \"clearable\": true,\n" +

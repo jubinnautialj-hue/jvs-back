@@ -18,6 +18,8 @@ import javax.validation.constraints.NotBlank;
 public class CreateIdentificationReqDto {
 
     @ApiModelProperty(value = "标识符", required = true)
+    @NotBlank(message = "请输入标识符")
+    @Length(max = 100, min = 1, message = "标识符最多100个字符")
     private String identifier;
 
     @ApiModelProperty(value = "设计id", required = true)

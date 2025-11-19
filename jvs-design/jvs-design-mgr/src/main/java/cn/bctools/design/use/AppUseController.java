@@ -188,10 +188,6 @@ public class AppUseController {
                     e.getEnabledQueryTypes().remove(DataQueryType.isNull);
                     e.getEnabledQueryTypes().add(DataQueryType.isNull);
                 }
-                if (e.getEnabledQueryTypes().contains(DataQueryType.like)) {
-                    e.getEnabledQueryTypes().remove(DataQueryType.like);
-                    e.getEnabledQueryTypes().add(DataQueryType.like);
-                }
             });
             //如果是选项卡类型，将不显示选项卡
             design.getDataPage().getAutoTableFields().removeIf(e -> e.getComponentType().equals(DataFieldType.tab));

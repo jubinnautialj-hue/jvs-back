@@ -63,7 +63,7 @@ public @interface ParameterValue {
      * 获取这个类型的值可选项，进行自定义操作, 这个属性，只针对 Type为  selected 的时候使用
      *
      * @author: guojing
-     * @return: {@linkplain java.lang.Class<? extends  ParameterSelected > }
+     * @return: {@linkplain Class<? extends  ParameterSelected > }
      */
     Class<? extends ParameterSelected> cls() default ParameterSelected.class;
 

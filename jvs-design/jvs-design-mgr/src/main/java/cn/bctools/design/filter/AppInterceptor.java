@@ -4,10 +4,8 @@ import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.permission.BasePermissionHandlerHandler;
-import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.util.CurrentAppUtils;
-import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import lombok.experimental.Accessors;
 import lombok.extern.slf4j.Slf4j;
@@ -46,7 +44,6 @@ public class AppInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object object) throws Exception {
         String requestUri = request.getRequestURI();
-        String method = request.getMethod();
         ServletOutputStream outputStream = response.getOutputStream();
         // 超级管理员直接放行
         UserDto userDto = UserCurrentUtils.getNullableUser();
@@ -55,14 +52,13 @@ public class AppInterceptor implements HandlerInterceptor {
         }
         JvsApp jvsApp = CurrentAppUtils.getApp();
         if (ObjectNull.isNotNull(jvsApp)) {
-            DynamicDataUtils.setDto(new DesignRoleSettingDto().setJvsAppId(jvsApp.getId()).setJvsAppName(jvsApp.getName()));
             // 鉴权获取参数
             Map<String, Object> variablesAttribute = (Map<String, Object>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
             //获取所有的权限处理类，并直接进行处理转换
             for (BasePermissionHandlerHandler handler : handlers) {
                 //执行检查
                 try {
-                    boolean check = handler.check(userDto, jvsApp.getId(), jvsApp, requestUri, variablesAttribute, method);
+                    boolean check = handler.check(userDto, jvsApp.getId(), jvsApp, requestUri, variablesAttribute);
                     //如果为通过则放开
                     if (check) {
                         return true;

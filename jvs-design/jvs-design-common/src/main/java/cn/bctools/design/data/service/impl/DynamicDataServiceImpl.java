@@ -1179,11 +1179,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 List<Criteria> dynamicCriteriaList = buildDynamicCriteriaList(conditionDtos);
                 if (ObjectNull.isNotNull(buildDynamicCriteriaList, dynamicCriteriaList)) {
                     buildDynamicCriteriaList.forEach(e -> e.andOperator(dynamicCriteriaList));
-                    if (andOr) {
-                        authCriteria = DynamicDataUtils.trueCriteria().andOperator(buildDynamicCriteriaList);
-                    } else {
-                        authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
-                    }
+                    authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
                 } else if (ObjectNull.isNotNull(buildDynamicCriteriaList) && ObjectNull.isNull(dynamicCriteriaList)) {
                     if (andOr) {
                         authCriteria = DynamicDataUtils.trueCriteria().andOperator(buildDynamicCriteriaList);
@@ -1226,12 +1222,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             authCriteria = DynamicDataUtils.trueCriteria().orOperator(criteriaList);
         }
 
-
         Boolean isFree = SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_FREE);
-        if (ObjectNull.isNotNull(isFree) && isFree) {
-            List<Criteria> criteria = buildDynamicCriteriaList(conditions.get(0));
-            authCriteria = DynamicDataUtils.trueCriteria().andOperator(criteria);
-        }
         Query query;
         if (ObjectNull.isNotNull(list)) {
             query = DynamicDataUtils.andOr(list, authCriteria, andOr);

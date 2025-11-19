@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.locks.ReentrantReadWriteLock.ReadLock;
-import java.util.stream.Collectors;
 
 /**
  * 版本: [1.0]
@@ -102,37 +101,6 @@ public class JimServerAPI implements ImConst {
                 cluster.clusterToGroup(groupId, packet);
             }
             return true;
-        }
-        try {
-            imChannelContextList.forEach(imChannelContext -> {
-                send(imChannelContext, packet);
-            });
-            return true;
-        } finally {
-            ImCluster cluster = imConfig.getCluster();
-            if (Objects.nonNull(cluster) && !packet.isFromCluster()) {
-                cluster.clusterToGroup(groupId, packet);
-            }
-        }
-    }
-
-    /**
-     * 功能描述：[发送到群组(所有不同协议端)]
-     *
-     * @param groupId 群组ID
-     * @param packet  消息包
-     * @param userId  需要排除的用户id
-     */
-    public static Boolean sendToGroup(String groupId, ImPacket packet, String userId) {
-        List<ImChannelContext> imChannelContextList = getByGroup(groupId);
-        if (CollectionUtils.isEmpty(imChannelContextList)) {
-            ImCluster cluster = imConfig.getCluster();
-            if (cluster != null && !packet.isFromCluster()) {
-                cluster.clusterToGroup(groupId, packet);
-            }
-            return true;
-        } else {
-            imChannelContextList = imChannelContextList.stream().filter(e -> !e.getTioChannelContext().userid.equals(userId)).collect(Collectors.toList());
         }
         try {
             imChannelContextList.forEach(imChannelContext -> {

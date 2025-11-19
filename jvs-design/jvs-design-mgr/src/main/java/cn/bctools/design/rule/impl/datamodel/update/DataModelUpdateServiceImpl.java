@@ -10,8 +10,6 @@ import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.notice.handler.DataNoticeHandler;
 import cn.bctools.design.notice.handler.enums.TriggerTypeEnum;
-import cn.bctools.design.permission.ResourcePermissionHandler;
-import cn.bctools.design.permission.service.DesignPermissionService;
 import cn.bctools.design.rule.impl.datamodel.FieldStructureUtils;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.rule.annotations.Rule;
@@ -53,7 +51,7 @@ public class DataModelUpdateServiceImpl implements BaseCustomFunctionInterface<D
     DynamicDataService dynamicDataService;
     DataModelService dataModelService;
     DataFieldService fieldService;
-    DesignPermissionService designPermissionService;
+
     /**
      * 自定义参数结构，可用于下级节点选择结构
      */
@@ -70,13 +68,7 @@ public class DataModelUpdateServiceImpl implements BaseCustomFunctionInterface<D
     @Override
     @SneakyThrows
     public Object execute(DataModelUpdateDto dataModelDto, Map<String, Object> params) {
-            //判断请求入口是否是模型入口
-        if (ResourcePermissionHandler.matcher()) {
-            //如果是那这里需要根据设计 id重新获取数据权限
-            designPermissionService.handleDesignDataScope(dataModelDto.getDataModelId());
-        } else {
-            DynamicDataUtils.freePermit();
-        }
+        DynamicDataUtils.freePermit();
         dataModelDto.getBody().keySet().forEach(e -> {
             if (DynamicDataConstant.DATA_EMPTY.equals(dataModelDto.getBody().get(e))) {
                 dataModelDto.getBody().put(e, null);

@@ -1,6 +1,5 @@
 package cn.bctools.design.menu.entity.dto;
 
-import cn.bctools.design.permission.dto.PermissionEndpoint;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
@@ -25,6 +24,6 @@ public class PermissionIdentificationDto implements Serializable {
     @ApiModelProperty(value = "列表页树的资源标识")
     private List<String> treeOperation;
     @ApiModelProperty(value = "自定义页面的资源标识", notes = "key:标识，value：标识显示值")
-    private List<PermissionEndpoint> urlOperation;
+    private List<Map<String, String>> urlOperation;
 
 }

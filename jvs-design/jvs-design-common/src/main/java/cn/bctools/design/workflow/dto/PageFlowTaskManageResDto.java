@@ -21,6 +21,9 @@ public class PageFlowTaskManageResDto extends FlowTask {
     @ApiModelProperty("当前环节节点名")
     private String currentNodeName;
 
+    @ApiModelProperty("部门名称")
+    private String createDeptName;
+
     @ApiModelProperty("true-是发起节点，false-不是发起节点")
     private Boolean rootNode;
 

@@ -10,7 +10,7 @@ spring:
   cloud:
     nacos:
       discovery:
-        server-addr: http://www.bctools.cn
+        server-addr: http://jvs-nacos:8848
         group: jvs
         namespace: ${spring.cloud.nacos.discovery.group}
       config:

@@ -67,7 +67,7 @@ public class ResourceController {
     @Bean
     public RouterFunction random() {
         return RouterFunctions
-                .route(RequestPredicates.GET("/auth/random").and(RequestPredicates.accept(MediaType.ALL)),
+                .route(RequestPredicates.path("/auth/random").and(RequestPredicates.accept(MediaType.ALL)),
                         request -> {
                             ByteArrayOutputStream baos = new ByteArrayOutputStream();
                             int i = CodeKaptchaUtils.get(baos);
@@ -86,7 +86,7 @@ public class ResourceController {
     @Bean
     public RouterFunction iconFunction() {
         return RouterFunctions
-                .route(RequestPredicates.GET("/icon/all/**").and(RequestPredicates.accept(MediaType.ALL)),
+                .route(RequestPredicates.path("/icon/all/**").and(RequestPredicates.accept(MediaType.ALL)),
                         request -> {
                             List<String> names = request.queryParams().getOrDefault("names[]", new ArrayList<>());
 

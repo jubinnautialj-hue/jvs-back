@@ -32,7 +32,7 @@ public class AppPermissionHandler implements BasePermissionHandlerHandler {
     private static final String APP_MANAGE_PERMISSION_VERIFICATION_PATTERN = "/app/manage/{appId}/**";
 
     @Override
-    public boolean check(UserDto userDto, String appId, JvsApp jvsApp, String requestUri, Map<String, Object> variablesAttribute, String method) throws BusinessException {
+    public boolean check(UserDto userDto, String appId, JvsApp jvsApp, String requestUri, Map<String, Object> variablesAttribute) throws BusinessException {
         // 校验应用管理权限
         if (PATH_MATCHER.matchStart(APP_MANAGE_PERMISSION_VERIFICATION_PATTERN, requestUri)) {
             //校验是否有管理应用权限，如果有权限才继续向下，如果发布后，进行缓存处理

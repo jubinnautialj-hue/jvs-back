@@ -1,7 +1,6 @@
 package cn.bctools.gateway.filter;
 
 import cn.bctools.common.constant.SysConstant;
-import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.PasswordUtil;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.database.util.IdGenerator;
@@ -32,7 +31,6 @@ import java.net.URLEncoder;
 import java.nio.charset.Charset;
 import java.util.Map;
 
-import static cn.bctools.common.constant.SysConstant.TENANTID;
 import static org.springframework.cloud.gateway.support.ServerWebExchangeUtils.PRESERVE_HOST_HEADER_ATTRIBUTE;
 
 /**
@@ -95,9 +93,6 @@ public class AuthGlobalFilter implements GlobalFilter, Ordered {
         }
         //添加临时缓存
         String tenantId = cache.get(host, () -> configService.fromHost(host));
-        //已经登录用户优先
-        String first = headers.getFirst(TENANTID);
-        tenantId = exchange.getAttributeOrDefault(TENANTID, ObjectNull.isNull(first) ? tenantId : first);
         log.info("tenant id from 域名: [{}] -> 租户 {}", host, tenantId);
         ServerHttpRequest request = exchange.getRequest().mutate()
                 .header(SysConstant.TENANTID, tenantId)

@@ -10,7 +10,6 @@ import cn.bctools.design.data.fields.dto.page.PageDesignHtml;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.menu.entity.AppMenu;
 import cn.bctools.design.menu.entity.dto.PermissionIdentificationDto;
-import cn.bctools.design.permission.dto.PermissionEndpoint;
 import cn.bctools.design.project.dto.ButtonSettingDto;
 
 import java.util.*;
@@ -97,14 +96,14 @@ public class DesignPermissionUtil {
      * @return 自定义页面的资源标识
      */
     private static PermissionIdentificationDto parseUrlDesign(PermissionIdentificationDto permission) {
-        List<PermissionEndpoint> urlOperation = permission.getUrlOperation();
+        List<Map<String, String>> urlOperation = permission.getUrlOperation();
         if (ObjectNull.isNotNull(urlOperation)) {
             return permission;
         }
         // 未配置自定义页面的资源标识，默认返回标识
-        PermissionEndpoint permissionEndpoint = new PermissionEndpoint();
-        permissionEndpoint.setName("查看").setPermission("def_view");
-        permission.setUrlOperation(Collections.singletonList(permissionEndpoint));
+        Map<String, String> defUrlOperation = new HashMap<>(1);
+        defUrlOperation.put("def_view", "查看");
+        permission.setUrlOperation(Collections.singletonList(defUrlOperation));
         return permission;
     }
 }

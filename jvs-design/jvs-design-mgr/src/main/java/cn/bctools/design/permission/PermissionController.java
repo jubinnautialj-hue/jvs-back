@@ -190,7 +190,7 @@ public class PermissionController {
     @ApiOperation(value = "保存自定义页面操作权限标识")
     @Transactional(rollbackFor = Exception.class)
     @PutMapping("/url/operation/{designId}")
-    public R saveAppUrlOperation(@PathVariable String appId, @PathVariable String designId, @RequestBody List<PermissionEndpoint> operations) {
+    public R saveAppUrlOperation(@PathVariable String appId, @PathVariable String designId, @RequestBody List<Map<String, String>> operations) {
         PermissionIdentificationDto permissionIdentification = new PermissionIdentificationDto();
         permissionIdentification.setUrlOperation(operations);
         appVersionMenuHandler.updateOperation(designId, permissionIdentification);

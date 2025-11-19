@@ -9,7 +9,6 @@ import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.crud.entity.DesignRole;
 import cn.bctools.design.data.fields.dto.page.ButtonDesignHtml;
 import cn.bctools.design.project.dto.ButtonSettingDto;
-import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.util.CurrentAppUtils;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import com.alibaba.fastjson2.JSONArray;
@@ -21,8 +20,6 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * The type Role utils.
- *
  * @author Administrator
  */
 public class RoleUtils {
@@ -31,19 +28,13 @@ public class RoleUtils {
      * 根据设计权限添加是否有功能判断返回
      *
      * @param roles 权限信息集合
-     * @return 校验结果 boolean
+     * @return 校验结果
      */
     public static boolean hasPermitJsonObject(List<JSONObject> roles) {
         List<DesignRole> designRoles = JSONArray.parseArray(JSONObject.toJSONString(roles), DesignRole.class);
         return RoleUtils.hasPermit(designRoles);
     }
 
-    /**
-     * Has permit boolean.
-     *
-     * @param roles the roles
-     * @return the boolean
-     */
     public static boolean hasPermit(List<DesignRole> roles) {
         if (ObjectUtils.isEmpty(roles)) {
             // 未配置权限, 默认不放行
@@ -65,7 +56,7 @@ public class RoleUtils {
      * 会用到当前登录用户的信息
      *
      * @param designRole 权限范围
-     * @return 是否有权限 boolean
+     * @return 是否有权限
      */
     public static boolean hasPermit(DesignRole designRole) {
         //暂时先跳过，因为权限使用问题。 不是每一个表单都会有权限的。 会导致每一次都创建一个新的权限,需要建立串链关系 ，让权限复用，把权限独立出来
@@ -86,12 +77,6 @@ public class RoleUtils {
         return checkPersonnels(personnels);
     }
 
-    /**
-     * Has data permit boolean.
-     *
-     * @param designRole the design role
-     * @return the boolean
-     */
     public static boolean hasDataPermit(DesignRole designRole) {
         //暂时先跳过，因为权限使用问题。 不是每一个表单都会有权限的。 会导致每一次都创建一个新的权限,需要建立串链关系 ，让权限复用，把权限独立出来
         if (Objects.isNull(designRole)) {
@@ -110,12 +95,6 @@ public class RoleUtils {
         return checkPersonnels(personnels);
     }
 
-    /**
-     * Check personnels boolean.
-     *
-     * @param personnels the personnels
-     * @return the boolean
-     */
     public static boolean checkPersonnels(List<PersonnelDto> personnels) {
         UserInfoDto<? extends UserDto> userInfo = UserCurrentUtils.init();
         UserDto userDto = userInfo.getUserDto();
@@ -156,17 +135,17 @@ public class RoleUtils {
      * 获取允许的操作权限
      *
      * @param designRole 权限信息
-     * @return 操作集合 permit operation
+     * @return 操作集合
      */
     public static Set<String> getPermitOperation(DesignRole designRole) {
         if (Objects.isNull(designRole)) {
             return Collections.emptySet();
         }
         List<String> operation = new ArrayList<>();
-        if (ObjectNull.isNotNull(designRole.getOperation())) {
+        if(ObjectNull.isNotNull(designRole.getOperation())){
             operation.addAll(designRole.getOperation());
         }
-        if (ObjectNull.isNotNull(designRole.getTreeOperation())) {
+        if(ObjectNull.isNotNull(designRole.getTreeOperation())) {
             operation.addAll(designRole.getTreeOperation());
         }
         if (ObjectUtils.isEmpty(operation) || !hasPermit(designRole)) {
@@ -179,8 +158,7 @@ public class RoleUtils {
      * 获取允许的操作权限
      *
      * @param designRoles 权限信息集合
-     * @param buttons     the buttons
-     * @return 操作集合 permit operation
+     * @return 操作集合
      */
     public static Set<String> getPermitOperation(List<DesignRole> designRoles, List<ButtonDesignHtml> buttons) {
         if (ObjectUtils.isEmpty(designRoles)) {
@@ -201,7 +179,7 @@ public class RoleUtils {
      * 获取所有操作权限
      *
      * @param designRole 权限信息
-     * @return 操作集合 operation
+     * @return 操作集合
      */
     public static Set<String> getOperation(DesignRole designRole) {
         if (Objects.isNull(designRole)) {
@@ -218,7 +196,7 @@ public class RoleUtils {
      * 获取所有操作权限
      *
      * @param designRoles 权限信息集合
-     * @return 操作集合 operation
+     * @return 操作集合
      */
     public static Set<String> getOperation(List<DesignRole> designRoles) {
         if (ObjectUtils.isEmpty(designRoles)) {
@@ -235,7 +213,7 @@ public class RoleUtils {
      * 过滤当前用户匹配的权限配置
      *
      * @param designRoleList 设计套件权限组
-     * @return 当前用户匹配的配置 list
+     * @return 当前用户匹配的配置
      */
     public static List<DesignRole> filterDesignRole(List<DesignRole> designRoleList) {
         if (ObjectUtils.isEmpty(designRoleList)) {
@@ -243,50 +221,5 @@ public class RoleUtils {
         }
         return designRoleList.stream().filter(RoleUtils::hasPermit).collect(Collectors.toList());
     }
-    /**
-     * 校验用户是否有应用设计权限
-     *
-     * @param userId 用户id
-     * @param app    应用
-     * @return true-有设计权限，false-无设计权限
-     */
-    public static boolean checkAppDesignPermission(String userId, JvsApp app) {
-        // 应用的创建人有权限
-        if (app.getCreateById().equals(userId)) {
-            return Boolean.TRUE;
-        }
-        // 应用管理员有权限
-        boolean appAdmin = app.getRole().getAdminMember().stream()
-                .anyMatch(p -> p.getType().equals(PersonnelTypeEnum.user) && p.getId().equals(userId));
-        if (appAdmin) {
-            return Boolean.TRUE;
-        }
-        // 应用开发人员有权限
-        boolean devAdmin = app.getRole().getDevMember().stream()
-                .anyMatch(p -> p.getType().equals(PersonnelTypeEnum.user) && p.getId().equals(userId));
-        if (devAdmin) {
-            return Boolean.TRUE;
-        }
-        return Boolean.FALSE;
-    }
-    /**
-     * 根据权限判断用户这个应用里面的的权限是否有这个资源标识
-     *
-     * @param roles the roles
-     * @return boolean boolean
-     */
-    public static boolean hasPermitOperation(List<DesignRole> roles) {
-        if (ObjectUtils.isEmpty(roles)) {
-            // 未配置权限, 默认不放行
-            return false;
-        }
-        //判断角色，判断人员
-        for (DesignRole role : roles) {
-            boolean check = hasPermit(role);
-            if (check) {
-                return true;
-            }
-        }
-        return false;
-    }
+
 }

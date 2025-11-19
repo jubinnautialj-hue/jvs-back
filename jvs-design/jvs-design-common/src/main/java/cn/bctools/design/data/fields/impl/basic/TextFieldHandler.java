@@ -66,9 +66,9 @@ public class TextFieldHandler implements IDataFieldHandler<FieldBasicsHtml> {
                 "        \"sqlType\"\n" +
                 "    ],\n" +
                 "    \"linkbind\": \"\",\n" +
-                "    \"rows\": 1,\n" +
+                "    \"rows\": 2,\n" +
                 "    \"minlength\": 0,\n" +
-                "    \"maxlength\": 100,\n" +
+                "    \"maxlength\": 300,\n" +
                 "    \"showwordlimit\": false,\n" +
                 "    \"placeholder\": \"请输入" + name + "\",\n" +
                 "    \"clearable\": true,\n" +

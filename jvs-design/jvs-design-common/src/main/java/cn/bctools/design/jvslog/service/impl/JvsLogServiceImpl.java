@@ -1,7 +1,6 @@
 package cn.bctools.design.jvslog.service.impl;
 
 import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.common.utils.TenantContextHolder;
 import cn.bctools.design.jvslog.entity.JvsLog;
 import cn.bctools.design.jvslog.mapper.JvsLogMapper;
 import cn.bctools.design.jvslog.service.JvsLogService;
@@ -50,7 +49,6 @@ public class JvsLogServiceImpl extends ServiceImpl<JvsLogMapper, JvsLog> impleme
                 entity.setJvsAppId(dto.getJvsAppId())
                         .setJvsAppName(Optional.ofNullable(dto.getJvsAppName()).orElseGet(() -> appName.get(dto.getJvsAppId(), () -> jvsAppService.getById(dto.getJvsAppId()).getName())));
             }
-            entity.setTenantId(TenantContextHolder.getTenantId());
             executorService.execute(() -> logBatch.add(entity));
             logBatch.add(entity);
         } catch (Exception e) {

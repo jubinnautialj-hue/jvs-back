@@ -49,6 +49,7 @@ public class FlowTaskCarbonCopyServiceImpl  extends ServiceImpl<FlowTaskCarbonCo
                 .in("cc.jvs_app_id", appIds)
                 .like(StringUtils.isNotBlank(dto.getTaskCode()), "t.task_code", dto.getTaskCode())
                 .like(StringUtils.isNotBlank(dto.getFlowName()), "t.name", dto.getFlowName())
+                .like(StringUtils.isNotBlank(dto.getTitle()), "t.title", dto.getTitle())
                 .like(StringUtils.isNotBlank(dto.getSendUser()), "t.create_by", dto.getSendUser());
         baseMapper.carbonCopyPage(page, userDto.getId(), queryWrapper);
         page.getRecords().forEach(data -> data.setFlowDesign(null));

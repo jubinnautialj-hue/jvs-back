@@ -4,8 +4,6 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.data.fields.dto.QueryConditionDto;
 import cn.bctools.design.data.service.DynamicDataService;
-import cn.bctools.design.permission.ResourcePermissionHandler;
-import cn.bctools.design.permission.service.DesignPermissionService;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
@@ -50,17 +48,10 @@ public class DataModelAggregateServiceImpl implements BaseCustomFunctionInterfac
      * The Dynamic data service.
      */
     DynamicDataService dynamicDataService;
-    DesignPermissionService designPermissionService;
 
     @Override
     public Object execute(DataModelAggregateDto dataModelDto, Map<String, Object> params) {
-        //判断请求入口是否是模型入口
-        if (ResourcePermissionHandler.matcher()) {
-            //如果是那这里需要根据设计 id重新获取数据权限
-            designPermissionService.handleDesignDataScope(dataModelDto.getDataModelId());
-        } else {
-            DynamicDataUtils.freePermit();
-        }
+        DynamicDataUtils.freePermit();
         List<QueryConditionDto> queryConditions = dataModelDto.getBody();
         Criteria criteria = DynamicDataUtils.buildDynamicCriteria(queryConditions);
         criteria = DynamicDataUtils.initCriteria(criteria);
@@ -83,7 +74,7 @@ public class DataModelAggregateServiceImpl implements BaseCustomFunctionInterfac
         List aggregate = dynamicDataService.aggregate(criteria, dataModelDto.getDataModelId(), dataModelDto.getType(), dataModelDto.getFields(), null);
         if (ObjectNull.isNotNull(aggregate)) {
             Map<String, Object> o = (Map<String, Object>) aggregate.get(0);
-            Object o1 = o.getOrDefault("value", o.entrySet().iterator().next().getValue());
+            Object o1 = o.get("value");
             return o1;
         } else {
             return 0;

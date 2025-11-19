@@ -4,13 +4,7 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.crud.entity.DesignRole;
 import cn.bctools.design.data.entity.DataModelPo;
-import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.data.service.DataModelService;
-import cn.bctools.design.data.util.RoleUtils;
-import cn.bctools.design.identification.entity.Identification;
-import cn.bctools.design.menu.entity.AppMenu;
-import cn.bctools.design.menu.service.AppMenuService;
-import cn.bctools.design.permission.dto.PermissionEndpoint;
 import cn.bctools.design.permission.dto.PermissionSettingDto;
 import cn.bctools.design.permission.entity.PermissionGroup;
 import cn.bctools.design.permission.entity.PermissionSetting;
@@ -24,21 +18,16 @@ import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.util.DynamicDataUtils;
-import cn.bctools.oauth2.utils.UserCurrentUtils;
-import cn.bctools.web.utils.WebUtils;
-import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import javax.servlet.http.HttpServletRequest;
 import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * The type Design permission service.
- *
- * @author zhuxiaokang 权限服务
+ * @author zhuxiaokang
+ * 权限服务
  */
 @Service
 @AllArgsConstructor
@@ -48,7 +37,6 @@ public class DesignPermissionServiceImpl implements DesignPermissionService {
     private final DataModelService dataModelService;
     private final PermissionGroupService permissionGroupService;
     private final PermissionSettingService permissionSettingService;
-    private final AppMenuService appMenuService;
 
     @Override
     public void savePermission(String appId, String groupId, PermissionMemberDto member, List<PermissionSettingDto> permissions) {
@@ -148,74 +136,6 @@ public class DesignPermissionServiceImpl implements DesignPermissionService {
         return getOperationDesignRoles(permissionSettings, groupMemberMap, designId);
     }
 
-    /**
-     * 一个标识对应着多个不同的接口
-     *
-     * @param identification the identification
-     * @return
-     */
-    @Override
-    public Boolean getOperationPermissions(Identification identification) {
-        JvsApp jvsApp = appService.getById(identification.getJvsAppId());
-        if (RoleUtils.checkAppDesignPermission(UserCurrentUtils.getUserId(), jvsApp)) {
-            return true;
-        }
-        // 获取权限
-        List<PermissionSetting> permissionSettings = permissionSettingService.list(Wrappers.<PermissionSetting>lambdaQuery()
-                .eq(PermissionSetting::getJvsAppId, identification.getJvsAppId())
-                .eq(PermissionSetting::getPermissionType, PermissionType.OPERATION));
-        if (ObjectNull.isNull(permissionSettings)) {
-            return false;
-        }
-        // 查询权限组权限成员配置
-        Map<String, PermissionMemberDto> groupMemberMap = getGroupMemberMap(permissionSettings);
-        List<DesignRole> collect = permissionSettings.stream()
-                .filter(p -> PermissionType.OPERATION.equals(p.getPermissionType()))
-                .map(p -> {
-                    PermissionMemberDto member = groupMemberMap.get(p.getPermissionGroupId());
-                    return new DesignRole()
-                            .setPersonType(member.getPersonType())
-                            .setPersonnels(member.getPersonnels())
-                            .setOperation(p.getPermission().getOperation())
-                            .setTreeOperation(p.getPermission().getTreeOperation());
-                }).collect(Collectors.toList());
-        //获取当前用户有哪些资源权限
-        HttpServletRequest request = WebUtils.getRequest();
-        //查询自定义的权限资源树有哪些并进行过滤
-        collect = filterOperation(collect, request.getServletPath(), request.getMethod(), identification.getJvsAppId());
-        return RoleUtils.hasPermitOperation(collect);
-    }
-
-    /**
-     * 调用接口时根据当前用户权限进行过滤
-     *
-     * @param collect
-     * @param servletPath
-     * @param method
-     * @param appId
-     * @return
-     */
-    private List<DesignRole> filterOperation(List<DesignRole> collect, String servletPath, String method, String appId) {
-        //找到匹配的资源数据
-        appMenuService.list(new LambdaQueryWrapper<AppMenu>()
-                        .isNotNull(AppMenu::getPermission)
-                        .eq(AppMenu::getJvsAppId, appId).eq(AppMenu::getDesignType, DesignType.URL))
-                .forEach(e -> {
-                    List<PermissionEndpoint> urlOperation = e.getPermission().getUrlOperation();
-                    if (ObjectNull.isNotNull(urlOperation)) {
-                        urlOperation.forEach(a -> {
-                            a.getUrl().forEach(b -> {
-                                if (b.getType().toLowerCase().equals(method.toLowerCase()) && servletPath.equals(b.getUrl())) {
-                                    //删除掉不存在的权限只保留部分资源标识
-                                    collect.removeIf(c -> !c.getOperation().contains(a.getPermission()));
-                                }
-                            });
-                        });
-                    }
-                });
-        return collect;
-    }
-
     @Override
     public Map<String, List<DesignRole>> getBatchOperationPermission(List<String> designIds) {
         if (ObjectNull.isNull(designIds)) {
@@ -282,11 +202,11 @@ public class DesignPermissionServiceImpl implements DesignPermissionService {
     /**
      * 得到数据权限
      *
-     * @param settingDto         权限设置
+     * @param settingDto 权限设置
      * @param permissionSettings 权限集合
-     * @param groupMemberMap     权限组成员
-     * @param designId           设计id
-     * @param dataModelId        模型id
+     * @param groupMemberMap 权限组成员
+     * @param designId 设计id
+     * @param dataModelId 模型id
      */
     private void getDataPermission(DesignRoleSettingDto settingDto, List<PermissionSetting> permissionSettings, Map<String, PermissionMemberDto> groupMemberMap, String designId, String dataModelId) {
         // 数据权限
@@ -314,8 +234,8 @@ public class DesignPermissionServiceImpl implements DesignPermissionService {
      * 获取设计的操作权限
      *
      * @param permissionSettings 权限集合
-     * @param groupMemberMap     权限组成员
-     * @param designId           设计id
+     * @param groupMemberMap 权限组成员
+     * @param designId 设计id
      * @return 设计的操作权限
      */
     private List<DesignRole> getOperationDesignRoles(List<PermissionSetting> permissionSettings, Map<String, PermissionMemberDto> groupMemberMap, String designId) {
@@ -331,10 +251,4 @@ public class DesignPermissionServiceImpl implements DesignPermissionService {
                 }).collect(Collectors.toList());
     }
 
-    @Override
-    public void handleDesignDataScope(String modelId) {
-        DesignRoleSettingDto dataModelPermission = getDataModelPermission(modelId);
-        //获取这个模型的数据权限有哪些
-        DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
-    }
 }

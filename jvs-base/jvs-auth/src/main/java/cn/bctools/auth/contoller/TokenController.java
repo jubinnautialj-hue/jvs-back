@@ -36,7 +36,6 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.Optional;
 
 /**
  * @author Administrator
@@ -145,11 +144,11 @@ public class TokenController {
      * @param token 三方系统的token
      */
     @GetMapping("/logout/{type}/{token}")
-    public R logoutToken(@PathVariable String token, @PathVariable String type, HttpServletRequest request, HttpServletResponse response) {
+    public R logoutToken(@PathVariable String token, @PathVariable String type, HttpServletResponse response) {
         //根据三方平台的token调用退出
         Object o = redisUtils.get("justToken:" + type + token);
         if (ObjectNull.isNotNull(o)) {
-            return logout(o.toString(), request, response);
+            return logout(o.toString(), response);
         }
         return R.ok();
     }
@@ -159,7 +158,7 @@ public class TokenController {
      * @return
      */
     @GetMapping("/logout")
-    public R logout(@RequestHeader(value = HttpHeaders.AUTHORIZATION,required = false) String authHeader, HttpServletRequest request, HttpServletResponse response) {
+    public R logout(@RequestHeader(value = HttpHeaders.AUTHORIZATION) String authHeader, HttpServletResponse response) {
         Cookie cookie = new Cookie(SysConstant.JVS, "");
         cookie.setMaxAge(0);
         cookie.setPath("/");
@@ -196,13 +195,6 @@ public class TokenController {
             } catch (Exception e) {
                 log.error("用户已退出");
             }
-        } else {
-            Arrays.stream(request.getCookies())
-                    .filter(e -> e.getName().equals(SysConstant.JVS))
-                    .map(Cookie::getValue)
-                    .findFirst()
-                    .ifPresent(s -> jvsOAuth2AuthorizationService.keys(s, OAuth2TokenType.ACCESS_TOKEN)
-                            .forEach(authorizationService::remove));
         }
         return R.ok("退出成功");
     }

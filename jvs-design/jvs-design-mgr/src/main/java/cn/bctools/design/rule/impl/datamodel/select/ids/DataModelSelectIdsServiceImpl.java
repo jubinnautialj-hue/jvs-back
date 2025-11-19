@@ -5,8 +5,6 @@ import cn.bctools.design.data.fields.dto.FieldBasicsHtml;
 import cn.bctools.design.data.service.DataFieldService;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
-import cn.bctools.design.permission.ResourcePermissionHandler;
-import cn.bctools.design.permission.service.DesignPermissionService;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.rule.annotations.Rule;
 import cn.bctools.rule.entity.enums.ClassType;
@@ -47,18 +45,11 @@ public class DataModelSelectIdsServiceImpl implements BaseCustomFunctionInterfac
     DynamicDataService dynamicDataService;
     DataModelService dataModelService;
     DataFieldService dataFieldService;
-    DesignPermissionService designPermissionService;
 
     @Override
     @SneakyThrows
     public Object execute(DataModelSelectIdsDto dataModelDto, Map<String, Object> params) {
-            //判断请求入口是否是模型入口
-        if (ResourcePermissionHandler.matcher()) {
-            //如果是那这里需要根据设计 id重新获取数据权限
-            designPermissionService.handleDesignDataScope(dataModelDto.getDataModelId());
-        } else {
-            DynamicDataUtils.freePermit();
-        }
+        DynamicDataUtils.freePermit();
         if (ObjectNull.isNull(dataModelDto.getFields())) {
             return dynamicDataService.getByIds(dataModelDto.getDataModelId(), dataModelDto.getIds());
         }

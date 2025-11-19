@@ -37,10 +37,9 @@ public class DesignPermissionHandler implements BasePermissionHandlerHandler {
      * 当前用户是应用管理员 && 该管理员自己创建的应用
      *
      * @param appId
-     * @param method
      */
     @Override
-    public boolean check(UserDto userDto, String appId, JvsApp jvsApp, String requestUri, Map<String, Object> variablesAttribute, String method) throws BusinessException {
+    public boolean check(UserDto userDto, String appId, JvsApp jvsApp, String requestUri, Map<String, Object> variablesAttribute) throws BusinessException {
         // 校验设计权限
         if (PATH_MATCHER.matchStart(APP_PERMISSION_VERIFICATION_PATTERN, requestUri)) {
             if (requestUri.endsWith("/data/field/user/list")) {

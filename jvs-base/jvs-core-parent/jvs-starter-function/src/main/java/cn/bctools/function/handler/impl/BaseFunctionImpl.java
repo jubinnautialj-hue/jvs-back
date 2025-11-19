@@ -148,7 +148,6 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
             if (expectedParamCount > paramCount) {
                 throw new BusinessException("[{}]参数数量异常, 期望的参数数量: {}, 实际数量: {}", functionName, expectedParamCount, paramCount);
             }
-            expectedParamCount = paramCount;
         } else if (!validParamCount.contains(paramCount)) {
             throw new BusinessException("[{}]参数数量异常, 期望的参数数量: {}, 实际数量: {}", functionName, JSONUtil.toJsonStr(validParamCount), paramCount);
         }

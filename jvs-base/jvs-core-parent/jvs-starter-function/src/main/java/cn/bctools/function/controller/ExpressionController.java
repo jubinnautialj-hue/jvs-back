@@ -330,9 +330,6 @@ public class ExpressionController {
     @PostMapping("/base/save")
     @ApiOperation("函数新增")
     public R<Map<String, Object>> baseSave(@RequestBody FunctionBusinessTestVo businessTestVo) {
-        if(ObjectNull.isNull(businessTestVo.getParameters())){
-            return R.failed("请填写参数");
-        }
         functionService.insertBaseFunction(businessTestVo.getFunctionName(), businessTestVo.getShortName(), businessTestVo.getInfo(), businessTestVo.getType(), businessTestVo.getBody(), businessTestVo.getJvsParamType(),
                 businessTestVo.getParameters(), businessTestVo.getDynamicParam());
         redisUtils.publish("functionCleanCache", null);

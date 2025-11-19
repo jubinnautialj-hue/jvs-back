@@ -1,4 +1,4 @@
-//package cn.bctools.rule.data.sqlserver;
+package cn.bctools.rule.data.sqlserver;//package cn.bctools.rule.data.sqlserver;
 //
 //import cn.bctools.rule.annotations.Inspect;
 //import cn.bctools.rule.annotations.ParameterValue;

@@ -574,12 +574,6 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
             } else {
                 // 版本迭代, 直接获取来源版本的所属应用唯一标识
                 affiliationAppId = sourceAppVersion.getAffiliationApp();
-                // 应用不允许跨租户迭代
-                String affiliationTenantId = appVersionService.getTenantIdByAffiliationId(affiliationAppId);
-                if (ObjectNull.isNotNull(affiliationTenantId) && !affiliationTenantId.equals(TenantContextHolder.getTenantId())) {
-                    throw new BusinessException("无法跨租户部署应用");
-                }
-
                 // 若有自定义标识，需要校验标识在当前租户下是否已存在，若已存在，则校验是否属于当前应用或其派生应用，若不是，则不允许迭代
                 checkCanIterationApp(affiliationAppId, templateBoSource.getIdentifiers());
                 // 版本迭代

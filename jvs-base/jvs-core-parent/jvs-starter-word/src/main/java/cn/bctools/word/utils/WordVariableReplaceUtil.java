@@ -3,7 +3,6 @@ package cn.bctools.word.utils;
 import cn.bctools.common.utils.JvsJsonPath;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.function.Get;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.core.util.NumberUtil;
 import cn.hutool.core.util.ReUtil;
 import lombok.Getter;
@@ -203,9 +202,6 @@ public class WordVariableReplaceUtil {
                 String variableKey = getPureKey(variable);
                 String variableParam = getVariableParam(variable);
                 Object dataValue = JvsJsonPath.read(varsMap, variableKey);
-                if (dataValue instanceof Date) {
-                    dataValue = DateUtil.formatDateTime((Date) dataValue);
-                }
                 replace(mlPackage, textElement, variableDataType, variableKey, variableParam, dataValue);
             });
         }

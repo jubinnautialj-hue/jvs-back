@@ -747,7 +747,6 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
     public void fillTaskDesignBody(FlowTask flowTask) {
         if (ObjectNull.isNotNull(flowTask.getFlowDesign())) {
             flowTask.setDesignBody(flowTask.getFlowDesign());
-            return;
         }
         // 没保存设计，则根据设计版本id获取工作流设计
         setFlowDesignBody(flowTask);

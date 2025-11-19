@@ -1,12 +1,10 @@
 package cn.bctools.gateway.config;
 
-import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.entity.dto.UserInfoDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;
-import cn.bctools.gateway.dto.CheckToken;
 import cn.bctools.oauth2.dto.CustomUser;
 import cn.bctools.redis.utils.RedisUtils;
 import lombok.AllArgsConstructor;
@@ -101,10 +99,8 @@ public class AuthorizationManager implements ReactiveAuthorizationManager<Author
             } else {
                 return mono.map(e -> ((CustomUser) e.getPrincipal()))
                         .filter(e -> {
-                                    String tenantId = e.getUserDto().getTenantId();
-                                    authorizationContext.getExchange().getAttributes().put(SysConstant.TENANTID, tenantId);
                                     Boolean b = SpringContextUtil.getMode() ||
-                                                ObjectNull.isNotNull(referer) && e.getUserDto().getUserAgent().startsWith(referer);
+                                            ObjectNull.isNotNull(referer) && e.getUserDto().getUserAgent().startsWith(referer);
                                     return b;
                                 }
                         )
@@ -117,15 +113,11 @@ public class AuthorizationManager implements ReactiveAuthorizationManager<Author
                 .map(e -> ((CustomUser) e.getPrincipal()))
                 .filter(e -> {
                     return SpringContextUtil.getMode() ||
-                           ObjectNull.isNotNull(referer) && e.getUserDto().getUserAgent().startsWith(referer);
+                            ObjectNull.isNotNull(referer) && e.getUserDto().getUserAgent().startsWith(referer);
                 })
                 .switchIfEmpty(Mono.error(new BusinessException("登录已过期").setCode(-2)))
                 // 2、认证通过且角色匹配的用户可访问当前路径,
-                .flatMapIterable(e -> {
-                    String tenantId = e.getUserDto().getTenantId();
-                    authorizationContext.getExchange().getAttributes().put(SysConstant.TENANTID, tenantId);
-                    return e.getPermissions();
-                })
+                .flatMapIterable(e -> e.getPermissions())
                 .map(String::valueOf)
                 .any((e) -> list.contains(e))
                 .map((v) -> new AuthorizationDecision((Boolean) v))

@@ -69,7 +69,7 @@ public class UserRoleComponent {
         UserTenant one = userTenantService.getOne(Wrappers.<UserTenant>lambdaQuery()
                 .eq(UserTenant::getUserId, userId));
         if (ObjectNull.isNotNull(one.getDeptId())) {
-            userDeptId = deptService.listByIds(one.getDeptId()).stream().map(e -> new DeptDto().setDeptId(e.getId()).setType(e.getType()).setDeptName(e.getDeptCode()).setDeptName(e.getName())).collect(Collectors.toList());
+            userDeptId = deptService.listByIds(one.getDeptId()).stream().map(e -> new DeptDto().setDeptId(e.getId()).setDeptName(e.getDeptCode()).setDeptName(e.getName())).collect(Collectors.toList());
         }
         if (ObjectNull.isNotNull(userDeptId)) {
             List<Dept> deptList = deptService.list();

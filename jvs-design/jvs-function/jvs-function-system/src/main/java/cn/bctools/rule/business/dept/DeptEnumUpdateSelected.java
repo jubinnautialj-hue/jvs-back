@@ -1,6 +1,6 @@
 package cn.bctools.rule.business.dept;
 
-import cn.bctools.common.enums.DeptEnum;
+import cn.bctools.auth.api.enums.DeptEnum;
 import cn.bctools.rule.common.ParameterOption;
 import cn.bctools.rule.common.ParameterSelected;
 import lombok.extern.slf4j.Slf4j;

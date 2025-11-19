@@ -1,6 +1,5 @@
 package cn.bctools.design.util;
 
-import cn.bctools.common.enums.DeptEnum;
 import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.entity.dto.UserInfoDto;
@@ -32,7 +31,6 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
 
-import java.math.BigDecimal;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -199,9 +197,6 @@ public class DynamicDataUtils {
                     queryValue = DataConditionType.get(queryValue);
                 }
             } else {
-                if (queryValue instanceof BigDecimal) {
-                    queryValue = ((BigDecimal) queryValue).doubleValue();
-                }
                 queryValue = DataConditionType.get(queryValue);
             }
 
@@ -212,10 +207,10 @@ public class DynamicDataUtils {
                     if (queryValue instanceof String) {
                         if (DynamicDataConstant.DATA_EMPTY.equals(queryValue) || "".equals(queryValue)) {
                             criteria = new Criteria().orOperator(Criteria.where(fieldId).isNull(), Criteria.where(fieldId).is(""));
-//                        } else if (queryValue.toString().contains(",")) {
-//                            String[] split = queryValue.toString().split(",");
-//                            criteria.in(new ArrayList<String>(Arrays.asList(split)));
-//                            break;
+                        } else if (queryValue.toString().contains(",")) {
+                            String[] split = queryValue.toString().split(",");
+                            criteria.in(new ArrayList<String>(Arrays.asList(split)));
+                            break;
                         } else {
                             criteria.is(queryValue);
                         }
@@ -597,7 +592,7 @@ public class DynamicDataUtils {
                 );
                 return criteria;
             case curr_dept:
-                return Criteria.where(Get.name(DynamicDataPo::getDeptId)).in(user.getDept().stream().filter(e-> DeptEnum.dept.equals(e.getType())).map(DeptDto::getDeptId).collect(Collectors.toSet()));
+                return Criteria.where(Get.name(DynamicDataPo::getDeptId)).in(user.getDept().stream().map(DeptDto::getDeptId).collect(Collectors.toSet()));
             case self:
                 return Criteria.where(Get.name(DynamicDataPo::getCreateById)).is(user.getId());
             case curr_dept_tree:

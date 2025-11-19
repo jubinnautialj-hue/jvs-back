@@ -7,8 +7,6 @@ import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.notice.handler.DataNoticeHandler;
 import cn.bctools.design.notice.handler.enums.TriggerTypeEnum;
-import cn.bctools.design.permission.ResourcePermissionHandler;
-import cn.bctools.design.permission.service.DesignPermissionService;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.rule.annotations.Rule;
@@ -51,20 +49,14 @@ public class DataModelDeleteServiceImpl implements BaseCustomFunctionInterface<D
     DynamicDataService dynamicDataService;
     DataNoticeHandler dataNoticeHandler;
     DataModelService dataModelService;
-    DesignPermissionService designPermissionService;
+
     @Override
     @SneakyThrows
     public Object execute(DataModelDeleteDto dataModelDto, Map<String, Object> params) {
         if (ObjectNull.isNull(dataModelDto.getBody()) && ObjectNull.isNull(dataModelDto.getIds())) {
             throw new BusinessException("没有条件不支持删除");
         }
-        //判断请求入口是否是模型入口
-        if (ResourcePermissionHandler.matcher()) {
-            //如果是那这里需要根据设计 id重新获取数据权限
-            designPermissionService.handleDesignDataScope(dataModelDto.getDataModelId());
-        } else {
-            DynamicDataUtils.freePermit();
-        }
+        DynamicDataUtils.freePermit();
         List<String> ids = new ArrayList<>();
         String appId = dataModelService.getById(dataModelDto.getDataModelId()).getAppId();
         if (ObjectNull.isNotNull(dataModelDto.getIds())) {

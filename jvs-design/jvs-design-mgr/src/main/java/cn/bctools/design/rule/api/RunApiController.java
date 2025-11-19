@@ -1,12 +1,10 @@
 package cn.bctools.design.rule.api;
 
 import cn.bctools.common.constant.SysConstant;
-import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.identification.entity.Identification;
 import cn.bctools.design.identification.service.IdentificationService;
-import cn.bctools.design.permission.service.DesignPermissionService;
 import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.rule.RuleStartUtils;
@@ -60,7 +58,7 @@ import java.util.stream.Collectors;
 /**
  * API 主要是外部系统调用时走的接口
  *
- * @author zx 跑逻辑与设计请求接口  逻辑引擎调用入口【此为通过api调用方式，如前端直接调用，三方系统调用，或集群服务内相互调用】 针对于应用中心创建时的逻辑，并在源码开发标识管理中有声明的。 不同的业务场景需求调用逻辑的方式有所不同。 以下举例几种不同场景： 1、在轻应用中添加自定义开发的页面，调用逻辑引擎。 通过配置的标识，调用 2、三方系统通过api和凭证调用。 <p> 3、同集群同注册中心下不需要登录时调用逻辑引擎。通过feign调用。或通过标识调用。
+ * @author zx  跑逻辑与设计请求接口  逻辑引擎调用入口【此为通过api调用方式，如前端直接调用，三方系统调用，或集群服务内相互调用】 针对于应用中心创建时的逻辑，并在源码开发标识管理中有声明的。 不同的业务场景需求调用逻辑的方式有所不同。 以下举例几种不同场景： 1、在轻应用中添加自定义开发的页面，调用逻辑引擎。 通过配置的标识，调用 2、三方系统通过api和凭证调用。 <p> 3、同集群同注册中心下不需要登录时调用逻辑引擎。通过feign调用。或通过标识调用。
  */
 @Slf4j
 @AllArgsConstructor
@@ -77,11 +75,6 @@ public class RunApiController {
      * The Rule service.
      */
     RuleDesignService ruleService;
-    /**
-     * The Design permission service.
-     */
-    DesignPermissionService designPermissionService;
-
     /**
      * The Rule start utils.
      */
@@ -110,7 +103,6 @@ public class RunApiController {
      *
      * @param appIdentification the app identification
      * @param request           the request
-     * @param response          the response
      * @return the r
      */
     @SneakyThrows
@@ -129,7 +121,6 @@ public class RunApiController {
      * @param appIdentification the app identification
      * @param map               the map
      * @param request           the request
-     * @param response          the response
      * @return the r
      */
     @SneakyThrows
@@ -186,11 +177,6 @@ public class RunApiController {
             case Source_code_development_docking_logic:
                 //判断此逻辑的类型，是否需要登录如果需要登录，则获取一下当前用户
                 UserCurrentUtils.getCurrentUser();
-                Boolean operationPermissions = designPermissionService.getOperationPermissions(identification);
-                //这里需要自行匹配权限
-                if (Boolean.FALSE.equals(operationPermissions)) {
-                    throw new BusinessException("没有权限操作");
-                }
                 break;
             case External_API_logic:
                 //正常执行  判断用户添加的key和传递的key 是否一致 或ip白名单
@@ -252,7 +238,7 @@ public class RunApiController {
      * Return test r.
      *
      * @param id the id
-     * @return r r
+     * @return r
      */
     @SneakyThrows
     @Log
@@ -284,7 +270,6 @@ public class RunApiController {
      * @param secret      应用密钥
      * @param ruleKey     请求模板参数
      * @param variableMap 数据值对象
-     * @param response    the response
      * @return 运行跑出来的结果数据 r
      * @author zx
      */
@@ -309,17 +294,6 @@ public class RunApiController {
         return runApiRule(appId, ruleKey, variableMap, po, request, response);
     }
 
-    /**
-     * Run api rule r.
-     *
-     * @param appId       the app id
-     * @param ruleKey     the rule key
-     * @param variableMap the variable map
-     * @param po          the po
-     * @param request     the request
-     * @param response    the response
-     * @return the r
-     */
     @NotNull
     public R<Object> runApiRule(String appId, String ruleKey, Map<String, Object> variableMap, RuleDesignPo po, HttpServletRequest request, HttpServletResponse response) {
         //设置id值

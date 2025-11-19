@@ -86,7 +86,7 @@ public class SwitchFieldHandler implements IDataFieldHandler<SwitchHtml> {
                 "    \"rules\": [\n" +
                 "        {\n" +
                 "            \"required\": false,\n" +
-                "            \"message\": \"请输入" + name + "\",\n" +
+                "            \"message\": \"请选择" + name + "\",\n" +
                 "            \"trigger\": \"change\"\n" +
                 "        }\n" +
                 "    ],\n" +

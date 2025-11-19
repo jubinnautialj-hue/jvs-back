@@ -329,27 +329,7 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
                                             }
                                             return new QueryConditionDto().setFieldKey(e.getFieldKey()).setValue(read).setEnabledQueryTypes(e.getEnabledQueryTypes());
                                         } else {
-                                            Object value = e.getValue();
-                                            if (((List<?>) value).size() == 1) {
-                                                value = ((List<?>) value).get(0);
-                                            }
-                                            if (fieldsMap.containsKey(e.getFieldKey())) {
-                                                switch (fieldsMap.get(e.getFieldKey()).getType()) {
-                                                    case inputNumber:
-                                                        return new QueryConditionDto().setFieldKey(e.getFieldKey()).setValue(Integer.valueOf(value.toString())).setEnabledQueryTypes(e.getEnabledQueryTypes());
-                                                    default:
-                                                        return new QueryConditionDto().setFieldKey(e.getFieldKey()).setValue(value).setEnabledQueryTypes(e.getEnabledQueryTypes());
-                                                }
-                                            } else {
-                                                Optional<FieldBasicsHtml> first = html.getTableColumn().stream().filter(a -> a.getProp().equals(e.getFieldKey())).findFirst();
-                                                if (first.isPresent()) {
-                                                    switch (first.get().getType()) {
-                                                        case inputNumber:
-                                                            return new QueryConditionDto().setFieldKey(e.getFieldKey()).setValue(Integer.valueOf(value.toString())).setEnabledQueryTypes(e.getEnabledQueryTypes());
-                                                    }
-                                                }
-                                                return new QueryConditionDto().setFieldKey(e.getFieldKey()).setValue(value).setEnabledQueryTypes(e.getEnabledQueryTypes());
-                                            }
+                                            return new QueryConditionDto().setFieldKey(e.getFieldKey()).setValue(e.getValue()).setEnabledQueryTypes(e.getEnabledQueryTypes());
                                         }
                                     }
                             ).filter(ObjectNull::isNotNull).collect(Collectors.toList()))
@@ -361,15 +341,13 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
             queryPageDto.setGroupConditions(collections);
         }
 
-        if (html.getDataFilterEnable()) {
-            DynamicDataService bean = SpringContextUtil.getBean(DynamicDataService.class);
-            List<Map<String, Object>> maps = bean.postQueryList(html.getDataModelId(), queryPageDto);
-            String path = new ArrayList<String>(Arrays.asList(parentPath))
-                    .stream()
-                    .collect(Collectors.joining(StrUtil.DOT));
-            Object echoValue = getEchoValue(html, maps, false, new HashMap<>(8), path);
-            JSONPath.set(data, path, echoValue);
-        }
+        DynamicDataService bean = SpringContextUtil.getBean(DynamicDataService.class);
+        List<Map<String, Object>> maps = bean.postQueryList(html.getDataModelId(), queryPageDto);
+        String path = new ArrayList<String>(Arrays.asList(parentPath))
+                .stream()
+                .collect(Collectors.joining(StrUtil.DOT));
+        Object echoValue = getEchoValue(html, maps, false, new HashMap<>(8), path);
+        JSONPath.set(data, path, echoValue);
     }
 
     @Override
@@ -412,47 +390,47 @@ public class TableFormFieldHandler implements IDataFieldHandler<TableFormItemHtm
     @Override
     public Map<String, Object> generate(String name, String field, List<String> dicData) {
         String str = "{\n" +
-                     "    \"prop\": \"" + field + "\",\n" +
-                     "    \"type\": \"tableForm\",\n" +
-                     "    \"label\": \"" + name + "\",\n" +
-                     "    \"span\": 24,\n" +
-                     "    \"display\": true,\n" +
-                     "    \"status\": \"\",\n" +
-                     "    \"tips\": {\n" +
-                     "        \"text\": \"\",\n" +
-                     "        \"position\": \"right\"\n" +
-                     "    },\n" +
-                     "    \"showFrom\": [\n" +
-                     "        \"label\",\n" +
-                     "        \"span\",\n" +
-                     "        \"prop\",\n" +
-                     "        \"border\",\n" +
-                     "        \"stripe\",\n" +
-                     "        \"sqlType\",\n" +
-                     "        \"editable\"\n" +
-                     "    ],\n" +
-                     "    \"border\": true,\n" +
-                     "    \"page\": false,\n" +
-                     "    \"editable\": true,\n" +
-                     "    \"addBtn\": true,\n" +
-                     "    \"addBtnFormCode\": \"\",\n" +
-                     "    \"editBtn\": true,\n" +
-                     "    \"editBtnFormCode\": \"\",\n" +
-                     "    \"viewBtn\": true,\n" +
-                     "    \"delBtn\": true,\n" +
-                     "    \"stripe\": false,\n" +
-                     "    \"sqlType\": \"array\",\n" +
-                     "    \"rules\": [\n" +
-                     "\n" +
-                     "    ],\n" +
-                     "    \"tableColumn\": [\n" +
-                     "\n" +
-                     "    ],\n" +
-                     "    \"menuFix\": false,\n" +
-                     "    \"align\": \"left\",\n" +
-                     "    \"name\": \"" + DataFieldType.tableForm.getDesc() + "\",\n" +
-                     "    \"disabled\": false\n" +
-                     "}";
+                "    \"prop\": \"" + field + "\",\n" +
+                "    \"type\": \"tableForm\",\n" +
+                "    \"label\": \"" + name + "\",\n" +
+                "    \"span\": 24,\n" +
+                "    \"display\": true,\n" +
+                "    \"status\": \"\",\n" +
+                "    \"tips\": {\n" +
+                "        \"text\": \"\",\n" +
+                "        \"position\": \"right\"\n" +
+                "    },\n" +
+                "    \"showFrom\": [\n" +
+                "        \"label\",\n" +
+                "        \"span\",\n" +
+                "        \"prop\",\n" +
+                "        \"border\",\n" +
+                "        \"stripe\",\n" +
+                "        \"sqlType\",\n" +
+                "        \"editable\"\n" +
+                "    ],\n" +
+                "    \"border\": true,\n" +
+                "    \"page\": false,\n" +
+                "    \"editable\": true,\n" +
+                "    \"addBtn\": true,\n" +
+                "    \"addBtnFormCode\": \"\",\n" +
+                "    \"editBtn\": true,\n" +
+                "    \"editBtnFormCode\": \"\",\n" +
+                "    \"viewBtn\": true,\n" +
+                "    \"delBtn\": true,\n" +
+                "    \"stripe\": false,\n" +
+                "    \"sqlType\": \"array\",\n" +
+                "    \"rules\": [\n" +
+                "\n" +
+                "    ],\n" +
+                "    \"tableColumn\": [\n" +
+                "\n" +
+                "    ],\n" +
+                "    \"menuFix\": false,\n" +
+                "    \"align\": \"left\",\n" +
+                "    \"name\": \"" + DataFieldType.tableForm.getDesc() + "\",\n" +
+                "    \"disabled\": false\n" +
+                "}";
         return JSONObject.parseObject(str);
     }
 }

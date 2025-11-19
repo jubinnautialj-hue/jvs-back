@@ -41,7 +41,5 @@ public class JvsLog implements Serializable {
     private String jvsAppId;
     @ApiModelProperty("应用名称")
     private String jvsAppName;
-    @ApiModelProperty("租户 id")
-    private String tenantId;
 
 }

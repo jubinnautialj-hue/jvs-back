@@ -40,7 +40,6 @@ import java.util.stream.Collectors;
 public class UserInfoComponent {
 
     DeptService deptService;
-    UserLevelService userLevelService;
     JobService jobService;
     UserRoleComponent userRoleComponent;
     RoleService roleService;
@@ -185,7 +184,7 @@ public class UserInfoComponent {
                     List<String> id = userTenantMap.get(userId).getDeptId();
                     if (ObjectNull.isNotNull(id)) {
                         List<DeptDto> dtoList =
-                                id.stream().map(e -> deptService.getById(e)).filter(ObjectNull::isNotNull).map(e -> new DeptDto().setDeptId(e.getId()).setType(e.getType()).setDeptName(e.getName()).setDeptCode(e.getDeptCode())).collect(Collectors.toList());
+                                id.stream().map(e -> deptService.getById(e)).filter(ObjectNull::isNotNull).map(e -> new DeptDto().setDeptId(e.getId()).setDeptName(e.getName()).setDeptCode(e.getDeptCode())).collect(Collectors.toList());
                         userDto.setDept(dtoList);
                     }
                 }
@@ -194,7 +193,6 @@ public class UserInfoComponent {
                 userDto.setId(userId);
                 userDto.setAdminFlag(userId.equalsIgnoreCase(adminUserId));
                 userDto.setRoleIds(Optional.ofNullable(userRoles.get(userId)).orElseGet(ArrayList::new).stream().map(Role::getId).collect(Collectors.toList()));
-                userDto.setRoleType(Optional.ofNullable(userRoles.get(userId)).orElseGet(ArrayList::new).stream().map(Role::getRoleName).collect(Collectors.toList()));
                 result.add(userDto);
             }
         } else {

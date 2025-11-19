@@ -42,8 +42,6 @@ public class BaseInterceptor implements HandlerInterceptor {
      */
     private static final String APP_ID = "appId";
     private static final String APPIDENTIFICATION_ID = "appIdentification";
-    private static final String MODELIDENTIFICATION_ID = "modelIdentification";
-
     private static final String UNDEFINED = "undefined";
 
     @Override
@@ -89,7 +87,7 @@ public class BaseInterceptor implements HandlerInterceptor {
         }
         if (ObjectNull.isNull(appId) && MapUtils.isNotEmpty(variablesAttribute)) {
             //将其标识转换一下
-            String appidentification = Optional.ofNullable(variablesAttribute.get(APPIDENTIFICATION_ID)).map(String::valueOf).orElseGet(() -> variablesAttribute.getOrDefault(MODELIDENTIFICATION_ID,"").toString());
+            String appidentification = Optional.ofNullable(variablesAttribute.get(APPIDENTIFICATION_ID)).map(String::valueOf).orElseGet(() -> null);
             if (ObjectNull.isNotNull(appidentification)) {
                 String tenantId = TenantContextHolder.getTenantId();
                 if (ObjectNull.isNull(tenantId)) {
