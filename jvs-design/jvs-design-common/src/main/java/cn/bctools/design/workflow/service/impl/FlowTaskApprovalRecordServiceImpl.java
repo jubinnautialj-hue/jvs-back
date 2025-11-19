@@ -73,7 +73,6 @@ public class FlowTaskApprovalRecordServiceImpl extends ServiceImpl<FlowTaskAppro
                 .like(StringUtils.isNotBlank(dto.getTaskCode()), "t.task_code", dto.getTaskCode())
                 .like(ObjectNull.isNotNull(dto.getTaskStatus()), "t.task_status", dto.getTaskStatus())
                 .like(StringUtils.isNotBlank(dto.getFlowName()), "t.name", dto.getFlowName())
-                .like(StringUtils.isNotBlank(dto.getTitle()), "t.title", dto.getTitle())
                 .like(StringUtils.isNotBlank(dto.getSendUser()), "t.create_by", dto.getSendUser());
 
         baseMapper.approvalRecordPage(page, queryWrapper);

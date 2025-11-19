@@ -137,7 +137,7 @@ public class CheckBoxFieldHandler extends IMultipleTypeHandler implements IDataF
                 "    \"rules\": [\n" +
                 "        {\n" +
                 "            \"required\": false,\n" +
-                "            \"message\": \"请选择" + name + "\",\n" +
+                "            \"message\": \"请输入" + name + "\",\n" +
                 "            \"trigger\": \"change\"\n" +
                 "        }\n" +
                 "    ],\n" +

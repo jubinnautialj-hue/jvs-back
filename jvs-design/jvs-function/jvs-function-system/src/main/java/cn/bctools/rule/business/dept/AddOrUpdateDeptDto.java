@@ -1,9 +1,8 @@
 package cn.bctools.rule.business.dept;
 
-import cn.bctools.auth.api.enums.DeptEnum;
+import cn.bctools.common.enums.DeptEnum;
 import cn.bctools.rule.annotations.ParameterValue;
 import cn.bctools.rule.entity.enums.InputType;
-import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
 import lombok.experimental.Accessors;
 

@@ -156,6 +156,7 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
             jsonObject = JSON.parseObject(fieldJsonStr);
         }
         FieldPublicHtml t = BeanCopyUtil.copy(cls, jsonObject);
+        t.setDataFilterEnable(jsonObject.getBooleanValue("dataFilterEnable", false));
         t.setDesignJson(jsonObject);
         isNext((T) t);
         return (T) t;
@@ -187,7 +188,7 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
     /**
      * 解析下级字段
      * 于用公式逻辑处理
-     * 此方法已经摒弃,使用 {@linkplain IDataFieldHandler#next(List, FieldPublicHtml, Map, ElementVo) }代替
+     * 此方法已经摒弃,使用 {@linkplain IDataFieldHandler#next(java.util.List, cn.bctools.design.data.fields.dto.FieldPublicHtml, java.util.Map, cn.bctools.function.entity.vo.ElementVo) }代替
      *
      * @param list       公式数据
      * @param publicHtml 字段对象信息
@@ -250,7 +251,7 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
                 }
 
                 //查询条件字段值
-                List<QueryConditionDto> queryConditionDtos = e.getDataLinkageList().stream().filter(s -> ObjectNull.isNotNull(map.get(s.getValue())) && fieldMap.containsKey(s.getValue())).map(s -> {
+                List<QueryConditionDto> queryConditionDtos = e.getDataLinkageList().stream().filter(s -> fieldMap.containsKey(s.getValue())).map(s -> {
                     //获取数据  如果是下拉框，或者是文本框的选择方式不一样
                     Object value = map.get(s.getValue());
                     //判断是不是特殊类型的值

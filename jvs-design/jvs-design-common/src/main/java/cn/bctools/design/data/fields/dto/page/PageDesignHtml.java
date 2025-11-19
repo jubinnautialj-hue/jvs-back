@@ -61,6 +61,14 @@ public class PageDesignHtml {
 
     @ApiModelProperty("是否固定操作栏")
     private Boolean menuFixed;
+    @ApiModelProperty("隐藏刷新")
+    private Boolean hiddenRefresh;
+    @ApiModelProperty("隐藏搜索")
+    private Boolean hiddenSearch;
+    @ApiModelProperty("隐藏分享")
+    private Boolean hiddenShare;
+    @ApiModelProperty("隐藏排序")
+    private Boolean hiddenSort;
     @ApiModelProperty("操作栏宽度")
     private Integer menuWidth;
 

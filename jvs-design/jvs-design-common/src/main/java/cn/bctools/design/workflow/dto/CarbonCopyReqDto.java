@@ -15,9 +15,6 @@ public class CarbonCopyReqDto {
     @ApiModelProperty(value = "流程名称")
     private String flowName;
 
-    @ApiModelProperty(value = "流程标题")
-    private String title;
-
     @ApiModelProperty(value = "发起人名称")
     private String sendUser;
 

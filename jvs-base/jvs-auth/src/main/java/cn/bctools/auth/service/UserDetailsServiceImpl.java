@@ -233,7 +233,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             TenantContextHolder.setTenantId(e.getId());
             if (ObjectNull.isNotNull(deptIds)) {
                 //获取部门
-                List<DeptDto> collect = deptService.listByIds(deptIds).stream().map(v -> new DeptDto().setDeptId(v.getId()).setDeptName(v.getName()).setDeptCode(v.getDeptCode())).collect(Collectors.toList());
+                List<DeptDto> collect =
+                        deptService.listByIds(deptIds).stream().map(v -> new DeptDto().setDeptId(v.getId()).setType(v.getType()).setDeptName(v.getName()).setDeptCode(v.getDeptCode())).collect(Collectors.toList());
                 tenant.setDept(collect);
             } else {
                 tenant.setDept(new ArrayList<>());

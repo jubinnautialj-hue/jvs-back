@@ -28,7 +28,7 @@ public class DesignPermissionDto {
     @ApiModelProperty("树的操作权限")
     private List<String> treeOperation;
     @ApiModelProperty(value = "自定义页面的操作权限", notes = "key:标识，value：标识显示值")
-    private List<Map<String, String>> urlOperation;
+    private List<PermissionEndpoint> urlOperation;
     @ApiModelProperty(value = "相关设计资源", notes = "同模型，且与菜单关联的设计资源")
     private List<DesignPermissionDto> relevant;
 }

@@ -33,6 +33,7 @@ import cn.bctools.design.menu.service.AppMenuService;
 import cn.bctools.design.menu.service.AppMenuTypeService;
 import cn.bctools.design.menu.util.JvsMenuVo;
 import cn.bctools.design.permission.service.DesignPermissionService;
+import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.entity.JvsAppVersion;
 import cn.bctools.design.project.entity.enums.AppVersionStatusEnum;
@@ -230,6 +231,7 @@ public class UseComponent implements AppApi, TreeApi {
         SecurityContext context = SecurityContextHolder.getContext();
         Map<String, Object> threadMap = SystemThreadLocal.get();
         Map<String, JvsApp> finalWithDesignPermissionAppMap = withDesignPermissionAppMap;
+        SwitchModeDto switchMode = ModeUtils.getSwitchMode();
         List<JvsMenuVo> menus = appMenus
                 .parallelStream()
                 //判断是否是移动端,还是Pc显示
@@ -243,7 +245,7 @@ public class UseComponent implements AppApi, TreeApi {
                     SecurityContextHolder.setContext(context);
                     // 有设计权限，不判断是否隐藏
                     JvsApp jvsApp = allAppMap.get(e.getJvsAppId());
-                    if (checkAppDesignPermission(UserCurrentUtils.getUserId(), jvsApp)) {
+                    if (RoleUtils.checkAppDesignPermission(UserCurrentUtils.getUserId(), jvsApp)) {
                         return Boolean.TRUE;
                     }
                     // 无设计权限，根据配置显示隐藏
@@ -251,6 +253,7 @@ public class UseComponent implements AppApi, TreeApi {
                 })
                 //根据这些资源判断此用户是否包含权限,如果包含,则返回这些资源
                 .filter(e -> {
+                    ModeUtils.setSwitchModel(switchMode);
                     // 非模拟用户： 开发模式直接放行，其它模式都要校验资源权限
                     // 模拟用户： 所有模式都要校验资源权限
                     if (AppVersionTypeEnum.DEV.equals(mode) && Boolean.FALSE.equals(ModeUtils.whetherAnalogUser())) {
@@ -502,36 +505,10 @@ public class UseComponent implements AppApi, TreeApi {
         }
         // 筛选有权限的应用
         return jvsApps.stream()
-                .filter(app -> checkAppDesignPermission(userId, app))
+                .filter(app -> RoleUtils.checkAppDesignPermission(userId, app))
                 .collect(Collectors.toMap(JvsApp::getId, Function.identity()));
     }
 
-    /**
-     * 校验用户是否有应用设计权限
-     *
-     * @param userId 用户id
-     * @param app    应用
-     * @return true-有设计权限，false-无设计权限
-     */
-    private boolean checkAppDesignPermission(String userId, JvsApp app) {
-        // 应用的创建人有权限
-        if (app.getCreateById().equals(userId)) {
-            return Boolean.TRUE;
-        }
-        // 应用管理员有权限
-        boolean appAdmin = app.getRole().getAdminMember().stream()
-                .anyMatch(p -> p.getType().equals(PersonnelTypeEnum.user) && p.getId().equals(userId));
-        if (appAdmin) {
-            return Boolean.TRUE;
-        }
-        // 应用开发人员有权限
-        boolean devAdmin = app.getRole().getDevMember().stream()
-                .anyMatch(p -> p.getType().equals(PersonnelTypeEnum.user) && p.getId().equals(userId));
-        if (devAdmin) {
-            return Boolean.TRUE;
-        }
-        return Boolean.FALSE;
-    }
 
     /**
      * 筛选无设计权限可返回的应用

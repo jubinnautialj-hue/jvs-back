@@ -159,14 +159,10 @@ public class RoleController {
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = SysConstant.CACHE_ROLE, allEntries = true)
     public R<Boolean> removeRole(@PathVariable String id) {
-        //判断是否有用户
-        long count = userRoleService.count(Wrappers.query(new UserRole().setRoleId(id)));
-        if (count > 0) {
-            return R.failed("角色下有用户不能删除");
-        }
         //角色角色
         roleService.removeById(id);
         //用户角色
+        userRoleService.remove(Wrappers.query(new UserRole().setRoleId(id)));
         //部门角色
         deptRoleService.remove(Wrappers.<DeptRole>lambdaQuery().eq(DeptRole::getRoleId, id));
         //删除角色下的资源

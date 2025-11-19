@@ -1179,7 +1179,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 List<Criteria> dynamicCriteriaList = buildDynamicCriteriaList(conditionDtos);
                 if (ObjectNull.isNotNull(buildDynamicCriteriaList, dynamicCriteriaList)) {
                     buildDynamicCriteriaList.forEach(e -> e.andOperator(dynamicCriteriaList));
-                    authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
+                    if (andOr) {
+                        authCriteria = DynamicDataUtils.trueCriteria().andOperator(buildDynamicCriteriaList);
+                    } else {
+                        authCriteria = DynamicDataUtils.trueCriteria().orOperator(buildDynamicCriteriaList);
+                    }
                 } else if (ObjectNull.isNotNull(buildDynamicCriteriaList) && ObjectNull.isNull(dynamicCriteriaList)) {
                     if (andOr) {
                         authCriteria = DynamicDataUtils.trueCriteria().andOperator(buildDynamicCriteriaList);
@@ -1222,7 +1226,12 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             authCriteria = DynamicDataUtils.trueCriteria().orOperator(criteriaList);
         }
 
+
         Boolean isFree = SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_FREE);
+        if (ObjectNull.isNotNull(isFree) && isFree) {
+            List<Criteria> criteria = buildDynamicCriteriaList(conditions.get(0));
+            authCriteria = DynamicDataUtils.trueCriteria().andOperator(criteria);
+        }
         Query query;
         if (ObjectNull.isNotNull(list)) {
             query = DynamicDataUtils.andOr(list, authCriteria, andOr);
@@ -1238,18 +1247,10 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             String[] fields = new String[fieldKeys.size()];
             query.fields().include(fieldKeys.toArray(fields));
         }
-        long total;
-        //判断数据权限, 如果跳过数据权限，则查询数据
-        if (Boolean.TRUE.equals(isFree)) {
-            total = dataModelHandler.estimatedCount(modelId);
-        } else if (ObjectNull.isNull(list) && ObjectNull.isNotNull(isFree)) {
-            //如果条件为空，跳过权限也为空
-            total = dataModelHandler.estimatedCount(modelId);
-        } else {
-            //如果没有跳过
-            // 查询总页数
-            total = dataModelHandler.count(query, modelId);
-        }
+        //如果没有跳过
+        // 查询总页数
+        long total = dataModelHandler.count(query, modelId);
+
         long skip = size * (current - 1);
         mapPage.setTotal(total);
         if (total == 0 || skip >= total || size < 1 || current < 1) {
@@ -2482,7 +2483,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     groupOperation.min(((String) aggregateField).trim()).as("value");
                 } else if (aggregateField instanceof List) {
                     for (Object e : ((List<?>) aggregateField)) {
-                        groupOperation = groupOperation.min(e.toString()).as("value");
+                        groupOperation = groupOperation.min(e.toString()).as(e.toString());
                     }
                 }
                 break;
@@ -2494,7 +2495,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     groupOperation.avg(((String) aggregateField).trim()).as("value");
                 } else if (aggregateField instanceof List) {
                     for (Object e : ((List<?>) aggregateField)) {
-                        groupOperation = groupOperation.avg(e.toString()).as("value");
+                        groupOperation = groupOperation.avg(e.toString()).as(e.toString());
                     }
                 }
                 break;
@@ -2503,7 +2504,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     groupOperation.sum(((String) aggregateField).trim()).as("value");
                 } else if (aggregateField instanceof List) {
                     for (Object e : ((List<?>) aggregateField)) {
-                        groupOperation = groupOperation.sum(e.toString()).as("value");
+                        groupOperation = groupOperation.sum(e.toString()).as(e.toString());
                     }
                 }
             default:

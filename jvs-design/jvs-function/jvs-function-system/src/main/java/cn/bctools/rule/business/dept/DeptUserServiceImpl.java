@@ -3,7 +3,7 @@ package cn.bctools.rule.business.dept;
 
 import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.auth.api.dto.SysDeptDto;
-import cn.bctools.auth.api.enums.DeptEnum;
+import cn.bctools.common.enums.DeptEnum;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.oauth2.utils.AuthorityManagementUtils;

@@ -244,7 +244,7 @@ public class RunController {
     @PostMapping("/download")
     public ResponseEntity<byte[]> downloadFile(@RequestBody RuleFile value) {
         HttpHeaders headers = new HttpHeaders();
-        headers.set("output_format", URLUtil.encode(value.getOriginalName()));
+        headers.set("output_format", URLUtil.encode(value.getOriginalName() + value.getFileType()));
         headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
         headers.setContentDisposition(ContentDisposition.formData().filename(URLUtil.encode(value.getOriginalName() + value.getFileType())).build());
         headers.set("Access-Control-Expose-Headers", "Content-Disposition");

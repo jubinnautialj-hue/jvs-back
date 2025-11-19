@@ -74,7 +74,7 @@ public class HttpServiceImpl implements BaseCustomFunctionInterface<HttpFunction
         }
         Map<String, String> headerMap = new HashMap<>(8);
 
-        if (ObjectNull.isNull(dto.getSystemHeader()) || !dto.getSystemHeader()) {
+        if (ObjectNull.isNull(dto.getSystemHeader()) || dto.getSystemHeader()) {
             try {
                 HttpServletRequest request = WebUtils.getRequest();
                 //如果是监听,或是定时,没有请求对象不能直接操作
@@ -82,9 +82,6 @@ public class HttpServiceImpl implements BaseCustomFunctionInterface<HttpFunction
                     Enumeration<String> headerNames = request.getHeaderNames();
                     while (headerNames.hasMoreElements()) {
                         String name = headerNames.nextElement();
-                        if ("Authorization".equals(name)) {
-                            continue;
-                        }
                         String value = request.getHeader(name);
                         headerMap.put(name, value);
                     }

@@ -54,7 +54,6 @@ import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.handler.DesignHandler;
 import cn.bctools.design.rule.RuleRunService;
 import cn.bctools.design.rule.RuleStartUtils;
-import cn.bctools.design.rule.api.RunApiController;
 import cn.bctools.design.rule.entity.RuleDesignPo;
 import cn.bctools.design.rule.entity.RunLogPo;
 import cn.bctools.design.rule.service.RuleDesignService;
@@ -68,7 +67,6 @@ import cn.bctools.design.workflow.service.impl.FlowDynamicDataServiceImpl;
 import cn.bctools.function.entity.dto.ExecDto;
 import cn.bctools.function.entity.dto.TableType;
 import cn.bctools.function.entity.po.FunctionBusinessPo;
-import cn.bctools.function.enums.JvsParamType;
 import cn.bctools.function.handler.ExpressionAfterHandler;
 import cn.bctools.function.handler.IJvsFunction;
 import cn.bctools.function.mapper.FunctionBusinessMapper;
@@ -285,10 +283,6 @@ public class DynamicDataUseController {
      */
     RuleStartUtils ruleStartUtils;
     /**
-     * The Run api controller.
-     */
-    RunApiController runApiController;
-    /**
      * The Run log service.
      */
     RunLogService runLogService;
@@ -360,7 +354,7 @@ public class DynamicDataUseController {
         byId.getJsonData().put("userId", UserCurrentUtils.getUserId());
         byId.getJsonData().put("token", token);
 
-        Document document = NoticeVariableUtils.replacement(address.replaceAll("nbsp;", ""), byId.getJsonData());
+        Document document = NoticeVariableUtils.replacement(address.replaceAll("&nbsp;", "").replaceAll("&amp;",""), byId.getJsonData());
         StringBuilder text = new StringBuilder();
         document.getElementsByTag("p").forEach(p -> text.append(p.text()));
 

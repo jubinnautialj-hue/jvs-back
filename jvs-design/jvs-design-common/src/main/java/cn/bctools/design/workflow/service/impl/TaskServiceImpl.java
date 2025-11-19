@@ -46,8 +46,10 @@ import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.StringUtils;
+import org.checkerframework.checker.index.qual.SameLen;
 import org.springframework.scheduling.annotation.AsyncResult;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -61,6 +63,7 @@ import java.util.stream.Collectors;
 /**
  * @author zhuxiaokang
  */
+@Slf4j
 @Component
 @AllArgsConstructor
 public class TaskServiceImpl implements TaskService {
@@ -162,6 +165,7 @@ public class TaskServiceImpl implements TaskService {
             RuntimeData runtimeData = runtimeService.start(startTask);
             return new StartFlowResDto().setFlowTaskId(flowTask.getId()).setData(runtimeData.getData()).setFlowTask(flowTask);
         }  catch (Exception e) {
+            log.error("启动流程异常", e);
             throw new BusinessException(e.getMessage());
         } finally {
             redisUtils.unLock(lockKey);
@@ -215,7 +219,7 @@ public class TaskServiceImpl implements TaskService {
         }
 
         // 修改数据
-        if (ObjectNull.isNotNull(flowDto.getData())) {
+        if (ObjectNull.isNotNull(flowDto.getData()) && !NodeOperationTypeEnum.REMOVE_SIGNER.equals(flowDto.getNodeOperationType())) {
             DataDto dataDto = flowDynamicDataService.updateModelData(flowTask.getJvsAppId(), flowDto.getData(), flowTask.getDataModelId(), flowTask.getDataId());
             executeTask.setDataVersion(dataDto.getVersion());
             executeTask.setData(dataDto.getData());

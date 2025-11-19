@@ -193,7 +193,7 @@ public class SelectFieldHandler extends IMultipleTypeHandler implements IDataFie
                 "    \"disabled\": false,\n" +
                 "    \"filterable\": true,\n" +
                 "    \"allowcreate\": false,\n" +
-                "    \"placeholder\": \"请选择" + name + "\",\n" +
+                "    \"placeholder\": \"请输入" + name + "\",\n" +
                 "    \"clearable\": true,\n" +
                 "    \"defaultValue\": \"\",\n" +
                 "    \"defaultUrl\": \"\",\n" +
@@ -208,7 +208,7 @@ public class SelectFieldHandler extends IMultipleTypeHandler implements IDataFie
                 "    \"rules\": [\n" +
                 "        {\n" +
                 "            \"required\": false,\n" +
-                "            \"message\": \"请选择" + name + "\",\n" +
+                "            \"message\": \"请输入" + name + "\",\n" +
                 "            \"trigger\": \"change\"\n" +
                 "        }\n" +
                 "    ],\n" +

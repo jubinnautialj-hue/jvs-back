@@ -33,7 +33,7 @@ public class DesignWebMvcConfig implements WebMvcConfigurer {
     /**
      * 三方系统或前端调用逻辑引擎的时候处理的方式
      */
-    private static final String RULE_API_VERIFICATION_PATTERN = "/rule/openapi/**";
+    public static final String RULE_API_VERIFICATION_PATTERN = "/rule/openapi/**";
     /**
      * 默认放行的地址前缀
      */

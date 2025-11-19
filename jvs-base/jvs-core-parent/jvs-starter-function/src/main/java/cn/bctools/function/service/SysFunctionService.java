@@ -31,6 +31,16 @@ public interface SysFunctionService extends IService<BaseFunctionPo> {
      */
     void insertBaseFunction(String functionName, String shortName, String info, String type, String body, JvsParamType jvsParamType, List<Parameter> parameters, Boolean dynamicParam);
 
+    void checkAndSave(String functionName,
+                      String shortName,
+                      String info,
+                      String type,
+                      String functionBody,
+                      JvsParamType resultType,
+                      List<Parameter> parameters,
+                      List<Object> params,
+                      Boolean dynamicParam);
+
     /**
      * 用于测试要新增的函数是否正确
      *

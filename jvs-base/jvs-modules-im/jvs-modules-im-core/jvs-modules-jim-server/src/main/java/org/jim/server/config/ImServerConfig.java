@@ -74,7 +74,7 @@ public class ImServerConfig extends ImConfig {
         setImServerHandler(imServerHandler);
         setImServerListener(imServerListener);
         this.tioConfig = new ServerTioConfig(this.getName(), new ImServerHandlerAdapter(this.imServerHandler), new ImServerListenerAdapter(this.imServerListener));
-        Global.set(this);
+        ImConfig.Global.set(this);
     }
 
     public static Builder newBuilder() {

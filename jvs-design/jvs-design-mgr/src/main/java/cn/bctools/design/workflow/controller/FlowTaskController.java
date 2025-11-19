@@ -188,7 +188,6 @@ public class FlowTaskController {
                 // 无表单，不显示
                 .isNotNull(FlowTask::getFormId)
                 .like(StringUtils.isNotBlank(reqDto.getName()), FlowTask::getName, reqDto.getName())
-                .like(StringUtils.isNotBlank(reqDto.getTitle()), FlowTask::getTitle, reqDto.getTitle())
                 .like(StringUtils.isNotBlank(reqDto.getTaskCode()), FlowTask::getTaskCode, reqDto.getTaskCode())
                 .eq(reqDto.getTaskStatus() != null, FlowTask::getTaskStatus, reqDto.getTaskStatus())
                 .orderByDesc(FlowTask::getCreateTime));

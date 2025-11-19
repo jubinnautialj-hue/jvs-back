@@ -65,7 +65,7 @@ public class DeptServiceImpl extends ServiceImpl<DeptMapper, Dept> implements De
         if (StringUtils.isBlank(deptId)) {
             return new ArrayList<>();
         }
-        List<Dept> allDeptList = this.list(Wrappers.<Dept>lambdaQuery().select(Dept::getId, Dept::getSort, Dept::getName, Dept::getParentId));
+        List<Dept> allDeptList = this.list(Wrappers.<Dept>lambdaQuery().select(Dept::getId, Dept::getType, Dept::getSort, Dept::getName, Dept::getParentId));
         if (ObjectUtils.isEmpty(allDeptList)) {
             return new ArrayList<>();
         }
