@@ -320,12 +320,14 @@ public class DataFieldServiceImpl extends ServiceImpl<DataFieldMapper, DataField
                         DataFieldPo::getDesignType,
                         DataFieldPo::getFieldName,
                         DataFieldPo::getDesignId,
+                        DataFieldPo::getUpdateTime,
                         DataFieldPo::getFieldType,
                         DataFieldPo::getEnabledQueryTypes, DataFieldPo::getDesignJson,
                         DataFieldPo::getDataModelId)
                 .eq(DataFieldPo::getModelId, fieldCacheKey.getModelId())
                 .eq(ObjectNull.isNotNull(fieldCacheKey.getAppId()), DataFieldPo::getJvsAppId, fieldCacheKey.getAppId())
                 //新增字段类型排序保证有类型的排序在最后面
+                .orderByDesc(DataFieldPo::getUpdateTime)
                 .orderByDesc(DataFieldPo::getDesignJson)
                 .orderByAsc(DataFieldPo::getEnabledQueryTypes));
         return getFields(fieldPoList, fieldCacheKey.getModelId(), fieldCacheKey.getDesignId(), fieldCacheKey.getFieldKeys(), fieldCacheKey.getFieldType(), fieldCacheKey.getGetDesignJson(),
