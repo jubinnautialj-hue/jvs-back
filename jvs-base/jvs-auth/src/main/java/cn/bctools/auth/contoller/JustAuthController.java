@@ -239,7 +239,11 @@ public class JustAuthController {
             }
             log.info("/just/callback的redirectUri为:{}", redirectUri);
             if (redirectUri.indexOf("?") > 0) {
-                response.sendRedirect(redirectUri + "&code=" + code);
+                if(redirectUri.contains("&code=")){
+                    response.sendRedirect(redirectUri);
+                }else {
+                    response.sendRedirect(redirectUri + "&code=" + code);
+                }
             } else {
                 response.sendRedirect(redirectUri + "#/other/" + state + "?code=" + code);
             }
