@@ -245,12 +245,13 @@ public class JustAuthController {
                     String param = split[1];
                     String newUri = domain+"#/other/"+state+"?"+param;
                     log.info("/just/callback的newUri为:{}", newUri);
-                    if(redirectUri.contains("&code=")){
+                    if(redirectUri.contains("code=")){
                         response.sendRedirect(newUri);
                     }else {
                         response.sendRedirect(newUri + "&code=" + code);
                     }
                 }else {
+                    log.info("/just/callback的newUri2为:{}", redirectUri);
                     response.sendRedirect(redirectUri + "&code=" + code);
                 }
             } else {
