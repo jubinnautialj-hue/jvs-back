@@ -239,8 +239,16 @@ public class JustAuthController {
             }
             log.info("/just/callback的redirectUri为:{}", redirectUri);
             if (redirectUri.indexOf("?") > 0) {
-                if(redirectUri.contains("&code=")){
-                    response.sendRedirect(redirectUri);
+                if(redirectUri.contains("doc-") || redirectUri.contains("bi-")){
+                    String[] split = redirectUri.split("\\?");
+                    String domain = split[0];
+                    String param = split[1];
+                    String newUri = domain+"#/other/"+state+param;
+                    if(redirectUri.contains("&code=")){
+                        response.sendRedirect(newUri);
+                    }else {
+                        response.sendRedirect(newUri + "&code=" + code);
+                    }
                 }else {
                     response.sendRedirect(redirectUri + "&code=" + code);
                 }
