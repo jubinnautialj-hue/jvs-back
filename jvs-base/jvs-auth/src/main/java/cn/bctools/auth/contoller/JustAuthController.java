@@ -243,7 +243,7 @@ public class JustAuthController {
                     String[] split = redirectUri.split("\\?");
                     String domain = split[0];
                     String param = split[1];
-                    String newUri = domain+"#/other/"+state+param;
+                    String newUri = domain+"#/other/"+state+"?"+param;
                     log.info("/just/callback的newUri为:{}", newUri);
                     if(redirectUri.contains("&code=")){
                         response.sendRedirect(newUri);
