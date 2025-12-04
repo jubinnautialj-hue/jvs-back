@@ -312,7 +312,7 @@ public class RuleController {
         designPo.setDesignDrawingJson(jsonString);
         designPo.setParameterIn(formDesign.getParameterIn());
         designPo.setParameterOut(formDesign.getParameterOut());
-        designPo.setTask(formDesign.getTask());
+        designPo.setTask(new TaskCronDto());
         functionBusinessService.saveBatch(list);
         designService.updateById(designPo);
         return R.ok(designPo);

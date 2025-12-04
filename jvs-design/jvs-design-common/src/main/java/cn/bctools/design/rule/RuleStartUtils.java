@@ -77,7 +77,8 @@ public class RuleStartUtils {
             TimeUnit.MINUTES,
             new LinkedBlockingDeque<>(),
             Executors.defaultThreadFactory(),
-            new ThreadPoolExecutor.AbortPolicy());
+            new ThreadPoolExecutor.CallerRunsPolicy());
+    // 改为调用者运行策略
     public static final DateTimeFormatter FORMAT_DATETIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.SSS");
     public static final String FORMAT_LOG = "%s [ %s ] %s ";
 

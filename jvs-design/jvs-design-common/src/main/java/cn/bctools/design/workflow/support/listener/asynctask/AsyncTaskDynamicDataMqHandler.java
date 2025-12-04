@@ -56,6 +56,7 @@ public class AsyncTaskDynamicDataMqHandler {
         try {
             //不在线直接返回
             if (!SpringContextUtil.thisServerStats()) {
+                log.info("同步流程数据到业务失败，当前服务不在线，重回队列");
                 channel.basicNack(messages.get(messages.size() - 1).getMessageProperties().getDeliveryTag(), true, true);
                 return;
             }

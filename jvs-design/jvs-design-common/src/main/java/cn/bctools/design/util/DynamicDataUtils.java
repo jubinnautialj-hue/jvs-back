@@ -1,5 +1,6 @@
 package cn.bctools.design.util;
 
+import cn.bctools.auth.api.dto.SysDeptDto;
 import cn.bctools.common.enums.DeptEnum;
 import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
@@ -21,6 +22,7 @@ import cn.bctools.design.data.service.DynamicDataService;
 import cn.bctools.design.data.util.RoleUtils;
 import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.handler.DesignHandler;
+import cn.bctools.oauth2.utils.AuthorityManagementUtils;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.web.utils.WebUtils;
 import cn.hutool.json.JSONUtil;
@@ -36,6 +38,7 @@ import java.math.BigDecimal;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * 数据管理工具类
@@ -597,11 +600,16 @@ public class DynamicDataUtils {
                 );
                 return criteria;
             case curr_dept:
-                return Criteria.where(Get.name(DynamicDataPo::getDeptId)).in(user.getDept().stream().filter(e-> DeptEnum.dept.equals(e.getType())).map(DeptDto::getDeptId).collect(Collectors.toSet()));
+                return Criteria.where(Get.name(DynamicDataPo::getDeptId)).in(user.getDept().stream().filter(e -> DeptEnum.dept.equals(e.getType())).map(DeptDto::getDeptId).collect(Collectors.toSet()));
             case self:
                 return Criteria.where(Get.name(DynamicDataPo::getCreateById)).is(user.getId());
             case curr_dept_tree:
-                List<String> childDeptIds = userInfo.getChildDeptIds();
+                Set childDeptIds = user.getDept().stream().filter(e -> DeptEnum.dept.equals(e.getType())).map(DeptDto::getDeptId)
+                        .map(AuthorityManagementUtils::getChildDepts)
+                        .flatMap(Collection::stream)
+                        .map(SysDeptDto::getId)
+                        .collect(Collectors.toSet());
+
                 if (ObjectUtils.isEmpty(childDeptIds)) {
                     return falseCriteria();
                 }

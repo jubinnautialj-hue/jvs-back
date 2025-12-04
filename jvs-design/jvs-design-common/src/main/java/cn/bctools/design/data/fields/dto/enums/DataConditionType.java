@@ -97,6 +97,8 @@ public enum DataConditionType {
                 case 当前登录用户所在部门及以下:
                     List<String> collect = new ArrayList<>();
                     UserCurrentUtils.getDept()
+                            .stream()
+                            .filter(e-> DeptEnum.dept.equals(e.getType()))
                             .forEach(e -> extracted(e.getDeptId(), collect));
                     return collect;
                 case 当前登录用户所在公司及以下部门:

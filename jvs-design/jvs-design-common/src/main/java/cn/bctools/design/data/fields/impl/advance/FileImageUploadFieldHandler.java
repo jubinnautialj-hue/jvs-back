@@ -103,15 +103,7 @@ public class FileImageUploadFieldHandler implements IDataFieldHandler<ImageUploa
                 "        \"position\": \"right\"\n" +
                 "    },\n" +
                 "    \"limit\": 1,\n" +
-                "    \"showFrom\": [\n" +
-                "        \"label\",\n" +
-                "        \"span\",\n" +
-                "        \"prop\",\n" +
-                "        \"url\",\n" +
-                "        \"fit\",\n" +
-                "        \"jurisdiction\",\n" +
-                "        \"sqlType\"\n" +
-                "    ],\n" +
+                "    \"showFrom\": ['label', 'span', 'prop', 'multipleUpload','action','limit','fit','headers','headersStr','sqlType'],\n" +
                 "    \"url\": \"\",\n" +
                 "    \"fit\": \"\",\n" +
                 "    \"fileList\": [],\n" +

@@ -28,6 +28,7 @@ import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
 import java.util.Date;
+import java.util.HashMap;
 
 /**
  * 调用逻辑的Handler
@@ -49,6 +50,7 @@ public class RuleCommonPostHandler {
     @XxlJob("jvs-design-mgr")
     public void execute() {
         String param = XxlJobHelper.getJobParam();
+        SystemThreadLocal.setAll(new HashMap<>());
         XxlJobHelper.log("定时任务开始执行，入参为:{}", param);
         //兼容json格式
         JSONObject json = compatibilityJsonCheck(param);

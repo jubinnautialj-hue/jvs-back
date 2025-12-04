@@ -387,6 +387,7 @@ public class RunApiController {
                     }
                 }
             } catch (RuntimeException e) {
+                log.error("执行逻辑异常: ", e);
                 throw new RuleException(RuleExceptionEnum.设计错误, ruleExecDto.getExecuteDto().getErrorMessage());
             }
             //返回执行日志对象

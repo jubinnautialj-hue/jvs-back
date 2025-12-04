@@ -273,16 +273,18 @@ public class UseComponent implements AppApi, TreeApi {
                     return transition(e, enableWorkflowMap, checkDesignRole(e.getJvsAppId(), finalWithDesignPermissionAppMap));
                 })
                 .peek(e -> {
-                    if (DesignType.URL.equals(e.getDesign())) {
-                        //判断如果不是 http开头或不是/开头，则可能是环境变量，需要进行替换
-                        if (!(e.getUrl().startsWith("http") || e.getUrl().startsWith("/"))) {
-                            try {
-                                EnvironmentVariableDto data = environmentVariableApi.getByKey(e.getUrl(), ModeTypeEnum.getType(ModeUtils.getMode().getValue())).getData();
-                                if (ObjectNull.isNotNull(data)) {
-                                    Map extend = (Map) e.getExtend();
-                                    extend.put("variable", data.getValue());
+                    if (ObjectNull.isNotNull(e.getUrl())) {
+                        if (DesignType.URL.equals(e.getDesign())) {
+                            //判断如果不是 http开头或不是/开头，则可能是环境变量，需要进行替换
+                            if (!(e.getUrl().startsWith("http") || e.getUrl().startsWith("/"))) {
+                                try {
+                                    EnvironmentVariableDto data = environmentVariableApi.getByKey(e.getUrl(), ModeTypeEnum.getType(ModeUtils.getMode().getValue())).getData();
+                                    if (ObjectNull.isNotNull(data)) {
+                                        Map extend = (Map) e.getExtend();
+                                        extend.put("variable", data.getValue());
+                                    }
+                                } catch (Exception ignored) {
                                 }
-                            } catch (Exception ignored) {
                             }
                         }
                     }
@@ -349,7 +351,9 @@ public class UseComponent implements AppApi, TreeApi {
                     break;
                 case URL:
                     AppUrlPo appUrlPo = appUrlService.getById(e.getDesignId());
-                    vo.setUrl(appUrlPo.getUrl());
+                    if (ObjectNull.isNotNull(appUrlPo)) {
+                        vo.setUrl(appUrlPo.getUrl());
+                    }
                     break;
                 default:
                     break;
