@@ -367,24 +367,25 @@ public class DesignHandler {
         // oa_workflow_progress按钮的权限
         if (ButtonTypeEnum.oa_workflow_progress.equals(buttonType)) {
             // 遍历所有工作流任务信息，只要有一个条件满足，都可以看进度
-            List<FlowDynamicDataServiceImpl.FlowTaskModelData> jvsFlowTasks = getDataFlowTasks(data);
-            for (FlowDynamicDataServiceImpl.FlowTaskModelData jvsFlowTask : jvsFlowTasks) {
-                if (userId.equals(jvsFlowTask.getCreateById())) {
-                    return true;
-                }
-                // 是审批人，可看进度
-                if (ObjectNull.isNotNull(jvsFlowTask.getFlowTaskPersons()) && jvsFlowTask.getFlowTaskPersons().contains(userId)) {
-                    return true;
-                }
-                // 是抄送人，可看进度
-                if (ObjectNull.isNotNull(jvsFlowTask.getCarbonCopyPersons()) && jvsFlowTask.getCarbonCopyPersons().contains(userId)) {
-                    return true;
-                }
-                // 历史审批人，可看进度
-                if (ObjectNull.isNotNull(jvsFlowTask.getHistoryPersons()) && jvsFlowTask.getHistoryPersons().contains(userId)) {
-                    return true;
-                }
-            }
+//            List<FlowDynamicDataServiceImpl.FlowTaskModelData> jvsFlowTasks = getDataFlowTasks(data);
+//            for (FlowDynamicDataServiceImpl.FlowTaskModelData jvsFlowTask : jvsFlowTasks) {
+//                if (userId.equals(jvsFlowTask.getCreateById())) {
+//                    return true;
+//                }
+//                // 是审批人，可看进度
+//                if (ObjectNull.isNotNull(jvsFlowTask.getFlowTaskPersons()) && jvsFlowTask.getFlowTaskPersons().contains(userId)) {
+//                    return true;
+//                }
+//                // 是抄送人，可看进度
+//                if (ObjectNull.isNotNull(jvsFlowTask.getCarbonCopyPersons()) && jvsFlowTask.getCarbonCopyPersons().contains(userId)) {
+//                    return true;
+//                }
+//                // 历史审批人，可看进度
+//                if (ObjectNull.isNotNull(jvsFlowTask.getHistoryPersons()) && jvsFlowTask.getHistoryPersons().contains(userId)) {
+//                    return true;
+//                }
+//            }
+            return true;
         }
 
         FlowDynamicDataServiceImpl.FlowTaskModelData jvsFlowTask = BeanCopyUtil.copy(jvsFlowTaskObj, FlowDynamicDataServiceImpl.FlowTaskModelData.class);
