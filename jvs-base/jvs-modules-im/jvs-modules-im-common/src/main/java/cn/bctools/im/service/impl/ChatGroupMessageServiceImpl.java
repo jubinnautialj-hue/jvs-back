@@ -72,7 +72,7 @@ public class ChatGroupMessageServiceImpl extends ServiceImpl<ChatGroupMessageMap
         }
         queryWrapper
                 .select(ChatGroupMessage::getMessage)
-                .orderByAsc(ChatGroupMessage::getCreateTime);
+                .orderByDesc(ChatGroupMessage::getCreateTime);
 
         Page<ChatGroupMessage> page = new Page<>(reqDto.getCurrent(), reqDto.getSize());
         Page<ChatGroupMessage> resultMsg = page(page, queryWrapper);

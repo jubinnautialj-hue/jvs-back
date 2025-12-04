@@ -252,8 +252,9 @@ public class UserController {
         List list = new ArrayList();
         for (String s : map.keySet()) {
             UserVo userVo = map.get(s).setRoleNames(roleByUserId.get(s).stream().map(Role::getRoleName).distinct().collect(Collectors.toList()));
-            if (ObjectNull.isNotNull(userVo.getDeptId())) {
-                userVo.setDeptName(deptService.listByIds(userVo.getDeptId()).stream().map(Dept::getName).collect(Collectors.toList()));
+            Set<String> ids = userDeptService.list(Wrappers.query(new UserDept().setUserId(s))).stream().map(e -> e.getDeptId()).collect(Collectors.toSet());
+            if (ObjectNull.isNotNull(ids)) {
+                userVo.setDeptName(deptService.listByIds(ids).stream().map(Dept::getName).collect(Collectors.toList()));
             }
             list.add(userVo);
         }

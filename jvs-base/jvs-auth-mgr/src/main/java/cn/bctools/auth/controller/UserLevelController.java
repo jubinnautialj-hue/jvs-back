@@ -6,6 +6,7 @@ import cn.bctools.auth.service.UserLevelService;
 import cn.bctools.auth.service.UserTenantService;
 import cn.bctools.common.utils.R;
 import cn.bctools.log.annotation.Log;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import io.swagger.annotations.ApiOperation;
 import lombok.AllArgsConstructor;
@@ -37,7 +38,7 @@ public class UserLevelController {
     @ApiOperation(value = "所有用户等级", notes = "每一个用户等级都可以设置自己的首页地址")
     @GetMapping("/all")
     public R<List<UserLevel>> level() {
-        List<UserLevel> list = userLevelService.list();
+        List<UserLevel> list = userLevelService.list(new LambdaQueryWrapper<UserLevel>().orderByAsc(UserLevel::getSort));
         return R.ok(list);
     }
 

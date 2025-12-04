@@ -4,6 +4,7 @@ import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.feign.annotation.EnableJvsFeignClients;
 import cn.bctools.im.config.JimConfig;
 import cn.bctools.im.entity.ServerInfo;
+import cn.bctools.im.rabbit.SyncMessageConsumer;
 import cn.bctools.im.service.ImServerInfoService;
 import com.alibaba.cloud.nacos.NacosDiscoveryProperties;
 import com.alibaba.cloud.nacos.registry.NacosRegistration;
@@ -56,6 +57,7 @@ public class ImServerApplication {
             registerImSocketServer(nacosRegistration);
             // im服务启动成功，保存服务信息到数据库
             saveImServer();
+            SpringContextUtil.getBean(SyncMessageConsumer.class);
         } catch (Exception e) {
             log.error("IM服务启动失败。exception: {}", e);
             exit(run);
