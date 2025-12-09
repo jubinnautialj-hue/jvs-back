@@ -334,7 +334,9 @@ public class DesignPermissionServiceImpl implements DesignPermissionService {
     @Override
     public void handleDesignDataScope(String modelId) {
         DesignRoleSettingDto dataModelPermission = getDataModelPermission(modelId);
-        //获取这个模型的数据权限有哪些
-        DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
+        if(ObjectNull.isNotNull(dataModelPermission)) {
+            //获取这个模型的数据权限有哪些
+            DynamicDataUtils.handleDesignDataScope(dataModelPermission.getDataModelRole());
+        }
     }
 }
