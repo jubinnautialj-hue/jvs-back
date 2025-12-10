@@ -91,15 +91,25 @@ public class FlowTaskManageController {
     @ApiOperation("流程任务分页")
     @GetMapping("/page")
     public R<Page<PageFlowTaskManageResDto>> manageTaskPage(Page<FlowTask> page, TaskManagePageDto dto) {
+        long totalStart = System.currentTimeMillis();
+        log.info("工作流任务分页查询开始，参数: current={}, size={}, taskStatus={}, jvsAppId={}",
+                page.getCurrent(), page.getSize(), dto.getTaskStatus(), dto.getJvsAppId());
+
         // 查询当前模式应用id集合
+        long menuStart = System.currentTimeMillis();
         AppVersionTypeEnum mode = ObjectNull.isNotNull(dto.getMode()) ? dto.getMode() : ModeUtils.getMode();
         //获取该用户该模式下的所有应用
         List<Tree<Object>> tree = useComponent.menu("", ModeUtils.getRealUser().getId(), IpUtil.isMobile(), mode, null).getKey();
         List<String> appIds = tree.stream().map(x -> String.valueOf(x.getId())).collect(Collectors.toList());
-//        List<String> appIds = appVersionService.getVersionTypeAppIds(mode);
+        log.info("查询用户应用菜单耗时: {}ms", System.currentTimeMillis() - menuStart);
+
         if (CollectionUtils.isEmpty(appIds)) {
+            log.info("用户没有可访问的应用，返回空结果");
             return R.ok();
         }
+
+        // 构建查询条件
+        long queryStart = System.currentTimeMillis();
         LambdaQueryWrapper<FlowTask> wrapper = Wrappers.<FlowTask>lambdaQuery()
                 .and(wa ->
                         wa.eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PENDING)
@@ -111,45 +121,72 @@ public class FlowTaskManageController {
                 .like(ObjectNull.isNotNull(dto.getJvsAppId()), FlowTask::getJvsAppId, dto.getJvsAppId())
                 .like(ObjectNull.isNotNull(dto.getTaskStatus()), FlowTask::getTaskStatus, dto.getTaskStatus())
                 .orderByDesc(FlowTask::getCreateTime);
+        log.info("构建查询条件耗时: {}ms", System.currentTimeMillis() - queryStart);
+
+        // 执行分页查询
+        long pageStart = System.currentTimeMillis();
         flowTaskService.page(page, wrapper);
+        log.info("分页查询耗时: {}ms, 返回记录数: {}", System.currentTimeMillis() - pageStart, page.getRecords().size());
+
         // 填充工作流任务使用的设计
+        long fillStart = System.currentTimeMillis();
         flowTaskService.fillBatchTaskDesignBody(page.getRecords());
+        log.info("填充工作流设计耗时: {}ms", System.currentTimeMillis() - fillStart);
 
         // 转换结果
         Page<PageFlowTaskManageResDto> pageDto = new Page<>(page.getCurrent(), page.getSize());
         if (ObjectNull.isNull(page.getRecords())) {
+            log.info("查询结果为空，返回空分页");
             return R.ok(pageDto);
         }
+
         // 填充数据
+        long convertStart = System.currentTimeMillis();
         List<PageFlowTaskManageResDto> resultList = BeanCopyUtil.copys(page.getRecords(), PageFlowTaskManageResDto.class);
         resultList.forEach(task -> {
+            long userStart = System.currentTimeMillis();
             UserDto userById = AuthorityManagementUtils.getUserById(task.getCreateById());
             task.setCreateDeptName(userById.getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(",")));
+            log.debug("查询用户信息耗时: {}ms, 用户ID: {}", System.currentTimeMillis() - userStart, task.getCreateById());
         });
+        log.info("转换结果集耗时: {}ms", System.currentTimeMillis() - convertStart);
 
         pageDto.setRecords(resultList);
         pageDto.setTotal(page.getTotal());
+
+        // 处理待办任务节点信息
+        long pendingStart = System.currentTimeMillis();
         // 未结束的任务id
         List<String> taskIds = page.getRecords().stream()
                 .filter(flowTask -> FlowTaskStatusEnum.PENDING.equals(flowTask.getTaskStatus()))
                 .map(FlowTask::getId).collect(Collectors.toList());
+        log.info("待办任务数量: {}", taskIds.size());
+
         // Map<任务id, 节点id集合>
         Map<String, List<String>> taskNodeIdMap = new HashMap<>();
         // Map<任务id, 待审批人>
         Map<String, List<FlowTaskPerson>> pendingTaskPersonMap = new HashMap<>();
-        if (ObjectNull.isNotNull(taskIds)) {
+        if (ObjectNull.isNotNull(taskIds) && !taskIds.isEmpty()) {
             // 获取待办节点
+            long nodeStart = System.currentTimeMillis();
             taskNodeIdMap = Optional.ofNullable(flowTaskNodeService.getCurrentNodeByTaskIds(taskIds))
                     .orElseGet(ArrayList::new)
                     .stream()
                     .collect(Collectors.groupingBy(FlowTaskNode::getFlowTaskId, Collectors.mapping(FlowTaskNode::getNodeId, Collectors.toList())));
+            log.info("查询待办节点耗时: {}ms", System.currentTimeMillis() - nodeStart);
+
             // 查询任务节点待处理人
+            long personStart = System.currentTimeMillis();
             pendingTaskPersonMap = ObjectNull.isNull(taskIds) ? Collections.emptyMap() :
                     flowTaskPersonService.listPerson(taskIds)
                             .stream()
                             .filter(p -> !ProcessStatusEnum.PROCESSED.equals(p.getProcessStatus()))
                             .collect(Collectors.groupingBy(FlowTaskPerson::getFlowTaskId));
+            log.info("查询待处理人耗时: {}ms", System.currentTimeMillis() - personStart);
         }
+
+        // 构建返回结果
+        long buildStart = System.currentTimeMillis();
         for (PageFlowTaskManageResDto task : pageDto.getRecords()) {
             String flowDesignBody = task.getDesignBody();
             List<String> taskNodeIds = taskNodeIdMap.get(task.getId());
@@ -194,6 +231,11 @@ public class FlowTaskManageController {
             task.setFlowDesign(null);
             task.setRootNode(rootNode);
         }
+        log.info("构建返回结果耗时: {}ms", System.currentTimeMillis() - buildStart);
+
+        long totalTime = System.currentTimeMillis() - totalStart;
+        log.info("工作流任务分页查询总耗时: {}ms", totalTime);
+
         return R.ok(pageDto);
     }
 
