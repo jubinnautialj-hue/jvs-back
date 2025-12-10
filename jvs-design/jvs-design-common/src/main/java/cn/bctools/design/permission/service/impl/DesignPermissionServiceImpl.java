@@ -29,6 +29,7 @@ import cn.bctools.web.utils.WebUtils;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import javax.servlet.http.HttpServletRequest;
@@ -40,6 +41,7 @@ import java.util.stream.Collectors;
  *
  * @author zhuxiaokang 权限服务
  */
+@Slf4j
 @Service
 @AllArgsConstructor
 public class DesignPermissionServiceImpl implements DesignPermissionService {
@@ -218,25 +220,77 @@ public class DesignPermissionServiceImpl implements DesignPermissionService {
 
     @Override
     public Map<String, List<DesignRole>> getBatchOperationPermission(List<String> designIds) {
+        long totalStart = System.currentTimeMillis();
+        log.info("开始批量获取操作权限，设计ID数量: {}", designIds == null ? 0 : designIds.size());
+
         if (ObjectNull.isNull(designIds)) {
             return Collections.emptyMap();
         }
+
         // 获取权限
+        long queryStart = System.currentTimeMillis();
         List<PermissionSetting> permissionSettings = permissionSettingService.list(Wrappers.<PermissionSetting>lambdaQuery()
                 .in(PermissionSetting::getDesignId, designIds)
                 .eq(PermissionSetting::getPermissionType, PermissionType.OPERATION));
+        log.info("查询权限设置耗时: {}ms, 返回记录数: {}", System.currentTimeMillis() - queryStart,
+                permissionSettings == null ? 0 : permissionSettings.size());
+
         if (ObjectNull.isNull(permissionSettings)) {
             return Collections.emptyMap();
         }
-        // 查询权限组权限成员配置
-        Map<String, PermissionMemberDto> groupMemberMap = getGroupMemberMap(permissionSettings);
 
-        // 操作权限
+        // 查询权限组权限成员配置
+        long groupStart = System.currentTimeMillis();
+        Map<String, PermissionMemberDto> groupMemberMap = getGroupMemberMap(permissionSettings);
+        log.info("查询权限组成员耗时: {}ms", System.currentTimeMillis() - groupStart);
+
+        // 操作权限 - 按designId分组优化处理
+        long processStart = System.currentTimeMillis();
+
+        // 先按designId分组权限设置，避免重复遍历
+        Map<String, List<PermissionSetting>> settingsByDesignId = permissionSettings.stream()
+                .filter(p -> PermissionType.OPERATION.equals(p.getPermissionType()))
+                .collect(Collectors.groupingBy(PermissionSetting::getDesignId));
+
+        log.info("按designId分组后，需要处理的designId数量: {}", settingsByDesignId.size());
+
         Map<String, List<DesignRole>> batchPermissionMap = new HashMap<>(designIds.size());
-        designIds.forEach(designId -> {
-            List<DesignRole> operationRoles = getOperationDesignRoles(permissionSettings, groupMemberMap, designId);
+
+        for (String designId : designIds) {
+            long roleStart = System.currentTimeMillis();
+
+            // 直接从分组后的map中获取，避免再次过滤
+            List<PermissionSetting> designSettings = settingsByDesignId.getOrDefault(designId, Collections.emptyList());
+
+            List<DesignRole> operationRoles = designSettings.stream()
+                    .map(p -> {
+                        PermissionMemberDto member = groupMemberMap.get(p.getPermissionGroupId());
+                        if (member == null) {
+                            return null;
+                        }
+                        return new DesignRole()
+                                .setPersonType(member.getPersonType())
+                                .setPersonnels(member.getPersonnels())
+                                .setOperation(p.getPermission().getOperation())
+                                .setTreeOperation(p.getPermission().getTreeOperation());
+                    })
+                    .filter(Objects::nonNull)
+                    .collect(Collectors.toList());
+
             batchPermissionMap.put(designId, operationRoles);
-        });
+
+            if (System.currentTimeMillis() - roleStart > 100) { // 单个设计权限处理超过100ms才记录
+                log.debug("处理设计ID {} 权限耗时: {}ms", designId, System.currentTimeMillis() - roleStart);
+            }
+        }
+
+        long processTime = System.currentTimeMillis() - processStart;
+        log.info("批量处理权限耗时: {}ms, 平均每个设计ID: {}ms",
+                processTime, processTime / designIds.size());
+
+        long totalTime = System.currentTimeMillis() - totalStart;
+        log.info("批量获取操作权限总耗时: {}ms", totalTime);
+
         return batchPermissionMap;
     }
 
@@ -247,12 +301,23 @@ public class DesignPermissionServiceImpl implements DesignPermissionService {
      * @return 权限组权限成员配置
      */
     private Map<String, PermissionMemberDto> getGroupMemberMap(List<PermissionSetting> permissionSettings) {
-        List<String> groupIds = permissionSettings
+        long startTime = System.currentTimeMillis();
+
+        // 去重groupIds，减少查询量
+        Set<String> groupIdSet = permissionSettings
                 .stream()
                 .map(PermissionSetting::getPermissionGroupId)
-                .collect(Collectors.toList());
-        return permissionGroupService.listByIds(groupIds)
-                .stream()
+                .collect(Collectors.toSet());
+
+        log.info("需要查询的权限组数量: {}", groupIdSet.size());
+
+        List<String> groupIds = new ArrayList<>(groupIdSet);
+        List<PermissionGroup> groups = permissionGroupService.listByIds(groupIds);
+
+        long costTime = System.currentTimeMillis() - startTime;
+        log.info("查询权限组耗时: {}ms, 返回权限组数量: {}", costTime, groups.size());
+
+        return groups.stream()
                 .collect(Collectors.toMap(PermissionGroup::getId, p -> Optional.ofNullable(p.getMember()).orElseGet(PermissionMemberDto::new)));
     }
 
