@@ -2691,6 +2691,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         if (ObjectNull.isNull(dataList, fieldModelDisplayMap)) {
             return;
         }
+        log.info("DynamicDataServiceImpl echoModelDisplay dataList:{}。fieldModelDisplayMap{}",dataList,fieldModelDisplayMap);
         for (Map<String, Object> data : dataList) {
             // 获取所有显示配置关联模型数据
             for (Map.Entry<String, ModelDisplayHtml> entry : fieldModelDisplayMap.entrySet()) {
@@ -2726,6 +2727,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
     @Override
     public void echoModelDisplay(Map<String, Object> data, Map<String, Object> linkageData, Collection<FieldBasicsHtml> fieldBasicsHtmls, List<ModelDisplayLinkageFieldHtml> linkageFieldKeys) {
+        log.info("echoModelDisplay2 ,data:{} ,linkageData:{}",data,linkageData);
         echo(linkageData, fieldBasicsHtmls, false);
         linkageFieldKeys.forEach(linkageFieldKey -> {
             data.put(linkageFieldKey.getAliasProp(), linkageData.get(linkageFieldKey.getProp()));
