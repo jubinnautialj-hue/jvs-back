@@ -2727,8 +2727,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
     @Override
     public void echoModelDisplay(Map<String, Object> data, Map<String, Object> linkageData, Collection<FieldBasicsHtml> fieldBasicsHtmls, List<ModelDisplayLinkageFieldHtml> linkageFieldKeys) {
-        log.info("echoModelDisplay2 ,data:{} ,linkageData:{}",data,linkageData);
         echo(linkageData, fieldBasicsHtmls, false);
+        log.info("echoModelDisplay2 ,data:{} ,linkageData:{},linkageFieldKeys{}",data,linkageData,linkageFieldKeys);
         linkageFieldKeys.forEach(linkageFieldKey -> {
             data.put(linkageFieldKey.getAliasProp(), linkageData.get(linkageFieldKey.getProp()));
             Object echoValue = linkageData.get(linkageFieldKey.getProp() + DynamicDataUtils.SUFFIX_ECHO);
