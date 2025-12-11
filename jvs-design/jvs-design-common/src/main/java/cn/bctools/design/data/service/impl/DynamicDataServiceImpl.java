@@ -2691,7 +2691,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         if (ObjectNull.isNull(dataList, fieldModelDisplayMap)) {
             return;
         }
-        log.info("DynamicDataServiceImpl echoModelDisplay dataList:{}。fieldModelDisplayMap{}",dataList,fieldModelDisplayMap);
+        log.info("DynamicDataServiceImpl echoModelDisplay dataList数量={}。fieldModelDisplayMap数量={}",dataList.size(),fieldModelDisplayMap.size());
         for (Map<String, Object> data : dataList) {
             // 获取所有显示配置关联模型数据
             for (Map.Entry<String, ModelDisplayHtml> entry : fieldModelDisplayMap.entrySet()) {
@@ -2709,15 +2709,28 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 }
                 // 一对一处理数据回显
                 List<String> linkageQueryFieldKeys = modelDisplay.getLinkageFieldKeys().stream().map(ModelDisplayLinkageFieldHtml::getProp).collect(Collectors.toList());
+
+                log.debug("处理关联模型回显: modelId={}, linkageFieldKeys={}", modelDisplay.getDataLinkageModelId(), linkageQueryFieldKeys);
+
                 // 替换条件值，并查询关联模型数据
                 List<QueryConditionDto> dataLinkageList = BeanCopyUtil.copys(modelDisplay.getDataLinkageList(), QueryConditionDto.class);
                 QueryConditionUtils.replaceConditionValue(dataLinkageList, data);
+
+                log.debug("查询关联模型数据条件: {}", dataLinkageList);
+
                 List<Map<String, Object>> linkageDataList = queryList(modelDisplay.getDataLinkageModelId(), linkageQueryFieldKeys, dataLinkageList.toArray(new QueryConditionDto[0]));
                 if (ObjectNull.isNull(linkageDataList)) {
+                    log.warn("关联模型查询结果为空: modelId={}, conditions={}", modelDisplay.getDataLinkageModelId(), dataLinkageList);
                     continue;
                 }
+
+                log.debug("关联模型查询结果: 记录数={}, 第一条数据={}", linkageDataList.size(), linkageDataList.get(0));
+
                 // 回显处理
                 List<FieldBasicsHtml> allLinkageDataFieldList = dataFieldService.getFields(appId, modelDisplay.getDataLinkageModelId(), true, true).stream().filter(fieldBasicsHtml -> linkageQueryFieldKeys.contains(fieldBasicsHtml.getFieldKey())).collect(Collectors.toList());
+
+                log.debug("关联模型字段列表: 字段数={}, 字段keys={}", allLinkageDataFieldList.size(), allLinkageDataFieldList.stream().map(FieldBasicsHtml::getFieldKey).collect(Collectors.toList()));
+
                 // 只获取一条数据回显
                 Map<String, Object> linkageData = linkageDataList.get(0);
                 echoModelDisplay(data, linkageData, allLinkageDataFieldList, modelDisplay.getLinkageFieldKeys());
@@ -2727,12 +2740,33 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
     @Override
     public void echoModelDisplay(Map<String, Object> data, Map<String, Object> linkageData, Collection<FieldBasicsHtml> fieldBasicsHtmls, List<ModelDisplayLinkageFieldHtml> linkageFieldKeys) {
+        log.info("开始处理模型显示回显: linkageFieldKeys数量={}, fieldBasicsHtmls数量={}", linkageFieldKeys.size(), fieldBasicsHtmls.size());
+
+        // 记录回显前的linkageData状态
+        log.debug("回显前linkageData: {}", linkageData);
+
         echo(linkageData, fieldBasicsHtmls, false);
+
+        // 记录回显后的linkageData状态
+        log.debug("回显后linkageData: {}", linkageData);
+
         log.info("echoModelDisplay2 ,data:{} ,linkageData:{},linkageFieldKeys{}",data,linkageData,linkageFieldKeys);
         linkageFieldKeys.forEach(linkageFieldKey -> {
-            data.put(linkageFieldKey.getAliasProp(), linkageData.get(linkageFieldKey.getProp()));
-            Object echoValue = linkageData.get(linkageFieldKey.getProp() + DynamicDataUtils.SUFFIX_ECHO);
-            data.put(linkageFieldKey.getAliasProp() + DynamicDataUtils.SUFFIX_ECHO, echoValue);
+            String prop = linkageFieldKey.getProp();
+            String aliasProp = linkageFieldKey.getAliasProp();
+            Object originalValue = linkageData.get(prop);
+            Object echoValue = linkageData.get(prop + DynamicDataUtils.SUFFIX_ECHO);
+
+            log.debug("处理关联字段: prop={}, aliasProp={}, originalValue={}, echoValue={}",
+                     prop, aliasProp, originalValue, echoValue);
+
+            data.put(aliasProp, originalValue);
+            data.put(aliasProp + DynamicDataUtils.SUFFIX_ECHO, echoValue);
+
+            // 如果echoValue为空，记录警告
+            if (ObjectNull.isNull(echoValue)) {
+                log.warn("关联字段回显值为空: prop={}, originalValue={}, 请检查字典配置或数据模型");
+            }
         });
     }
 
