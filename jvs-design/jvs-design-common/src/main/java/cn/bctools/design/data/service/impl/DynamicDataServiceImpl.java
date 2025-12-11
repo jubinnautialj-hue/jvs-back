@@ -1963,6 +1963,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     }
                 });
 
+        log.info("处理回显数据x前:{}",data);
         // 处理回显数据
         data.entrySet().stream().collect(Collectors.toList()).stream()
                 //有key的存在
@@ -1985,16 +1986,19 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                 }
                                 FieldBasicsHtml html = fieldHandler.toHtml(fieldDto);
                                 Object echoValue = fieldHandler.getEcho(html, value, override, olddata);
+                                log.info("处理回显数据x中3 fieldKey:{} . echoValue:{}",fieldKey,echoValue);
                                 if (ObjectNull.isNotNull(echoValue)) {
                                     //如果是导出进行特殊处理
                                     echoValue = function.apply(new ExportFieldDto().setField(fieldKey).setType(html.getType()).setObject(echoValue));
                                 }
+                                log.info("处理回显数据x中2 fieldKey:{} . echoValue:{}",fieldKey,echoValue);
                                 String path = DynamicDataUtils.getEchoFieldKey(html.getProp());
                                 if ((html.getType().equals(DataFieldType.input) || html.getType().equals(DataFieldType.tabGenerate)) && echoValue instanceof HashMap) {
                                     fieldHandler.setDataOverride(data, fieldKey, html, path, override, "不支持显示");
                                 } else {
                                     fieldHandler.setDataOverride(data, fieldKey, html, path, override, echoValue);
                                 }
+                                log.info("处理回显数据x中 fieldKey:{} . echoValue:{}",fieldKey,echoValue);
                             }
                         }
                     } catch (BusinessException be) {
@@ -2006,6 +2010,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     }
 
                 });
+        log.info("处理回显数据x后:{}",data);
         return data;
     }
 
