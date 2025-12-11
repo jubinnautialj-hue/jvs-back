@@ -1274,6 +1274,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         query.skip(skip).limit((int) size);
         List<Map> mapList = dataModelHandler.find(query, Map.class, modelId);
         List<Map<String, Object>> dataList = mapList.stream().map(e -> (Map<String, Object>) e).collect(Collectors.toList());
+        log.info("查询库x后:{}",dataList);
         // 获取设计字段
         DataModelPo byId = dataModelService.getById(modelId);
         if (echo) {
@@ -1316,6 +1317,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 }
                 return echo(e, fieldMap, false);
             }).collect(Collectors.toList());
+            log.info("清理缓存前x后:{}",dataList);
             //清理逻辑 可能会存在缓存
             RuleStartUtils.threadLocalCache.remove();
         }
@@ -1326,9 +1328,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         if (encryptionData) {
             dataList.forEach(e -> encryptionData(e, byId, true));
         }
+        log.info("数据脱敏x后:{}",dataList);
         if (ObjectNull.isNotNull(combiningFieldFormulaContentMap)) {
             dataList.forEach(e -> combiningFieldFormulaContent(e, combiningFieldFormulaContentMap));
         }
+        log.info("组合字段x后:{}",dataList);
         // 封装返回值
         mapPage.setRecords(dataList);
         return mapPage;
