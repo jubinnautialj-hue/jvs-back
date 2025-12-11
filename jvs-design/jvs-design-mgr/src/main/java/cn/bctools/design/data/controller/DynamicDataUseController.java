@@ -1348,7 +1348,6 @@ public class DynamicDataUseController {
                                                             modelId,
                                                     Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap,
                                                     List<List<QueryConditionDto>> queryGroupConditions, List<QueryOrderDto> sorts, List<String> fields, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet) {
-        log.info("DynamicDataUseController treeStructur = appId:{},records:{}, modelDisplayMap:{}",appId,records==null?"null":records,modelDisplayMap==null?"null":modelDisplayMap);
         // 显示设置-关联模型数据回显
         dynamicDataService.echoModelDisplay(appId, records, modelDisplayMap);
         if (ObjectNull.isNotNull(treeQuery.get())) {
