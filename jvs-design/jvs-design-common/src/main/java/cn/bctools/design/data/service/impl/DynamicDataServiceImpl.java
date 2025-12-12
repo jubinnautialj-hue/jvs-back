@@ -1274,7 +1274,6 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         query.skip(skip).limit((int) size);
         List<Map> mapList = dataModelHandler.find(query, Map.class, modelId);
         List<Map<String, Object>> dataList = mapList.stream().map(e -> (Map<String, Object>) e).collect(Collectors.toList());
-        log.info("查询库x后:{}",dataList);
         // 获取设计字段
         DataModelPo byId = dataModelService.getById(modelId);
         if (echo) {
@@ -1317,7 +1316,6 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 }
                 return echo(e, fieldMap, false);
             }).collect(Collectors.toList());
-            log.info("清理缓存前x后:{}",dataList);
             //清理逻辑 可能会存在缓存
             RuleStartUtils.threadLocalCache.remove();
         }
@@ -1328,11 +1326,9 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         if (encryptionData) {
             dataList.forEach(e -> encryptionData(e, byId, true));
         }
-        log.info("数据脱敏x后:{}",dataList);
         if (ObjectNull.isNotNull(combiningFieldFormulaContentMap)) {
             dataList.forEach(e -> combiningFieldFormulaContent(e, combiningFieldFormulaContentMap));
         }
-        log.info("组合字段x后:{}",dataList);
         // 封装返回值
         mapPage.setRecords(dataList);
         return mapPage;
@@ -1963,7 +1959,6 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     }
                 });
 
-        log.info("处理回显数据x前:{}",data);
         // 处理回显数据
         data.entrySet().stream().collect(Collectors.toList()).stream()
                 //有key的存在
@@ -1986,19 +1981,16 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                 }
                                 FieldBasicsHtml html = fieldHandler.toHtml(fieldDto);
                                 Object echoValue = fieldHandler.getEcho(html, value, override, olddata);
-                                log.info("处理回显数据x中3 fieldKey:{} . echoValue:{}",fieldKey,echoValue);
                                 if (ObjectNull.isNotNull(echoValue)) {
                                     //如果是导出进行特殊处理
                                     echoValue = function.apply(new ExportFieldDto().setField(fieldKey).setType(html.getType()).setObject(echoValue));
                                 }
-                                log.info("处理回显数据x中2 fieldKey:{} . echoValue:{}",fieldKey,echoValue);
                                 String path = DynamicDataUtils.getEchoFieldKey(html.getProp());
                                 if ((html.getType().equals(DataFieldType.input) || html.getType().equals(DataFieldType.tabGenerate)) && echoValue instanceof HashMap) {
                                     fieldHandler.setDataOverride(data, fieldKey, html, path, override, "不支持显示");
                                 } else {
                                     fieldHandler.setDataOverride(data, fieldKey, html, path, override, echoValue);
                                 }
-                                log.info("处理回显数据x中 fieldKey:{} . echoValue:{}",fieldKey,echoValue);
                             }
                         }
                     } catch (BusinessException be) {
@@ -2010,7 +2002,6 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     }
 
                 });
-        log.info("处理回显数据x后:{}",data);
         return data;
     }
 
@@ -2697,10 +2688,16 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
     @Override
     public void echoModelDisplay(String appId, List<Map<String, Object>> dataList, Map<String, ModelDisplayHtml> fieldModelDisplayMap) {
+        log.info("DynamicDataServiceImpl echoModelDisplay 开始 - appId={}, dataList={}, fieldModelDisplayMap={}",
+                appId,
+                dataList == null ? "null" : "size=" + dataList.size(),
+                fieldModelDisplayMap == null ? "null" : "size=" + fieldModelDisplayMap.size());
+
         if (ObjectNull.isNull(dataList, fieldModelDisplayMap)) {
+            log.warn("echoModelDisplay 参数为空，直接返回 - dataList={}, fieldModelDisplayMap={}",
+                    dataList, fieldModelDisplayMap);
             return;
         }
-        log.info("DynamicDataServiceImpl echoModelDisplay dataList数量={}。fieldModelDisplayMap数量={}",dataList.size(),fieldModelDisplayMap.size());
         for (Map<String, Object> data : dataList) {
             // 获取所有显示配置关联模型数据
             for (Map.Entry<String, ModelDisplayHtml> entry : fieldModelDisplayMap.entrySet()) {
@@ -2727,7 +2724,19 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
                 log.debug("查询关联模型数据条件: {}", dataLinkageList);
 
-                List<Map<String, Object>> linkageDataList = queryList(modelDisplay.getDataLinkageModelId(), linkageQueryFieldKeys, dataLinkageList.toArray(new QueryConditionDto[0]));
+                // 修复回显
+                List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
+                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
+                log.debug("临时清除数据权限以查询关联模型数据");
+
+                List<Map<String, Object>> linkageDataList;
+                try {
+                    linkageDataList = queryList(modelDisplay.getDataLinkageModelId(), linkageQueryFieldKeys, dataLinkageList.toArray(new QueryConditionDto[0]));
+                } finally {
+                    // 确保数据权限总是被恢复
+                    SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                    log.debug("恢复数据权限设置");
+                }
                 if (ObjectNull.isNull(linkageDataList)) {
                     log.warn("关联模型查询结果为空: modelId={}, conditions={}", modelDisplay.getDataLinkageModelId(), dataLinkageList);
                     continue;
@@ -2742,6 +2751,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
                 // 只获取一条数据回显
                 Map<String, Object> linkageData = linkageDataList.get(0);
+                log.info("开始调用echoModelDisplay进行关联字段回显处理: 数据模型ID={}, 关联字段数量={}", modelDisplay.getDataLinkageModelId(), modelDisplay.getLinkageFieldKeys().size());
                 echoModelDisplay(data, linkageData, allLinkageDataFieldList, modelDisplay.getLinkageFieldKeys());
             }
         }
