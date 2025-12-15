@@ -1375,13 +1375,27 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         }
         // 对于字典查询，绕过权限检查
         Query query;
-        if (criteria != null && criteria.toString().contains("id")) {
-            // 字典查询，直接创建查询，绕过权限
-            log.info("字典查询绕过权限检查 - modelId={}, criteria={}", modelId, criteria);
-            query = new Query(criteria);
+        if (criteria != null) {
+            // 检查是否是字典回显查询
+            String criteriaStr = criteria.toString();
+            boolean isDictionaryQuery = criteriaStr.contains("id") &&
+                                       (criteriaStr.contains("eq") || criteriaStr.contains("=")) &&
+                                       fieldKeyList.size() == 2 &&
+                                       (fieldKeyList.contains("id") &&
+                                        (fieldKeyList.contains("label") || fieldKeyList.contains("name")));
+
+            if (isDictionaryQuery) {
+                // 字典查询，直接创建查询，绕过权限
+                log.info("字典查询绕过权限检查 - modelId={}, criteria={}, fields={}", modelId, criteria, fieldKeyList);
+                query = new Query(criteria);
+            } else {
+                // 普通查询，应用权限
+                query = this.getPermitQuery(criteria);
+            }
         } else {
-            // 普通查询，应用权限
-            query = this.getPermitQuery(criteria);
+            // criteria为null，可能是获取所有数据，也绕过权限（字典获取场景）
+            log.info("无查询条件的列表查询，绕过权限检查 - modelId={}, fields={}", modelId, fieldKeyList);
+            query = new Query();
         }
 
         query.with(sorts);
