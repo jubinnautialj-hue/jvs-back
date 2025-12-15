@@ -355,16 +355,32 @@ public interface ISelectorDataHandler {
 
             SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
             List<Map<String, Object>> list;
+
+            // 添加更详细的查询诊断
+            log.info("线程[{}] 查询参数 - formId={}, fields={}, queryDto={}", threadId, fromId, arrayList, queryConditionDto);
+            log.info("线程[{}] 权限状态 - KEY_AUTH_CRITERIA={}, KEY_AUTH_FREE={}", threadId,
+                SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_CRITERIA),
+                SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_FREE));
+
             try {
                 list = bean.queryList(fromId, arrayList, queryConditionDto);
-                log.info("线程[{}]字典查询结果 - 记录数={}, 第一条数据={}", threadId,
+                log.info("线程[{}] 字典查询结果 - 记录数={}, 第一条数据={}", threadId,
                     list == null ? 0 : list.size(),
                     list == null || list.isEmpty() ? "null" : list.get(0));
+
+                // 如果查询结果为空，记录详细信息
+                if (list == null || list.isEmpty()) {
+                    log.warn("线程[{}] 字典查询返回空结果！formId={}, data={}, 这可能影响回显显示",
+                        threadId, fromId, data);
+                }
+            } catch (Exception e) {
+                log.error("线程[{}] 字典查询异常！formId={}, data={}", threadId, fromId, data, e);
+                throw e;
             } finally {
                 // 确保权限总是被恢复
                 SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
                 SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
-                log.info("线程[{}]恢复权限设置 - authCriteria已恢复", threadId);
+                log.info("线程[{}] 恢复权限设置 - authCriteria已恢复", threadId);
             }
             if (ObjectNull.isNull(list)) {
                 if (data instanceof Collection) {

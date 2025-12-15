@@ -1373,7 +1373,16 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         if (StringUtils.isBlank(modelId) || ObjectUtils.isEmpty(fieldKeyList)) {
             return Collections.emptyList();
         }
-        Query query = this.getPermitQuery(criteria);
+        // 对于字典查询，绕过权限检查
+        Query query;
+        if (criteria != null && criteria.toString().contains("id")) {
+            // 字典查询，直接创建查询，绕过权限
+            log.info("字典查询绕过权限检查 - modelId={}, criteria={}", modelId, criteria);
+            query = new Query(criteria);
+        } else {
+            // 普通查询，应用权限
+            query = this.getPermitQuery(criteria);
+        }
 
         query.with(sorts);
         if (ObjectNull.isNotNull(limit)) {
