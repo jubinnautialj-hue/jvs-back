@@ -207,12 +207,12 @@ public class DynamicDataUtils {
                         DataConditionType.valueOf(queryValue.toString());
                         isPermissionType = true;
                     } catch (IllegalArgumentException ex) {
-                        log.debug("查询条件值不是权限类型，直接使用原值: {}", queryValue);
+                        log.info("查询条件值不是权限类型，直接使用原值: {}", queryValue);
                     }
 
                     if (isPermissionType) {
                         queryValue = DataConditionType.get(queryValue);
-                        log.debug("数据权限条件转换结果: 转换后值={}", queryValue);
+                        log.info("数据权限条件转换结果: 转换后值={}", queryValue);
                     }
                     // 如果不是权限类型，直接使用原值
                 }
@@ -226,12 +226,12 @@ public class DynamicDataUtils {
                     DataConditionType.valueOf(queryValue.toString());
                     isPermissionType = true;
                 } catch (IllegalArgumentException ex) {
-                    log.debug("查询条件值不是权限类型，直接使用原值: {}", queryValue);
+                    log.info("查询条件值不是权限类型，直接使用原值: {}", queryValue);
                 }
 
                 if (isPermissionType) {
                     queryValue = DataConditionType.get(queryValue);
-                    log.debug("数据权限条件转换结果: 转换后值={}", queryValue);
+                    log.info("数据权限条件转换结果: 转换后值={}", queryValue);
                 }
                 // 如果不是权限类型，直接使用原值
             }
@@ -678,7 +678,7 @@ public class DynamicDataUtils {
                     isPermissionType = true;
                 } catch (IllegalArgumentException ex) {
                     // 不是权限类型，可能是数据ID，直接使用原值
-                    log.debug("查询条件值不是权限类型，直接使用原值: {}", e);
+                    log.info("查询条件值不是权限类型，直接使用原值: {}", e);
                 }
 
                 if (isPermissionType) {
