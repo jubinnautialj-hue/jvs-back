@@ -345,9 +345,14 @@ public interface ISelectorDataHandler {
             queryConditionDto.setFieldKey("id");
             List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
             SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
-            List<Map<String, Object>> list = bean.queryList(fromId, arrayList, queryConditionDto);
-            SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
-            SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
+            List<Map<String, Object>> list;
+            try {
+                list = bean.queryList(fromId, arrayList, queryConditionDto);
+            } finally {
+                // 确保权限总是被恢复
+                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
+            }
             if (ObjectNull.isNull(list)) {
                 if (data instanceof Collection) {
                     return ((Collection<?>) data).stream().map(e -> e.toString()).collect(Collectors.joining(","));

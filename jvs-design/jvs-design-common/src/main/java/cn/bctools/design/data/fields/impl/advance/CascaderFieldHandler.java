@@ -93,8 +93,12 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                         List<String> fields = new ArrayList<>();
                         fields.add(cascaderItem.getProps().getLabel());
                         fields.add(cascaderItem.getProps().getSecTitle());
-                        dictList = dynamicDataService.queryList(cascaderItem.getFormId(), fields, new QueryConditionDto());
-                        SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                        try {
+                            dictList = dynamicDataService.queryList(cascaderItem.getFormId(), fields, new QueryConditionDto());
+                        } finally {
+                            // 确保权限总是被恢复
+                            SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                        }
                         SystemThreadLocal.set(cascaderItem.getFormId() + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle(), dictList);
                     }
                     map = dictList

@@ -28,6 +28,7 @@ import cn.bctools.web.utils.WebUtils;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -45,6 +46,7 @@ import java.util.stream.Stream;
  *
  * @Author: GuoZi
  */
+@Slf4j
 public class DynamicDataUtils {
     /**
      * 将所有返回给前端的展示数据进行添加_1后缀，用于前端展示，
@@ -199,13 +201,39 @@ public class DynamicDataUtils {
                         }
                     }
                 } else {
-                    queryValue = DataConditionType.get(queryValue);
+                    // 检查是否是数据权限类型
+                    boolean isPermissionType = false;
+                    try {
+                        DataConditionType.valueOf(queryValue.toString());
+                        isPermissionType = true;
+                    } catch (IllegalArgumentException ex) {
+                        log.debug("查询条件值不是权限类型，直接使用原值: {}", queryValue);
+                    }
+
+                    if (isPermissionType) {
+                        queryValue = DataConditionType.get(queryValue);
+                        log.debug("数据权限条件转换结果: 转换后值={}", queryValue);
+                    }
+                    // 如果不是权限类型，直接使用原值
                 }
             } else {
                 if (queryValue instanceof BigDecimal) {
                     queryValue = ((BigDecimal) queryValue).doubleValue();
                 }
-                queryValue = DataConditionType.get(queryValue);
+                // 检查是否是数据权限类型
+                boolean isPermissionType = false;
+                try {
+                    DataConditionType.valueOf(queryValue.toString());
+                    isPermissionType = true;
+                } catch (IllegalArgumentException ex) {
+                    log.debug("查询条件值不是权限类型，直接使用原值: {}", queryValue);
+                }
+
+                if (isPermissionType) {
+                    queryValue = DataConditionType.get(queryValue);
+                    log.debug("数据权限条件转换结果: 转换后值={}", queryValue);
+                }
+                // 如果不是权限类型，直接使用原值
             }
 
             Criteria criteria = Criteria.where(fieldId);
@@ -642,11 +670,27 @@ public class DynamicDataUtils {
             Object o = null;
             //替换规则的值
             List<Object> collect = conditionDto.getValue().stream().flatMap(e -> {
-                Object obj = DataConditionType.get(e);
-                if (obj instanceof Collection) {
-                    return ((Collection<?>) obj).stream();
+                // 检查是否是数据权限类型，避免将数据ID误当作权限类型
+                boolean isPermissionType = false;
+                try {
+                    // 尝试判断是否是权限类型（如：当前登录用户ID、当前登录用户所在部门等）
+                    DataConditionType.valueOf(e.toString());
+                    isPermissionType = true;
+                } catch (IllegalArgumentException ex) {
+                    // 不是权限类型，可能是数据ID，直接使用原值
+                    log.debug("查询条件值不是权限类型，直接使用原值: {}", e);
+                }
+
+                if (isPermissionType) {
+                    Object obj = DataConditionType.get(e);
+                    if (obj instanceof Collection) {
+                        return ((Collection<?>) obj).stream();
+                    } else {
+                        return Collections.singletonList(obj).stream();
+                    }
                 } else {
-                    return Collections.singletonList(obj).stream();
+                    // 不是权限类型，直接使用原值
+                    return Collections.singletonList(e).stream();
                 }
             }).collect(Collectors.toList());
             if (collect.size() == 1) {
