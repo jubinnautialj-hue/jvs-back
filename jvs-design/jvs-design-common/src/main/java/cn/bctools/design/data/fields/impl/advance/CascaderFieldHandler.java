@@ -88,16 +88,29 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                     if (ObjectNull.isNotNull(o1)) {
                         dictList = (List<Map<String, Object>>) o1;
                     } else {
+                        long threadId = Thread.currentThread().getId();
                         List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
                         SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
                         List<String> fields = new ArrayList<>();
                         fields.add(cascaderItem.getProps().getLabel());
                         fields.add(cascaderItem.getProps().getSecTitle());
+                        log.info("线程[{}]开始级联查询 - formId={}, data={}, authCriteria={}", threadId, cascaderItem.getFormId(), data, authCriteria);
+
+                        // 添加 ThreadLocal 状态检查
+                        Map<String, Object> threadLocalState = SystemThreadLocal.get();
+                        log.info("线程[{}] ThreadLocal状态: size={}, keys={}", threadId,
+                            threadLocalState == null ? 0 : threadLocalState.size(),
+                            threadLocalState == null ? "null" : threadLocalState.keySet());
                         try {
                             dictList = dynamicDataService.queryList(cascaderItem.getFormId(), fields, new QueryConditionDto());
+                            log.info("线程[{}]级联查询结果 - formId={}, 记录数={}, 第一条数据={}", threadId,
+                                cascaderItem.getFormId(),
+                                dictList == null ? 0 : dictList.size(),
+                                dictList == null || dictList.isEmpty() ? "null" : dictList.get(0));
                         } finally {
                             // 确保权限总是被恢复
                             SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                            log.info("线程[{}]恢复级联查询权限设置 - authCriteria已恢复", threadId);
                         }
                         SystemThreadLocal.set(cascaderItem.getFormId() + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle(), dictList);
                     }
