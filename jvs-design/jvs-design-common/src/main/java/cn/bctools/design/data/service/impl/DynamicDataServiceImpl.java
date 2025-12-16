@@ -1377,12 +1377,21 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         Query query;
         if (criteria != null) {
             // 检查是否是字典回显查询
-            String criteriaStr = criteria.toString();
-            boolean isDictionaryQuery = criteriaStr.contains("id") &&
+            boolean isDictionaryQuery = false;
+            try {
+                String criteriaStr = criteria.toString();
+                if (criteriaStr != null) {
+                    isDictionaryQuery = criteriaStr.contains("id") &&
                                        (criteriaStr.contains("eq") || criteriaStr.contains("=")) &&
                                        fieldKeyList.size() == 2 &&
                                        (fieldKeyList.contains("id") &&
                                         (fieldKeyList.contains("label") || fieldKeyList.contains("name")));
+                }
+            } catch (Exception e) {
+                // 如果criteria.toString()抛出异常，记录警告并使用默认行为
+                log.warn("检查criteria时出现异常，将使用默认权限检查 - modelId={}, error={}", modelId, e.getMessage());
+                log.debug("criteria异常详情", e);
+            }
 
             if (isDictionaryQuery) {
                 // 字典查询，直接创建查询，绕过权限
