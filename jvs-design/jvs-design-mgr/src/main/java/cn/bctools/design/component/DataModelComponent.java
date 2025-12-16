@@ -478,19 +478,7 @@ public class DataModelComponent implements DataModelApi {
                 queryType = DataModelQueryType.in;
                 //如果是多值为查询条件,则直接改变查询的类型为in 或 not in
             } else {
-                // 检查是否是数据权限类型，避免将数据ID误当作权限类型
-                boolean isPermissionType = false;
-                try {
-                    DataConditionType.valueOf(queryValue.toString());
-                    isPermissionType = true;
-                } catch (IllegalArgumentException ex) {
-                    log.debug("查询条件值不是权限类型，直接使用原值: {}", queryValue);
-                }
-
-                if (isPermissionType) {
-                    queryValue = DataConditionType.get(queryValue);
-                }
-                // 如果不是权限类型，直接使用原值
+                queryValue = DataConditionType.get(queryValue);
             }
         }
 
