@@ -1379,18 +1379,22 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             // 检查是否是字典回显查询
             boolean isDictionaryQuery = false;
             try {
-                String criteriaStr = criteria.toString();
-                if (criteriaStr != null) {
-                    isDictionaryQuery = criteriaStr.contains("id") &&
-                                       (criteriaStr.contains("eq") || criteriaStr.contains("=")) &&
-                                       fieldKeyList.size() == 2 &&
-                                       (fieldKeyList.contains("id") &&
-                                        (fieldKeyList.contains("label") || fieldKeyList.contains("name")));
+                // 添加多重保护，防止各种空指针情况
+                if (fieldKeyList != null && fieldKeyList.size() == 2) {
+                    String criteriaStr = String.valueOf(criteria);  // 使用String.valueOf而不是toString()
+                    if (criteriaStr != null && !"null".equals(criteriaStr) && criteriaStr.length() > 0) {
+                        isDictionaryQuery = criteriaStr.contains("id") &&
+                                           (criteriaStr.contains("eq") || criteriaStr.contains("=")) &&
+                                           fieldKeyList.contains("id") &&
+                                           (fieldKeyList.contains("label") || fieldKeyList.contains("name"));
+                    }
                 }
             } catch (Exception e) {
-                // 如果criteria.toString()抛出异常，记录警告并使用默认行为
+                // 如果任何检查抛出异常，记录警告并使用默认行为
                 log.warn("检查criteria时出现异常，将使用默认权限检查 - modelId={}, error={}", modelId, e.getMessage());
                 log.debug("criteria异常详情", e);
+                // 异常时默认使用权限检查，确保安全性
+                isDictionaryQuery = false;
             }
 
             if (isDictionaryQuery) {
