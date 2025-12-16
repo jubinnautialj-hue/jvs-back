@@ -1373,7 +1373,43 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         if (StringUtils.isBlank(modelId) || ObjectUtils.isEmpty(fieldKeyList)) {
             return Collections.emptyList();
         }
-        Query query = this.getPermitQuery(criteria);
+        // 对于字典查询，绕过权限检查
+        Query query;
+        if (criteria != null) {
+            // 检查是否是字典回显查询
+            boolean isDictionaryQuery = false;
+            try {
+                // 添加多重保护，防止各种空指针情况
+                if (fieldKeyList != null && fieldKeyList.size() == 2) {
+                    String criteriaStr = String.valueOf(criteria);  // 使用String.valueOf而不是toString()
+                    if (criteriaStr != null && !"null".equals(criteriaStr) && criteriaStr.length() > 0) {
+                        isDictionaryQuery = criteriaStr.contains("id") &&
+                                           (criteriaStr.contains("eq") || criteriaStr.contains("=")) &&
+                                           fieldKeyList.contains("id") &&
+                                           (fieldKeyList.contains("label") || fieldKeyList.contains("name"));
+                    }
+                }
+            } catch (Exception e) {
+                // 如果任何检查抛出异常，记录警告并使用默认行为
+                log.warn("检查criteria时出现异常，将使用默认权限检查 - modelId={}, error={}", modelId, e.getMessage());
+                log.debug("criteria异常详情", e);
+                // 异常时默认使用权限检查，确保安全性
+                isDictionaryQuery = false;
+            }
+
+            if (isDictionaryQuery) {
+                // 字典查询，直接创建查询，绕过权限
+                log.info("字典查询绕过权限检查 - modelId={}, criteria={}, fields={}", modelId, criteria, fieldKeyList);
+                query = new Query(criteria);
+            } else {
+                // 普通查询，应用权限
+                query = this.getPermitQuery(criteria);
+            }
+        } else {
+            // criteria为null，可能是获取所有数据，也绕过权限（字典获取场景）
+            log.info("无查询条件的列表查询，绕过权限检查 - modelId={}, fields={}", modelId, fieldKeyList);
+            query = new Query();
+        }
 
         query.with(sorts);
         if (ObjectNull.isNotNull(limit)) {
