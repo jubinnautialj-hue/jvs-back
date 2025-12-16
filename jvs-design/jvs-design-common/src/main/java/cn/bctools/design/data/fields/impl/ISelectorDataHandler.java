@@ -362,20 +362,56 @@ public interface ISelectorDataHandler {
                 SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_CRITERIA),
                 SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_FREE));
 
-            try {
-                list = bean.queryList(fromId, arrayList, queryConditionDto);
-                log.info("线程[{}] 字典查询结果 - 记录数={}, 第一条数据={}", threadId,
-                    list == null ? 0 : list.size(),
-                    list == null || list.isEmpty() ? "null" : list.get(0));
+            // 实现重试机制解决间歇性查询失败问题
+            int maxRetries = 3;
+            int retryDelayMs = 200;
+            list = null;
 
-                // 如果查询结果为空，记录详细信息
-                if (list == null || list.isEmpty()) {
-                    log.warn("线程[{}] 字典查询返回空结果！formId={}, data={}, 这可能影响回显显示",
-                        threadId, fromId, data);
+            for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    log.info("线程[{}] 第{}次尝试查询字典 - formId={}, data={}", threadId, attempt, fromId, data);
+                    list = bean.queryList(fromId, arrayList, queryConditionDto);
+
+                    // 如果查询成功且有结果，跳出重试循环
+                    if (list != null && !list.isEmpty()) {
+                        log.info("线程[{}] 第{}次查询成功 - 记录数={}", threadId, attempt, list.size());
+                        break;
+                    }
+
+                    // 如果是空结果且不是最后一次尝试，等待后重试
+                    if (attempt < maxRetries) {
+                        log.warn("线程[{}] 第{}次查询返回空结果，{}ms后重试", threadId, attempt, retryDelayMs);
+                        Thread.sleep(retryDelayMs);
+                        retryDelayMs *= 2; // 指数退避
+                    }
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    log.error("线程[{}] 查询被中断", threadId, ie);
+                    break;
+                } catch (Exception e) {
+                    log.error("线程[{}] 第{}次查询异常！formId={}, data={}", threadId, attempt, fromId, data, e);
+                    if (attempt == maxRetries) {
+                        throw e; // 最后一次尝试失败，抛出异常
+                    }
+                    // 非最后一次尝试，等待后重试
+                    try {
+                        Thread.sleep(retryDelayMs);
+                        retryDelayMs *= 2; // 指数退避
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        throw e;
+                    }
                 }
-            } catch (Exception e) {
-                log.error("线程[{}] 字典查询异常！formId={}, data={}", threadId, fromId, data, e);
-                throw e;
+            }
+
+            // 记录最终结果
+            log.info("线程[{}] 字典查询最终结果 - 记录数={}, 尝试次数={}", threadId,
+                list == null ? 0 : list.size(), maxRetries);
+
+            // 如果所有重试都失败，记录详细信息
+            if (list == null || list.isEmpty()) {
+                log.error("线程[{}] 字典查询所有重试均失败！formId={}, data={}, 将返回原始数据",
+                    threadId, fromId, data);
             } finally {
                 // 确保权限总是被恢复
                 SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);

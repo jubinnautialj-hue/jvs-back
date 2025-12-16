@@ -101,17 +101,63 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                         log.info("线程[{}] ThreadLocal状态: size={}, keys={}", threadId,
                             threadLocalState == null ? 0 : threadLocalState.size(),
                             threadLocalState == null ? "null" : threadLocalState.keySet());
-                        try {
-                            dictList = dynamicDataService.queryList(cascaderItem.getFormId(), fields, new QueryConditionDto());
-                            log.info("线程[{}]级联查询结果 - formId={}, 记录数={}, 第一条数据={}", threadId,
-                                cascaderItem.getFormId(),
-                                dictList == null ? 0 : dictList.size(),
-                                dictList == null || dictList.isEmpty() ? "null" : dictList.get(0));
-                        } finally {
-                            // 确保权限总是被恢复
-                            SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
-                            log.info("线程[{}]恢复级联查询权限设置 - authCriteria已恢复", threadId);
+
+                        // 实现重试机制解决级联查询间歇性失败问题
+                        int maxRetries = 3;
+                        int retryDelayMs = 200;
+                        dictList = null;
+
+                        for (int attempt = 1; attempt <= maxRetries; attempt++) {
+                            try {
+                                log.info("线程[{}] 第{}次尝试级联查询 - formId={}", threadId, attempt, cascaderItem.getFormId());
+                                dictList = dynamicDataService.queryList(cascaderItem.getFormId(), fields, new QueryConditionDto());
+
+                                // 如果查询成功且有结果，跳出重试循环
+                                if (dictList != null && !dictList.isEmpty()) {
+                                    log.info("线程[{}] 第{}次级联查询成功 - 记录数={}", threadId, attempt, dictList.size());
+                                    break;
+                                }
+
+                                // 如果是空结果且不是最后一次尝试，等待后重试
+                                if (attempt < maxRetries) {
+                                    log.warn("线程[{}] 第{}次级联查询返回空结果，{}ms后重试", threadId, attempt, retryDelayMs);
+                                    Thread.sleep(retryDelayMs);
+                                    retryDelayMs *= 2; // 指数退避
+                                }
+                            } catch (InterruptedException ie) {
+                                Thread.currentThread().interrupt();
+                                log.error("线程[{}] 级联查询被中断", threadId, ie);
+                                break;
+                            } catch (Exception e) {
+                                log.error("线程[{}] 第{}次级联查询异常！formId={}", threadId, attempt, cascaderItem.getFormId(), e);
+                                if (attempt == maxRetries) {
+                                    throw e; // 最后一次尝试失败，抛出异常
+                                }
+                                // 非最后一次尝试，等待后重试
+                                try {
+                                    Thread.sleep(retryDelayMs);
+                                    retryDelayMs *= 2; // 指数退避
+                                } catch (InterruptedException ie) {
+                                    Thread.currentThread().interrupt();
+                                    throw e;
+                                }
+                            }
                         }
+
+                        // 记录最终结果
+                        log.info("线程[{}] 级联查询最终结果 - 记录数={}, 尝试次数={}", threadId,
+                            dictList == null ? 0 : dictList.size(), maxRetries);
+
+                        // 如果所有重试都失败，记录详细信息
+                        if (dictList == null || dictList.isEmpty()) {
+                            log.error("线程[{}] 级联查询所有重试均失败！formId={}, 将使用空列表",
+                                threadId, cascaderItem.getFormId());
+                            dictList = new ArrayList<>(); // 使用空列表避免后续空指针
+                        }
+
+                        // 确保权限总是被恢复
+                        SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                        log.info("线程[{}]恢复级联查询权限设置 - authCriteria已恢复", threadId);
                         SystemThreadLocal.set(cascaderItem.getFormId() + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle(), dictList);
                     }
                     map = dictList
