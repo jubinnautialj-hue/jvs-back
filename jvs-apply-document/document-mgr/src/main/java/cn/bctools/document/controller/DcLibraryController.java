@@ -607,16 +607,21 @@ public class DcLibraryController {
     @ApiImplicitParams({@ApiImplicitParam(name = "id（知识库id、目录id、文档id）", value = "id", required = true)})
     @GetMapping("/info/{id}")
     public R<DcLibrary> queryDcLibraryInfo(@PathVariable String id) {
+        log.info("======= 进入 /dcLibrary/info/{} 接口，参数 id: {}", id, id);
         // 查询
         DocumentAuthDto documentAuth = AuthSystemTool.getDocumentAuth();
         Set<String> ids = documentAuth.getIds();
+        log.info("======= 当前用户权限 ids: {}", ids);
         if (ids.isEmpty() || !ids.contains(id)) {
+            log.warn("======= 没有此文档操作权限，请求 id: {}", id);
             return R.failed("没有此文档操作权限");
         }
         DcLibrary dcLibraryInfo = dcLibraryService.getById(id);
         if (dcLibraryInfo == null) {
+            log.warn("======= 资源不存在，请求 id: {}", id);
             return R.failed("资源不存在");
         }
+        log.info("======= /dcLibrary/info/{} 接口返回数据: {}", id, JSONObject.toJSONString(dcLibraryInfo));
         return R.ok(dcLibraryInfo.setDcIdentifying(documentAuth.getIdentifyingRoleMap().get(id)));
     }
 
