@@ -344,82 +344,10 @@ public interface ISelectorDataHandler {
             queryConditionDto.setEnabledQueryTypes(DataQueryType.eq);
             queryConditionDto.setFieldKey("id");
             List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
-            long threadId = Thread.currentThread().getId();
-            log.info("线程[{}]开始字典查询 - fromId={}, data={}, authCriteria={}", threadId, fromId, data, authCriteria);
-
-            // 添加 ThreadLocal 状态检查
-            Map<String, Object> threadLocalState = SystemThreadLocal.get();
-            log.info("线程[{}] ThreadLocal状态: size={}, keys={}", threadId,
-                threadLocalState == null ? 0 : threadLocalState.size(),
-                threadLocalState == null ? "null" : threadLocalState.keySet());
-
             SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
-            List<Map<String, Object>> list;
-
-            // 添加更详细的查询诊断
-            log.info("线程[{}] 查询参数 - formId={}, fields={}, queryDto={}", threadId, fromId, arrayList, queryConditionDto);
-            log.info("线程[{}] 权限状态 - KEY_AUTH_CRITERIA={}, KEY_AUTH_FREE={}", threadId,
-                SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_CRITERIA),
-                SystemThreadLocal.get(DynamicDataUtils.KEY_AUTH_FREE));
-
-            // 实现重试机制解决间歇性查询失败问题
-            int maxRetries = 3;
-            int retryDelayMs = 200;
-            list = null;
-
-            try {
-                for (int attempt = 1; attempt <= maxRetries; attempt++) {
-                    try {
-                        log.info("线程[{}] 第{}次尝试查询字典 - formId={}, data={}", threadId, attempt, fromId, data);
-                        list = bean.queryList(fromId, arrayList, queryConditionDto);
-
-                        // 如果查询成功且有结果，跳出重试循环
-                        if (list != null && !list.isEmpty()) {
-                            log.info("线程[{}] 第{}次查询成功 - 记录数={}", threadId, attempt, list.size());
-                            break;
-                        }
-
-                        // 如果是空结果且不是最后一次尝试，等待后重试
-                        if (attempt < maxRetries) {
-                            log.warn("线程[{}] 第{}次查询返回空结果，{}ms后重试", threadId, attempt, retryDelayMs);
-                            Thread.sleep(retryDelayMs);
-                            retryDelayMs *= 2; // 指数退避
-                        }
-                    } catch (InterruptedException ie) {
-                        Thread.currentThread().interrupt();
-                        log.error("线程[{}] 查询被中断", threadId, ie);
-                        break;
-                    } catch (Exception e) {
-                        log.error("线程[{}] 第{}次查询异常！formId={}, data={}", threadId, attempt, fromId, data, e);
-                        if (attempt == maxRetries) {
-                            throw e; // 最后一次尝试失败，抛出异常
-                        }
-                        // 非最后一次尝试，等待后重试
-                        try {
-                            Thread.sleep(retryDelayMs);
-                            retryDelayMs *= 2; // 指数退避
-                        } catch (InterruptedException ie) {
-                            Thread.currentThread().interrupt();
-                            throw e;
-                        }
-                    }
-                }
-
-                // 记录最终结果
-                log.info("线程[{}] 字典查询最终结果 - 记录数={}, 尝试次数={}", threadId,
-                    list == null ? 0 : list.size(), maxRetries);
-
-                // 如果所有重试都失败，记录详细信息
-                if (list == null || list.isEmpty()) {
-                    log.error("线程[{}] 字典查询所有重试均失败！formId={}, data={}, 将返回原始数据",
-                        threadId, fromId, data);
-                }
-            } finally {
-                // 确保权限总是被恢复
-                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
-                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
-                log.info("线程[{}] 恢复权限设置 - authCriteria已恢复", threadId);
-            }
+            List<Map<String, Object>> list = bean.queryList(fromId, arrayList, queryConditionDto);
+            SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+            SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
             if (ObjectNull.isNull(list)) {
                 if (data instanceof Collection) {
                     return ((Collection<?>) data).stream().map(e -> e.toString()).collect(Collectors.joining(","));

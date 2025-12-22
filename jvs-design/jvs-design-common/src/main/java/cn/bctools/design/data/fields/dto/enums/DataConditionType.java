@@ -69,11 +69,6 @@ public enum DataConditionType {
      * @return the object
      */
     public static Object get(Object str) {
-        // 添加null检查，防止空指针异常
-        if (str == null) {
-            log.debug("数据权限条件值为null，直接返回null");
-            return null;
-        }
         try {
             DataConditionType value = DataConditionType.valueOf(str.toString());
             switch (value) {
@@ -116,7 +111,7 @@ public enum DataConditionType {
                     return str;
             }
         } catch (IllegalArgumentException e) {
-            log.debug("数据权限条件值不是系统预定义类型，直接使用原值: {}", str);
+            log.error("系统数据权限未匹配到数据" + str);
             return str;
         } catch (RuntimeException e) {
             return "未匹配到数据";
