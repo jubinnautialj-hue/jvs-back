@@ -18,6 +18,7 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.URLUtil;
 import cn.hutool.crypto.SecureUtil;
+import com.alibaba.fastjson.JSONObject;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import io.swagger.annotations.*;
 import lombok.SneakyThrows;
@@ -115,6 +116,7 @@ public class DcLibraryFileController {
     })
     @DocumentLog(operationType = DcLibraryLogOperationTypeEnum.SEE)
     public R<Dict> getUrl(@PathVariable String id, Boolean isTemplate) {
+        log.info("/dcLibrary/file/get/url/{} 接口请求参数: id={}, isTemplate={}", id, id, isTemplate);
         //如果不是模板需要判断是否有权限
         if (!isTemplate) {
             DcLibrary byId = dcLibraryService.getById(id);
@@ -144,6 +146,7 @@ public class DcLibraryFileController {
             filePath = byId.getFilePath();
             key = byId.getBucketName() + byId.getFilePath();
         }
+        log.info("/dcLibrary/file/get/url/{} 接口key: key={}", id, key);
         key = SecureUtil.md5(key);
         //判断当前文件是否为
         String s = ossTemplate.fileLink(filePath, bucketName);
@@ -157,6 +160,7 @@ public class DcLibraryFileController {
             key = key.substring(0, Math.min(key.length(), 20));
             dict.put("key", key);
         }
+        log.info("/dcLibrary/file/get/url/{} 接口返回数据: {}", id, JSONObject.toJSONString(dict));
         return R.ok(dict);
     }
 

@@ -130,6 +130,7 @@ public class DcNoAuthController {
     @ApiOperation("获取文库信息")
     public R<DcLibrary> dcLibraryInfo(@PathVariable String id) {
         DcLibrary dcLibrary = dcLibraryService.getById(id);
+        log.info("/dcLibrary/info/{} 接口返回数据: {}", id, JSONObject.toJSONString(dcLibrary));
         return R.ok(dcLibrary);
     }
 
