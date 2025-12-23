@@ -68,8 +68,8 @@ public class JvsSystemConfig {
     private int connectTimeout = 30 * 10 * 1000;
 
     /**
-     * 自定义的 socket 超时时间
+     * 自定义的 socket 超时时间(读取超时)
      */
-    private int socketTimeout = 10 * 1000;
+    private int socketTimeout = 30 * 10 * 1000;
 
 }

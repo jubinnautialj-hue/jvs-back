@@ -1,6 +1,8 @@
 package cn.bctools.design.workflow.controller;
 
+import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.R;
+import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.design.workflow.dto.manage.TaskManagePageDto;
 import cn.bctools.design.workflow.service.FlowTaskManageAsyncExportService;
 import io.swagger.annotations.Api;
@@ -41,8 +43,14 @@ public class FlowTaskManageExportController {
             String taskId = UUID.randomUUID().toString();
             log.info("发起异步导出任务: {},参数: {}", taskId, params);
 
+            // 获取当前用户信息,传递给异步任务
+            UserDto currentUser = UserCurrentUtils.getCurrentUser();
+            if (currentUser == null) {
+                return R.failed("获取当前用户信息失败");
+            }
+
             // 启动异步导出
-            asyncExportService.asyncExport(params, taskId);
+            asyncExportService.asyncExport(params, taskId, currentUser);
 
             return R.ok(taskId, "导出任务已创建");
         } catch (Exception e) {
@@ -99,7 +107,7 @@ public class FlowTaskManageExportController {
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFileName)
-                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM_VALUE)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_OCTET_STREAM.toString())
                     .contentLength(data.length)
                     .body(data);
 

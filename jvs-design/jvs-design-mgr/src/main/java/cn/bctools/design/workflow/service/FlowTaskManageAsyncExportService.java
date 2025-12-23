@@ -75,16 +75,17 @@ public class FlowTaskManageAsyncExportService {
      *
      * @param params 查询参数
      * @param taskId 任务ID
+     * @param currentUser 当前用户信息
      */
     @Async("exportExecutor")
-    public void asyncExport(TaskManagePageDto params, String taskId) {
+    public void asyncExport(TaskManagePageDto params, String taskId, UserDto currentUser) {
         log.info("开始异步导出任务: {}, 参数: {}", taskId, params);
         updateProgress(taskId, 0, "开始导出");
 
         try {
             // 1. 查询数据
             updateProgress(taskId, 10, "查询任务数据...");
-            List<FlowTask> records = queryFlowTasks(params);
+            List<FlowTask> records = queryFlowTasks(params, currentUser);
 
             if (records.isEmpty()) {
                 log.info("导出任务 {} 没有数据", taskId);
@@ -110,24 +111,35 @@ public class FlowTaskManageAsyncExportService {
             log.info("异步导出任务 {} 完成,文件大小: {} bytes", taskId, excelBytes.length);
 
         } catch (Exception e) {
-            log.error("异步导出任务 {} 失败: {}", taskId, e.getMessage(), e);
-            saveErrorResult(taskId, e.getMessage());
+            String errorMsg = "导出失败: " + e.getClass().getSimpleName() + ": " + (e.getMessage() != null ? e.getMessage() : "未知错误");
+            log.error("异步导出任务 {} 失败: {}", taskId, errorMsg, e);
+            saveErrorResult(taskId, errorMsg);
         }
     }
 
     /**
      * 查询工作流任务数据
      */
-    private List<FlowTask> queryFlowTasks(TaskManagePageDto dto) {
-        UserDto userDto = UserCurrentUtils.getCurrentUser();
-        if (ObjectNull.isNull(userDto)) {
+    private List<FlowTask> queryFlowTasks(TaskManagePageDto dto, UserDto currentUser) {
+        if (ObjectNull.isNull(currentUser)) {
             return Collections.emptyList();
         }
 
         // 获取模式
         AppVersionTypeEnum mode = ObjectNull.isNotNull(dto.getMode()) ? dto.getMode() : ModeUtils.getMode();
         // 获取该用户该模式下的所有应用
-        List<Tree<Object>> tree = useComponent.menu("", ModeUtils.getRealUser().getId(), IpUtil.isMobile(), mode, null).getKey();
+        List<Tree<Object>> tree;
+        try {
+            tree = useComponent.menu("", currentUser.getId(), IpUtil.isMobile(), mode, null).getKey();
+            if (tree == null || tree.isEmpty()) {
+                log.warn("获取用户应用菜单失败,用户ID: {}", currentUser.getId());
+                return Collections.emptyList();
+            }
+        } catch (Exception e) {
+            log.error("获取用户应用菜单失败,用户ID: {}", currentUser.getId(), e);
+            return Collections.emptyList();
+        }
+        
         List<String> appIds = tree.stream()
                 .map(x -> String.valueOf(x.getId()))
                 .collect(Collectors.toList());
