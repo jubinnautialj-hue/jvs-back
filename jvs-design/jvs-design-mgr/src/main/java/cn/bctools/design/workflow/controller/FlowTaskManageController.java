@@ -243,12 +243,26 @@ public class FlowTaskManageController {
     @ApiOperation("流程导出")
     @GetMapping("/exportTaskManage")
     public void exportTaskManage(TaskManagePageDto dto, HttpServletResponse response) {
+        String traceId = "EXPORT-" + System.currentTimeMillis() + "-" + Thread.currentThread().getId();
+        log.info("[{}] 开始执行导出任务，参数: mode={}, taskStatus={}, taskCode={}, flowName={}, title={}, jvsAppId={}",
+                traceId, dto.getMode(), dto.getTaskStatus(), dto.getTaskCode(), dto.getFlowName(), dto.getTitle(), dto.getJvsAppId());
+        long totalStart = System.currentTimeMillis();
+
         // 获取模式
+        long modeStart = System.currentTimeMillis();
         AppVersionTypeEnum mode = ObjectNull.isNotNull(dto.getMode()) ? dto.getMode() : ModeUtils.getMode();
+        log.info("[{}] 获取模式耗时: {}ms", traceId, System.currentTimeMillis() - modeStart);
+
         //获取该用户该模式下的所有应用
+        long menuStart = System.currentTimeMillis();
         List<Tree<Object>> tree = useComponent.menu("", ModeUtils.getRealUser().getId(), IpUtil.isMobile(), mode, null).getKey();
+        log.info("[{}] 获取用户应用菜单耗时: {}ms", traceId, System.currentTimeMillis() - menuStart);
+
         List<String> appIds = tree.stream().map(x -> String.valueOf(x.getId())).collect(Collectors.toList());
+        log.info("[{}] 提取应用ID列表耗时: {}ms, 应用数量: {}", traceId, System.currentTimeMillis() - menuStart, appIds.size());
+
         //组装查询条件
+        long queryBuildStart = System.currentTimeMillis();
         LambdaQueryWrapper<FlowTask> wrapper = Wrappers.<FlowTask>lambdaQuery()
                 .and(wa ->
                         wa.eq(FlowTask::getTaskStatus, FlowTaskStatusEnum.PENDING)
@@ -261,15 +275,29 @@ public class FlowTaskManageController {
                 .like(ObjectNull.isNotNull(dto.getJvsAppId()), FlowTask::getJvsAppId, dto.getJvsAppId())
                 .like(ObjectNull.isNotNull(dto.getTaskStatus()), FlowTask::getTaskStatus, dto.getTaskStatus())
                 .orderByDesc(FlowTask::getCreateTime);
+        log.info("[{}] 构建查询条件耗时: {}ms", traceId, System.currentTimeMillis() - queryBuildStart);
+
+        // 执行查询
+        long queryStart = System.currentTimeMillis();
         List<FlowTask> records = flowTaskService.list(wrapper);
+        log.info("[{}] 数据库查询耗时: {}ms, 返回记录数: {}", traceId, System.currentTimeMillis() - queryStart, records.size());
+
+        // 处理数据
+        long dataProcessStart = System.currentTimeMillis();
         List<TaskManageExcelDto> taskManageExcelDtos = this.handleData(records);
+        log.info("[{}] 数据处理耗时: {}ms, 生成Excel数据行数: {}", traceId, System.currentTimeMillis() - dataProcessStart, taskManageExcelDtos.size());
+
         //将文件名称进行编码
+        long responseStart = System.currentTimeMillis();
         response.setContentType("application/ms-excel");
         response.setCharacterEncoding("utf-8");
         String fileName = URLCoder.encode("审批进度报表.xlsx");
         response.setHeader("Content-disposition", "attachment;filename=" + fileName);
+        log.info("[{}] 设置响应头耗时: {}ms", traceId, System.currentTimeMillis() - responseStart);
 
         try {
+            // Excel样式配置
+            long styleStart = System.currentTimeMillis();
             // 头的策略
             WriteCellStyle headWriteCellStyle = new WriteCellStyle();
             WriteFont headWriteFont = new WriteFont();
@@ -295,6 +323,10 @@ public class FlowTaskManageController {
             // 这个策略是 头是头的样式 内容是内容的样式 其他的策略可以自己实现
             HorizontalCellStyleStrategy horizontalCellStyleStrategy =
                     new HorizontalCellStyleStrategy(headWriteCellStyle, contentWriteCellStyle);
+            log.info("[{}] Excel样式配置耗时: {}ms", traceId, System.currentTimeMillis() - styleStart);
+
+            // Excel写入
+            long writeStart = System.currentTimeMillis();
             EasyExcel.write(new BufferedOutputStream(response.getOutputStream()), TaskManageExcelDto.class)
                     .registerWriteHandler(horizontalCellStyleStrategy)
                     .registerWriteHandler(new ConditionMergeStrategy<>(
@@ -306,7 +338,11 @@ public class FlowTaskManageController {
                     .excelType(ExcelTypeEnum.XLSX)
                     // 是否自动关闭输入流
                     .autoCloseStream(Boolean.TRUE).sheet("审批进度报表").doWrite(taskManageExcelDtos);
+            log.info("[{}] Excel写入耗时: {}ms", traceId, System.currentTimeMillis() - writeStart);
+
+            log.info("[{}] 导出任务完成，总耗时: {}ms", traceId, System.currentTimeMillis() - totalStart);
         } catch (IOException e) {
+            log.error("[{}] 导出任务失败: {}", traceId, e.getMessage(), e);
             e.printStackTrace();
         }
     }
@@ -318,34 +354,56 @@ public class FlowTaskManageController {
      * @return
      */
     private List<TaskManageExcelDto> handleData(List<FlowTask> records) {
+        String traceId = "EXPORT-" + System.currentTimeMillis() + "-DATA-" + Thread.currentThread().getId();
+        long totalStart = System.currentTimeMillis();
+        log.info("[{}] 开始处理导出数据，记录数: {}", traceId, records.size());
+
         List<TaskManageExcelDto> res = new ArrayList<>();
         // 填充工作流任务使用的设计
+        long designStart = System.currentTimeMillis();
         flowTaskService.fillBatchTaskDesignBody(records);
+        log.info("[{}] 填充工作流设计耗时: {}ms", traceId, System.currentTimeMillis() - designStart);
+
         // 未结束的任务id
+        long taskIdsStart = System.currentTimeMillis();
         List<String> taskIds = records.stream()
                 .filter(flowTask -> FlowTaskStatusEnum.PENDING.equals(flowTask.getTaskStatus()))
                 .map(FlowTask::getId).collect(Collectors.toList());
+        log.info("[{}] 筛选待办任务ID耗时: {}ms, 待办任务数量: {}", traceId, System.currentTimeMillis() - taskIdsStart, taskIds.size());
+
         // Map<任务id, 节点id集合>
         Map<String, List<String>> taskNodeIdMap = new HashMap<>();
         // Map<任务id, 待审批人>
         Map<String, List<FlowTaskPerson>> pendingTaskPersonMap = new HashMap<>();
         if (ObjectNull.isNotNull(taskIds)) {
             // 获取待办节点
+            long nodeStart = System.currentTimeMillis();
             taskNodeIdMap = Optional.ofNullable(flowTaskNodeService.getCurrentNodeByTaskIds(taskIds))
                     .orElseGet(ArrayList::new)
                     .stream()
                     .collect(Collectors.groupingBy(FlowTaskNode::getFlowTaskId, Collectors.mapping(FlowTaskNode::getNodeId, Collectors.toList())));
+            log.info("[{}] 获取待办节点耗时: {}ms", traceId, System.currentTimeMillis() - nodeStart);
+
             // 查询任务节点待处理人
+            long personStart = System.currentTimeMillis();
             pendingTaskPersonMap = ObjectNull.isNull(taskIds) ? Collections.emptyMap() :
                     flowTaskPersonService.listPerson(taskIds)
                             .stream()
                             .filter(p -> !ProcessStatusEnum.PROCESSED.equals(p.getProcessStatus()))
                             .collect(Collectors.groupingBy(FlowTaskPerson::getFlowTaskId));
+            log.info("[{}] 查询待处理人耗时: {}ms", traceId, System.currentTimeMillis() - personStart);
         }
+
+        // 处理每条记录
+        long processStart = System.currentTimeMillis();
         for (FlowTask task : records) {
+            long userStart = System.currentTimeMillis();
             UserDto userById = AuthorityManagementUtils.getUserById(task.getCreateById());
             String deptName = userById.getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(","));
+            log.debug("[{}] 查询用户信息耗时: {}ms, 用户ID: {}", traceId, System.currentTimeMillis() - userStart, task.getCreateById());
+
             LinkedList<CourseDto> courses = task.getCourses();
+            long coursesStart = System.currentTimeMillis();
             for (int i = 0; i < courses.size(); i++) {
                 CourseDto course = courses.get(i);
                 int finalI = i;
@@ -375,6 +433,7 @@ public class FlowTaskManageController {
                     res.add(excel);
                 });
             }
+            log.debug("[{}] 处理课程数据耗时: {}ms, 课程数量: {}", traceId, System.currentTimeMillis() - coursesStart, courses.size());
 
             List<String> taskNodeIds = taskNodeIdMap.get(task.getId());
             if (ObjectNull.isNull(taskNodeIds)) {
@@ -415,6 +474,8 @@ public class FlowTaskManageController {
             excel.setTaskStatusName(task.getTaskStatus().getValue() == 1 ? "待审批" : "已通过");
             res.add(excel);
         }
+        log.info("[{}] 处理所有记录耗时: {}ms, 生成Excel行数: {}", traceId, System.currentTimeMillis() - processStart, res.size());
+        log.info("[{}] handleData总耗时: {}ms", traceId, System.currentTimeMillis() - totalStart);
         return res;
     }
 
