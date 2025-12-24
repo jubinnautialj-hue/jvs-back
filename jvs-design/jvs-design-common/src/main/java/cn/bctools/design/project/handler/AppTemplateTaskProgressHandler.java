@@ -334,42 +334,61 @@ public class AppTemplateTaskProgressHandler {
         try {
             // 执行任务
             log.info("执行任务方法，开始时间: {}", new Date(startTime));
+            // 添加空值检查以帮助调试
+            if (method == null) {
+                log.error("任务执行失败，Runnable method 为 null，任务ID: {}，任务步骤: {}", taskId, taskProgressStep);
+                throw new BusinessException("任务执行失败: Runnable method 为 null");
+            }
+            if (taskProgress == null) {
+                log.error("任务执行失败，JvsAppTemplateTaskProgress 为 null，任务步骤: {}", taskProgressStep);
+                throw new BusinessException("任务执行失败: JvsAppTemplateTaskProgress 为 null");
+            }
             method.run();
             // 修改任务日志状态为成功
             long duration = LocalDateTimeUtil.toEpochMilli(LocalDateTime.now()) - startTime;
             log.info("任务执行成功，耗时: {}ms，任务ID: {}", duration, taskId);
             changeProgress(taskId, taskProgressStep, AppTemplateTaskProgressEnum.SUCCESS, duration);
+        } catch (NullPointerException e) {
+            log.error("任务执行发生空指针异常，任务ID: {}，任务步骤: {}，耗时: {}ms", taskId, taskProgressStep, LocalDateTimeUtil.toEpochMilli(LocalDateTime.now()) - startTime, e);
+            // 提供更详细的空指针异常信息
+            log.error("空指针异常详情 - 任务ID: {}，步骤: {}，方法对象是否为null: {}，任务进度对象是否为null: {}", 
+                taskId, taskProgressStep, method == null, taskProgress == null);
+            handleTaskFailure(taskId, taskProgress, taskProgressStep, startTime, e);
         } catch (Exception e) {
             log.error("任务执行失败，任务ID: {}，任务步骤: {}，耗时: {}ms", taskId, taskProgressStep, LocalDateTimeUtil.toEpochMilli(LocalDateTime.now()) - startTime, e);
-            // 修改任务日志状态为失败
-            StringWriter sw = new StringWriter();
-            e.printStackTrace(new PrintWriter(sw));
-            String printStackTraceStr = sw.toString().substring(0, Math.min(sw.toString().length(), MAX_STACK_TRACE_LENGTH));
-            long duration = LocalDateTimeUtil.toEpochMilli(LocalDateTime.now()) - startTime;
-            
-            // 在调用changeProgress、addProgress等方法时增加保护，防止二次异常
-            try {
-                changeProgress(taskId, taskProgressStep, AppTemplateTaskProgressEnum.FAILURE, duration, printStackTraceStr);
-            } catch (Exception changeProgressException) {
-                log.error("更新任务进度失败，任务ID: {}，任务步骤: {}", taskId, taskProgressStep, changeProgressException);
-            }
-
-            // 任务结束
-            long totalDuration = LocalDateTimeUtil.toEpochMilli(LocalDateTime.now()) - LocalDateTimeUtil.toEpochMilli(taskProgress.getCreateTime());
-            try {
-                addProgress(taskId, AppTemplateTaskProgressDetailEnum.END, AppTemplateTaskProgressEnum.FAILURE, totalDuration, "失败");
-            } catch (Exception addProgressException) {
-                log.error("添加任务进度失败，任务ID: {}", taskId, addProgressException);
-            }
-            
-            try {
-                progressService.end(taskId, AppTemplateTaskProgressEnum.FAILURE);
-            } catch (Exception progressServiceException) {
-                log.error("结束任务失败，任务ID: {}", taskId, progressServiceException);
-            }
-            
-            throw new BusinessException("任务执行失败: " + e.getMessage(), e);
+            handleTaskFailure(taskId, taskProgress, taskProgressStep, startTime, e);
         }
+    }
+    
+    private void handleTaskFailure(String taskId, JvsAppTemplateTaskProgress taskProgress, AppTemplateTaskProgressDetailEnum taskProgressStep, long startTime, Exception e) {
+        // 修改任务日志状态为失败
+        StringWriter sw = new StringWriter();
+        e.printStackTrace(new PrintWriter(sw));
+        String printStackTraceStr = sw.toString().substring(0, Math.min(sw.toString().length(), MAX_STACK_TRACE_LENGTH));
+        long duration = LocalDateTimeUtil.toEpochMilli(LocalDateTime.now()) - startTime;
+        
+        // 在调用changeProgress、addProgress等方法时增加保护，防止二次异常
+        try {
+            changeProgress(taskId, taskProgressStep, AppTemplateTaskProgressEnum.FAILURE, duration, printStackTraceStr);
+        } catch (Exception changeProgressException) {
+            log.error("更新任务进度失败，任务ID: {}，任务步骤: {}", taskId, taskProgressStep, changeProgressException);
+        }
+
+        // 任务结束
+        long totalDuration = LocalDateTimeUtil.toEpochMilli(LocalDateTime.now()) - LocalDateTimeUtil.toEpochMilli(taskProgress.getCreateTime());
+        try {
+            addProgress(taskId, AppTemplateTaskProgressDetailEnum.END, AppTemplateTaskProgressEnum.FAILURE, totalDuration, "失败");
+        } catch (Exception addProgressException) {
+            log.error("添加任务进度失败，任务ID: {}", taskId, addProgressException);
+        }
+        
+        try {
+            progressService.end(taskId, AppTemplateTaskProgressEnum.FAILURE);
+        } catch (Exception progressServiceException) {
+            log.error("结束任务失败，任务ID: {}", taskId, progressServiceException);
+        }
+        
+        throw new BusinessException("任务执行失败: " + e.getMessage(), e);
     }
 
     /**

@@ -562,7 +562,29 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         // 创建应用或迭代应用
         AtomicReference<JvsAppVersion> targetVersionRef = new AtomicReference<>();
         TemplateBo templateBoSource = JSONObject.parseObject(dataRef.get(), TemplateBo.class);
+        
+        // 在执行前进行空值检查
+        log.info("ANALYSIS_APP 步骤前的空值检查 - jvsApp: {}, template: {}, sourceAppVersion: {}, templateBoSource: {}, type: {}",
+            jvsApp != null, template != null, sourceAppVersion != null, templateBoSource != null, type);
+        
         templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.ANALYSIS_APP, () -> {
+            // 在 lambda 内部再次检查关键对象
+            if (jvsApp == null) {
+                throw new BusinessException("ANALYSIS_APP 步骤中 jvsApp 为 null");
+            }
+            if (template == null) {
+                throw new BusinessException("ANALYSIS_APP 步骤中 template 为 null");
+            }
+            if (!type && sourceAppVersion == null) {
+                throw new BusinessException("ANALYSIS_APP 步骤中 sourceAppVersion 为 null，当 type 为 false 时");
+            }
+            if (templateBoSource == null) {
+                throw new BusinessException("ANALYSIS_APP 步骤中 templateBoSource 为 null");
+            }
+            if (now == null) {
+                throw new BusinessException("ANALYSIS_APP 步骤中 now 为 null");
+            }
+            
             jvsApp.setCreateTime(now);
             String affiliationAppId = null;
             JvsAppVersion targetVersion = null;
@@ -573,7 +595,15 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
                 targetVersion = new JvsAppVersion().setAppVersion(AppConstant.DEFAULT_INIT_APP_VERSION).setVersionType(targetVersionType).setAffiliationApp(affiliationAppId);
             } else {
                 // 版本迭代, 直接获取来源版本的所属应用唯一标识
+                if (sourceAppVersion.getAffiliationApp() == null) {
+                    throw new BusinessException("ANALYSIS_APP 步骤中 sourceAppVersion.getAffiliationApp() 为 null");
+                }
                 affiliationAppId = sourceAppVersion.getAffiliationApp();
+                
+                if (templateBoSource.getIdentifiers() == null) {
+                    log.warn("ANALYSIS_APP 步骤中 templateBoSource.getIdentifiers() 为 null");
+                }
+                
                 // 若有自定义标识，需要校验标识在当前租户下是否已存在，若已存在，则校验是否属于当前应用或其派生应用，若不是，则不允许迭代
                 checkCanIterationApp(affiliationAppId, templateBoSource.getIdentifiers());
                 // 版本迭代
