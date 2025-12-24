@@ -242,4 +242,14 @@ public interface AuthUserServiceApi {
     @PostMapping(value = "/user/delete")
     R<Boolean> deleteUser(@RequestParam("userId") String userId, @RequestParam("tenantId") String tenantId);
 
+    /**
+     * 根据用户ID列表批量获取用户部门信息
+     *
+     * @param userIds  用户ID列表
+     * @param tenantId 租户ID
+     * @return 用户信息列表
+     */
+    @PostMapping(value = "/user/get/dept/info/by/ids")
+    R<List<UserDto>> getUserDeptInfoByIds(@RequestBody List<String> userIds, @RequestParam("tenantId") String tenantId);
+
 }

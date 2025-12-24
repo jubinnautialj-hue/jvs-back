@@ -241,6 +241,19 @@ public class AuthorityManagementUtils {
         return validResult(result, null);
     }
 
+    /**
+     * 根据用户ID列表批量获取用户部门信息
+     * 返回用户信息列表，用于优化性能
+     *
+     * @param userIds  用户ID列表
+     * @param tenantId 租户ID
+     * @return 用户信息列表
+     */
+    public static List<UserDto> getUserDeptInfoByIds(List<String> userIds, String tenantId) {
+        R<List<UserDto>> result = USER_SERVICE.getUserDeptInfoByIds(userIds, tenantId);
+        return validResult(result, Collections.emptyList());
+    }
+
     // 查询角色
 
     /**

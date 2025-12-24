@@ -542,4 +542,11 @@ public class UserApiImpl implements AuthUserServiceApi {
                 .eq(UserTenant::getUserId, userId));
         return R.ok(update);
     }
+
+    @Override
+    @ApiOperation("根据用户ID列表批量获取用户部门信息")
+    public R<List<UserDto>> getUserDeptInfoByIds(List<String> userIds, String tenantId) {
+        List<UserDto> userDeptInfo = userInfoComponent.getUserDeptInfoByIds(userIds, tenantId);
+        return R.ok(userDeptInfo);
+    }
 }

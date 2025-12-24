@@ -143,10 +143,25 @@ public class FlowTaskManageController {
         // 填充数据
         long convertStart = System.currentTimeMillis();
         List<PageFlowTaskManageResDto> resultList = BeanCopyUtil.copys(page.getRecords(), PageFlowTaskManageResDto.class);
+        
+        // 批量查询用户部门信息以优化性能
+        Set<String> userIds = page.getRecords().stream()
+                .map(FlowTask::getCreateById)
+                .collect(Collectors.toSet());
+        String tenantId = TenantContextHolder.getTenantId();
+        List<UserDto> userDeptList = AuthorityManagementUtils.getUserDeptInfoByIds(new ArrayList<>(userIds), tenantId);
+        Map<String, String> userDeptMap = userDeptList.stream()
+                .collect(Collectors.toMap(
+                        UserDto::getId,
+                        user -> user.getDept().stream()
+                                .map(DeptDto::getDeptName)
+                                .collect(Collectors.joining(","))
+                ));
+        
         resultList.forEach(task -> {
             long userStart = System.currentTimeMillis();
-            UserDto userById = AuthorityManagementUtils.getUserById(task.getCreateById());
-            task.setCreateDeptName(userById.getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(",")));
+            String deptName = userDeptMap.getOrDefault(task.getCreateById(), "");
+            task.setCreateDeptName(deptName);
             log.debug("查询用户信息耗时: {}ms, 用户ID: {}", System.currentTimeMillis() - userStart, task.getCreateById());
         });
         log.info("转换结果集耗时: {}ms", System.currentTimeMillis() - convertStart);
@@ -394,13 +409,28 @@ public class FlowTaskManageController {
             log.info("[{}] 查询待处理人耗时: {}ms", traceId, System.currentTimeMillis() - personStart);
         }
 
+        // 批量查询所有创建人部门信息以优化性能
+        long userQueryStart = System.currentTimeMillis();
+        Set<String> userIds = records.stream()
+                .map(FlowTask::getCreateById)
+                .collect(Collectors.toSet());
+        String tenantId = TenantContextHolder.getTenantId();
+        List<UserDto> userDeptList = AuthorityManagementUtils.getUserDeptInfoByIds(new ArrayList<>(userIds), tenantId);
+        Map<String, String> userDeptMap = userDeptList.stream()
+                .collect(Collectors.toMap(
+                        UserDto::getId,
+                        user -> user.getDept().stream()
+                                .map(DeptDto::getDeptName)
+                                .collect(Collectors.joining(","))
+                ));
+        log.info("[{}] 批量查询用户部门信息耗时: {}ms, 查询用户数: {}", traceId, System.currentTimeMillis() - userQueryStart, userIds.size());
+        
         // 处理每条记录
         long processStart = System.currentTimeMillis();
         for (FlowTask task : records) {
             long userStart = System.currentTimeMillis();
-            UserDto userById = AuthorityManagementUtils.getUserById(task.getCreateById());
-            String deptName = userById.getDept().stream().map(DeptDto::getDeptName).collect(Collectors.joining(","));
-            log.debug("[{}] 查询用户信息耗时: {}ms, 用户ID: {}", traceId, System.currentTimeMillis() - userStart, task.getCreateById());
+            String deptName = userDeptMap.getOrDefault(task.getCreateById(), "");
+            log.info("[{}] 获取用户部门信息耗时: {}ms, 用户ID: {}", traceId, System.currentTimeMillis() - userStart, task.getCreateById());
 
             LinkedList<CourseDto> courses = task.getCourses();
             long coursesStart = System.currentTimeMillis();
@@ -433,7 +463,7 @@ public class FlowTaskManageController {
                     res.add(excel);
                 });
             }
-            log.debug("[{}] 处理课程数据耗时: {}ms, 课程数量: {}", traceId, System.currentTimeMillis() - coursesStart, courses.size());
+            log.info("[{}] 处理课程数据耗时: {}ms, 课程数量: {}", traceId, System.currentTimeMillis() - coursesStart, courses.size());
 
             List<String> taskNodeIds = taskNodeIdMap.get(task.getId());
             if (ObjectNull.isNull(taskNodeIds)) {

@@ -3,6 +3,7 @@ package cn.bctools.design.workflow.service;
 import cn.bctools.common.entity.dto.DeptDto;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.utils.*;
+import cn.bctools.common.utils.TenantContextHolder;
 
 import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.design.use.UseComponent;
@@ -201,11 +202,22 @@ public class FlowTaskManageAsyncExportService {
                     .collect(Collectors.groupingBy(FlowTaskPerson::getFlowTaskId));
         }
 
+        // 批量查询所有创建人部门信息以优化性能
+        Set<String> userIds = records.stream()
+                .map(FlowTask::getCreateById)
+                .collect(Collectors.toSet());
+        String tenantId = TenantContextHolder.getTenantId();
+        List<UserDto> userDeptList = AuthorityManagementUtils.getUserDeptInfoByIds(new ArrayList<>(userIds), tenantId);
+        Map<String, String> userDeptMap = userDeptList.stream()
+                .collect(Collectors.toMap(
+                        UserDto::getId,
+                        user -> user.getDept().stream()
+                                .map(DeptDto::getDeptName)
+                                .collect(Collectors.joining(","))
+                ));
+        
         for (FlowTask task : records) {
-            UserDto userById = AuthorityManagementUtils.getUserById(task.getCreateById());
-            String deptName = userById.getDept().stream()
-                    .map(DeptDto::getDeptName)
-                    .collect(Collectors.joining(","));
+            String deptName = userDeptMap.getOrDefault(task.getCreateById(), "");
 
             LinkedList<CourseDto> courses = task.getCourses();
             for (int i = 0; i < courses.size(); i++) {

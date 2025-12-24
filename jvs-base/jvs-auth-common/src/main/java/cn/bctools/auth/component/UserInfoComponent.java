@@ -205,4 +205,54 @@ public class UserInfoComponent {
         return result;
     }
 
+    /**
+     * 根据用户ID列表批量获取用户部门信息
+     * 返回用户信息列表，用于优化性能
+     *
+     * @param userIds  用户ID列表
+     * @param tenantId 租户ID
+     * @return 用户信息列表
+     */
+    public List<UserDto> getUserDeptInfoByIds(List<String> userIds, String tenantId) {
+        if (ObjectUtil.isEmpty(userIds) || StringUtils.isBlank(tenantId)) {
+            return new ArrayList<>();
+        }
+
+        TenantContextHolder.setTenantId(tenantId);
+        Set<String> userIdSet = new HashSet<>(userIds);
+        List<UserTenant> tenantList = userTenantService.list(Wrappers.<UserTenant>lambdaQuery().in(UserTenant::getUserId, userIdSet));
+        Map<String, UserTenant> userTenantMap = tenantList.stream()
+                .collect(Collectors.toMap(UserTenant::getUserId, Function.identity()));
+
+        List<UserDto> result = new ArrayList<>();
+        for (String userId : userIds) {
+            UserTenant userTenant = userTenantMap.get(userId);
+            if (userTenant != null) {
+                User user = userService.getById(userId);
+                if (user != null) {
+                    UserDto userDto = BeanCopyUtil.copy(UserDto.class, user, userTenant);
+                    List<String> deptIds = userTenant.getDeptId();
+                    if (ObjectNull.isNotNull(deptIds)) {
+                        List<DeptDto> deptDtos = deptIds.stream()
+                                .map(deptId -> {
+                                    Dept dept = deptService.getById(deptId);
+                                    if (dept != null) {
+                                        return new DeptDto().setDeptId(dept.getId()).setDeptName(dept.getName()).setType(dept.getType()).setDeptCode(dept.getDeptCode());
+                                    }
+                                    return null;
+                                })
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toList());
+                        userDto.setDept(deptDtos);
+                    } else {
+                        userDto.setDept(new ArrayList<>());
+                    }
+                    result.add(userDto);
+                }
+            }
+        }
+
+        return result;
+    }
+
 }
