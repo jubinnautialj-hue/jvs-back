@@ -1780,22 +1780,33 @@ public class DynamicDataUseController {
     @PostMapping("/import/{modelId}")
     @Transactional(rollbackFor = Exception.class)
     public R importDesign(@PathVariable String appId, @RequestParam("file") MultipartFile file, @PathVariable("modelId") String modelId, @RequestParam(name = "designId", required = false) String designId) {
+        long startTime = System.currentTimeMillis();
+        log.info("开始执行数据导入，开始时间: {}", new Date(startTime));
         setFunctionName("导入");
 
         DynamicDataUtils.checkPermit();
         List<List<Object>> excelData;
         try {
+            log.info("开始读取Excel文件");
             excelData = ExcelUtil.getReader(file.getInputStream()).read();
+            log.info("Excel文件读取完成，耗时: {}ms，数据行数: {}", System.currentTimeMillis() - startTime, excelData.size());
         } catch (Exception ex) {
             log.error("数据导入异常", ex);
             return R.failed("数据导入异常");
         }
         if (ObjectUtils.isEmpty(excelData) || excelData.size() < EXCEL_DATA_MIN_SIZE) {
+            log.info("导入数据为空，返回");
             return R.ok(false, "导入数据为空");
         }
         // 处理Excel表头
+        log.info("开始查询CrudPage数据");
         CrudPage crudPage = pageService.getOne(Wrappers.query(new CrudPage().setDataModelId(modelId).setId(designId).setJvsAppId(appId)));
+        log.info("CrudPage数据查询完成，耗时: {}ms", System.currentTimeMillis() - startTime);
+        
+        log.info("开始解析页面设计");
         PageDesignHtml pageDesignHtml = DesignUtils.parsePage(crudPage.getViewJson());
+        log.info("页面设计解析完成，耗时: {}ms", System.currentTimeMillis() - startTime);
+        
         Optional<ButtonDesignHtml> first = pageDesignHtml.getButtons().stream().filter(e -> e.getType().equals(ButtonTypeEnum.btn_download_template)).findFirst();
         //转换使用导出模板的别名为转换规则。这里获取的是所有要导入的字段列，需要判断字段列的个数是否正确
         List<String> fieldKeyList = new ArrayList<>();
@@ -1803,9 +1814,11 @@ public class DynamicDataUseController {
         Map<String, String> isNotNullField = new HashMap<>(8);
         if (CollectionUtils.isEmpty(first.get().getImportFields())) {
             //默认所有数据字段
+            log.info("获取默认所有数据字段");
             fieldKeyList = pageDesignHtml.getDataPage().getAutoTableFields().stream().map(DataTableFieldDesignHtml::getAliasColumnName).collect(Collectors.toList());
         } else {
             List<String> fieldIndex = pageDesignHtml.getDataPage().getAutoTableFields().stream().map(DataTableFieldDesignHtml::getAliasColumnName).collect(Collectors.toList());
+            log.info("获取自定义导入字段");
             fieldKeyList = new ArrayList<>(first.get().getImportFields().stream()
                     .peek(e -> {
                         if (ObjectNull.isNotNull(e.getRequired())) {
@@ -1819,21 +1832,29 @@ public class DynamicDataUseController {
                     .collect(Collectors.toList()));
         }
 
+        log.info("开始查询数据模型，耗时: {}ms", System.currentTimeMillis() - startTime);
         DataModelPo byId = dataModelService.getById(crudPage.getDataModelId());
         //处理表单中的脱敏字段
+        log.info("开始处理脱敏字段，耗时: {}ms", System.currentTimeMillis() - startTime);
         List<String> encryptionFields = dynamicDataService.encryptionData(byId);
         //根据脱敏字段进行去掉
         if (ObjectNull.isNotNull(encryptionFields)) {
             fieldKeyList.removeAll(encryptionFields);
         }
         if (excelData.get(0).size() != fieldKeyList.size()) {
+            log.info("导入的模板格式不正确，返回错误，耗时: {}ms", System.currentTimeMillis() - startTime);
             return R.failed("导入的模板格式不正确,请检查文件");
         }
 
-
+        log.info("开始查询字段信息，耗时: {}ms", System.currentTimeMillis() - startTime);
         List<FieldBasicsHtml> fields = dataFieldService.getFields(appId, modelId, true, false);
+        log.info("字段信息查询完成，字段数量: {}，耗时: {}ms", fields.size(), System.currentTimeMillis() - startTime);
+        
         // 处理Excel表数据
+        log.info("开始解析Excel数据为Map结构，耗时: {}ms", System.currentTimeMillis() - startTime);
         List<Map<String, Object>> mapDataList = this.parseExcelData2MapData(excelData, fieldKeyList, modelId);
+        log.info("Excel数据解析完成，数据条数: {}，耗时: {}ms", mapDataList.size(), System.currentTimeMillis() - startTime);
+        log.info("开始检查非空字段，耗时: {}ms", System.currentTimeMillis() - startTime);
         //判断导入的数据是否为空，如果为空，则直接报错, 并记录行号，和列号
         if (ObjectNull.isNotNull(isNotNullField)) {
             String error = IntStream.iterate(0, i -> i + 1)
@@ -1849,14 +1870,21 @@ public class DynamicDataUseController {
                         return collect;
                     }).filter(ObjectNull::isNotNull).collect(Collectors.joining(","));
             if (ObjectNull.isNotNull(error)) {
+                log.info("发现非空字段错误，耗时: {}ms", System.currentTimeMillis() - startTime);
                 throw new BusinessException(error + "为空");
             }
         }
+        log.info("非空字段检查完成，耗时: {}ms", System.currentTimeMillis() - startTime);
+        
+        log.info("开始检查数据字段类型，耗时: {}ms", System.currentTimeMillis() - startTime);
         dynamicDataService.checkDataFieldType(appId, modelId, mapDataList);
+        log.info("数据字段类型检查完成，耗时: {}ms", System.currentTimeMillis() - startTime);
+        
         Map<String, String> ids = new HashMap<>(8);
         String linkFieldKey = null;
         //自己关联自己
         FormValueHtml formValueHtml = null;
+        log.info("开始构建字段类型映射，耗时: {}ms", System.currentTimeMillis() - startTime);
         Map<String, FieldBasicsHtml> typeMaps =
                 fields.stream().filter(e -> DataFieldType.SELECT_CONVERSION.contains(e.getType()) || e.getType().equals(DataFieldType.datePicker) || e.getType().equals(DataFieldType.timePicker) || e.getType().equals(DataFieldType.timeSelect)).collect(Collectors.toMap(FieldPublicHtml::getFieldKey,
                         //这里直接转换获取真实类型数据
@@ -1867,20 +1895,27 @@ public class DynamicDataUseController {
                                 return e;
                             }
                         }));
+        log.info("字段类型映射构建完成，映射数量: {}，耗时: {}ms", typeMaps.size(), System.currentTimeMillis() - startTime);
+        log.info("开始处理树形数据，耗时: {}ms", System.currentTimeMillis() - startTime);
         //如果是树形数据中间的数据
         Map<String, List<Map<String, Object>>> generateCascaderList = new LinkedHashMap<>();
         if (ObjectNull.isNotNull(typeMaps)) {
             //用于存储不同字段的数据 id和值的关系路径  但这里缺少一个路径，所以需要添加上路径  field , path ,id
             Map<String, Map<String, String>> cascaderFieldPathIdsMap = new LinkedHashMap<>();
             Set<String> collect = fieldKeyList.stream().filter(typeMaps::containsKey).collect(Collectors.toSet());
+            log.info("开始处理选择转换字段，耗时: {}ms", System.currentTimeMillis() - startTime);
             //树形字段和多选字段处理逻辑前置处理逻辑
             Map<String, List<FieldBasicsHtml>> cascaderList = typeMaps.values().stream().filter(e -> DataFieldType.SELECT_CONVERSION.contains(e.getType()))
                     .collect(Collectors.groupingBy(FieldPublicHtml::getProp));
+            log.info("选择转换字段分组完成，分组数量: {}，耗时: {}ms", cascaderList.size(), System.currentTimeMillis() - startTime);
             //需要先判断出是否关联了自己,并将所有的下拉数据值，进行转换出结果对象
+            log.info("开始遍历选择转换字段，耗时: {}ms", System.currentTimeMillis() - startTime);
             for (String field : cascaderList.keySet()) {
                 //只取第一条，因为设计一致，
                 FieldBasicsHtml fieldBasicsHtml = cascaderList.get(field).get(0);
+                log.info("处理字段: {}，耗时: {}ms", field, System.currentTimeMillis() - startTime);
                 //遍历所有的数据值，用于判断每一级的数据是否存在，如果不存在新增一个数据 id的值
+                log.info("开始遍历数据映射，数据条数: {}，耗时: {}ms", mapDataList.size(), System.currentTimeMillis() - startTime);
                 for (Map<String, Object> objectMap : mapDataList) {
                     Object o = objectMap.get(field);
                     if (ObjectNull.isNull(o)) {
@@ -1908,7 +1943,9 @@ public class DynamicDataUseController {
                         }
                     }
                 }
+                log.info("字段: {} 处理完成，耗时: {}ms", field, System.currentTimeMillis() - startTime);
             }
+            log.info("选择转换字段遍历完成，耗时: {}ms", System.currentTimeMillis() - startTime);
             //遍历数据转换
             for (Map<String, Object> map : mapDataList) {
                 for (String key : collect) {
@@ -2094,9 +2131,10 @@ public class DynamicDataUseController {
                 }
             }
         }
+        log.info("开始处理级联生成数据，耗时: {}ms", System.currentTimeMillis() - startTime);
         if (ObjectNull.isNotNull(generateCascaderList)) {
             for (Map.Entry<String, List<Map<String, Object>>> entry : generateCascaderList.entrySet()) {
-
+                log.info("处理级联生成数据，模型ID: {}，数据条数: {}，耗时: {}ms", entry.getKey(), entry.getValue().size(), System.currentTimeMillis() - startTime);
                 try {
                     List<Map<String, Object>> list = entry.getValue();
                     //过滤出当前模型的数据，避免重复新增
@@ -2131,14 +2169,17 @@ public class DynamicDataUseController {
                         });
                     }
                     if (ObjectNull.isNotNull(list)) {
+                        log.info("保存级联生成数据，模型ID: {}，数据条数: {}，耗时: {}ms", entry.getKey(), list.size(), System.currentTimeMillis() - startTime);
                         dynamicDataService.saveBatch(appId, entry.getKey(), list);
+                        log.info("级联生成数据保存完成，耗时: {}ms", System.currentTimeMillis() - startTime);
                     }
                 } catch (Exception ignored) {
-
+                    log.error("处理级联生成数据异常", ignored);
                 }
-
+                log.info("级联生成数据处理完成，耗时: {}ms", System.currentTimeMillis() - startTime);
             }
         }
+        log.info("开始保存主数据，数据条数: {}，耗时: {}ms", mapDataList.size(), System.currentTimeMillis() - startTime);
 //        //这里考虑是否重复插入已经存在的数据
 //        if (ObjectNull.isNotNull(formValueHtml)) {
 //            FormValueHtml valueHtml = formValueHtml;
@@ -2167,13 +2208,17 @@ public class DynamicDataUseController {
 //        }
         //这里需要判断是否已经存在，如果存在，则不新增这个数据
         RuleExecuteDto executeDto = dynamicDataService.saveBatch(appId, modelId, mapDataList);
+        log.info("数据保存完成，耗时: {}ms", System.currentTimeMillis() - startTime);
         if (ObjectNull.isNotNull(executeDto) && ObjectNull.isNotNull(executeDto.getStats())) {
             if (executeDto.getStats()) {
+                log.info("导入成功完成，总耗时: {}ms", System.currentTimeMillis() - startTime);
                 return R.ok().setMsg(executeDto.getSyncMessageTips());
             } else {
+                log.info("导入失败，总耗时: {}ms", System.currentTimeMillis() - startTime);
                 return R.failed(executeDto.getSyncMessageTips());
             }
         }
+        log.info("导入完成，总耗时: {}ms", System.currentTimeMillis() - startTime);
         return R.ok().setMsg("导入成功");
     }
 
