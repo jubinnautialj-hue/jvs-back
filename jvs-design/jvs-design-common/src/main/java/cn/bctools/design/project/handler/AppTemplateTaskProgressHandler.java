@@ -277,7 +277,7 @@ public class AppTemplateTaskProgressHandler {
      * @param content          内容
      */
     public void addProgress(String taskId, AppTemplateTaskProgressDetailEnum taskProgressStep, AppTemplateTaskProgressEnum progress, Long duration, String content) {
-        log.debug("开始添加进度，任务ID: {}，步骤: {}，进度: {}，耗时: {}ms，内容: {}", taskId, taskProgressStep, progress, duration, content);
+        log.info("开始添加进度，任务ID: {}，步骤: {}，进度: {}，耗时: {}ms，内容: {}", taskId, taskProgressStep, progress, duration, content);
         try {
             String contentStr = content == null ? taskProgressStep.getDefaultContent() : content;
             JvsAppTemplateTaskProgressDetail templateTaskLog = new JvsAppTemplateTaskProgressDetail()
@@ -290,7 +290,7 @@ public class AppTemplateTaskProgressHandler {
             templateTaskLog.setCreateTime(LocalDateTime.now());
 
             AppTemplateTaskUtils.cacheProgressDetail(taskId, taskProgressStep.name(), JSON.toJSONString(templateTaskLog));
-            log.debug("成功添加进度，任务ID: {}，步骤: {}", taskId, taskProgressStep);
+            log.info("成功添加进度，任务ID: {}，步骤: {}", taskId, taskProgressStep);
         } catch (Exception e) {
             log.error("添加进度失败，任务ID: {}，步骤: {}，进度: {}，耗时: {}ms", taskId, taskProgressStep, progress, duration, e);
             throw e;
@@ -423,11 +423,11 @@ public class AppTemplateTaskProgressHandler {
      * @param exceptionStackTrace 异常栈
      */
     public void changeProgress(String taskId, AppTemplateTaskProgressDetailEnum taskLogEnum, AppTemplateTaskProgressEnum progress, Long duration, String exceptionStackTrace) {
-        log.debug("开始变更进度，任务ID: {}，日志类型: {}，进度: {}，耗时: {}ms", taskId, taskLogEnum, progress, duration);
+        log.info("开始变更进度，任务ID: {}，日志类型: {}，进度: {}，耗时: {}ms", taskId, taskLogEnum, progress, duration);
         try {
             JvsAppTemplateTaskProgressDetail detail = AppTemplateTaskUtils.getDetail(taskId, taskLogEnum.name());
             if (detail == null) {
-                log.warn("变更进度时未找到对应详情，任务ID: {}，日志类型: {}", taskId, taskLogEnum);
+                log.info("变更进度时未找到对应详情，任务ID: {}，日志类型: {}", taskId, taskLogEnum);
                 return;
             }
             detail.setProgress(progress);
@@ -438,7 +438,7 @@ public class AppTemplateTaskProgressHandler {
                 detail.setExceptionStackTrace(exceptionStackTrace);
             }
             AppTemplateTaskUtils.cacheProgressDetail(taskId, taskLogEnum.name(), JSON.toJSONString(detail));
-            log.debug("成功变更进度，任务ID: {}，日志类型: {}", taskId, taskLogEnum);
+            log.info("成功变更进度，任务ID: {}，日志类型: {}", taskId, taskLogEnum);
         } catch (Exception e) {
             log.error("变更进度失败，任务ID: {}，日志类型: {}，进度: {}，耗时: {}ms", taskId, taskLogEnum, progress, duration, e);
             throw e;
