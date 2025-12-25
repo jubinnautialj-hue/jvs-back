@@ -524,9 +524,13 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
             }
 
             // TRUE-模板创建应用， FALSE-版本迭代
-            boolean type = Boolean.FALSE.equals(Optional.ofNullable(template.getVersionTemplate()).orElse(Boolean.FALSE));
+            Boolean versionTemplate = template.getVersionTemplate();
+            log.info("PREPARE步骤 - template.getVersionTemplate()返回值: {}", versionTemplate);
+            boolean type = Boolean.FALSE.equals(Optional.ofNullable(versionTemplate).orElse(Boolean.FALSE));
+            log.info("PREPARE步骤 - 计算得到的type值: {} (含义: {} )", type, type ? "模板创建应用" : "版本迭代");
             typeRef.set(type);
             templateRef.set(template);
+            log.info("PREPARE步骤 - 已设置 typeRef 和 templateRef");
         });
 
         // 创建或迭代应用
@@ -538,7 +542,19 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         } else {
             log.warn("调用createOrIterationApp前 - sourceAppVersion 为 null！");
         }
-        createOrIterationApp(templateTaskProgress, typeRef.get(), sourceAppVersion, targetVersionType, templateRef.get());
+        
+        // 检查typeRef和templateRef是否为null
+        Boolean typeValue = typeRef.get();
+        JvsAppTemplate templateValue = templateRef.get();
+        log.info("调用createOrIterationApp前 - typeRef.get()结果: {}, templateRef.get()是否为null: {}", 
+            typeValue, templateValue == null);
+        
+        if (typeValue == null) {
+            log.error("严重错误：typeRef.get() 返回 null！这会导致createOrIterationApp方法的type参数为null");
+            throw new BusinessException("type参数为null，无法判断是模板创建应用还是版本迭代");
+        }
+        
+        createOrIterationApp(templateTaskProgress, typeValue, sourceAppVersion, targetVersionType, templateValue);
     }
 
     /**
@@ -628,11 +644,34 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
                 
                 // 若有自定义标识，需要校验标识在当前租户下是否已存在，若已存在，则校验是否属于当前应用或其派生应用，若不是，则不允许迭代
                 checkCanIterationApp(affiliationAppId, templateBoSource.getIdentifiers());
-                // 版本迭代
+
+                // 版本查询 - 增加详细日志
+                log.info("准备查询目标版本 - appVersion: {}, targetVersionType: {}, affiliationAppId: {}",
+                    sourceAppVersion.getAppVersion(), targetVersionType, affiliationAppId);
+
                 targetVersion = appVersionService.getVersion(sourceAppVersion.getAppVersion(), targetVersionType, affiliationAppId);
+
+                log.info("版本查询结果 - targetVersion是否为null: {}", targetVersion == null);
+
                 if (ObjectNull.isNull(targetVersion)) {
-                    targetVersion = new JvsAppVersion().setAppVersion(sourceAppVersion.getAppVersion()).setVersionType(targetVersionType).setAffiliationApp(affiliationAppId);
+                    log.info("目标版本不存在，准备创建新版本 - appVersion: {}, versionType: {}, affiliationApp: {}",
+                        sourceAppVersion.getAppVersion(), targetVersionType, affiliationAppId);
+                    targetVersion = new JvsAppVersion()
+                        .setAppVersion(sourceAppVersion.getAppVersion())
+                        .setVersionType(targetVersionType)
+                        .setAffiliationApp(affiliationAppId);
+                    log.info("新版本对象创建完成 - targetVersion: {}", JSONObject.toJSONString(targetVersion));
+                } else {
+                    log.info("找到已存在的目标版本 - targetVersion.id: {}, targetVersion.appVersion: {}",
+                        targetVersion.getId(), targetVersion.getAppVersion());
                 }
+
+                // 在调用iterationJvsApp前检查关键字段
+                log.info("准备调用iterationJvsApp - template.id: {}, jvsApp.id: {}, targetVersion.affiliationApp: {}",
+                    template != null ? template.getId() : "null",
+                    jvsApp != null ? jvsApp.getId() : "null",
+                    targetVersion != null ? targetVersion.getAffiliationApp() : "null");
+
                 iterationJvsApp(template, jvsApp, targetVersion);
             }
             targetVersionRef.set(targetVersion);
@@ -720,8 +759,17 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         }
 
         JvsAppVersion targetVersion = targetVersionRef.get();
+        // 增加日志记录targetVersion的关键字段
+        log.info("准备获取目标版本模板 - targetVersion详情: id={}, appVersion={}, versionType={}, affiliationApp={}, templateId={}, jvsAppId={}",
+            targetVersion != null ? targetVersion.getId() : null,
+            targetVersion != null ? targetVersion.getAppVersion() : null,
+            targetVersion != null ? targetVersion.getVersionType() : null,
+            targetVersion != null ? targetVersion.getAffiliationApp() : null,
+            targetVersion != null ? targetVersion.getTemplateId() : null,
+            targetVersion != null ? targetVersion.getJvsAppId() : null);
         // 获取指定版本号的设计模板
         TemplateBo targetVersionTemplateBo = getTargetVersionTemplate(targetVersion);
+        log.info("获取目标版本模板完成 - targetVersionTemplateBo是否为null: {}", targetVersionTemplateBo == null);
         // 表单
         templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.FORM, () -> {
             formTemplateService.save(jvsApp, targetVersion, existsIds, templateBo, targetVersionTemplateBo);

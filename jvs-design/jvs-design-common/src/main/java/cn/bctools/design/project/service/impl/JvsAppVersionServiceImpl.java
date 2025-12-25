@@ -82,10 +82,15 @@ public class JvsAppVersionServiceImpl extends ServiceImpl<JvsAppVersionMapper, J
         List<JvsAppVersion> appVersionList = list(Wrappers.<JvsAppVersion>lambdaQuery().
                 eq(JvsAppVersion::getAffiliationApp, affiliationApp)
                 .eq(JvsAppVersion::getVersionType, versionType).last("limit 1"));
-        if (ObjectNull.isNull(appVersionList)) {
+        // 修复：正确处理空列表的情况（MyBatis Plus的list()方法返回空列表而不是null）
+        if (ObjectNull.isNull(appVersionList) || appVersionList.isEmpty()) {
+            log.info("未找到应用版本记录 - affiliationApp: {}, versionType: {}", affiliationApp, versionType);
             return null;
         }
-        return appVersionList.get(0).getJvsAppId();
+        JvsAppVersion version = appVersionList.get(0);
+        log.info("找到应用版本记录 - affiliationApp: {}, versionType: {}, jvsAppId: {}", 
+            affiliationApp, versionType, version.getJvsAppId());
+        return version.getJvsAppId();
     }
 
     @Override
