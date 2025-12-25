@@ -8,6 +8,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 import org.springframework.context.annotation.ComponentScan;
+import org.springframework.scheduling.annotation.EnableScheduling;
 import org.springframework.stereotype.Indexed;
 
 /**
@@ -17,6 +18,7 @@ import org.springframework.stereotype.Indexed;
 @EnableDiscoveryClient
 @SpringBootApplication
 @EnableXxlJobExecutor
+@EnableScheduling
 @ComponentScan(basePackages = {"cn.bctools.design", "cn.bctools.rule", "cn.bctools.function"})
 @EnableJvsMgrResourceServer
 public class JvsDesignApplication {

@@ -29,10 +29,11 @@ public interface RunLogService extends IService<RunLogPo> {
 
     /**
      * 保存运行日志
+     * 注意：此方法已在RuleStartUtils的线程池中异步调用，不需要@Async注解
+     * 移除@Async避免双重异步导致的线程爆炸和连接池耗尽问题
      *
      * @param runLogBo
      */
-    @Async
     void saveLog(RunLogPo runLogBo);
 
 }

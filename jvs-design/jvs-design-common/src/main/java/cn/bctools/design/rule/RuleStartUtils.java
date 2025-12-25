@@ -8,6 +8,7 @@ import cn.bctools.design.config.DesignConfig;
 import cn.bctools.design.rule.entity.*;
 import cn.bctools.design.rule.service.RuleDesignService;
 import cn.bctools.design.rule.service.RunLogService;
+import cn.bctools.design.rule.service.impl.BatchRunLogService;
 import cn.bctools.oss.dto.BaseFile;
 import cn.bctools.oss.template.OssTemplate;
 import cn.bctools.redis.utils.RedisUtils;
@@ -64,6 +65,7 @@ public class RuleStartUtils {
     RedisUtils redisUtils;
     RuleDesignService ruleDesignService;
     RunLogService runLogService;
+    BatchRunLogService batchRunLogService;
     OssTemplate ossTemplate;
     static final String http = "http";
 
@@ -300,8 +302,9 @@ public class RuleStartUtils {
                 logPo.setLogs("未开启日志");
             }
             logPo.setStatus(ObjectNull.isNull(data.getExecuteDto().getErrorMessage(), data.getExecuteDto().getErrorNodeId()));
-            runLogService.saveLog(logPo);
-            log.info("线程保存日志完成");
+            // 使用批量日志服务保存，减少数据库连接占用
+            batchRunLogService.addLog(logPo);
+            log.info("线程保存日志完成，已添加到批量队列");
         });
 
         //如果是测试执行才做结构定义推断
