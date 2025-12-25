@@ -71,11 +71,11 @@ public class RuleStartUtils {
     DesignConfig designConfig;
 
     public final static ThreadPoolExecutor EXECUTOR = new ThreadPoolExecutor(
-            MAX_THREADS,
-            MAX_THREADS,
+            Math.min(MAX_THREADS, 20),  // 限制最大线程数为20，避免过多并发
+            Math.min(MAX_THREADS, 20),
             10L,
             TimeUnit.MINUTES,
-            new LinkedBlockingDeque<>(),
+            new LinkedBlockingDeque<>(1000),  // 限制队列大小，避免任务积压
             Executors.defaultThreadFactory(),
             new ThreadPoolExecutor.CallerRunsPolicy());
     // 改为调用者运行策略

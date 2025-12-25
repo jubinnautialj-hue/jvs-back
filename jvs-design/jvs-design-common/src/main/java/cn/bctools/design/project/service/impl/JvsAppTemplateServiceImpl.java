@@ -531,6 +531,13 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
 
         // 创建或迭代应用
 //        TenantContextHolder.setTenantId(UserCurrentUtils.getCurrentUser().getTenantId());
+        // 记录调用前的sourceAppVersion信息
+        if (sourceAppVersion != null) {
+            log.info("调用createOrIterationApp前 - sourceAppVersion完整信息: {}", JSONObject.toJSONString(sourceAppVersion));
+            log.info("调用createOrIterationApp前 - sourceAppVersion.affiliationApp: [{}]", sourceAppVersion.getAffiliationApp());
+        } else {
+            log.warn("调用createOrIterationApp前 - sourceAppVersion 为 null！");
+        }
         createOrIterationApp(templateTaskProgress, typeRef.get(), sourceAppVersion, targetVersionType, templateRef.get());
     }
 
@@ -563,9 +570,18 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         AtomicReference<JvsAppVersion> targetVersionRef = new AtomicReference<>();
         TemplateBo templateBoSource = JSONObject.parseObject(dataRef.get(), TemplateBo.class);
         
-        // 在执行前进行空值检查
+        // 在执行前进行空值检查并记录详细信息
         log.info("ANALYSIS_APP 步骤前的空值检查 - jvsApp: {}, template: {}, sourceAppVersion: {}, templateBoSource: {}, type: {}",
             jvsApp != null, template != null, sourceAppVersion != null, templateBoSource != null, type);
+        
+        // 如果是版本迭代模式，记录sourceAppVersion的完整信息
+        if (!type && sourceAppVersion != null) {
+            log.info("版本迭代模式 - sourceAppVersion完整信息: {}", JSONObject.toJSONString(sourceAppVersion));
+            log.info("版本迭代模式 - affiliationApp字段值: [{}], 是否为null: {}, 是否为空字符串: {}",
+                sourceAppVersion.getAffiliationApp(),
+                sourceAppVersion.getAffiliationApp() == null,
+                sourceAppVersion.getAffiliationApp() != null && sourceAppVersion.getAffiliationApp().isEmpty());
+        }
         
         templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.ANALYSIS_APP, () -> {
             // 在 lambda 内部再次检查关键对象
@@ -595,8 +611,14 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
                 targetVersion = new JvsAppVersion().setAppVersion(AppConstant.DEFAULT_INIT_APP_VERSION).setVersionType(targetVersionType).setAffiliationApp(affiliationAppId);
             } else {
                 // 版本迭代, 直接获取来源版本的所属应用唯一标识
-                if (sourceAppVersion.getAffiliationApp() == null) {
-                    throw new BusinessException("ANALYSIS_APP 步骤中 sourceAppVersion.getAffiliationApp() 为 null");
+                log.info("版本迭代模式 - sourceAppVersion详情: id={}, appVersion={}, affiliationApp={}, versionType={}",
+                    sourceAppVersion.getId(),
+                    sourceAppVersion.getAppVersion(),
+                    sourceAppVersion.getAffiliationApp(),
+                    sourceAppVersion.getVersionType());
+                
+                if (sourceAppVersion.getAffiliationApp() == null || sourceAppVersion.getAffiliationApp().trim().isEmpty()) {
+                    throw new BusinessException("版本迭代失败：来源版本的所属应用ID(affiliationApp)为空，请检查来源版本数据是否完整。来源版本ID: " + sourceAppVersion.getId());
                 }
                 affiliationAppId = sourceAppVersion.getAffiliationApp();
                 
@@ -614,7 +636,15 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
                 iterationJvsApp(template, jvsApp, targetVersion);
             }
             targetVersionRef.set(targetVersion);
-            templateTaskProgressHandler.updateAppId(taskProgressId, affiliationAppId, sourceAppVersion.getAffiliationApp());
+            // 更新应用ID：只在版本迭代模式下执行
+            if (!type) {
+                String oldAffiliationAppId = sourceAppVersion.getAffiliationApp();
+                if (oldAffiliationAppId != null) {
+                    templateTaskProgressHandler.updateAppId(taskProgressId, affiliationAppId, oldAffiliationAppId);
+                } else {
+                    log.warn("ANALYSIS_APP 步骤 - sourceAppVersion.getAffiliationApp() 为null，跳过updateAppId操作");
+                }
+            }
         });
 
         // 解析模板数据
