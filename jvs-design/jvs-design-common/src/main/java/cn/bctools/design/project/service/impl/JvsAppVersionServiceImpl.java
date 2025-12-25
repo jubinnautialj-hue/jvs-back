@@ -10,6 +10,7 @@ import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.project.service.JvsAppVersionService;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import lombok.extern.slf4j.Slf4j;
 import lombok.AllArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -20,6 +21,7 @@ import java.util.stream.Collectors;
  * @author zhuxiaokang
  * 应用版本
  */
+@Slf4j
 @Service
 @AllArgsConstructor
 public class JvsAppVersionServiceImpl extends ServiceImpl<JvsAppVersionMapper, JvsAppVersion> implements JvsAppVersionService {
