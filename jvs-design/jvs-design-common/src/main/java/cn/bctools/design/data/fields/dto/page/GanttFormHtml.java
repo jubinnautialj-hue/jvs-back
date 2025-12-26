@@ -41,4 +41,7 @@ public class GanttFormHtml {
     @ApiModelProperty(value = "动态颜色")
     private List<ConditionControlHtml> conditionControl;
 
+    @ApiModelProperty(value = "展示形式")
+    private String showType;
+
 }

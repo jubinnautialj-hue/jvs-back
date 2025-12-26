@@ -69,6 +69,8 @@ public class PageDesignHtml {
     private Boolean hiddenShare;
     @ApiModelProperty("隐藏排序")
     private Boolean hiddenSort;
+    @ApiModelProperty("隐藏序号")
+    private Boolean hiddenIndex;
     @ApiModelProperty("操作栏宽度")
     private Integer menuWidth;
 
