@@ -973,8 +973,8 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         jvsApp.setDescription(template.getDescription());
         jvsApp.setLogo(template.getLogo());
         //获取系统名称
-        String shortName = UserCurrentUtils.getCurrentUser().getTenant().getShortName();
-        jvsApp.setPlatform(shortName);
+//        String shortName = UserCurrentUtils.getCurrentUser().getTenant().getShortName();
+//        jvsApp.setPlatform(shortName);
         jvsApp.setFree(template.getFree());
         jvsApp.setPlatform(template.getPlatform());
         jvsApp.setPrice(template.getPrice());
