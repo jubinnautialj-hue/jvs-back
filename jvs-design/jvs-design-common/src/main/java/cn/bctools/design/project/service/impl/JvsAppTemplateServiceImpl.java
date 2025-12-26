@@ -693,16 +693,9 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         // 新的设计id映射关系
         List<JvsAppVersionMapping> newVersionMappings = new ArrayList<>();
         templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.ANALYSIS_DATA, () -> {
-            // 增加保护性检查，防止targetVersionRef为null
-            JvsAppVersion targetVersion = targetVersionRef.get();
-            if (targetVersion == null) {
-                log.error("ANALYSIS_DATA步骤严重错误：targetVersionRef.get()返回null，这可能是并发问题或版本创建失败");
-                throw new BusinessException("目标版本未正确初始化，请检查版本创建逻辑");
-            }
-
             List<String> ids = templateBoSource.getIds().stream().filter(ObjectNull::isNotNull).collect(Collectors.toList());
             // 获取应用版本设计id映射集合
-            String affiliationAppId = targetVersion.getAffiliationApp();
+            String affiliationAppId = targetVersionRef.get().getAffiliationApp();
             List<JvsAppVersionMapping> appVersionMappings = appVersionMappingService.getIdMappings(affiliationAppId);
             // 模板数据分片处理
             // Map<待替换的id, 新id>
@@ -1573,26 +1566,9 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
                 .setAppVersion(sourceVersion.getAppVersion())
                 .setVersionStatus(AppVersionStatusEnum.USE)
                 .setTemplateId(templateId);
-
-        // 记录版本保存前的详细信息
-        log.info("准备保存版本 - appId: {}, affiliationApp: {}, versionType: {}, appVersion: {}, templateId: {}",
-                appId, affiliationApp, targetVersion.getVersionType(), targetVersion.getAppVersion(), templateId);
-
-        // 保存版本并记录结果
-        try {
-            appVersionService.saveVersion(targetVersion);
-            // 记录版本保存结果（注意：saveVersion无返回值，通过ID是否生成判断是否成功）
-            log.info("版本保存完成 - 版本ID: {}, 版本号: {}, 版本类型: {}, 所属应用: {}",
-                    targetVersion.getId(), targetVersion.getAppVersion(), targetVersion.getVersionType(), targetVersion.getAffiliationApp());
-        } catch (Exception e) {
-            log.error("版本保存失败 - 版本号: {}, 版本类型: {}, 所属应用: {}, 错误: {}",
-                    targetVersion.getAppVersion(), targetVersion.getVersionType(), targetVersion.getAffiliationApp(), e.getMessage(), e);
-            throw e;
-        }
-
+        appVersionService.saveVersion(targetVersion);
         // 若目标版本是正式版本，则将该应用改为已发布
         if (AppVersionTypeEnum.GA.equals(targetVersion.getVersionType())) {
-            log.info("目标版本为正式版本，准备发布应用 - appId: {}", targetVersion.getJvsAppId());
             jvsAppService.deploy(targetVersion.getJvsAppId());
         }
     }
