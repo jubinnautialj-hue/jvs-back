@@ -693,9 +693,16 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
         // 新的设计id映射关系
         List<JvsAppVersionMapping> newVersionMappings = new ArrayList<>();
         templateTaskProgressHandler.runTask(templateTaskProgress, AppTemplateTaskProgressDetailEnum.ANALYSIS_DATA, () -> {
+            // 增加保护性检查，防止targetVersionRef为null
+            JvsAppVersion targetVersion = targetVersionRef.get();
+            if (targetVersion == null) {
+                log.error("ANALYSIS_DATA步骤严重错误：targetVersionRef.get()返回null，这可能是并发问题或版本创建失败");
+                throw new BusinessException("目标版本未正确初始化，请检查版本创建逻辑");
+            }
+
             List<String> ids = templateBoSource.getIds().stream().filter(ObjectNull::isNotNull).collect(Collectors.toList());
             // 获取应用版本设计id映射集合
-            String affiliationAppId = targetVersionRef.get().getAffiliationApp();
+            String affiliationAppId = targetVersion.getAffiliationApp();
             List<JvsAppVersionMapping> appVersionMappings = appVersionMappingService.getIdMappings(affiliationAppId);
             // 模板数据分片处理
             // Map<待替换的id, 新id>
