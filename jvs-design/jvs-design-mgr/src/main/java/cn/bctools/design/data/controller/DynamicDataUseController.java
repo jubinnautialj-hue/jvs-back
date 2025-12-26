@@ -897,6 +897,13 @@ public class DynamicDataUseController {
     @ApiOperation("分页查询数据")
     @PostMapping("/query/page/{modelId}")
     public R queryPage(@PathVariable String appId, @PathVariable("modelId") String modelId, @RequestHeader(value = "formId", required = false) String formId, @RequestHeader(value = "fieldId", required = false) String fieldId, @RequestHeader(value = "notification", required = false, defaultValue = "") Object notification, @RequestBody QueryPageDto queryPageDto) {
+        long startTime = System.currentTimeMillis();
+        log.info("[分页查询] 开始执行分页查询，appId: {}, modelId: {}, formId: {}, fieldId: {}", appId, modelId, formId, fieldId);
+        log.info("[分页查询] 查询参数: 分页: {}/{}, 关键字: {}, 条件数: {}, 分组条件数: {}", 
+                queryPageDto.getCurrent(), queryPageDto.getSize(), queryPageDto.getKeywords(), 
+                queryPageDto.getConditions() != null ? queryPageDto.getConditions().size() : 0,
+                queryPageDto.getGroupConditions() != null ? queryPageDto.getGroupConditions().size() : 0);
+        
         //将设计的列表页字段进行拼装
 
         if (ObjectNull.isNotNull(queryPageDto.getKeywords())) {
@@ -908,7 +915,9 @@ public class DynamicDataUseController {
             //如果设计中包含
             if (ObjectNull.isNull(formId) || ObjectNull.isNull(fieldId)) {
                 //5数据权限
+                long scopeStart = System.currentTimeMillis();
                 queryField.addAll(DynamicDataUtils.dataModelScope(modelId));
+                log.info("[分页查询] 数据权限处理耗时: {}ms", System.currentTimeMillis() - scopeStart);
             }
         }
         //将查询条件的字段添加进去
@@ -932,12 +941,16 @@ public class DynamicDataUseController {
             }).collect(Collectors.toList());
         }
         Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap = new HashMap<>(8);
+        long getAllFieldStart = System.currentTimeMillis();
         Map<String, FieldBasicsHtml> collectMap = dataFieldService.getAllField(appId, modelId, true, true, e -> false).stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity(), (e1, e2) -> e1));
+        log.info("[分页查询] getAllField查询耗时: {}ms, 字段数量: {}", System.currentTimeMillis() - getAllFieldStart, collectMap.size());
         // Map<列表字段key，关联字段>
         Map<String, ModelDisplayHtml> modelDisplayMap = new HashMap<>();
 
         //转换查询条件，有可能存在树形
+        long crudPageStart = System.currentTimeMillis();
         List<CrudPage> crudPage = pageService.list(Wrappers.query(new CrudPage().setDataModelId(modelId).setJvsAppId(appId)));
+        log.info("[分页查询] CrudPage列表查询耗时: {}ms, 数量: {}", System.currentTimeMillis() - crudPageStart, crudPage != null ? crudPage.size() : 0);
         //记录甘特图的设置属性值，确定是哪哪几个字段进行处理的，需要对其数据进行排列并取最大最小
         List<String> dateField = new ArrayList<>();
         Optional<String> retrievalKey = Optional.empty();
@@ -960,6 +973,7 @@ public class DynamicDataUseController {
                         .filter(e -> collectMap.containsKey(e.getAliasColumnName()))
                         .filter(e -> collectMap.get(e.getAliasColumnName()).getFieldType().equals(DataFieldType.select))
                         .map(DataTableFieldDesignHtml::getAliasColumnName).findFirst();
+                long retrievalStart = System.currentTimeMillis();
                 pageDesignHtml.getDataPage().getAutoTableFields().stream()
                         .filter(e -> ObjectNull.isNotNull(e.getEnableRetrieval()))
                         .filter(DataTableFieldDesignHtml::getEnableRetrieval)
@@ -968,6 +982,7 @@ public class DynamicDataUseController {
                         .filter(e -> e.getRetrievalOption().getAllChildren())
                         .findFirst()
                         .map(e -> {
+                            log.info("[分页查询] 检索字段处理开始");
                             //对其字段进行转换
                             String key = e.getAliasColumnName();
                             //表示是树形关系
@@ -981,6 +996,7 @@ public class DynamicDataUseController {
                                     a.setValue(strings.stream().collect(Collectors.toList()));
                                 }
                             });
+                            log.info("[分页查询] 检索字段处理耗时: {}ms", System.currentTimeMillis() - retrievalStart);
                             return e;
                         });
             }
@@ -992,6 +1008,7 @@ public class DynamicDataUseController {
             queryPageDto.getConditions().forEach(e -> map.put(e.getFieldKey(), e.getValue()));
         }
         //判断查询条件是否是部门字段，如果是部门字段，需要将部门做修改为多条件查询
+        long deptConditionStart = System.currentTimeMillis();
         if (ObjectNull.isNotNull(queryPageDto.getConditions())) {
             queryPageDto.getConditions().forEach(e -> {
                 if (!e.getEnabledQueryTypes().equals(DataQueryType.isNull)) {
@@ -1036,7 +1053,9 @@ public class DynamicDataUseController {
                     }
                 }
             });
+            log.info("[分页查询] 部门/级联字段条件处理耗时: {}ms", System.currentTimeMillis() - deptConditionStart);
         }
+        long groupConditionStart = System.currentTimeMillis();
         if (ObjectNull.isNotNull(queryPageDto.getGroupConditions())) {
             queryPageDto.getGroupConditions().forEach(e -> {
                 e.forEach(a -> {
@@ -1067,6 +1086,7 @@ public class DynamicDataUseController {
                     }
                 });
             });
+            log.info("[分页查询] 分组条件类型转换耗时: {}ms", System.currentTimeMillis() - groupConditionStart);
         }
 
 
@@ -1075,8 +1095,10 @@ public class DynamicDataUseController {
         AtomicReference<QueryConditionDto> treeQuery = new AtomicReference<>();
         if (ObjectNull.isNotNull(crudPage)) {
             setFunctionName("分页查询");
+            long parsePageStart = System.currentTimeMillis();
             CrudPage page = crudPage.stream().filter(e -> e.getId().equals(designId)).findAny().orElseGet(() -> crudPage.get(0));
             PageDesignHtml pageDesignHtml = DesignUtils.parsePage(page.getViewJson());
+            log.info("[分页查询] 解析页面设计JSON耗时: {}ms", System.currentTimeMillis() - parsePageStart);
             //如果关键字查询条件不为空的时候
             if (ObjectNull.isNotNull(queryPageDto.getKeywords(), pageDesignHtml)) {
                 List<QueryConditionDto> list =
@@ -1086,6 +1108,7 @@ public class DynamicDataUseController {
             if (StringUtils.isNotBlank(designId) && ObjectNull.isNotNull(pageDesignHtml)) {
                 List<String> formula = new ArrayList<>();
                 //1将字段添加起来
+                long autoTableFieldsStart = System.currentTimeMillis();
                 List<QueryConditionDto> finalQueryConditions1 = queryConditions;
                 pageDesignHtml.getDataPage().getAutoTableFields().forEach(e -> {
                     //判断这个模型中展示的字段，是否存在自己关联自己情况，如果存在，则直接返回树形，并添加筛选条件
@@ -1148,19 +1171,22 @@ public class DynamicDataUseController {
                     }
                     queryField.add(e.getAliasColumnName());
                 });
+                log.info("[分页查询] 处理AutoTableFields耗时: {}ms, 字段数: {}", System.currentTimeMillis() - autoTableFieldsStart, pageDesignHtml.getDataPage().getAutoTableFields().size());
                 //2排序字段
                 if (ObjectNull.isNotNull(pageDesignHtml.getSorts())) {
                     pageDesignHtml.getSorts().forEach(e -> queryField.add(e.getFieldKey()));
                 }
                 //3按钮公式字段 移动端的按钮
+                long formulaStart = System.currentTimeMillis();
                 formula.addAll(pageDesignHtml.getButtons().stream().map(ButtonSettingDto::getFormula).collect(Collectors.toList()));
                 //添加 公式
                 formula.addAll(pageDesignHtml.getButtons().stream().map(ButtonSettingDto::getMobileFormula).collect(Collectors.toList()));
                 if (ObjectNull.isNotNull(formula)) {
                     functionBusinessMapper.selectBatchIds(formula).forEach(e -> queryField.addAll(e.getRelatedIds()));
+                    log.info("[分页查询] 查询按钮公式字段耗时: {}ms, 公式数: {}", System.currentTimeMillis() - formulaStart, formula.size());
                 }
-
                 //列表页筛选条件，与数据权限不同，是直接进行数据筛选
+                long parametersStart = System.currentTimeMillis();
                 if (ObjectNull.isNotNull(pageDesignHtml.getParameters())) {
                     pageDesignHtml.getParameters().stream().filter(e -> ObjectNull.isNotNull(e.getValue(), e.getKey(), e.getOperator())).map(e -> {
                         QueryConditionDto queryConditionDto = new QueryConditionDto().setValue(e.getOperator().equals(DataQueryType.in) ? e.getValue() : e.getValue().get(0)).setFieldKey(e.getKey()).setEnabledQueryTypes(e.getOperator());
@@ -1201,6 +1227,7 @@ public class DynamicDataUseController {
                     });
                     //4列表过滤
                     pageDesignHtml.getParameters().forEach(e -> queryField.add(e.getKey()));
+                    log.info("[分页查询] 处理列表筛选条件耗时: {}ms, 参数数: {}", System.currentTimeMillis() - parametersStart, pageDesignHtml.getParameters().size());
                 }
                 // 如果没有指定排序字段，则使用列表的排序设计
                 if (CollectionUtils.isEmpty(queryPageDto.getSorts()) && CollectionUtils.isNotEmpty(pageDesignHtml.getSorts())) {
@@ -1231,7 +1258,9 @@ public class DynamicDataUseController {
                     queryGroupConditions = Collections.singletonList(queryPageDto.getConditions());
                 }
             }
+            long getQueryConditionsStart = System.currentTimeMillis();
             queryGroupConditions = getQueryConditions(queryGroupConditions, collectMap, notification);
+            log.info("[分页查询] getQueryConditions处理耗时: {}ms", System.currentTimeMillis() - getQueryConditionsStart);
         } else {
             if (ObjectNull.isNotNull(queryPageDto.getConditions())) {
                 queryConditions.addAll(queryPageDto.getConditions());
@@ -1240,6 +1269,7 @@ public class DynamicDataUseController {
             queryGroupConditions = Collections.singletonList(queryConditions);
         }
         // 条件值转换
+        long convertStart = System.currentTimeMillis();
         queryGroupConditions.stream()
                         .
 
@@ -1249,6 +1279,7 @@ public class DynamicDataUseController {
                 forEach(condition ->
 
                         convertQueryValue(condition, collectMap));
+        log.info("[分页查询] 条件值转换耗时: {}ms", System.currentTimeMillis() - convertStart);
 
         Page<DynamicDataPo> page = new Page<>(queryPageDto.getCurrent(), queryPageDto.getSize());
         collect.addAll(dataFieldService.getDoNotShowFields().
@@ -1273,17 +1304,27 @@ public class DynamicDataUseController {
         if (ObjectNull.isNotNull(dateField)) {
             collect.addAll(dateField);
         }
+        long queryPageStart = System.currentTimeMillis();
+        log.info("[分页查询] 开始执行数据库分页查询，查询字段数: {}, 查询条件组数: {}", collect.size(), queryGroupConditions.size());
         Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, combiningFieldFormulaContentMap, queryGroupConditions, queryPageDto.getSorts(), collect, true, true, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
+        log.info("[分页查询] 数据库分页查询耗时: {}ms, 返回记录数: {}", System.currentTimeMillis() - queryPageStart, pageResult.getRecords().size());
         List<List<QueryConditionDto>> queryGroup = Collections.singletonList(Collections.singletonList(treeQuery.get()));
         List<Map<String, Object>> allData = new ArrayList<>();
         //如果是树，并关联自己，需要对数据进行关联查询下级直到查询不到结果为止
+        long treeStructureStart = System.currentTimeMillis();
         List<Map<String, Object>> mapList = treeStructure(allData, modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, queryGroup, queryPageDto.getSorts(), collect,
                 ObjectNull.isNull(queryPageDto.getKeywords()),
                 new ArrayList<>(collectMap.values()), stringSet);
+        log.info("[分页查询] 树形结构处理耗时: {}ms", System.currentTimeMillis() - treeStructureStart);
         pageResult.setRecords(mapList);
         if (ObjectNull.isNotNull(dateField)) {
-            return R.ok(GanttChartUtils.setFiled(pageResult, dateField));
+            long ganttStart = System.currentTimeMillis();
+            R result = R.ok(GanttChartUtils.setFiled(pageResult, dateField));
+            log.info("[分页查询] 甘特图处理耗时: {}ms", System.currentTimeMillis() - ganttStart);
+            log.info("[分页查询] ====== 总耗时: {}ms ======", System.currentTimeMillis() - startTime);
+            return result;
         }
+        log.info("[分页查询] ====== 总耗时: {}ms ======", System.currentTimeMillis() - startTime);
         return R.ok(pageResult);
     }
 
