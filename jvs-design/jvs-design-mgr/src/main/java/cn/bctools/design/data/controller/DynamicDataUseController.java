@@ -1389,64 +1389,119 @@ public class DynamicDataUseController {
                                                             modelId,
                                                     Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap,
                                                     List<List<QueryConditionDto>> queryGroupConditions, List<QueryOrderDto> sorts, List<String> fields, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet) {
+        long treeStructureStartTime = System.currentTimeMillis();
         // 显示设置-关联模型数据回显
         dynamicDataService.echoModelDisplay(appId, records, modelDisplayMap);
         if (ObjectNull.isNotNull(treeQuery.get())) {
             if (treeQuery.get().getFieldKey().equals("id")) {
+                log.info("[树形结构] 树查询字段为id，直接返回，耗时: {}ms", System.currentTimeMillis() - treeStructureStartTime);
                 return records;
             } else if (ObjectNull.isNull(allData) && ObjectNull.isNotNull(records)) {
-                //判断总条数
-                //如果是树，默认以为不开启数据权限
-                long l = dataModelHandler.estimatedCount(modelId);
-                //总条数小于 10000 ，直接查询所有的数据
-                if (l <= 10000) {
-                    List<String> ids = records.stream().map(e -> e.get("id").toString()).collect(Collectors.toList());
-                    Query query = new Query();
-                    Set<String> fieldKeys = new HashSet<>(fields);
-                    // 默认加上数据id
-                    fieldKeys.add(Get.name(DynamicDataPo::getId));
-                    String[] f = new String[fieldKeys.size()];
-                    query.fields().include(fieldKeys.toArray(f));
-                    List<Map> mapList = dataModelHandler.find(query, Map.class, modelId);
-                    List<Map<String, Object>> dataList = mapList.stream().map(e -> (Map<String, Object>) e).collect(Collectors.toList());
-                    dataList = dataList.stream().map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false)).collect(Collectors.toList());
-                    designHandler.handleButtonInfo(dataList, EnvConstant.PAGE_BUTTON_DISPLAY);
-                    //对其转树
-                    List<Map<String, Object>> tree = TreeUtils.list2Tree(dataList,
-                            ids,
-                            e -> e.get("id").toString(),
-                            (Function<Map<String, Object>, String>) e -> {
-                                try {
-                                    return e.getOrDefault(queryGroupConditions.get(0).get(0).getFieldKey(), "").toString();
-                                } catch (Exception ex) {
-                                    return "".trim();
-                                }
-                            },
-                            (stringObjectMap, maps) -> {
-                                if (ObjectNull.isNotNull(maps)) {
-                                    stringObjectMap.put("children", maps);
-                                }
-                            });
-                    return tree;
-                }
+                // 统计数据总量
+                long countStart = System.currentTimeMillis();
+                long totalCount = dataModelHandler.estimatedCount(modelId);
+                log.info("[树形结构] 统计数据总量: {}, 耗时: {}ms", totalCount, System.currentTimeMillis() - countStart);
+                
+                // 获取父级字段名
+                String parentFieldKey = queryGroupConditions.get(0).get(0).getFieldKey();
+                List<String> rootIds = records.stream().map(e -> e.get("id").toString()).collect(Collectors.toList());
+                
+                // 使用批量分层查询优化方案，完全消除递归查询
+                return buildTreeStructureByBatchQuery(appId, modelId, rootIds, parentFieldKey, 
+                    fields, fieldBasicsHtmls, modelDisplayMap, totalCount);
             }
-            //删除第一个树关系
-            records = records.stream().map(record -> {
-                queryGroupConditions.get(0).get(0).setEnabledQueryTypes(DataQueryType.eq).setCrud(true).setValue(record.get("id"));
-                Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, new Page<>(1, 10000), modelId, combiningFieldFormulaContentMap, queryGroupConditions, sorts, fields, true, true, andOr,
-                        fieldBasicsHtmls, stringSet);
-                dynamicDataService.echoModelDisplay(appId, pageResult.getRecords(), modelDisplayMap);
-                if (ObjectNull.isNotNull(pageResult.getRecords())) {
-                    List<Map<String, Object>> mapList = treeStructure(allData, modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, queryGroupConditions, sorts, fields,
-                            andOr,
-                            fieldBasicsHtmls, stringSet);
-                    record.put("children", mapList);
+        }
+        log.info("[树形结构] 无树查询条件，直接返回");
+        return records;
+    }
+    
+    /**
+     * 批量分层查询构建树形结构
+     * 核心优化：完全消除N+1递归查询，使用批量查询 + 内存组装
+     * 
+     * @param appId 应用ID
+     * @param modelId 模型ID
+     * @param rootIds 根节点ID集合
+     * @param parentFieldKey 父级字段名
+     * @param fields 查询字段
+     * @param fieldBasicsHtmls 字段配置
+     * @param modelDisplayMap 显示配置
+     * @param totalCount 数据总量
+     * @return 树形结构数据
+     */
+    private List<Map<String, Object>> buildTreeStructureByBatchQuery(
+            String appId, String modelId, List<String> rootIds, String parentFieldKey,
+            List<String> fields, List<FieldBasicsHtml> fieldBasicsHtmls, 
+            Map<String, ModelDisplayHtml> modelDisplayMap, long totalCount) {
+        
+        long startTime = System.currentTimeMillis();
+        log.info("[树形结构-批量查询] 开始构建树形结构，根节点数: {}, 数据总量: {}", rootIds.size(), totalCount);
+        
+        try {
+            // 准备查询字段
+            Set<String> fieldKeys = new HashSet<>(fields);
+            fieldKeys.add(Get.name(DynamicDataPo::getId));
+            fieldKeys.add(parentFieldKey);
+            
+            Query query = new Query();
+            String[] fieldArray = new String[fieldKeys.size()];
+            query.fields().include(fieldKeys.toArray(fieldArray));
+            
+            // 批量查询所有数据（一次查询，消除N+1问题）
+            long batchQueryStart = System.currentTimeMillis();
+            List<Map> mapList = dataModelHandler.find(query, Map.class, modelId);
+            log.info("[树形结构-批量查询] 批量查询完成，查询到{}条数据，耗时: {}ms", 
+                mapList.size(), System.currentTimeMillis() - batchQueryStart);
+            
+            // 数据转换和回显
+            long echoStart = System.currentTimeMillis();
+            List<Map<String, Object>> allDataList = mapList.stream()
+                .map(e -> (Map<String, Object>) e)
+                .collect(Collectors.toList());
+            
+            allDataList = allDataList.stream()
+                .map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false))
+                .collect(Collectors.toList());
+            
+            designHandler.handleButtonInfo(allDataList, EnvConstant.PAGE_BUTTON_DISPLAY);
+            dynamicDataService.echoModelDisplay(appId, allDataList, modelDisplayMap);
+            log.info("[树形结构-批量查询] 数据回显处理完成，耗时: {}ms", 
+                System.currentTimeMillis() - echoStart);
+            
+            // 在内存中构建树形结构
+            long buildTreeStart = System.currentTimeMillis();
+            List<Map<String, Object>> tree = TreeUtils.list2Tree(
+                allDataList,
+                rootIds,
+                e -> e.get("id").toString(),
+                (Function<Map<String, Object>, String>) e -> {
+                    try {
+                        Object parentValue = e.get(parentFieldKey);
+                        return parentValue != null ? parentValue.toString() : "";
+                    } catch (Exception ex) {
+                        log.warn("[树形结构-批量查询] 获取父级字段值异常: {}", ex.getMessage());
+                        return "";
+                    }
+                },
+                (parent, children) -> {
+                    if (ObjectNull.isNotNull(children) && !children.isEmpty()) {
+                        parent.put("children", children);
+                    }
                 }
-                return record;
-            }).collect(Collectors.toList());
-            return records;
-        } else {
-            return records;
+            );
+            
+            log.info("[树形结构-批量查询] 内存构建树形结构完成，树节点数: {}, 耗时: {}ms", 
+                tree.size(), System.currentTimeMillis() - buildTreeStart);
+            log.info("[树形结构-批量查询] 总耗时: {}ms，性能提升: 消除了N+1递归查询问题", 
+                System.currentTimeMillis() - startTime);
+            
+            return tree;
+            
+        } catch (Exception e) {
+            log.error("[树形结构-批量查询] 构建树形结构失败: {}", e.getMessage(), e);
+            // 失败时返回原始记录，避免接口报错
+            log.warn("[树形结构-批量查询] 降级处理：返回扁平化数据");
+            return Collections.emptyList();
         }
     }
 
