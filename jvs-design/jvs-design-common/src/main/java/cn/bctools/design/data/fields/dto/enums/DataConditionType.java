@@ -111,7 +111,8 @@ public enum DataConditionType {
                     return str;
             }
         } catch (IllegalArgumentException e) {
-            log.error("系统数据权限未匹配到数据" + str);
+            // 正常情况：传入的是普通数据id而非权限变量，直接返回原值
+            log.debug("数据权限变量未匹配，使用原始值: {}", str);
             return str;
         } catch (RuntimeException e) {
             return "未匹配到数据";

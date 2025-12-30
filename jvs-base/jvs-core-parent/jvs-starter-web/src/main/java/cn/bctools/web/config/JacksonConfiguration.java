@@ -2,6 +2,7 @@ package cn.bctools.web.config;
 
 import cn.hutool.core.date.DatePattern;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -41,6 +42,9 @@ public class JacksonConfiguration {
             builder.locale(Locale.CHINA);
             builder.timeZone(TimeZone.getTimeZone(ZoneId.systemDefault()));
             builder.simpleDateFormat(DatePattern.NORM_DATETIME_PATTERN);
+            // 解凳循环引用问题：禁用循环引用检测，避免StackOverflowError
+            builder.featuresToDisable(SerializationFeature.FAIL_ON_SELF_REFERENCES);
+            log.info("[Jackson配置] 已禁用循环引用检测，避免树形结构序列化StackOverflowError");
         };
     }
 

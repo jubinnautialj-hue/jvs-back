@@ -1483,6 +1483,60 @@ public class DynamicDataUseController {
             
             // 在内存中构建树形结构
             long buildTreeStart = System.currentTimeMillis();
+            
+            // 循环引用路径检测：防止A→B→C→A这种循环，以及节点指向自己的情况
+            Map<String, String> idToParentMap = new HashMap<>();
+            for (Map<String, Object> data : allDataList) {
+                String id = data.get("id").toString();
+                Object parentValue = data.get(parentFieldKey);
+                String parentId = parentValue != null ? parentValue.toString() : "";
+                if (!parentId.isEmpty()) {
+                    idToParentMap.put(id, parentId);
+                }
+            }
+            
+            // 检测并修复循环引用
+            int circularReferenceCount = 0;
+            for (Map<String, Object> data : allDataList) {
+                String id = data.get("id").toString();
+                Object parentValue = data.get(parentFieldKey);
+                String parentId = parentValue != null ? parentValue.toString() : "";
+                
+                // 情况1：节点的父节点指向自己
+                if (id.equals(parentId)) {
+                    log.warn("[树形结构-批量查询] 发现自引用：节点[id={}, 名称={}]的父节点指向自己，已修复", 
+                        id, data.get("gongChengMingChen"));
+                    data.put(parentFieldKey, null);
+                    idToParentMap.remove(id);
+                    circularReferenceCount++;
+                    continue;
+                }
+                
+                // 情况2：检测循环引用链（A→B→C→A）
+                Set<String> visited = new HashSet<>();
+                visited.add(id);
+                
+                String currentId = id;
+                while (idToParentMap.containsKey(currentId)) {
+                    String nextParentId = idToParentMap.get(currentId);
+                    if (visited.contains(nextParentId)) {
+                        // 发现循环：断开循环链
+                        log.warn("[树形结构-批量查询] 发现循环引用链：节点[id={}, 名称={}]形成循环，已断开", 
+                            id, data.get("gongChengMingChen"));
+                        data.put(parentFieldKey, null);
+                        idToParentMap.remove(id);
+                        circularReferenceCount++;
+                        break;
+                    }
+                    visited.add(nextParentId);
+                    currentId = nextParentId;
+                }
+            }
+            
+            if (circularReferenceCount > 0) {
+                log.warn("[树形结构-批量查询] 共发现并修复 {} 处循环引用，建议修复数据库中的数据", circularReferenceCount);
+            }
+            
             List<Map<String, Object>> tree = TreeUtils.list2Tree(
                 allDataList,
                 rootIds,

@@ -52,9 +52,18 @@
     <logger name="org.mybatis">
         <level value="TRACE"/>
     </logger>
+    
+    <!-- 过滤Spring框架的DEBUG日志 -->
+    <logger name="org.springframework.transaction.event" level="INFO"/>
+    <logger name="org.springframework.data.mongodb.core.mapping.event" level="INFO"/>
+    <logger name="org.springframework.security" level="INFO"/>
+    <logger name="io.undertow" level="INFO"/>
+    
+    <!-- 保留业务日志的DEBUG级别 -->
+    <logger name="cn.bctools" level="DEBUG"/>
 
-    <!-- 日志输出级别 -->
-    <root level="debug">
+    <!-- 日志输出级别：生产环境建议设置为INFO -->
+    <root level="INFO">
         <appender-ref ref="ASYNC-STDOUT"/>
         <appender-ref ref="ASYNC-FILE"/>
     </root>
