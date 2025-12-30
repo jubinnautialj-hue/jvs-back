@@ -125,6 +125,8 @@ public class FileTreeUtil {
         HttpServletResponse response = servletRequestAttributes.getResponse();
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=utf-8");
         response.setHeader("Content-Disposition", "attachment;filename=" + java.net.URLEncoder.encode(fileName, "UTF-8"));
+        // 设置Content-Length响应头，告诉客户端文件大小
+        response.setContentLength(bytes.length);
         OutputStream outputStream = response.getOutputStream();
         outputStream.write(bytes);
         outputStream.flush();
