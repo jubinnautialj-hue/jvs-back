@@ -1459,9 +1459,22 @@ public class DynamicDataUseController {
                 .map(e -> (Map<String, Object>) e)
                 .collect(Collectors.toList());
             
-            allDataList = allDataList.stream()
-                .map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false))
-                .collect(Collectors.toList());
+            // 优化：批量预加载关联字段数据，避免N+1查询
+            long preloadStart = System.currentTimeMillis();
+            Map<String, Map<String, Map<String, Object>>> preloadedDataCache = 
+                batchPreloadRelatedFieldData(allDataList, fieldBasicsHtmls, appId);
+            log.info("[树形结构-批量查询] 关联数据预加载完成，耗时: {}ms, 缓存大小: {}", 
+                System.currentTimeMillis() - preloadStart, preloadedDataCache.size());
+            
+            // 使用预加载的数据进行回显，避免逐条查询数据库
+            SystemThreadLocal.set("PRELOADED_DATA_CACHE", preloadedDataCache);
+            try {
+                allDataList = allDataList.stream()
+                    .map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false))
+                    .collect(Collectors.toList());
+            } finally {
+                SystemThreadLocal.remove("PRELOADED_DATA_CACHE");
+            }
             
             designHandler.handleButtonInfo(allDataList, EnvConstant.PAGE_BUTTON_DISPLAY);
             dynamicDataService.echoModelDisplay(appId, allDataList, modelDisplayMap);
@@ -1503,6 +1516,130 @@ public class DynamicDataUseController {
             log.warn("[树形结构-批量查询] 降级处理：返回扁平化数据");
             return Collections.emptyList();
         }
+    }
+    
+    /**
+     * 批量预加载关联字段数据
+     * 核心优化：将逐条查询变为批量查询，从而消除N+1查询问题
+     * 
+     * @param allDataList 所有数据
+     * @param fieldBasicsHtmls 字段配置
+     * @param appId 应用ID
+     * @return 预加载数据缓存：Map<字段名, Map<关联模型ID, Map<ID, 数据>>>
+     */
+    private Map<String, Map<String, Map<String, Object>>> batchPreloadRelatedFieldData(
+            List<Map<String, Object>> allDataList,
+            List<FieldBasicsHtml> fieldBasicsHtmls,
+            String appId) {
+        
+        Map<String, Map<String, Map<String, Object>>> preloadedDataCache = new HashMap<>();
+        
+        // 过滤出需要关联查询的字段（下拉选择、级联选择等）
+        List<FieldBasicsHtml> relatedFields = fieldBasicsHtmls.stream()
+            .filter(field -> {
+                DataFieldType type = field.getType();
+                return type == DataFieldType.select || 
+                       type == DataFieldType.cascader || 
+                       type == DataFieldType.radio;
+            })
+            .filter(field -> {
+                try {
+                    // 检查是否是关联数据模型类型
+                    Object datatype = JvsJsonPath.read(field.getDesignJson(), "$.datatype");
+                    return "dataModel".equals(String.valueOf(datatype));
+                } catch (Exception e) {
+                    return false;
+                }
+            })
+            .collect(Collectors.toList());
+        
+        if (relatedFields.isEmpty()) {
+            log.info("[批量预加载] 没有需要关联查询的字段，跳过预加载");
+            return preloadedDataCache;
+        }
+        
+        log.info("[批量预加载] 发现{}个关联字段需要预加载", relatedFields.size());
+        
+        // 对每个关联字段进行批量预加载
+        for (FieldBasicsHtml field : relatedFields) {
+            try {
+                String fieldKey = field.getFieldKey();
+                String formId = (String) JvsJsonPath.read(field.getDesignJson(), "$.formId");
+                String labelField = (String) JvsJsonPath.read(field.getDesignJson(), "$.props.label");
+                
+                if (ObjectNull.isNull(formId, labelField)) {
+                    continue;
+                }
+                
+                // 收集所有需要查询的ID
+                Set<String> allIds = new HashSet<>();
+                for (Map<String, Object> data : allDataList) {
+                    Object value = data.get(fieldKey);
+                    if (ObjectNull.isNull(value)) {
+                        continue;
+                    }
+                    
+                    if (value instanceof Collection) {
+                        ((Collection<?>) value).forEach(v -> allIds.add(String.valueOf(v)));
+                    } else {
+                        allIds.add(String.valueOf(value));
+                    }
+                }
+                
+                if (allIds.isEmpty()) {
+                    continue;
+                }
+                
+                log.info("[批量预加载] 字段[{}]需要查询{}条关联数据，关联模型: {}", 
+                    fieldKey, allIds.size(), formId);
+                
+                // 批量查询关联数据
+                List<String> queryFields = Arrays.asList("id", labelField);
+                QueryConditionDto queryCondition = new QueryConditionDto();
+                queryCondition.setValue(new ArrayList<>(allIds));
+                queryCondition.setEnabledQueryTypes(DataQueryType.in);  // 使用IN查询
+                queryCondition.setFieldKey("id");
+                
+                // 跳过数据权限
+                DynamicDataUtils.freePermit();
+                List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
+                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
+                
+                try {
+                    List<Map<String, Object>> relatedDataList = 
+                        dynamicDataService.queryList(formId, queryFields, queryCondition);
+                    
+                    // 将查询结果缓存到Map中
+                    Map<String, Object> relatedDataMap = new HashMap<>();
+                    if (ObjectNull.isNotNull(relatedDataList)) {
+                        relatedDataMap = relatedDataList.stream()
+                            .collect(Collectors.toMap(
+                                data -> String.valueOf(data.get("id")),
+                                data -> data,
+                                (v1, v2) -> v1
+                            ));
+                    }
+                    
+                    // 存储到缓存中：结构为 fieldKey -> formId -> (dataId -> dataObject)
+                    Map<String, Map<String, Object>> formIdMap = preloadedDataCache
+                        .computeIfAbsent(fieldKey, k -> new HashMap<>());
+                    formIdMap.put(formId, relatedDataMap);
+                    
+                    log.info("[批量预加载] 字段[{}]预加载完成，加载{}条数据", 
+                        fieldKey, relatedDataMap.size());
+                        
+                } finally {
+                    SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                    SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
+                }
+                
+            } catch (Exception e) {
+                log.error("[批量预加载] 字段[{}]预加载失败: {}", field.getFieldKey(), e.getMessage(), e);
+            }
+        }
+        
+        log.info("[批量预加载] 总计预加载{}个字段的关联数据", preloadedDataCache.size());
+        return preloadedDataCache;
     }
 
     private List<List<QueryConditionDto>> getQueryConditions(List<List<QueryConditionDto>> conditions, Map<String, FieldBasicsHtml> collectMap, Object notification) {

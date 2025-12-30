@@ -69,30 +69,79 @@ public class SysFileController {
                                  @RequestParam(value = "label", required = false) String label,
                                  @RequestParam(value = "bucketName", required = false) String bucketName,
                                  @RequestParam(value = "fileName", required = false) String fileName) {
-        LambdaQueryWrapper<OssFile> queryWrapper = Wrappers.<OssFile>lambdaQuery()
-                .eq(ObjectNull.isNotNull(label), OssFile::getLabel, label)
-                .eq(ObjectNull.isNotNull(bucketName), OssFile::getBucketName, bucketName)
-                .like(StrUtil.isNotBlank(fileType), OssFile::getFileType, fileType);
-        if (ObjectNull.isNull(label)) {
-            Set<String> stringSet = labelMapper.selectList(Wrappers.query()).stream().map(OssFileLabel::getLabel).collect(Collectors.toSet());
-            stringSet.add("系统");
-            queryWrapper.in(OssFile::getLabel, stringSet);
+        long startTime1 = System.currentTimeMillis();
+        log.info("[文件列表] 开始处理请求 - 页码: {}, 每页数量: {}, label: {}, bucketName: {}, fileName: {}", 
+            page.getCurrent(), page.getSize(), label, bucketName, fileName);
+        
+        try {
+            // 1. 构建查询条件
+            long queryBuildStart = System.currentTimeMillis();
+            LambdaQueryWrapper<OssFile> queryWrapper = Wrappers.<OssFile>lambdaQuery()
+                    .eq(ObjectNull.isNotNull(label), OssFile::getLabel, label)
+                    .eq(ObjectNull.isNotNull(bucketName), OssFile::getBucketName, bucketName)
+                    .like(StrUtil.isNotBlank(fileType), OssFile::getFileType, fileType);
+            
+            if (ObjectNull.isNull(label)) {
+                long labelQueryStart = System.currentTimeMillis();
+                Set<String> stringSet = labelMapper.selectList(Wrappers.query()).stream().map(OssFileLabel::getLabel).collect(Collectors.toSet());
+                stringSet.add("系统");
+                queryWrapper.in(OssFile::getLabel, stringSet);
+                log.info("[文件列表] 查询标签列表完成，耗时: {}ms, 标签数量: {}", 
+                    System.currentTimeMillis() - labelQueryStart, stringSet.size());
+            }
+            
+            queryWrapper.like(StrUtil.isNotBlank(fileName), OssFile::getFileName, fileName);
+            if (ObjectUtil.isNotNull(startTime) && ObjectUtil.isNotNull(endTime)) {
+                queryWrapper.between(OssFile::getCreateTime, startTime.atTime(0,0,0), endTime.atTime(23,59,59));
+            }
+            if ("bctools.cn".equals(jvsSystemConfig.getDomain())) {
+                queryWrapper.ne(OssFile::getLabel, "默认");
+            }
+            queryWrapper.orderByDesc(OssFile::getCreateTime);
+            log.info("[文件列表] 查询条件构建完成，耗时: {}ms", System.currentTimeMillis() - queryBuildStart);
+            
+            // 2. 执行分页查询
+            long dbQueryStart = System.currentTimeMillis();
+            Page<OssFile> ossFilePage = fileMapper.selectPage(page, queryWrapper);
+            log.info("[文件列表] 数据库查询完成，耗时: {}ms, 查询到 {} 条记录", 
+                System.currentTimeMillis() - dbQueryStart, ossFilePage.getRecords().size());
+            
+            // 3. 处理文件链接和缩略图
+            long processStart = System.currentTimeMillis();
+            int processedCount = 0;
+            for (OssFile e : ossFilePage.getRecords()) {
+                long itemStart = System.currentTimeMillis();
+                
+                String fileLink = ossTemplate.fileLink(e.getFilePath(), e.getBucketName());
+                e.setFileLink(fileLink);
+                
+                String thumbnail = ThumbnailUtil.getImageBase64(e.getFileType());
+                e.setThumbnail(thumbnail);
+                
+                processedCount++;
+                long itemDuration = System.currentTimeMillis() - itemStart;
+                if (itemDuration > 100) {
+                    log.warn("[文件列表] 单条记录处理耗时过长: {}ms, 文件: {}, 路径: {}", 
+                        itemDuration, e.getFileName(), e.getFilePath());
+                }
+            }
+            log.info("[文件列表] 文件链接和缩略图处理完成，耗时: {}ms, 处理 {} 条记录", 
+                System.currentTimeMillis() - processStart, processedCount);
+            
+            long totalDuration = System.currentTimeMillis() - startTime1;
+            log.info("[文件列表] 请求处理完成，总耗时: {}ms", totalDuration);
+            
+            if (totalDuration > 3000) {
+                log.warn("[文件列表] 请求处理超时预警！总耗时: {}ms", totalDuration);
+            }
+            
+            return R.ok(ossFilePage);
+            
+        } catch (Exception e) {
+            long errorDuration = System.currentTimeMillis() - startTime1;
+            log.error("[文件列表] 请求处理异常，耗时: {}ms", errorDuration, e);
+            throw e;
         }
-        queryWrapper.like(StrUtil.isNotBlank(fileName), OssFile::getFileName, fileName);
-        if (ObjectUtil.isNotNull(startTime) && ObjectUtil.isNotNull(endTime)) {
-            queryWrapper.between(OssFile::getCreateTime, startTime.atTime(0,0,0), endTime.atTime(23,59,59));
-        }
-        if ("bctools.cn".equals(jvsSystemConfig.getDomain())) {
-            queryWrapper.ne(OssFile::getLabel, "默认");
-        }
-        queryWrapper.orderByDesc(OssFile::getCreateTime);
-        Page<OssFile> ossFilePage = fileMapper.selectPage(page, queryWrapper);
-        ossFilePage.getRecords().forEach(e -> {
-            String fileLink = ossTemplate.fileLink(e.getFilePath(), e.getBucketName());
-            e.setFileLink(fileLink);
-            e.setThumbnail(ThumbnailUtil.getImageBase64(e.getFileType()));
-        });
-        return R.ok(ossFilePage);
     }
 
     @Log

@@ -337,17 +337,55 @@ public interface ISelectorDataHandler {
             ArrayList<String> arrayList = new ArrayList<>();
             arrayList.add("id");
             arrayList.add(selectItem.getProps().getLabel());
-            //需要跳过数据权限，避免
-            DynamicDataUtils.freePermit();
-            QueryConditionDto queryConditionDto = new QueryConditionDto();
-            queryConditionDto.setValue(data);
-            queryConditionDto.setEnabledQueryTypes(DataQueryType.eq);
-            queryConditionDto.setFieldKey("id");
-            List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
-            SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
-            List<Map<String, Object>> list = bean.queryList(fromId, arrayList, queryConditionDto);
-            SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
-            SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
+            
+            // 优先尝试从预加载缓存中获取数据，避免N+1查询
+            @SuppressWarnings("unchecked")
+            Map<String, Map<String, Map<String, Object>>> preloadedCache = 
+                (Map<String, Map<String, Map<String, Object>>>) SystemThreadLocal.get("PRELOADED_DATA_CACHE");
+            
+            List<Map<String, Object>> list = null;
+            
+            if (ObjectNull.isNotNull(preloadedCache)) {
+                // 从缓存中获取数据
+                Map<String, Map<String, Object>> fieldCache = preloadedCache.get(selectItem.getProp());
+                if (ObjectNull.isNotNull(fieldCache)) {
+                    Map<String, Object> modelCache = fieldCache.get(fromId);
+                    if (ObjectNull.isNotNull(modelCache)) {
+                        // 从缓存中查找数据
+                        list = new ArrayList<>();
+                        if (data instanceof Collection) {
+                            for (Object id : (Collection<?>) data) {
+                                Object cachedDataObj = modelCache.get(String.valueOf(id));
+                                if (ObjectNull.isNotNull(cachedDataObj) && cachedDataObj instanceof Map) {
+                                    list.add((Map<String, Object>) cachedDataObj);
+                                }
+                            }
+                        } else {
+                            Object cachedDataObj = modelCache.get(String.valueOf(data));
+                            if (ObjectNull.isNotNull(cachedDataObj) && cachedDataObj instanceof Map) {
+                                list.add((Map<String, Object>) cachedDataObj);
+                            }
+                        }
+                        log.debug("[回显优化] 字段[{}]使用预加载缓存，命中{}条数据", selectItem.getProp(), list.size());
+                    }
+                }
+            }
+            
+            // 如果缓存未命中，则进行单条查询（兼容老逻辑）
+            if (ObjectNull.isNull(list)) {
+                //需要跳过数据权限，避免
+                DynamicDataUtils.freePermit();
+                QueryConditionDto queryConditionDto = new QueryConditionDto();
+                queryConditionDto.setValue(data);
+                queryConditionDto.setEnabledQueryTypes(DataQueryType.eq);
+                queryConditionDto.setFieldKey("id");
+                List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
+                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
+                list = bean.queryList(fromId, arrayList, queryConditionDto);
+                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
+            }
+            
             if (ObjectNull.isNull(list)) {
                 if (data instanceof Collection) {
                     return ((Collection<?>) data).stream().map(e -> e.toString()).collect(Collectors.joining(","));
