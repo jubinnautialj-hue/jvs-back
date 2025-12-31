@@ -1465,6 +1465,33 @@ public class DynamicDataUseController {
             log.info("[树形结构-批量查询] 关联数据预加载完成，耗时: {}ms, 缓存大小: {}", 
                 System.currentTimeMillis() - preloadStart, preloadedDataCache.size());
             
+            // 批量预加载部门数据，避免每条数据都调用远程API
+            long deptPreloadStart = System.currentTimeMillis();
+            try {
+                List<SysDeptDto> allDepts = authDeptServiceApi.getAll().getData();
+                if (ObjectNull.isNotNull(allDepts) && !allDepts.isEmpty()) {
+                    // 缓存部门列表
+                    SystemThreadLocal.set(DataFieldType.department.getDesc(), allDepts);
+                    
+                    // 缓存部门Map（ID -> SysDeptDto），避免每条数据都重复构建Map
+                    Map<String, SysDeptDto> deptMap = allDepts.stream()
+                        .collect(Collectors.toMap(SysDeptDto::getId, Function.identity(), (v1, v2) -> v1));
+                    SystemThreadLocal.set("DEPT_MAP_CACHE", deptMap);
+                    
+                    // 缓存部门名称Map（ID -> Name），加速回显
+                    Map<String, Object> deptNameMap = allDepts.stream()
+                        .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
+                    SystemThreadLocal.set("DEPT_NAME_MAP_CACHE", deptNameMap);
+                    
+                    log.info("[树形结构-批量查询] 部门数据预加载完成，耗时: {}ms, 部门数量: {}", 
+                        System.currentTimeMillis() - deptPreloadStart, allDepts.size());
+                } else {
+                    log.warn("[树形结构-批量查询] 部门数据为空，跳过预加载");
+                }
+            } catch (Exception e) {
+                log.error("[树形结构-批量查询] 部门数据预加载失败: {}", e.getMessage(), e);
+            }
+            
             // 使用预加载的数据进行回显，避免逐条查询数据库
             long echoStart = System.currentTimeMillis();
             SystemThreadLocal.set("PRELOADED_DATA_CACHE", preloadedDataCache);
@@ -1475,6 +1502,9 @@ public class DynamicDataUseController {
                     .collect(Collectors.toList());
             } finally {
                 SystemThreadLocal.remove("PRELOADED_DATA_CACHE");
+                SystemThreadLocal.remove(DataFieldType.department.getDesc());
+                SystemThreadLocal.remove("DEPT_MAP_CACHE");
+                SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
             }
             log.info("[树形结构-批量查询] echo完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
             
