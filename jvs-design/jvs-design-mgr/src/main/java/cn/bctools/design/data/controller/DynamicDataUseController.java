@@ -1477,9 +1477,9 @@ public class DynamicDataUseController {
             }
             
             designHandler.handleButtonInfo(allDataList, EnvConstant.PAGE_BUTTON_DISPLAY);
+            log.info("[树形结构-批量查询] handleButtonInfo完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
             dynamicDataService.echoModelDisplay(appId, allDataList, modelDisplayMap);
-            log.info("[树形结构-批量查询] 数据回显处理完成，耗时: {}ms", 
-                System.currentTimeMillis() - echoStart);
+            log.info("[树形结构-批量查询] 数据回显处理完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
             
             // 在内存中构建树形结构
             long buildTreeStart = System.currentTimeMillis();
@@ -1504,8 +1504,7 @@ public class DynamicDataUseController {
                 
                 // 情况1：节点的父节点指向自己
                 if (id.equals(parentId)) {
-                    log.warn("[树形结构-批量查询] 发现自引用：节点[id={}, 名称={}]的父节点指向自己，已修复", 
-                        id, data.get("gongChengMingChen"));
+                    log.warn("[树形结构-批量查询] 发现自引用：节点[id={}]的父节点指向自己，已修复", id);
                     data.put(parentFieldKey, null);
                     idToParentMap.remove(id);
                     circularReferenceCount++;
@@ -1521,8 +1520,7 @@ public class DynamicDataUseController {
                     String nextParentId = idToParentMap.get(currentId);
                     if (visited.contains(nextParentId)) {
                         // 发现循环：断开循环链
-                        log.warn("[树形结构-批量查询] 发现循环引用链：节点[id={}, 名称={}]形成循环，已断开", 
-                            id, data.get("gongChengMingChen"));
+                        log.warn("[树形结构-批量查询] 发现循环引用链：节点[id={}]形成循环，已断开",id);
                         data.put(parentFieldKey, null);
                         idToParentMap.remove(id);
                         circularReferenceCount++;

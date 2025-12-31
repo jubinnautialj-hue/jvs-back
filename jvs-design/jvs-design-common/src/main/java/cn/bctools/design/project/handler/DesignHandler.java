@@ -144,19 +144,30 @@ public class DesignHandler {
     }
 
     public void handleButtonInfo(List<Map<String, Object>> dataList, String useCase) {
+        long handleStart = System.currentTimeMillis();
+        log.info("[DesignHandler-handleButtonInfo] 开始处理按钮信息 - 数据条数: {}, useCase: {}", 
+            dataList != null ? dataList.size() : 0, useCase);
+        
         if (ObjectUtils.isEmpty(dataList)) {
+            log.info("[DesignHandler-handleButtonInfo] 数据列表为空，直接返回");
             return;
         }
 
+        // 1. 获取设计ID和用户信息
+        long step1Start = System.currentTimeMillis();
         String designId = DynamicDataUtils.getDesignId();
         if (StringUtils.isBlank(designId)) {
+            log.warn("[DesignHandler-handleButtonInfo] designId为空，直接返回");
             return;
         }
-
 
         String userId = UserCurrentUtils.getUserId();
         boolean mobile = IpUtil.isMobile();
+        log.info("[DesignHandler-handleButtonInfo] 获取基础信息完成，耗时: {}ms - designId: {}, userId: {}, mobile: {}", 
+            System.currentTimeMillis() - step1Start, designId, userId, mobile);
 
+        // 2. 获取并过滤按钮设置
+        long step2Start = System.currentTimeMillis();
         List<ButtonDesignHtml> buttonSetting = this.getButtonSetting(designId, useCase)
                 .stream()
                 .filter(b -> StringUtils.isNotBlank(b.getPermissionFlag()))
@@ -174,21 +185,37 @@ public class DesignHandler {
                     }
                 })
                 .collect(Collectors.toList());
+        log.info("[DesignHandler-handleButtonInfo] 获取并过滤按钮设置完成，耗时: {}ms - 按钮数量: {}", 
+            System.currentTimeMillis() - step2Start, buttonSetting != null ? buttonSetting.size() : 0);
+        
         //如果没有按钮直接返回
         if (ObjectNull.isNull(buttonSetting)) {
+            log.info("[DesignHandler-handleButtonInfo] 按钮设置为空，直接返回");
             return;
         }
 
-        // 获取流程任务信息
+        // 3. 获取流程任务信息
+        long step3Start = System.currentTimeMillis();
         List<String> dataIds = dataList.stream().map(dataMap -> String.valueOf(dataMap.get("id"))).collect(Collectors.toList());
         Map<String, JSONObject> dataFlowMap = flowDynamicDataService.getMltipleFlowTaskData(dataIds);
+        log.info("[DesignHandler-handleButtonInfo] 获取流程任务信息完成，耗时: {}ms - 数据ID数量: {}, 流程数据数量: {}", 
+            System.currentTimeMillis() - step3Start, dataIds.size(), dataFlowMap != null ? dataFlowMap.size() : 0);
 
+        // 4. 处理每条数据的按钮
+        long step4Start = System.currentTimeMillis();
+        int processedCount = 0;
+        long maxItemDuration = 0;
+        String slowestItemId = null;
+        
         for (Map<String, Object> data : dataList) {
+            long itemStart = System.currentTimeMillis();
+            
             // 将工作流的信息加入数据
             JSONObject flowData = dataFlowMap.get(String.valueOf(data.get("id")));
             if (ObjectNull.isNotNull(flowData)) {
                 data.putAll(flowData);
             }
+            
             List list = new ArrayList<>(buttonSetting)
                     .stream()
                     .filter(e -> {
@@ -237,6 +264,30 @@ public class DesignHandler {
                 list.add(IdGenerator.getIdStr());
             }
             data.put(JVS_ENABLED_BUTTONS, list);
+            
+            long itemDuration = System.currentTimeMillis() - itemStart;
+            if (itemDuration > maxItemDuration) {
+                maxItemDuration = itemDuration;
+                slowestItemId = String.valueOf(data.get("id"));
+            }
+            
+            // 单条数据处理超过50ms记录警告
+            if (itemDuration > 50) {
+                log.warn("[DesignHandler-handleButtonInfo] 单条数据处理耗时过长: {}ms - 数据ID: {}, 按钮数量: {}", 
+                    itemDuration, data.get("id"), list.size());
+            }
+            
+            processedCount++;
+        }
+        
+        log.info("[DesignHandler-handleButtonInfo] 处理所有数据的按钮完成，耗时: {}ms - 处理条数: {}, 最慢记录ID: {}, 最慢记录耗时: {}ms", 
+            System.currentTimeMillis() - step4Start, processedCount, slowestItemId, maxItemDuration);
+
+        long totalDuration = System.currentTimeMillis() - handleStart;
+        log.info("[DesignHandler-handleButtonInfo] 处理完成，总耗时: {}ms", totalDuration);
+        
+        if (totalDuration > 1000) {
+            log.warn("[DesignHandler-handleButtonInfo] 处理超时预警！总耗时: {}ms - 数据条数: {}", totalDuration, dataList.size());
         }
     }
 
