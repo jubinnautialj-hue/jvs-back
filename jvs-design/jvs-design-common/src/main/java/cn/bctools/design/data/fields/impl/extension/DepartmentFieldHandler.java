@@ -54,47 +54,65 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
             }
         }
 
-        // 优先使用预加载的部门名称Map缓存（最快）
-        Map<String, Object> deptNameMap = SystemThreadLocal.get("DEPT_NAME_MAP_CACHE");
+        // 优先从lineData中获取预加载的部门缓存（跨线程访问，解决并行处理问题）
+        Map<String, Object> deptNameMap = null;
         List<SysDeptDto> deptList = null;
         
-        if (ObjectNull.isNull(deptNameMap)) {
-            // 降级1：尝试使用部门列表缓存
-            deptList = SystemThreadLocal.get(DataFieldType.department.getDesc());
+        if (ObjectNull.isNotNull(lineData)) {
+            // 尝试从lineData中获取预加载的缓存
+            Object deptNameMapCache = lineData.get("__DEPT_NAME_MAP_CACHE__");
+            Object deptListCache = lineData.get("__DEPT_LIST_CACHE__");
             
-            if (ObjectNull.isNull(deptList)) {
-                // 降级2：调用远程API获取部门数据
-                long apiStart = System.currentTimeMillis();
-                deptList = deptApi.getAll().getData();
-                long apiDuration = System.currentTimeMillis() - apiStart;
-                
-                if (apiDuration > 50) {
-                    log.warn("[部门选择-Echo] 未找到预加载缓存，调用远程API耗时: {}ms，建议优化为批量预加载", apiDuration);
-                }
-                
-                SystemThreadLocal.set(DataFieldType.department.getDesc(), deptList);
+            if (deptNameMapCache instanceof Map) {
+                deptNameMap = (Map<String, Object>) deptNameMapCache;
+                log.debug("[部门选择-Echo] 使用预加载的部门名称Map缓存，部门数量: {}", deptNameMap.size());
             }
             
-            // 构建部门名称Map
-            long mapBuildStart = System.currentTimeMillis();
-            deptNameMap = deptList.stream()
-                .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
-            long mapBuildDuration = System.currentTimeMillis() - mapBuildStart;
-            
-            if (mapBuildDuration > 10) {
-                log.warn("[部门选择-Echo] 构建部门名称Map耗时: {}ms，部门数量: {}", mapBuildDuration, deptList.size());
+            if (deptListCache instanceof List) {
+                deptList = (List<SysDeptDto>) deptListCache;
             }
-            
-            // 缓存Map供后续使用
-            SystemThreadLocal.set("DEPT_NAME_MAP_CACHE", deptNameMap);
         }
         
-        // 如果需要路径处理，获取完整的部门列表
+        // 降级处理：如果lineData中没有缓存，尝试从ThreadLocal获取
+        if (ObjectNull.isNull(deptNameMap)) {
+            deptNameMap = SystemThreadLocal.get("DEPT_NAME_MAP_CACHE");
+            if (ObjectNull.isNotNull(deptNameMap)) {
+                log.debug("[部门选择-Echo] 使用ThreadLocal中的部门名称Map缓存");
+            }
+        }
+        
+        if (ObjectNull.isNull(deptList)) {
+            deptList = SystemThreadLocal.get(DataFieldType.department.getDesc());
+        }
+        
+        // 最终降级：调用远程API
+        if (ObjectNull.isNull(deptNameMap)) {
+            long apiStart = System.currentTimeMillis();
+            deptList = deptApi.getAll().getData();
+            long apiDuration = System.currentTimeMillis() - apiStart;
+            
+            if (apiDuration > 50) {
+                log.warn("[部门选择-Echo] 未找到预加载缓存，调用远程API耗时: {}ms，建议优化为批量预加载", apiDuration);
+            }
+            
+            if (ObjectNull.isNotNull(deptList)) {
+                // 构建部门名称Map
+                long mapBuildStart = System.currentTimeMillis();
+                deptNameMap = deptList.stream()
+                    .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
+                long mapBuildDuration = System.currentTimeMillis() - mapBuildStart;
+                
+                if (mapBuildDuration > 10) {
+                    log.warn("[部门选择-Echo] 构建部门名称Map耗时: {}ms，部门数量: {}", mapBuildDuration, deptList.size());
+                }
+            }
+        }
+        
+        // 如果需要路径处理但deptList为空，需要获取完整的部门列表
         if (showPath && ObjectNull.isNull(deptList)) {
             deptList = SystemThreadLocal.get(DataFieldType.department.getDesc());
             if (ObjectNull.isNull(deptList)) {
                 deptList = deptApi.getAll().getData();
-                SystemThreadLocal.set(DataFieldType.department.getDesc(), deptList);
             }
         }
         

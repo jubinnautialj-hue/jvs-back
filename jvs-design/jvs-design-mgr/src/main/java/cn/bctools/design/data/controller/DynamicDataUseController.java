@@ -1466,22 +1466,17 @@ public class DynamicDataUseController {
                 System.currentTimeMillis() - preloadStart, preloadedDataCache.size());
             
             // 批量预加载部门数据，避免每条数据都调用远程API
+            // 注意：由于echo处理可能在子线程中执行，ThreadLocal无法跨线程传递
+            // 因此将预加载数据存入preloadedDataCache，在echo时传入每条数据的lineData中
             long deptPreloadStart = System.currentTimeMillis();
+            Map<String, Object> deptNameMap = new HashMap<>();
+            List<SysDeptDto> allDepts = null;
             try {
-                List<SysDeptDto> allDepts = authDeptServiceApi.getAll().getData();
+                allDepts = authDeptServiceApi.getAll().getData();
                 if (ObjectNull.isNotNull(allDepts) && !allDepts.isEmpty()) {
-                    // 缓存部门列表
-                    SystemThreadLocal.set(DataFieldType.department.getDesc(), allDepts);
-                    
-                    // 缓存部门Map（ID -> SysDeptDto），避免每条数据都重复构建Map
-                    Map<String, SysDeptDto> deptMap = allDepts.stream()
-                        .collect(Collectors.toMap(SysDeptDto::getId, Function.identity(), (v1, v2) -> v1));
-                    SystemThreadLocal.set("DEPT_MAP_CACHE", deptMap);
-                    
-                    // 缓存部门名称Map（ID -> Name），加速回显
-                    Map<String, Object> deptNameMap = allDepts.stream()
+                    // 构建部门名称Map（ID -> Name），用于加速回显
+                    deptNameMap = allDepts.stream()
                         .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
-                    SystemThreadLocal.set("DEPT_NAME_MAP_CACHE", deptNameMap);
                     
                     log.info("[树形结构-批量查询] 部门数据预加载完成，耗时: {}ms, 部门数量: {}", 
                         System.currentTimeMillis() - deptPreloadStart, allDepts.size());
@@ -1490,6 +1485,19 @@ public class DynamicDataUseController {
                 }
             } catch (Exception e) {
                 log.error("[树形结构-批量查询] 部门数据预加载失败: {}", e.getMessage(), e);
+            }
+            
+            // 将部门数据存入每条数据的特殊字段中，供DepartmentFieldHandler使用
+            // 使用特殊前缀避免与业务字段冲突
+            final Map<String, Object> finalDeptNameMap = deptNameMap;
+            final List<SysDeptDto> finalAllDepts = allDepts;
+            if (ObjectNull.isNotNull(finalDeptNameMap) && !finalDeptNameMap.isEmpty()) {
+                allDataList.forEach(data -> {
+                    data.put("__DEPT_NAME_MAP_CACHE__", finalDeptNameMap);
+                    if (ObjectNull.isNotNull(finalAllDepts)) {
+                        data.put("__DEPT_LIST_CACHE__", finalAllDepts);
+                    }
+                });
             }
             
             // 使用预加载的数据进行回显，避免逐条查询数据库
@@ -1502,9 +1510,11 @@ public class DynamicDataUseController {
                     .collect(Collectors.toList());
             } finally {
                 SystemThreadLocal.remove("PRELOADED_DATA_CACHE");
-                SystemThreadLocal.remove(DataFieldType.department.getDesc());
-                SystemThreadLocal.remove("DEPT_MAP_CACHE");
-                SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
+                // 清理每条数据中的临时缓存字段
+                allDataList.forEach(data -> {
+                    data.remove("__DEPT_NAME_MAP_CACHE__");
+                    data.remove("__DEPT_LIST_CACHE__");
+                });
             }
             log.info("[树形结构-批量查询] echo完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
             
