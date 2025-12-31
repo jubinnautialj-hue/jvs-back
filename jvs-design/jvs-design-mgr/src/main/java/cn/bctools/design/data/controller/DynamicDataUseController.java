@@ -1453,8 +1453,7 @@ public class DynamicDataUseController {
             log.info("[树形结构-批量查询] 批量查询完成，查询到{}条数据，耗时: {}ms", 
                 mapList.size(), System.currentTimeMillis() - batchQueryStart);
             
-            // 数据转换和回显
-            long echoStart = System.currentTimeMillis();
+
             List<Map<String, Object>> allDataList = mapList.stream()
                 .map(e -> (Map<String, Object>) e)
                 .collect(Collectors.toList());
@@ -1467,19 +1466,25 @@ public class DynamicDataUseController {
                 System.currentTimeMillis() - preloadStart, preloadedDataCache.size());
             
             // 使用预加载的数据进行回显，避免逐条查询数据库
+            long echoStart = System.currentTimeMillis();
             SystemThreadLocal.set("PRELOADED_DATA_CACHE", preloadedDataCache);
             try {
+                log.info("[树形结构-批量查询] 开始echo处理，数据条数: {}", allDataList.size());
                 allDataList = allDataList.stream()
                     .map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false))
                     .collect(Collectors.toList());
             } finally {
                 SystemThreadLocal.remove("PRELOADED_DATA_CACHE");
             }
+            log.info("[树形结构-批量查询] echo完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
             
+            long buttonStart = System.currentTimeMillis();
             designHandler.handleButtonInfo(allDataList, EnvConstant.PAGE_BUTTON_DISPLAY);
-            log.info("[树形结构-批量查询] handleButtonInfo完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
+            log.info("[树形结构-批量查询] handleButtonInfo完成，耗时: {}ms", System.currentTimeMillis() - buttonStart);
+            
+            long modelDisplayStart = System.currentTimeMillis();
             dynamicDataService.echoModelDisplay(appId, allDataList, modelDisplayMap);
-            log.info("[树形结构-批量查询] 数据回显处理完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
+            log.info("[树形结构-批量查询] echoModelDisplay完成，耗时: {}ms", System.currentTimeMillis() - modelDisplayStart);
             
             // 在内存中构建树形结构
             long buildTreeStart = System.currentTimeMillis();
@@ -1671,14 +1676,11 @@ public class DynamicDataUseController {
                                 (v1, v2) -> v1
                             ));
                     }
-                    
                     // 存储到缓存中：结构为 fieldKey -> formId -> (dataId -> dataObject)
-                    Map<String, Map<String, Object>> formIdMap = preloadedDataCache
-                        .computeIfAbsent(fieldKey, k -> new HashMap<>());
+                    Map<String, Map<String, Object>> formIdMap = preloadedDataCache.computeIfAbsent(fieldKey, k -> new HashMap<>());
                     formIdMap.put(formId, relatedDataMap);
                     
-                    log.info("[批量预加载] 字段[{}]预加载完成，加载{}条数据", 
-                        fieldKey, relatedDataMap.size());
+                    log.info("[批量预加载] 字段[{}]预加载完成，加载{}条数据", fieldKey, relatedDataMap.size());
                         
                 } finally {
                     SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
