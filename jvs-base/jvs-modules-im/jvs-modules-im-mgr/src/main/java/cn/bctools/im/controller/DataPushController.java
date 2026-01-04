@@ -18,9 +18,13 @@ import org.jim.server.util.ChannelMarkUtil;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import com.alibaba.ttl.threadpool.TtlExecutors;
+
 import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @Author: ZhuXiaoKang
@@ -31,11 +35,24 @@ import java.util.concurrent.TimeUnit;
 public class DataPushController {
 
     /**
-     * 推送任务线程池
+     * 推送任务线程池（使用TTL装饰，确保租户信息传递）
+     * 优化：设置有界队列，防止OOM
      */
-    private static final ThreadPoolExecutor pushTaskExecutor = new ThreadPoolExecutor(4, 100,
-            30L, TimeUnit.SECONDS,
-            new LinkedBlockingQueue<>());
+    private static final ThreadPoolExecutor pushTaskExecutor = (ThreadPoolExecutor) TtlExecutors.getTtlExecutor(
+            new ThreadPoolExecutor(
+                    4,
+                    100,
+                    30L,
+                    TimeUnit.SECONDS,
+                    new LinkedBlockingQueue<>(10000),  // 优化：设置有界队列，防止OOM
+                    new ThreadFactory() {
+                        private final AtomicInteger threadNumber = new AtomicInteger(1);
+                        @Override
+                        public Thread newThread(Runnable r) {
+                            return new Thread(r, "im-push-" + threadNumber.getAndIncrement());
+                        }
+                    },
+                    new ThreadPoolExecutor.CallerRunsPolicy()));  // 队列满时由调用者执行，保证不丢失
 
     @PostMapping("/data/push")
     public R<String> push(@RequestBody @Validated DataPushDto dataPushDto, @RequestHeader("tenantId") String tenantId) {
