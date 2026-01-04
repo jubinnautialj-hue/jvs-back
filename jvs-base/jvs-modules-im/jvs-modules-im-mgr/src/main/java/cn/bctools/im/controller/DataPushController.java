@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import com.alibaba.ttl.threadpool.TtlExecutors;
 
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -38,7 +39,7 @@ public class DataPushController {
      * 推送任务线程池（使用TTL装饰，确保租户信息传递）
      * 优化：设置有界队列，防止OOM
      */
-    private static final ThreadPoolExecutor pushTaskExecutor = (ThreadPoolExecutor) TtlExecutors.getTtlExecutor(
+    private static final Executor pushTaskExecutor = TtlExecutors.getTtlExecutor(
             new ThreadPoolExecutor(
                     4,
                     100,

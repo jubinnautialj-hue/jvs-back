@@ -44,6 +44,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -74,7 +75,7 @@ public class SysLogAspect {
      * 日志保存线程池（使用TTL装饰，确保租户信息等ThreadLocal数据正确传递）
      * 队列容量从100万优化为10万，防止内存溢出
      */
-    private static ThreadPoolExecutor executor = (ThreadPoolExecutor) TtlExecutors.getTtlExecutor(
+    private static Executor executor = TtlExecutors.getTtlExecutor(
             new ThreadPoolExecutor(
                     1,
                     10,
