@@ -28,8 +28,13 @@ public class DesignIdFilter extends GenericFilterBean {
     public void doFilter(ServletRequest servletRequest, ServletResponse servletResponse, FilterChain filterChain) throws IOException, ServletException {
         HttpServletRequest request = (HttpServletRequest) servletRequest;
         String designId = request.getHeader(HEADER_DESIGN_ID);
-        SystemThreadLocal.set(IJvsFunction.KEY_DESIGN_ID, designId);
-        filterChain.doFilter(servletRequest, servletResponse);
+        try {
+            SystemThreadLocal.set(IJvsFunction.KEY_DESIGN_ID, designId);
+            filterChain.doFilter(servletRequest, servletResponse);
+        } finally {
+            // 清理ThreadLocal，避免线程池复用时产生脏数据
+            SystemThreadLocal.remove(IJvsFunction.KEY_DESIGN_ID);
+        }
     }
 
 }
