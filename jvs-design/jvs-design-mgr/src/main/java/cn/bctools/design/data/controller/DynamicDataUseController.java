@@ -1321,11 +1321,11 @@ public class DynamicDataUseController {
             for (FieldBasicsHtml field : collectMap.values()) {
                 if (DataFieldType.department.equals(field.getFieldType())) {
                     // 为部门字段查询所有可能的数据
-                    List<DeptDto> allDepts = authDeptServiceApi.getAll().getData();
+                    List<SysDeptDto> allDepts = authDeptServiceApi.getAll().getData();
                     if (ObjectNull.isNotNull(allDepts) && !allDepts.isEmpty()) {
                         Map<String, Object> deptNameMap = allDepts.stream()
                             .filter(dept -> ObjectNull.isNotNull(dept.getName()))
-                            .collect(Collectors.toMap(DeptDto::getId, DeptDto::getName, (v1, v2) -> v1));
+                            .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
                         SystemThreadLocal.set("DEPT_NAME_MAP_CACHE", deptNameMap);
                         log.info("[分页查询-预加载] 部门数据预加载完成，部门数量: {}", allDepts.size());
                     }
