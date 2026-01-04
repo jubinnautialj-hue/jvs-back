@@ -2,7 +2,9 @@ package cn.bctools.design.data.controller;
 
 import cn.bctools.ai.api.JvsAiDatasetApi;
 import cn.bctools.auth.api.api.AuthDeptServiceApi;
+import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.auth.api.dto.SysDeptDto;
+import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.function.Get;
@@ -237,6 +239,7 @@ public class DynamicDataUseController {
     CascaderFieldHandler cascaderFieldHandler;
     JvsTreeService jvsTreeService;
     AuthDeptServiceApi authDeptServiceApi;
+    AuthUserServiceApi authUserServiceApi;
     /**
      * The Field handler map.
      */
@@ -1507,7 +1510,6 @@ public class DynamicDataUseController {
                         .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
                     
                     // 将部门数据存入ThreadLocal，供DepartmentFieldHandler使用
-                    // 注意：这里使用ThreadLocal而不是InheritableThreadLocal，因为并行流会复用线程池
                     SystemThreadLocal.set("DEPT_NAME_MAP_CACHE", deptNameMap);
                     SystemThreadLocal.set("DEPT_LIST_CACHE", allDepts);
                     
@@ -1518,6 +1520,57 @@ public class DynamicDataUseController {
                 }
             } catch (Exception e) {
                 log.error("[树形结构-批量查询] 部门数据预加载失败: {}", e.getMessage(), e);
+            }
+            
+            // 批量预加载用户数据，避免每条数据都调用远程API
+            long userPreloadStart = System.currentTimeMillis();
+            try {
+                // 收集所有需要查询的用户ID
+                Set<String> allUserIds = new HashSet<>();
+                for (Map<String, Object> data : allDataList) {
+                    for (FieldBasicsHtml field : fieldBasicsHtmls) {
+                        if (DataFieldType.user.equals(field.getFieldType())) {
+                            Object userValue = data.get(field.getFieldKey());
+                            if (ObjectNull.isNotNull(userValue)) {
+                                if (userValue instanceof List) {
+                                    ((List<?>) userValue).forEach(id -> {
+                                        if (ObjectNull.isNotNull(id)) {
+                                            allUserIds.add(id.toString());
+                                        }
+                                    });
+                                } else {
+                                    allUserIds.add(userValue.toString());
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (!allUserIds.isEmpty()) {
+                    // 批量查询所有用户信息
+                    List<String> userIdList = new ArrayList<>(allUserIds);
+                    List<String> userFieldList = Arrays.asList("realName");
+                    List<UserDto> userList = authUserServiceApi.getBasicInfoById(userIdList, userFieldList).getData();
+                    
+                    if (ObjectNull.isNotNull(userList) && !userList.isEmpty()) {
+                        // 构建用户名称Map（ID -> Name）
+                        Map<String, Object> userNameMap = userList.stream()
+                            .filter(user -> ObjectNull.isNotNull(user.getRealName()))
+                            .collect(Collectors.toMap(UserDto::getId, UserDto::getRealName, (v1, v2) -> v1));
+                        
+                        // 将用户数据存入ThreadLocal，供UserFieldHandler使用
+                        SystemThreadLocal.set("USER_NAME_MAP_CACHE", userNameMap);
+                        
+                        log.info("[树形结构-批量查询] 用户数据预加载完成，耗时: {}ms, 用户数量: {}", 
+                            System.currentTimeMillis() - userPreloadStart, userList.size());
+                    } else {
+                        log.warn("[树形结构-批量查询] 用户数据为空，跳过预加载");
+                    }
+                } else {
+                    log.info("[树形结构-批量查询] 无需查询用户数据");
+                }
+            } catch (Exception e) {
+                log.error("[树形结构-批量查询] 用户数据预加载失败: {}", e.getMessage(), e);
             }
             
             // 使用预加载的数据进行回显，避免逐条查询数据库
@@ -1532,6 +1585,7 @@ public class DynamicDataUseController {
                 SystemThreadLocal.remove("PRELOADED_DATA_CACHE");
                 SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
                 SystemThreadLocal.remove("DEPT_LIST_CACHE");
+                SystemThreadLocal.remove("USER_NAME_MAP_CACHE");
             }
             log.info("[树形结构-批量查询] echo完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
             
