@@ -1390,10 +1390,12 @@ public class DynamicDataUseController {
                                                     Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap,
                                                     List<List<QueryConditionDto>> queryGroupConditions, List<QueryOrderDto> sorts, List<String> fields, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet) {
         long treeStructureStartTime = System.currentTimeMillis();
-        // 显示设置-关联模型数据回显
-        dynamicDataService.echoModelDisplay(appId, records, modelDisplayMap);
+        // 注意：不在这里调用echoModelDisplay，避免与buildTreeStructureByBatchQuery中的调用重复
+        // 树形结构的echoModelDisplay会在buildTreeStructureByBatchQuery中统一处理所有数据
         if (ObjectNull.isNotNull(treeQuery.get())) {
             if (treeQuery.get().getFieldKey().equals("id")) {
+                // 特殊情况：树查询字段为id时，需要为分页数据调用echoModelDisplay
+                dynamicDataService.echoModelDisplay(appId, records, modelDisplayMap);
                 log.info("[树形结构] 树查询字段为id，直接返回，耗时: {}ms", System.currentTimeMillis() - treeStructureStartTime);
                 return records;
             } else if (ObjectNull.isNull(allData) && ObjectNull.isNotNull(records)) {
@@ -1404,7 +1406,37 @@ public class DynamicDataUseController {
                 
                 // 获取父级字段名
                 String parentFieldKey = queryGroupConditions.get(0).get(0).getFieldKey();
-                List<String> rootIds = records.stream().map(e -> e.get("id").toString()).collect(Collectors.toList());
+                
+                // 关键修复：从分页查询结果中筛选出真正的根节点
+                // 只有父字段为null或空字符串的才是真正的根节点
+                List<String> rootIds = records.stream()
+                    .filter(record -> {
+                        Object parentValue = record.get(parentFieldKey);
+                        // 只有父字段为空才是真正的根节点
+                        return ObjectNull.isNull(parentValue) || parentValue.toString().isEmpty();
+                    })
+                    .map(e -> e.get("id").toString())
+                    .collect(Collectors.toList());
+                
+                // 如果没有找到根节点，说明查询结果都是子节点
+                // 需要从这些子节点向上查找父节点，构建完整的树结构
+                if (rootIds.isEmpty()) {
+                    log.warn("[树形结构] 分页查询结果中没有根节点，所有记录都是子节点，需要向上查找父节点");
+                    // 收集所有父节点ID
+                    Set<String> parentIds = records.stream()
+                        .map(record -> record.get(parentFieldKey))
+                        .filter(ObjectNull::isNotNull)
+                        .map(Object::toString)
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.toSet());
+                    
+                    // 使用父节点ID作为根节点来构建树
+                    // 这样可以确保树的完整性，即使父节点不在分页结果中
+                    rootIds = new ArrayList<>(parentIds);
+                    log.info("[树形结构] 使用{}个父节点ID作为树的起点", rootIds.size());
+                } else {
+                    log.info("[树形结构] 从{}条分页记录中识别出{}个真正的根节点", records.size(), rootIds.size());
+                }
                 
                 // 使用批量分层查询优化方案，完全消除递归查询
                 return buildTreeStructureByBatchQuery(appId, modelId, rootIds, parentFieldKey, 
@@ -1466,17 +1498,18 @@ public class DynamicDataUseController {
                 System.currentTimeMillis() - preloadStart, preloadedDataCache.size());
             
             // 批量预加载部门数据，避免每条数据都调用远程API
-            // 注意：由于echo处理可能在子线程中执行，ThreadLocal无法跨线程传递
-            // 因此将预加载数据存入preloadedDataCache，在echo时传入每条数据的lineData中
             long deptPreloadStart = System.currentTimeMillis();
-            Map<String, Object> deptNameMap = new HashMap<>();
-            List<SysDeptDto> allDepts = null;
             try {
-                allDepts = authDeptServiceApi.getAll().getData();
+                List<SysDeptDto> allDepts = authDeptServiceApi.getAll().getData();
                 if (ObjectNull.isNotNull(allDepts) && !allDepts.isEmpty()) {
                     // 构建部门名称Map（ID -> Name），用于加速回显
-                    deptNameMap = allDepts.stream()
+                    Map<String, Object> deptNameMap = allDepts.stream()
                         .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
+                    
+                    // 将部门数据存入ThreadLocal，供DepartmentFieldHandler使用
+                    // 注意：这里使用ThreadLocal而不是InheritableThreadLocal，因为并行流会复用线程池
+                    SystemThreadLocal.set("DEPT_NAME_MAP_CACHE", deptNameMap);
+                    SystemThreadLocal.set("DEPT_LIST_CACHE", allDepts);
                     
                     log.info("[树形结构-批量查询] 部门数据预加载完成，耗时: {}ms, 部门数量: {}", 
                         System.currentTimeMillis() - deptPreloadStart, allDepts.size());
@@ -1485,19 +1518,6 @@ public class DynamicDataUseController {
                 }
             } catch (Exception e) {
                 log.error("[树形结构-批量查询] 部门数据预加载失败: {}", e.getMessage(), e);
-            }
-            
-            // 将部门数据存入每条数据的特殊字段中，供DepartmentFieldHandler使用
-            // 使用特殊前缀避免与业务字段冲突
-            final Map<String, Object> finalDeptNameMap = deptNameMap;
-            final List<SysDeptDto> finalAllDepts = allDepts;
-            if (ObjectNull.isNotNull(finalDeptNameMap) && !finalDeptNameMap.isEmpty()) {
-                allDataList.forEach(data -> {
-                    data.put("__DEPT_NAME_MAP_CACHE__", finalDeptNameMap);
-                    if (ObjectNull.isNotNull(finalAllDepts)) {
-                        data.put("__DEPT_LIST_CACHE__", finalAllDepts);
-                    }
-                });
             }
             
             // 使用预加载的数据进行回显，避免逐条查询数据库
@@ -1510,11 +1530,8 @@ public class DynamicDataUseController {
                     .collect(Collectors.toList());
             } finally {
                 SystemThreadLocal.remove("PRELOADED_DATA_CACHE");
-                // 清理每条数据中的临时缓存字段
-                allDataList.forEach(data -> {
-                    data.remove("__DEPT_NAME_MAP_CACHE__");
-                    data.remove("__DEPT_LIST_CACHE__");
-                });
+                SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
+                SystemThreadLocal.remove("DEPT_LIST_CACHE");
             }
             log.info("[树形结构-批量查询] echo完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
             
@@ -1580,9 +1597,7 @@ public class DynamicDataUseController {
                 log.warn("[树形结构-批量查询] 共发现并修复 {} 处循环引用，建议修复数据库中的数据", circularReferenceCount);
             }
             
-            List<Map<String, Object>> tree = TreeUtils.list2Tree(
-                allDataList,
-                rootIds,
+            List<Map<String, Object>> tree = TreeUtils.list2Tree(allDataList, rootIds,
                 e -> e.get("id").toString(),
                 (Function<Map<String, Object>, String>) e -> {
                     try {

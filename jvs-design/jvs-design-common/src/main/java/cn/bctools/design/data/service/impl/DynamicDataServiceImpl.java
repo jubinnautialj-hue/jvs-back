@@ -1302,7 +1302,10 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             RequestAttributes finalContext = context;
             Map<String, FieldBasicsHtml> fieldMap = fieldBasicsHtmls.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity(), (e1, e2) -> e1));
 
-            dataList = dataList.parallelStream().map(e -> {
+            // 使用顺序流而非并行流，确保ThreadLocal数据可以正常传递
+            // 原因：并行流使用ForkJoinPool的工作线程，无法访问主线程的ThreadLocal数据
+            // 在树形结构查询场景下，部门数据预加载需要通过ThreadLocal传递
+            dataList = dataList.stream().map(e -> {
                 SystemThreadLocal.setAll(map);
                 TenantContextHolder.setTenantId(tenantId);
                 if (ObjectNull.isNotNull(finalContext)) {
