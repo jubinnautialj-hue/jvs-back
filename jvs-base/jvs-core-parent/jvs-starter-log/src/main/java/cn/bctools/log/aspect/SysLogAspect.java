@@ -72,24 +72,28 @@ public class SysLogAspect {
     private final Tracer tracer;
     private final RabbitTemplate rabbitTemplate;
     /**
-     * 日志保存线程池（使用TTL装饰，确保租户信息等ThreadLocal数据正确传递）
+     * 日志保存线程池（原始线程池，在使用时通过TTL装饰，确保租户信息等ThreadLocal数据正确传递）
      * 队列容量从100万优化为10万，防止内存溢出
      */
-    private static Executor executor = TtlExecutors.getTtlExecutor(
-            new ThreadPoolExecutor(
-                    1,
-                    10,
-                    10L,
-                    TimeUnit.SECONDS,
-                    new LinkedBlockingDeque<>(100000),  // 优化：从100万改为10万
-                    new ThreadFactory() {
-                        private final AtomicInteger threadNumber = new AtomicInteger(1);
-                        @Override
-                        public Thread newThread(Runnable r) {
-                            return new Thread(r, "log-saver-" + threadNumber.getAndIncrement());
-                        }
-                    },
-                    new ThreadPoolExecutor.DiscardPolicy()));
+    private static final ThreadPoolExecutor rawExecutor = new ThreadPoolExecutor(
+            1,
+            10,
+            10L,
+            TimeUnit.SECONDS,
+            new LinkedBlockingDeque<>(100000),  // 优化：从100万改为10万
+            new ThreadFactory() {
+                private final AtomicInteger threadNumber = new AtomicInteger(1);
+                @Override
+                public Thread newThread(Runnable r) {
+                    return new Thread(r, "log-saver-" + threadNumber.getAndIncrement());
+                }
+            },
+            new ThreadPoolExecutor.DiscardPolicy());
+    
+    /**
+     * TTL装饰后的执行器，确保ThreadLocal数据正确传递
+     */
+    private static final Executor executor = TtlExecutors.getTtlExecutor(rawExecutor);
 
     @SneakyThrows
     @Around("@annotation(logannotation)")
