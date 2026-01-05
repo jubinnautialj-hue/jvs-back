@@ -109,6 +109,21 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                     return dataFieldHandler.joinFormItems(map, data, isMulti, showPath);
                 } else {
                     // 优先使用预加载缓存，避免逐条调用getById
+                    // 校验Props是否为null，避免空指针
+                    if (ObjectNull.isNull(cascaderItem.getProps()) || 
+                        ObjectNull.isNull(cascaderItem.getProps().getLabel()) || 
+                        ObjectNull.isNull(cascaderItem.getProps().getSecTitle())) {
+                        log.warn("[级联选择-Echo] Props配置不完整，无法使用预加载缓存，formId: {}", cascaderItem.getFormId());
+                        // 降级：直接调用getById
+                        try {
+                            o = dynamicDataService.getById(cascaderItem.getFormId(), data.toString())
+                                .getJsonData().get(cascaderItem.getProps() != null ? cascaderItem.getProps().getLabel() : "name");
+                        } catch (Exception e) {
+                            log.error("[级联选择-Echo] 找不到数据: {}", data);
+                        }
+                        return o;
+                    }
+                    
                     String cacheKey = cascaderItem.getFormId() + "_" + 
                         cascaderItem.getProps().getLabel() + "_" + 
                         cascaderItem.getProps().getSecTitle();
@@ -125,6 +140,7 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                         
                         if (found.isPresent()) {
                             o = found.get().get(cascaderItem.getProps().getLabel());
+                            log.debug("[级联选择-Echo] 从缓存中获取数据成功，ID: {}", data);
                         } else {
                             log.debug("[级联选择-Echo] 缓存中未找到ID: {}", data);
                             // 降级：调用getById查询
@@ -134,14 +150,15 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                                     .getJsonData().get(cascaderItem.getProps().getLabel());
                                 long queryDuration = System.currentTimeMillis() - queryStart;
                                 if (queryDuration > 50) {
-                                    log.warn("[级联选择-Echo] 未找到预加载缓存，调用远程API耗时: {}ms，建议优化为批量预加载", queryDuration);
+                                    log.warn("[级联选择-Echo] 缓存未命中，调用远程API耗时: {}ms，ID: {}", queryDuration, data);
                                 }
                             } catch (Exception e) {
-                                log.error("[级联选择-Echo] 找不到数据: {}", data);
+                                log.error("[级联选择-Echo] 找不到数据: {}", data, e);
                             }
                         }
                     } else {
                         // 降级：调用getById查询
+                        log.debug("[级联选择-Echo] 未找到预加载缓存，cacheKey: {}", cacheKey);
                         try {
                             long queryStart = System.currentTimeMillis();
                             o = dynamicDataService.getById(cascaderItem.getFormId(), data.toString())
@@ -151,7 +168,7 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                                 log.warn("[级联选择-Echo] 未找到预加载缓存，调用远程API耗时: {}ms，建议优化为批量预加载", queryDuration);
                             }
                         } catch (Exception e) {
-                            log.error("[级联选择-Echo] 找不到数据: {}", data);
+                            log.error("[级联选择-Echo] 找不到数据: {}", data, e);
                         }
                     }
                 }

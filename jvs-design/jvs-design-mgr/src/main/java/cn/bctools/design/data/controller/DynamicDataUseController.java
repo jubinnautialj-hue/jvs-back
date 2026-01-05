@@ -1339,6 +1339,7 @@ public class DynamicDataUseController {
                     try {
                         CascaderItemHtml cascaderItem = cascaderFieldHandler.toHtml(field.getDesignJson());
                         if (ObjectNull.isNotNull(cascaderItem) && 
+                            ObjectNull.isNotNull(cascaderItem.getProps()) &&  // 添加Props空值校验
                             FormDataTypeEnum.dataModel.equals(cascaderItem.getDatatype()) && 
                             ObjectNull.isNotNull(cascaderItem.getFormId())) {
                             
@@ -1367,11 +1368,22 @@ public class DynamicDataUseController {
                                     log.info("[分页查询-预加载] 级联选择器数据预加载完成，字段: {}, 数据模型: {}, 数据量: {}, 耗时: {}ms",
                                         field.getFieldKey(), cascaderItem.getFormId(), cascaderDataList.size(), 
                                         System.currentTimeMillis() - cascaderStart);
+                                } else {
+                                    log.warn("[分页查询-预加载] 级联选择器数据为空，字段: {}, 数据模型: {}",
+                                        field.getFieldKey(), cascaderItem.getFormId());
                                 }
+                            } else {
+                                log.debug("[分页查询-预加载] 级联选择器数据已缓存，字段: {}", field.getFieldKey());
+                            }
+                        } else {
+                            if (ObjectNull.isNotNull(cascaderItem)) {
+                                log.debug("[分页查询-预加载] 级联选择器跳过预加载，字段: {}, datatype: {}, formId: {}, props: {}",
+                                    field.getFieldKey(), cascaderItem.getDatatype(), cascaderItem.getFormId(), 
+                                    ObjectNull.isNotNull(cascaderItem.getProps()));
                             }
                         }
                     } catch (Exception ce) {
-                        log.warn("[分页查询-预加载] 级联选择器字段预加载失败: {}, 字段: {}", ce.getMessage(), field.getFieldKey());
+                        log.warn("[分页查询-预加载] 级联选择器字段预加载失败: {}, 字段: {}", ce.getMessage(), field.getFieldKey(), ce);
                     }
                 }
             }
