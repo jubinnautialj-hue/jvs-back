@@ -108,10 +108,51 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                     }
                     return dataFieldHandler.joinFormItems(map, data, isMulti, showPath);
                 } else {
-                    try {
-                        o = dynamicDataService.getById(cascaderItem.getFormId(), data.toString()).getJsonData().get(cascaderItem.getProps().getLabel());
-                    } catch (Exception e) {
-                        log.error("找不到数据");
+                    // 优先使用预加载缓存，避免逐条调用getById
+                    String cacheKey = cascaderItem.getFormId() + "_" + 
+                        cascaderItem.getProps().getLabel() + "_" + 
+                        cascaderItem.getProps().getSecTitle();
+                    
+                    Object cachedDataList = SystemThreadLocal.get(cacheKey);
+                    
+                    if (ObjectNull.isNotNull(cachedDataList)) {
+                        // 使用预加载缓存
+                        List<Map<String, Object>> dictList = (List<Map<String, Object>>) cachedDataList;
+                        String dataId = data.toString();  // 提取为变量以满足lambda final要求
+                        Optional<Map<String, Object>> found = dictList.stream()
+                            .filter(item -> dataId.equals(String.valueOf(item.get("id"))))
+                            .findFirst();
+                        
+                        if (found.isPresent()) {
+                            o = found.get().get(cascaderItem.getProps().getLabel());
+                        } else {
+                            log.debug("[级联选择-Echo] 缓存中未找到ID: {}", data);
+                            // 降级：调用getById查询
+                            try {
+                                long queryStart = System.currentTimeMillis();
+                                o = dynamicDataService.getById(cascaderItem.getFormId(), data.toString())
+                                    .getJsonData().get(cascaderItem.getProps().getLabel());
+                                long queryDuration = System.currentTimeMillis() - queryStart;
+                                if (queryDuration > 50) {
+                                    log.warn("[级联选择-Echo] 未找到预加载缓存，调用远程API耗时: {}ms，建议优化为批量预加载", queryDuration);
+                                }
+                            } catch (Exception e) {
+                                log.error("[级联选择-Echo] 找不到数据: {}", data);
+                            }
+                        }
+                    } else {
+                        // 降级：调用getById查询
+                        try {
+                            long queryStart = System.currentTimeMillis();
+                            o = dynamicDataService.getById(cascaderItem.getFormId(), data.toString())
+                                .getJsonData().get(cascaderItem.getProps().getLabel());
+                            long queryDuration = System.currentTimeMillis() - queryStart;
+                            if (queryDuration > 50) {
+                                log.warn("[级联选择-Echo] 未找到预加载缓存，调用远程API耗时: {}ms，建议优化为批量预加载", queryDuration);
+                            }
+                        } catch (Exception e) {
+                            log.error("[级联选择-Echo] 找不到数据: {}", data);
+                        }
                     }
                 }
                 return o;

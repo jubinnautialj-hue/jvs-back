@@ -1310,14 +1310,15 @@ public class DynamicDataUseController {
         long queryPageStart = System.currentTimeMillis();
         log.info("[分页查询] 开始执行数据库分页查询，查询字段数: {}, 查询条件组数: {}", collect.size(), queryGroupConditions.size());
         
-        // 批量预加载部门和用户数据，避免每条数据都调用远程API
+        // 批量预加载部门、用户和级联选择器数据，避免每条数据都调用远程API
         long preloadStart = System.currentTimeMillis();
+        Set<String> cascaderCacheKeys = new HashSet<>();  // 记录级联选择器的缓存key，用于清理
         try {
             // 收集所有需要查询的部门ID和用户ID
             Set<String> allDeptIds = new HashSet<>();
             Set<String> allUserIds = new HashSet<>();
             
-            // 遍历所有字段配置，找出部门和用户字段
+            // 遍历所有字段配置，找出部门、用户和级联字段
             for (FieldBasicsHtml field : collectMap.values()) {
                 if (DataFieldType.department.equals(field.getFieldType())) {
                     // 为部门字段查询所有可能的数据
@@ -1333,6 +1334,45 @@ public class DynamicDataUseController {
                     // 收集用户字段，但需要实际数据才能预加载
                     // 由于分页查询还未执行，我们无法知道具体有哪些用户ID
                     // 所以这里只做准备，实际的用户预加载将在查询后进行
+                } else if (DataFieldType.cascader.equals(field.getFieldType())) {
+                    // 预加载级联选择器数据模型数据
+                    try {
+                        CascaderItemHtml cascaderItem = cascaderFieldHandler.toHtml(field.getDesignJson());
+                        if (ObjectNull.isNotNull(cascaderItem) && 
+                            FormDataTypeEnum.dataModel.equals(cascaderItem.getDatatype()) && 
+                            ObjectNull.isNotNull(cascaderItem.getFormId())) {
+                            
+                            // 构建缓存key
+                            String cacheKey = cascaderItem.getFormId() + "_" + 
+                                cascaderItem.getProps().getLabel() + "_" + 
+                                cascaderItem.getProps().getSecTitle();
+                            
+                            // 记录缓存key以便后续清理
+                            cascaderCacheKeys.add(cacheKey);
+                            
+                            // 检查是否已经缓存
+                            if (ObjectNull.isNull(SystemThreadLocal.get(cacheKey))) {
+                                long cascaderStart = System.currentTimeMillis();
+                                
+                                // 批量查询级联数据
+                                List<String> fields = new ArrayList<>();
+                                fields.add(cascaderItem.getProps().getLabel());
+                                fields.add(cascaderItem.getProps().getSecTitle());
+                                
+                                List<Map<String, Object>> cascaderDataList = dynamicDataService.queryList(
+                                    cascaderItem.getFormId(), fields, new QueryConditionDto());
+                                
+                                if (ObjectNull.isNotNull(cascaderDataList) && !cascaderDataList.isEmpty()) {
+                                    SystemThreadLocal.set(cacheKey, cascaderDataList);
+                                    log.info("[分页查询-预加载] 级联选择器数据预加载完成，字段: {}, 数据模型: {}, 数据量: {}, 耗时: {}ms",
+                                        field.getFieldKey(), cascaderItem.getFormId(), cascaderDataList.size(), 
+                                        System.currentTimeMillis() - cascaderStart);
+                                }
+                            }
+                        }
+                    } catch (Exception ce) {
+                        log.warn("[分页查询-预加载] 级联选择器字段预加载失败: {}, 字段: {}", ce.getMessage(), field.getFieldKey());
+                    }
                 }
             }
         } catch (Exception e) {
@@ -1403,6 +1443,10 @@ public class DynamicDataUseController {
         // 清理ThreadLocal缓存，避免内存泄漏
         SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
         SystemThreadLocal.remove("USER_NAME_MAP_CACHE");
+        // 清理级联选择器缓存
+        for (String cacheKey : cascaderCacheKeys) {
+            SystemThreadLocal.remove(cacheKey);
+        }
         
         return R.ok(pageResult);
     }
