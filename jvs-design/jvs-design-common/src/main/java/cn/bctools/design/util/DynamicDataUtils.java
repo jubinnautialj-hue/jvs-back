@@ -810,20 +810,6 @@ public class DynamicDataUtils {
     }
 
     /**
-     * 清理设计上下文相关的ThreadLocal数据
-     * 避免线程池复用时产生脏数据
-     */
-    public static void clearDesignContext() {
-        SystemThreadLocal.remove(KEY_DESIGN_ID);
-        SystemThreadLocal.remove(KEY_OPERATOR);
-        SystemThreadLocal.remove(KEY_PAGE_DESIGN_ID);
-        SystemThreadLocal.remove(KEY_AUTH_FREE);
-        SystemThreadLocal.remove(KEY_AUTH_CRITERIA);
-        SystemThreadLocal.remove(KEY_DATAMODEL_ID);
-        SystemThreadLocal.remove(KEY_DESIGNROLESETTINGDTO);
-    }
-
-    /**
      * 查询条件
      *
      * @param list         多个查询条件

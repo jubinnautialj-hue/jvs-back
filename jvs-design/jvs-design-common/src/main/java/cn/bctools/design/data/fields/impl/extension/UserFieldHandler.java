@@ -5,7 +5,6 @@ import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;
-import cn.bctools.common.utils.SystemThreadLocal;
 import cn.bctools.common.utils.function.Get;
 import cn.bctools.design.data.fields.DataFieldHandler;
 import cn.bctools.design.data.fields.DesignField;
@@ -70,44 +69,22 @@ public class UserFieldHandler extends IMultipleTypeHandler implements IDataField
         if (userIds.stream().allMatch(ObjectNull::isNull)) {
             return "";
         }
-        
-        // 优先使用ThreadLocal预加载缓存，避免远程API调用
-        Map<String, Object> preloadedUserCache = (Map<String, Object>) SystemThreadLocal.get("USER_NAME_MAP_CACHE");
-        boolean usePreloadCache = ObjectNull.isNotNull(preloadedUserCache) && !preloadedUserCache.isEmpty();
-        
-        long startTime = System.currentTimeMillis();
         Map<String, Object> userMap = new HashMap<>();
         List<String> queryUserId = new ArrayList<>();
-        
         userIds.forEach(e -> {
-            if (usePreloadCache && preloadedUserCache.containsKey(e)) {
-                // 使用预加载缓存
-                userMap.put(e, preloadedUserCache.get(e));
-            } else {
-                // 使用本地缓存
-                String value = userNameMapCache.get(e, () -> "");
-                if (ObjectNull.isNull(value)) {
-                    queryUserId.add(e);
-                }
-                userMap.put(e, value);
+            String value = userNameMapCache.get(e, () -> "");
+            if (ObjectNull.isNull(value)) {
+                queryUserId.add(e);
             }
+            userMap.put(e, value);
         });
-        
-        if (ObjectNull.isNotNull(queryUserId) && !queryUserId.isEmpty()) {
-            // 需要远程查询，记录告警日志
-            Map<String, String> queryMap = userApi.getBasicInfoById(queryUserId, USER_FIELD_LIST).getData().stream()
-                .collect(Collectors.toMap(UserDto::getId, user -> StringUtils.defaultIfBlank(user.getRealName(), "")));
-            queryMap.entrySet().forEach(e -> {
-                userNameMapCache.put(e.getKey(), e.getValue());
-                userMap.put(e.getKey(), e.getValue());
-            });
-            
-            long duration = System.currentTimeMillis() - startTime;
-            if (duration > 100) {
-                log.warn("[用户选择-Echo] 未找到预加载缓存，调用远程API耗时: {}ms，建议优化为批量预加载", duration);
-            }
+        if (ObjectNull.isNotNull(queryUserId)) {
+            Map<String, String> queryMap = userApi.getBasicInfoById(queryUserId, USER_FIELD_LIST).getData().stream().collect(Collectors.toMap(UserDto::getId, user -> StringUtils.defaultIfBlank(user.getRealName(), "")));
+            queryMap.entrySet().forEach(e ->
+                    userNameMapCache.put(e.getKey(), e.getValue())
+            );
+            userMap.putAll(queryMap);
         }
-        
         DataFieldHandler dataFieldHandler = SpringContextUtil.getBean(DataFieldHandler.class);
         boolean isMulti = ObjectNull.isNull(fieldDto.getMultiple()) ? false : fieldDto.getMultiple();
         return dataFieldHandler.joinFormItems(userMap, data, isMulti, false);

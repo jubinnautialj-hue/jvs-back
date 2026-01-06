@@ -180,12 +180,4 @@ public class ModeUtils {
                 .map(e -> ObjectNull.isNotNull(e.getId()))
                 .orElse(Boolean.FALSE);
     }
-
-    /**
-     * 清理模式上下文ThreadLocal数据
-     * 避免线程池复用时产生脏数据
-     */
-    public static void clear() {
-        mode_thread.remove();
-    }
 }
