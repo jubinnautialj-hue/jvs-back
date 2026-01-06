@@ -48,28 +48,22 @@ public class DesignFilter extends GenericFilterBean {
             //如果请求头没有可以通过 url参数
             mode = URLUtil.encode(request.getParameter(HEADER_MODE));
         }
-        try {
-            if (ObjectNull.isNotNull(tenantId)) {
-                TenantContextHolder.setTenantId(tenantId);
-            }
-            // 记录设计id与操作类型
-            DynamicDataUtils.setDesignId(designId);
-            DynamicDataUtils.setOperator(operator);
-            DynamicDataUtils.setPageDesignId(pageDesignId);
-            // 设置轻应用模式
-            // 优先设置用户token关联的模式，若没有，则使用请求头中的模式
-            ModeUtils.setMode();
-            if (ObjectNull.isNull(ModeUtils.getMode())) {
-                // 若请求头中也没有模式，或者匹配不到模式，则默认使用正式模式
-                AppVersionTypeEnum versionType = AppVersionTypeEnum.getType(mode);
-                ModeUtils.setSwitchModel(new SwitchModeDto().setMode(versionType));
-            }
-            filterChain.doFilter(servletRequest, servletResponse);
-        } finally {
-            // 清理ThreadLocal中的设计相关数据，避免线程池复用时产生脏数据
-            DynamicDataUtils.clearDesignContext();
-            ModeUtils.clear();
+        if (ObjectNull.isNotNull(tenantId)) {
+            TenantContextHolder.setTenantId(tenantId);
         }
+        // 记录设计id与操作类型
+        DynamicDataUtils.setDesignId(designId);
+        DynamicDataUtils.setOperator(operator);
+        DynamicDataUtils.setPageDesignId(pageDesignId);
+        // 设置轻应用模式
+        // 优先设置用户token关联的模式，若没有，则使用请求头中的模式
+        ModeUtils.setMode();
+        if (ObjectNull.isNull(ModeUtils.getMode())) {
+            // 若请求头中也没有模式，或者匹配不到模式，则默认使用正式模式
+            AppVersionTypeEnum versionType = AppVersionTypeEnum.getType(mode);
+            ModeUtils.setSwitchModel(new SwitchModeDto().setMode(versionType));
+        }
+        filterChain.doFilter(servletRequest, servletResponse);
     }
 
     /**
