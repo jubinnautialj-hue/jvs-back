@@ -200,21 +200,33 @@ public class PermissionController {
     @ApiOperation(value = "获取应用设计操作权限标识", notes = "设计的操作权限标识，菜单排在前面（菜单同模型的设计与菜单一组）；非菜单且与菜单模型不同的设计作为一组")
     @GetMapping("/operation")
     public R<List<DesignPermissionDto>> getPermission(@PathVariable("appId") String appId) {
+        log.info("[权限操作接口] 开始查询应用权限标识，appId={}", appId);
+        
         List<AppMenu> appMenus = appVersionMenuHandler.getAppVersionMenu(appId);
+        log.info("[权限操作接口] 查询到的应用菜单列表，appId={}, 菜单数量={}", appId, appMenus != null ? appMenus.size() : 0);
+        if (appMenus == null || appMenus.isEmpty()) {
+            log.warn("[权限操作接口] 应用菜单列表为空，appId={}", appId);
+        }
+        
         // 菜单
         List<AppMenu> menus = appMenus.stream()
                 .filter(d -> ObjectNull.isNotNull(d.getType()))
                 .collect(Collectors.toList());
+        log.info("[权限操作接口] 菜单类型数据筛选，appId={}, 菜单数量={}", appId, menus.size());
+        
         // 非菜单 （只要表单、列表）
         List<AppMenu> notMenus = appMenus.stream()
                 .filter(d -> ObjectNull.isNull(d.getType()))
                 .filter(d -> DesignType.page.equals(d.getDesignType()) || DesignType.form.equals(d.getDesignType()))
                 .collect(Collectors.toList());
+        log.info("[权限操作接口] 非菜单类型数据筛选，appId={}, 非菜单数量={}", appId, notMenus.size());
 
         // 组装渲染结构
         List<DesignPermissionDto> designPermissions = new ArrayList<>();
         // 查询菜单并按菜单顺序排序
         List<AppMenuType> menuTypes = appVersionMenuHandler.getAppVersionMenuType(appId);
+        log.info("[权限操作接口] 查询菜单类型，appId={}, 菜单类型数量={}", appId, menuTypes != null ? menuTypes.size() : 0);
+        
         List<JvsMenuVo> menuTypelist = menuTypes.stream()
                 .map(menuType -> (JvsMenuVo)new JvsMenuVo().setId(menuType.getId()).setName(menuType.getType()).setSort(menuType.getSort()).setParentId(appId))
                 .collect(Collectors.toList());
@@ -226,16 +238,28 @@ public class PermissionController {
         menuAll.addAll(menuTypelist);
         menuAll.addAll(menulist);
         List<Tree<Object>> tree = JvsMenuVo.tree(menuAll);
+        log.info("[权限操作接口] 构建菜单树结构，appId={}, 树节点数量={}", appId, tree != null ? tree.size() : 0);
+        
+        if (tree == null || tree.isEmpty()) {
+            log.warn("[权限操作接口] 菜单树为空，appId={}, 返回空结果", appId);
+            return R.ok(designPermissions);
+        }
+        
         List<Tree<Object>> ts = TreeUtils.tree2List(tree.get(0), Tree::getChildren);
+        log.info("[权限操作接口] 菜单树展平，appId={}, 展平后节点数量={}", appId, ts.size());
+        
         List<String> menuIds = menus.stream().map(AppMenu::getDesignId).collect(Collectors.toList());
         List<String> treeIds = ts.stream().map(m->String.valueOf(m.getId())).collect(Collectors.toList());
         Map<String, AppMenu> menuMap = menus.stream().collect(Collectors.toMap(AppMenu::getDesignId, Function.identity()));
+        log.info("[权限操作接口] 处理菜单ID列表，appId={}, menuIds数量={}, treeIds数量={}", appId, menuIds.size(), treeIds.size());
+        
         for (String menuId : treeIds) {
             if (Boolean.FALSE.equals(menuIds.contains(menuId))) {
                 continue;
             }
             // 组装菜单资源信息
             AppMenu menu = menuMap.get(menuId);
+            log.debug("[权限操作接口] 处理菜单，appId={}, menuId={}, menuName={}", appId, menuId, menu != null ? menu.getName() : "null");
             PermissionIdentificationDto menuPermission = DesignPermissionUtil.parseDesign(menu);
             DesignPermissionDto menuDesignPermission = new DesignPermissionDto()
                     .setName(menu.getName())
@@ -262,10 +286,18 @@ public class PermissionController {
         // 剩下与菜单不同模型的设计为一个组
         DesignPermissionDto menuDesignPermission = new DesignPermissionDto();
         List<DesignPermissionDto> notSameModelRelevantList = relevant(notMenus);
+        log.info("[权限操作接口] 处理非同模型设计，appId={}, 非同模型设计数量={}", appId, notSameModelRelevantList != null ? notSameModelRelevantList.size() : 0);
+        
         if (ObjectNull.isNotNull(notSameModelRelevantList)) {
             menuDesignPermission.setRelevant(notSameModelRelevantList);
             designPermissions.add(menuDesignPermission);
         }
+        
+        log.info("[权限操作接口] 查询完成，appId={}, 最终返回权限数量={}", appId, designPermissions.size());
+        if (designPermissions.isEmpty()) {
+            log.warn("[权限操作接口] 返回结果为空，appId={}", appId);
+        }
+        
         return R.ok(designPermissions);
     }
 
