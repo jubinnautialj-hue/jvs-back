@@ -2,7 +2,9 @@ package cn.bctools.design.data.controller;
 
 import cn.bctools.ai.api.JvsAiDatasetApi;
 import cn.bctools.auth.api.api.AuthDeptServiceApi;
+import cn.bctools.auth.api.api.AuthUserServiceApi;
 import cn.bctools.auth.api.dto.SysDeptDto;
+import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.function.Get;
@@ -237,6 +239,7 @@ public class DynamicDataUseController {
     CascaderFieldHandler cascaderFieldHandler;
     JvsTreeService jvsTreeService;
     AuthDeptServiceApi authDeptServiceApi;
+    AuthUserServiceApi authUserServiceApi;
     /**
      * The Field handler map.
      */
@@ -1306,7 +1309,130 @@ public class DynamicDataUseController {
         }
         long queryPageStart = System.currentTimeMillis();
         log.info("[分页查询] 开始执行数据库分页查询，查询字段数: {}, 查询条件组数: {}", collect.size(), queryGroupConditions.size());
+        
+        // 批量预加载部门、用户和级联选择器数据，避免每条数据都调用远程API
+        long preloadStart = System.currentTimeMillis();
+        Set<String> cascaderCacheKeys = new HashSet<>();  // 记录级联选择器的缓存key，用于清理
+        try {
+            // 收集所有需要查询的部门ID和用户ID
+            Set<String> allDeptIds = new HashSet<>();
+            Set<String> allUserIds = new HashSet<>();
+            
+            // 遍历所有字段配置，找出部门、用户和级联字段
+            for (FieldBasicsHtml field : collectMap.values()) {
+                if (DataFieldType.department.equals(field.getFieldType())) {
+                    // 为部门字段查询所有可能的数据
+                    List<SysDeptDto> allDepts = authDeptServiceApi.getAll().getData();
+                    if (ObjectNull.isNotNull(allDepts) && !allDepts.isEmpty()) {
+                        Map<String, Object> deptNameMap = allDepts.stream()
+                            .filter(dept -> ObjectNull.isNotNull(dept.getName()))
+                            .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
+                        SystemThreadLocal.set("DEPT_NAME_MAP_CACHE", deptNameMap);
+                        log.info("[分页查询-预加载] 部门数据预加载完成，部门数量: {}", allDepts.size());
+                    }
+                } else if (DataFieldType.user.equals(field.getFieldType())) {
+                    // 收集用户字段，但需要实际数据才能预加载
+                    // 由于分页查询还未执行，我们无法知道具体有哪些用户ID
+                    // 所以这里只做准备，实际的用户预加载将在查询后进行
+                } else if (DataFieldType.cascader.equals(field.getFieldType())) {
+                    // 预加载级联选择器数据模型数据
+                    try {
+                        CascaderItemHtml cascaderItem = cascaderFieldHandler.toHtml(field.getDesignJson());
+                        if (ObjectNull.isNotNull(cascaderItem) && 
+                            ObjectNull.isNotNull(cascaderItem.getProps()) &&  // 添加Props空值校验
+                            FormDataTypeEnum.dataModel.equals(cascaderItem.getDatatype()) && 
+                            ObjectNull.isNotNull(cascaderItem.getFormId())) {
+                            
+                            // 构建缓存key
+                            String cacheKey = cascaderItem.getFormId() + "_" + 
+                                cascaderItem.getProps().getLabel() + "_" + 
+                                cascaderItem.getProps().getSecTitle();
+                            
+                            // 记录缓存key以便后续清理
+                            cascaderCacheKeys.add(cacheKey);
+                            
+                            // 检查是否已经缓存
+                            if (ObjectNull.isNull(SystemThreadLocal.get(cacheKey))) {
+                                long cascaderStart = System.currentTimeMillis();
+                                
+                                // 批量查询级联数据
+                                List<String> fields = new ArrayList<>();
+                                fields.add(cascaderItem.getProps().getLabel());
+                                fields.add(cascaderItem.getProps().getSecTitle());
+                                
+                                List<Map<String, Object>> cascaderDataList = dynamicDataService.queryList(
+                                    cascaderItem.getFormId(), fields, new QueryConditionDto());
+                                
+                                if (ObjectNull.isNotNull(cascaderDataList) && !cascaderDataList.isEmpty()) {
+                                    SystemThreadLocal.set(cacheKey, cascaderDataList);
+                                    log.info("[分页查询-预加载] 级联选择器数据预加载完成，字段: {}, 数据模型: {}, 数据量: {}, 耗时: {}ms",
+                                        field.getFieldKey(), cascaderItem.getFormId(), cascaderDataList.size(), 
+                                        System.currentTimeMillis() - cascaderStart);
+                                } else {
+                                    log.warn("[分页查询-预加载] 级联选择器数据为空，字段: {}, 数据模型: {}",
+                                        field.getFieldKey(), cascaderItem.getFormId());
+                                }
+                            } else {
+                                log.debug("[分页查询-预加载] 级联选择器数据已缓存，字段: {}", field.getFieldKey());
+                            }
+                        } else {
+                            if (ObjectNull.isNotNull(cascaderItem)) {
+                                log.debug("[分页查询-预加载] 级联选择器跳过预加载，字段: {}, datatype: {}, formId: {}, props: {}",
+                                    field.getFieldKey(), cascaderItem.getDatatype(), cascaderItem.getFormId(), 
+                                    ObjectNull.isNotNull(cascaderItem.getProps()));
+                            }
+                        }
+                    } catch (Exception ce) {
+                        log.warn("[分页查询-预加载] 级联选择器字段预加载失败: {}, 字段: {}", ce.getMessage(), field.getFieldKey(), ce);
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.error("[分页查询-预加载] 预加载失败: {}", e.getMessage(), e);
+        }
+        
         Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, combiningFieldFormulaContentMap, queryGroupConditions, queryPageDto.getSorts(), collect, true, true, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
+        
+        // 查询完成后，对分页结果进行用户数据预加载
+        try {
+            Set<String> userIdsFromPage = new HashSet<>();
+            for (Map<String, Object> data : pageResult.getRecords()) {
+                for (FieldBasicsHtml field : collectMap.values()) {
+                    if (DataFieldType.user.equals(field.getFieldType())) {
+                        Object userValue = data.get(field.getFieldKey());
+                        if (ObjectNull.isNotNull(userValue)) {
+                            if (userValue instanceof List) {
+                                ((List<?>) userValue).forEach(id -> {
+                                    if (ObjectNull.isNotNull(id)) {
+                                        userIdsFromPage.add(id.toString());
+                                    }
+                                });
+                            } else {
+                                userIdsFromPage.add(userValue.toString());
+                            }
+                        }
+                    }
+                }
+            }
+            
+            if (!userIdsFromPage.isEmpty()) {
+                List<String> userIdList = new ArrayList<>(userIdsFromPage);
+                List<String> userFieldList = Arrays.asList("realName");
+                List<UserDto> userList = authUserServiceApi.getBasicInfoById(userIdList, userFieldList).getData();
+                
+                if (ObjectNull.isNotNull(userList) && !userList.isEmpty()) {
+                    Map<String, Object> userNameMap = userList.stream()
+                        .filter(user -> ObjectNull.isNotNull(user.getRealName()))
+                        .collect(Collectors.toMap(UserDto::getId, UserDto::getRealName, (v1, v2) -> v1));
+                    
+                    SystemThreadLocal.set("USER_NAME_MAP_CACHE", userNameMap);
+                    log.info("[分页查询-预加载] 用户数据预加载完成，用户数量: {}", userList.size());
+                }
+            }
+        } catch (Exception e) {
+            log.error("[分页查询-预加载] 用户数据预加载失败: {}", e.getMessage(), e);
+        }
+        
         log.info("[分页查询] 数据库分页查询耗时: {}ms, 返回记录数: {}", System.currentTimeMillis() - queryPageStart, pageResult.getRecords().size());
         List<List<QueryConditionDto>> queryGroup = Collections.singletonList(Collections.singletonList(treeQuery.get()));
         List<Map<String, Object>> allData = new ArrayList<>();
@@ -1325,6 +1451,15 @@ public class DynamicDataUseController {
             return result;
         }
         log.info("[分页查询] ====== 总耗时: {}ms ======", System.currentTimeMillis() - startTime);
+        
+        // 清理ThreadLocal缓存，避免内存泄漏
+        SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
+        SystemThreadLocal.remove("USER_NAME_MAP_CACHE");
+        // 清理级联选择器缓存
+        for (String cacheKey : cascaderCacheKeys) {
+            SystemThreadLocal.remove(cacheKey);
+        }
+        
         return R.ok(pageResult);
     }
 
@@ -1390,10 +1525,12 @@ public class DynamicDataUseController {
                                                     Map<String, FunctionBusinessPo> combiningFieldFormulaContentMap,
                                                     List<List<QueryConditionDto>> queryGroupConditions, List<QueryOrderDto> sorts, List<String> fields, Boolean andOr, List<FieldBasicsHtml> fieldBasicsHtmls, Set<String> stringSet) {
         long treeStructureStartTime = System.currentTimeMillis();
-        // 显示设置-关联模型数据回显
-        dynamicDataService.echoModelDisplay(appId, records, modelDisplayMap);
+        // 注意：不在这里调用echoModelDisplay，避免与buildTreeStructureByBatchQuery中的调用重复
+        // 树形结构的echoModelDisplay会在buildTreeStructureByBatchQuery中统一处理所有数据
         if (ObjectNull.isNotNull(treeQuery.get())) {
             if (treeQuery.get().getFieldKey().equals("id")) {
+                // 特殊情况：树查询字段为id时，需要为分页数据调用echoModelDisplay
+                dynamicDataService.echoModelDisplay(appId, records, modelDisplayMap);
                 log.info("[树形结构] 树查询字段为id，直接返回，耗时: {}ms", System.currentTimeMillis() - treeStructureStartTime);
                 return records;
             } else if (ObjectNull.isNull(allData) && ObjectNull.isNotNull(records)) {
@@ -1404,7 +1541,37 @@ public class DynamicDataUseController {
                 
                 // 获取父级字段名
                 String parentFieldKey = queryGroupConditions.get(0).get(0).getFieldKey();
-                List<String> rootIds = records.stream().map(e -> e.get("id").toString()).collect(Collectors.toList());
+                
+                // 关键修复：从分页查询结果中筛选出真正的根节点
+                // 只有父字段为null或空字符串的才是真正的根节点
+                List<String> rootIds = records.stream()
+                    .filter(record -> {
+                        Object parentValue = record.get(parentFieldKey);
+                        // 只有父字段为空才是真正的根节点
+                        return ObjectNull.isNull(parentValue) || parentValue.toString().isEmpty();
+                    })
+                    .map(e -> e.get("id").toString())
+                    .collect(Collectors.toList());
+                
+                // 如果没有找到根节点，说明查询结果都是子节点
+                // 需要从这些子节点向上查找父节点，构建完整的树结构
+                if (rootIds.isEmpty()) {
+                    log.warn("[树形结构] 分页查询结果中没有根节点，所有记录都是子节点，需要向上查找父节点");
+                    // 收集所有父节点ID
+                    Set<String> parentIds = records.stream()
+                        .map(record -> record.get(parentFieldKey))
+                        .filter(ObjectNull::isNotNull)
+                        .map(Object::toString)
+                        .filter(s -> !s.isEmpty())
+                        .collect(Collectors.toSet());
+                    
+                    // 使用父节点ID作为根节点来构建树
+                    // 这样可以确保树的完整性，即使父节点不在分页结果中
+                    rootIds = new ArrayList<>(parentIds);
+                    log.info("[树形结构] 使用{}个父节点ID作为树的起点", rootIds.size());
+                } else {
+                    log.info("[树形结构] 从{}条分页记录中识别出{}个真正的根节点", records.size(), rootIds.size());
+                }
                 
                 // 使用批量分层查询优化方案，完全消除递归查询
                 return buildTreeStructureByBatchQuery(appId, modelId, rootIds, parentFieldKey, 
@@ -1453,8 +1620,7 @@ public class DynamicDataUseController {
             log.info("[树形结构-批量查询] 批量查询完成，查询到{}条数据，耗时: {}ms", 
                 mapList.size(), System.currentTimeMillis() - batchQueryStart);
             
-            // 数据转换和回显
-            long echoStart = System.currentTimeMillis();
+
             List<Map<String, Object>> allDataList = mapList.stream()
                 .map(e -> (Map<String, Object>) e)
                 .collect(Collectors.toList());
@@ -1466,20 +1632,102 @@ public class DynamicDataUseController {
             log.info("[树形结构-批量查询] 关联数据预加载完成，耗时: {}ms, 缓存大小: {}", 
                 System.currentTimeMillis() - preloadStart, preloadedDataCache.size());
             
+            // 批量预加载部门数据，避免每条数据都调用远程API
+            long deptPreloadStart = System.currentTimeMillis();
+            try {
+                List<SysDeptDto> allDepts = authDeptServiceApi.getAll().getData();
+                if (ObjectNull.isNotNull(allDepts) && !allDepts.isEmpty()) {
+                    // 构建部门名称Map（ID -> Name），用于加速回显
+                    Map<String, Object> deptNameMap = allDepts.stream()
+                        .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
+                    
+                    // 将部门数据存入ThreadLocal，供DepartmentFieldHandler使用
+                    SystemThreadLocal.set("DEPT_NAME_MAP_CACHE", deptNameMap);
+                    SystemThreadLocal.set("DEPT_LIST_CACHE", allDepts);
+                    
+                    log.info("[树形结构-批量查询] 部门数据预加载完成，耗时: {}ms, 部门数量: {}", 
+                        System.currentTimeMillis() - deptPreloadStart, allDepts.size());
+                } else {
+                    log.warn("[树形结构-批量查询] 部门数据为空，跳过预加载");
+                }
+            } catch (Exception e) {
+                log.error("[树形结构-批量查询] 部门数据预加载失败: {}", e.getMessage(), e);
+            }
+            
+            // 批量预加载用户数据，避免每条数据都调用远程API
+            long userPreloadStart = System.currentTimeMillis();
+            try {
+                // 收集所有需要查询的用户ID
+                Set<String> allUserIds = new HashSet<>();
+                for (Map<String, Object> data : allDataList) {
+                    for (FieldBasicsHtml field : fieldBasicsHtmls) {
+                        if (DataFieldType.user.equals(field.getFieldType())) {
+                            Object userValue = data.get(field.getFieldKey());
+                            if (ObjectNull.isNotNull(userValue)) {
+                                if (userValue instanceof List) {
+                                    ((List<?>) userValue).forEach(id -> {
+                                        if (ObjectNull.isNotNull(id)) {
+                                            allUserIds.add(id.toString());
+                                        }
+                                    });
+                                } else {
+                                    allUserIds.add(userValue.toString());
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                if (!allUserIds.isEmpty()) {
+                    // 批量查询所有用户信息
+                    List<String> userIdList = new ArrayList<>(allUserIds);
+                    List<String> userFieldList = Arrays.asList("realName");
+                    List<UserDto> userList = authUserServiceApi.getBasicInfoById(userIdList, userFieldList).getData();
+                    
+                    if (ObjectNull.isNotNull(userList) && !userList.isEmpty()) {
+                        // 构建用户名称Map（ID -> Name）
+                        Map<String, Object> userNameMap = userList.stream()
+                            .filter(user -> ObjectNull.isNotNull(user.getRealName()))
+                            .collect(Collectors.toMap(UserDto::getId, UserDto::getRealName, (v1, v2) -> v1));
+                        
+                        // 将用户数据存入ThreadLocal，供UserFieldHandler使用
+                        SystemThreadLocal.set("USER_NAME_MAP_CACHE", userNameMap);
+                        
+                        log.info("[树形结构-批量查询] 用户数据预加载完成，耗时: {}ms, 用户数量: {}", 
+                            System.currentTimeMillis() - userPreloadStart, userList.size());
+                    } else {
+                        log.warn("[树形结构-批量查询] 用户数据为空，跳过预加载");
+                    }
+                } else {
+                    log.info("[树形结构-批量查询] 无需查询用户数据");
+                }
+            } catch (Exception e) {
+                log.error("[树形结构-批量查询] 用户数据预加载失败: {}", e.getMessage(), e);
+            }
+            
             // 使用预加载的数据进行回显，避免逐条查询数据库
+            long echoStart = System.currentTimeMillis();
             SystemThreadLocal.set("PRELOADED_DATA_CACHE", preloadedDataCache);
             try {
+                log.info("[树形结构-批量查询] 开始echo处理，数据条数: {}", allDataList.size());
                 allDataList = allDataList.stream()
                     .map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false))
                     .collect(Collectors.toList());
             } finally {
                 SystemThreadLocal.remove("PRELOADED_DATA_CACHE");
+                SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
+                SystemThreadLocal.remove("DEPT_LIST_CACHE");
+                SystemThreadLocal.remove("USER_NAME_MAP_CACHE");
             }
+            log.info("[树形结构-批量查询] echo完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
             
+            long buttonStart = System.currentTimeMillis();
             designHandler.handleButtonInfo(allDataList, EnvConstant.PAGE_BUTTON_DISPLAY);
+            log.info("[树形结构-批量查询] handleButtonInfo完成，耗时: {}ms", System.currentTimeMillis() - buttonStart);
+            
+            long modelDisplayStart = System.currentTimeMillis();
             dynamicDataService.echoModelDisplay(appId, allDataList, modelDisplayMap);
-            log.info("[树形结构-批量查询] 数据回显处理完成，耗时: {}ms", 
-                System.currentTimeMillis() - echoStart);
+            log.info("[树形结构-批量查询] echoModelDisplay完成，耗时: {}ms", System.currentTimeMillis() - modelDisplayStart);
             
             // 在内存中构建树形结构
             long buildTreeStart = System.currentTimeMillis();
@@ -1504,8 +1752,7 @@ public class DynamicDataUseController {
                 
                 // 情况1：节点的父节点指向自己
                 if (id.equals(parentId)) {
-                    log.warn("[树形结构-批量查询] 发现自引用：节点[id={}, 名称={}]的父节点指向自己，已修复", 
-                        id, data.get("gongChengMingChen"));
+                    log.warn("[树形结构-批量查询] 发现自引用：节点[id={}]的父节点指向自己，已修复", id);
                     data.put(parentFieldKey, null);
                     idToParentMap.remove(id);
                     circularReferenceCount++;
@@ -1521,8 +1768,7 @@ public class DynamicDataUseController {
                     String nextParentId = idToParentMap.get(currentId);
                     if (visited.contains(nextParentId)) {
                         // 发现循环：断开循环链
-                        log.warn("[树形结构-批量查询] 发现循环引用链：节点[id={}, 名称={}]形成循环，已断开", 
-                            id, data.get("gongChengMingChen"));
+                        log.warn("[树形结构-批量查询] 发现循环引用链：节点[id={}]形成循环，已断开",id);
                         data.put(parentFieldKey, null);
                         idToParentMap.remove(id);
                         circularReferenceCount++;
@@ -1537,9 +1783,7 @@ public class DynamicDataUseController {
                 log.warn("[树形结构-批量查询] 共发现并修复 {} 处循环引用，建议修复数据库中的数据", circularReferenceCount);
             }
             
-            List<Map<String, Object>> tree = TreeUtils.list2Tree(
-                allDataList,
-                rootIds,
+            List<Map<String, Object>> tree = TreeUtils.list2Tree(allDataList, rootIds,
                 e -> e.get("id").toString(),
                 (Function<Map<String, Object>, String>) e -> {
                     try {
@@ -1562,12 +1806,21 @@ public class DynamicDataUseController {
             log.info("[树形结构-批量查询] 总耗时: {}ms，性能提升: 消除了N+1递归查询问题", 
                 System.currentTimeMillis() - startTime);
             
+            // 清理ThreadLocal缓存，避免内存泄漏
+            SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
+            SystemThreadLocal.remove("USER_NAME_MAP_CACHE");
+            
             return tree;
             
         } catch (Exception e) {
             log.error("[树形结构-批量查询] 构建树形结构失败: {}", e.getMessage(), e);
             // 失败时返回原始记录，避免接口报错
             log.warn("[树形结构-批量查询] 降级处理：返回扁平化数据");
+            
+            // 清理ThreadLocal缓存，避免内存泄漏
+            SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
+            SystemThreadLocal.remove("USER_NAME_MAP_CACHE");
+            
             return Collections.emptyList();
         }
     }
@@ -1673,14 +1926,11 @@ public class DynamicDataUseController {
                                 (v1, v2) -> v1
                             ));
                     }
-                    
                     // 存储到缓存中：结构为 fieldKey -> formId -> (dataId -> dataObject)
-                    Map<String, Map<String, Object>> formIdMap = preloadedDataCache
-                        .computeIfAbsent(fieldKey, k -> new HashMap<>());
+                    Map<String, Map<String, Object>> formIdMap = preloadedDataCache.computeIfAbsent(fieldKey, k -> new HashMap<>());
                     formIdMap.put(formId, relatedDataMap);
                     
-                    log.info("[批量预加载] 字段[{}]预加载完成，加载{}条数据", 
-                        fieldKey, relatedDataMap.size());
+                    log.info("[批量预加载] 字段[{}]预加载完成，加载{}条数据", fieldKey, relatedDataMap.size());
                         
                 } finally {
                     SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);

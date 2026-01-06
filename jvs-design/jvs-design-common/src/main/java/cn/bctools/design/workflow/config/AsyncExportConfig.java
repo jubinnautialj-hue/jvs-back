@@ -1,5 +1,6 @@
 package cn.bctools.design.workflow.config;
 
+import com.alibaba.ttl.threadpool.TtlExecutors;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -21,7 +22,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 public class AsyncExportConfig {
 
     /**
-     * 导出任务执行器
+     * 导出任务执行器（使用TTL装饰，确保上下文传递）
      * 用于处理大数据量的异步导出任务
      */
     @Bean("exportExecutor")
@@ -53,11 +54,12 @@ public class AsyncExportConfig {
         log.info("异步导出线程池初始化完成 - 核心线程数: {}, 最大线程数: {}, 队列容量: {}",
                 executor.getCorePoolSize(), executor.getMaxPoolSize(), executor.getQueueCapacity());
 
-        return executor;
+        // 使用TTL装饰，确保租户信息、用户信息等上下文正确传递
+        return TtlExecutors.getTtlExecutor(executor);
     }
 
     /**
-     * 轻量级异步执行器
+     * 轻量级异步执行器（使用TTL装饰，确保上下文传递）
      * 用于处理快速的小任务
      */
     @Bean("lightExecutor")
@@ -85,6 +87,7 @@ public class AsyncExportConfig {
         log.info("轻量级异步执行器初始化完成 - 核心线程数: {}, 最大线程数: {}, 队列容量: {}",
                 executor.getCorePoolSize(), executor.getMaxPoolSize(), executor.getQueueCapacity());
 
-        return executor;
+        // 使用TTL装饰，确保租户信息、用户信息等上下文正确传递
+        return TtlExecutors.getTtlExecutor(executor);
     }
 }

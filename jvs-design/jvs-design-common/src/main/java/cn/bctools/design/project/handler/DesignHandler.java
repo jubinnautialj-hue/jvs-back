@@ -3,23 +3,21 @@ package cn.bctools.design.project.handler;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.SystemThreadLocal;
 import cn.bctools.database.util.IdGenerator;
 import cn.bctools.design.config.DesignConfig;
-import cn.bctools.design.crud.service.CrudPageService;
 import cn.bctools.design.data.fields.dto.enums.ButtonTypeEnum;
 import cn.bctools.design.data.fields.dto.page.ButtonDesignHtml;
 import cn.bctools.design.data.fields.enums.DesignType;
 import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.expression.EnvConstant;
 import cn.bctools.design.identification.service.IdentificationService;
-import cn.bctools.design.menu.service.AppMenuService;
 import cn.bctools.design.permission.service.PermissionCompatibleService;
 import cn.bctools.design.project.dto.ButtonSettingDto;
 import cn.bctools.design.project.dto.DesignRoleSettingDto;
 import cn.bctools.design.project.dto.DesignUpdateDto;
 import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.project.entity.JvsAppVersion;
-import cn.bctools.design.project.service.JvsAppService;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.design.util.ModeUtils;
 import cn.bctools.design.workflow.enums.FlowDataFieldEnum;
@@ -74,9 +72,6 @@ public class DesignHandler {
     DataModelService modelService;
     @Lazy
     @Autowired
-    JvsAppService appService;
-    @Lazy
-    @Autowired
     FunctionBusinessMapper functionMapper;
     @Lazy
     @Autowired
@@ -86,13 +81,7 @@ public class DesignHandler {
     ExpressionHandler expressionHandler;
     @Lazy
     @Autowired
-    CrudPageService crudPageService;
-    @Lazy
-    @Autowired
     FlowTaskService flowTaskService;
-    @Lazy
-    @Autowired
-    AppMenuService appMenuService;
     @Lazy
     @Autowired
     FlowDynamicDataService flowDynamicDataService;
@@ -108,7 +97,6 @@ public class DesignHandler {
      * 按钮的操作权限匹配规则
      */
     public static final String JVS_ENABLED_BUTTONS = "jvsEnabledButtons";
-    public static final String JVS_FLOW_TASK_PERSONS = "jvsFlowTaskPersons";
 
     @Data
     @Accessors(chain = true)
@@ -144,19 +132,30 @@ public class DesignHandler {
     }
 
     public void handleButtonInfo(List<Map<String, Object>> dataList, String useCase) {
+        long handleStart = System.currentTimeMillis();
+        log.info("[DesignHandler-handleButtonInfo] 开始处理按钮信息 - 数据条数: {}, useCase: {}", 
+            dataList != null ? dataList.size() : 0, useCase);
+        
         if (ObjectUtils.isEmpty(dataList)) {
+            log.info("[DesignHandler-handleButtonInfo] 数据列表为空，直接返回");
             return;
         }
 
+        // 1. 获取设计ID和用户信息
+        long step1Start = System.currentTimeMillis();
         String designId = DynamicDataUtils.getDesignId();
         if (StringUtils.isBlank(designId)) {
+            log.warn("[DesignHandler-handleButtonInfo] designId为空，直接返回");
             return;
         }
-
 
         String userId = UserCurrentUtils.getUserId();
         boolean mobile = IpUtil.isMobile();
+        log.info("[DesignHandler-handleButtonInfo] 获取基础信息完成，耗时: {}ms - designId: {}, userId: {}, mobile: {}", 
+            System.currentTimeMillis() - step1Start, designId, userId, mobile);
 
+        // 2. 获取并过滤按钮设置
+        long step2Start = System.currentTimeMillis();
         List<ButtonDesignHtml> buttonSetting = this.getButtonSetting(designId, useCase)
                 .stream()
                 .filter(b -> StringUtils.isNotBlank(b.getPermissionFlag()))
@@ -174,21 +173,67 @@ public class DesignHandler {
                     }
                 })
                 .collect(Collectors.toList());
+        log.info("[DesignHandler-handleButtonInfo] 获取并过滤按钮设置完成，耗时: {}ms - 按钮数量: {}", 
+            System.currentTimeMillis() - step2Start, buttonSetting != null ? buttonSetting.size() : 0);
+        
         //如果没有按钮直接返回
         if (ObjectNull.isNull(buttonSetting)) {
+            log.info("[DesignHandler-handleButtonInfo] 按钮设置为空，直接返回");
             return;
         }
 
-        // 获取流程任务信息
-        List<String> dataIds = dataList.stream().map(dataMap -> String.valueOf(dataMap.get("id"))).collect(Collectors.toList());
-        Map<String, JSONObject> dataFlowMap = flowDynamicDataService.getMltipleFlowTaskData(dataIds);
+        // 3. 批量预加载formula配置，避免N+1查询
+        long step3PreloadStart = System.currentTimeMillis();
+        Map<String, FunctionBusinessPo> formulaCache = new HashMap<>();
+        Set<String> formulaIds = new HashSet<>();
+        
+        // 收集所有需要的formulaId
+        buttonSetting.forEach(button -> {
+            if (ObjectNull.isNotNull(button.getFormula())) {
+                formulaIds.add(button.getFormula());
+            }
+            if (ObjectNull.isNotNull(button.getMobileFormula())) {
+                formulaIds.add(button.getMobileFormula());
+            }
+        });
+        
+        // 批量查询formula配置
+        if (!formulaIds.isEmpty()) {
+            List<FunctionBusinessPo> formulas = functionMapper.selectBatchIds(formulaIds);
+            if (ObjectNull.isNotNull(formulas)) {
+                formulas.forEach(f -> formulaCache.put(f.getId(), f));
+            }
+        }
+        
+        log.info("[DesignHandler-handleButtonInfo] 批量预加载formula完成，耗时: {}ms - formula数量: {}", 
+            System.currentTimeMillis() - step3PreloadStart, formulaCache.size());
+        
+        // 将formula缓存放入ThreadLocal，供checkFormula方法使用
+        SystemThreadLocal.set("FORMULA_CACHE", formulaCache);
+        
+        try {
+            // 4. 获取流程任务信息
+            long step4Start = System.currentTimeMillis();
+            List<String> dataIds = dataList.stream().map(dataMap -> String.valueOf(dataMap.get("id"))).collect(Collectors.toList());
+            Map<String, JSONObject> dataFlowMap = flowDynamicDataService.getMltipleFlowTaskData(dataIds);
+            log.info("[DesignHandler-handleButtonInfo] 获取流程任务信息完成，耗时: {}ms - 数据ID数量: {}, 流程数据数量: {}", 
+                System.currentTimeMillis() - step4Start, dataIds.size(), dataFlowMap != null ? dataFlowMap.size() : 0);
 
+            // 5. 处理每条数据的按钮
+            long step5Start = System.currentTimeMillis();
+        int processedCount = 0;
+        long maxItemDuration = 0;
+        String slowestItemId = null;
+        
         for (Map<String, Object> data : dataList) {
+            long itemStart = System.currentTimeMillis();
+            
             // 将工作流的信息加入数据
             JSONObject flowData = dataFlowMap.get(String.valueOf(data.get("id")));
             if (ObjectNull.isNotNull(flowData)) {
                 data.putAll(flowData);
             }
+            
             List list = new ArrayList<>(buttonSetting)
                     .stream()
                     .filter(e -> {
@@ -237,6 +282,34 @@ public class DesignHandler {
                 list.add(IdGenerator.getIdStr());
             }
             data.put(JVS_ENABLED_BUTTONS, list);
+            
+            long itemDuration = System.currentTimeMillis() - itemStart;
+            if (itemDuration > maxItemDuration) {
+                maxItemDuration = itemDuration;
+                slowestItemId = String.valueOf(data.get("id"));
+            }
+            
+            // 单条数据处理超过50ms记录警告
+            if (itemDuration > 50) {
+                log.warn("[DesignHandler-handleButtonInfo] 单条数据处理耗时过长: {}ms - 数据ID: {}, 按钮数量: {}", 
+                    itemDuration, data.get("id"), list.size());
+            }
+            
+            processedCount++;
+        }
+        
+            log.info("[DesignHandler-handleButtonInfo] 处理所有数据的按钮完成，耗时: {}ms - 处理条数: {}, 最慢记录ID: {}, 最慢记录耗时: {}ms", 
+                System.currentTimeMillis() - step5Start, processedCount, slowestItemId, maxItemDuration);
+
+            long totalDuration = System.currentTimeMillis() - handleStart;
+            log.info("[DesignHandler-handleButtonInfo] 处理完成，总耗时: {}ms", totalDuration);
+            
+            if (totalDuration > 1000) {
+                log.warn("[DesignHandler-handleButtonInfo] 处理超时预警！总耗时: {}ms - 数据条数: {}", totalDuration, dataList.size());
+            }
+        } finally {
+            // 清理ThreadLocal，避免内存泄漏
+            SystemThreadLocal.remove("FORMULA_CACHE");
         }
     }
 
@@ -250,7 +323,21 @@ public class DesignHandler {
      * @return
      */
     private boolean checkFormula(String formulaId, Map<String, Object> data, String useCase) {
-        FunctionBusinessPo function = functionMapper.selectById(formulaId);
+        // 优先从threadlocal缓存中获取
+        @SuppressWarnings("unchecked")
+        Map<String, FunctionBusinessPo> formulaCache = 
+            (Map<String, FunctionBusinessPo>) SystemThreadLocal.get("FORMULA_CACHE");
+        
+        FunctionBusinessPo function = null;
+        if (ObjectNull.isNotNull(formulaCache)) {
+            function = formulaCache.get(formulaId);
+        }
+        
+        // 如果缓存未命中，则查询数据库（兜底逻辑）
+        if (ObjectNull.isNull(function)) {
+            function = functionMapper.selectById(formulaId);
+        }
+        
         if (ObjectNull.isNull(function)) {
             return true;
         }

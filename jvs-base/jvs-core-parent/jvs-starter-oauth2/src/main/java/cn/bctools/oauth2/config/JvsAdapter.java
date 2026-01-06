@@ -39,6 +39,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ThreadPoolExecutor;
+import com.alibaba.ttl.threadpool.TtlExecutors;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
@@ -139,6 +140,8 @@ public class JvsAdapter {
 
     /**
      * Task executor executor.
+     * 使用TTL装饰线程池，自动传递TransmittableThreadLocal数据
+     * 相比手动TaskDecorator方案，更轻量、更可靠、更易维护
      *
      * @param properties the properties
      * @return the executor
@@ -159,7 +162,9 @@ public class JvsAdapter {
         executor.setThreadNamePrefix("jvs-executor-");
         // 设置任务丢弃后的处理策略
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
-        // 设置任务的装饰
+        
+        // 仅保留清理逻辑，TTL会自动传递SystemThreadLocal等TransmittableThreadLocal数据
+        // 但RequestAttributes和SecurityContext需要手动传递（它们不是TTL）
         executor.setTaskDecorator(runnable -> {
             RequestAttributes context = null;
             Authentication authenticationAuthentication = null;
@@ -169,38 +174,33 @@ public class JvsAdapter {
                 authenticationAuthentication = authentication.getAuthentication();
             } catch (IllegalStateException e) {
             }
-            String tenantId = TenantContextHolder.getTenantId();
-            Map<String, Object> systemThreadLocalMap = SystemThreadLocal.get();
-            Map<String, Object> map = new HashMap<>();
-            systemThreadLocalMap.entrySet()
-                    .forEach(e -> {
-                        if (ObjectNull.isNotNull(e.getValue())) {
-                            try {
-                                map.put(e.getKey(), BeanCopyUtil.deepCopy(e.getValue()));
-                            } catch (Exception ex) {
-
-                            }
-                        }
-                    });
+            
             Authentication finalAuthenticationAuthentication = authenticationAuthentication;
             RequestAttributes finalContext = context;
+            
             return () -> {
-                SystemThreadLocal.setAll(map);
-                TenantContextHolder.setTenantId(tenantId);
-                if (ObjectNull.isNotNull(finalContext)) {
-                    //设置上下文user对象
-                    RequestContextHolder.setRequestAttributes(finalContext);
-                    Object principal = finalAuthenticationAuthentication.getPrincipal();
-                    if (!(principal instanceof String)) {
-                        SystemThreadLocal.set("user", principal);
+                try {
+                    // TTL已自动传递SystemThreadLocal和TenantContextHolder
+                    // 只需设置RequestAttributes和SecurityContext
+                    if (ObjectNull.isNotNull(finalContext)) {
+                        RequestContextHolder.setRequestAttributes(finalContext);
+                        if (ObjectNull.isNotNull(finalAuthenticationAuthentication)) {
+                            SecurityContextHolder.getContext().setAuthentication(finalAuthenticationAuthentication);
+                        }
                     }
-                    SecurityContextHolder.getContext().setAuthentication(finalAuthenticationAuthentication);
+                    runnable.run();
+                } finally {
+                    // 清理ThreadLocal，避免线程池复用时产生脏数据
+                    SystemThreadLocal.clear();
+                    TenantContextHolder.clear();
+                    RequestContextHolder.resetRequestAttributes();
+                    SecurityContextHolder.clearContext();
                 }
-                // 2. 缓存租户id
-                runnable.run();
             };
         });
+        
         executor.initialize();
-        return executor;
+        // 使用TTL装饰线程池，自动传递TransmittableThreadLocal
+        return TtlExecutors.getTtlExecutor(executor);
     }
 }

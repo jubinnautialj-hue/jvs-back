@@ -43,6 +43,8 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
 
     @Override
     public Object getEchoValue(MultipleHtml fieldDto, Object data, boolean override, Map<String, Object> lineData, String... paths) {
+        long startTime = System.currentTimeMillis();
+        
         boolean isMulti = !ObjectNull.isNull(fieldDto.getMultiple()) && fieldDto.getMultiple();
         boolean showPath = !ObjectNull.isNull(fieldDto.getShowalllevels()) && fieldDto.getShowalllevels();
         String b = SystemThreadLocal.get("functionName");
@@ -51,25 +53,78 @@ public class DepartmentFieldHandler extends IMultipleTypeHandler implements IDat
                 showPath = true;
             }
         }
-        List<SysDeptDto> deptList = SystemThreadLocal.get(DataFieldType.department.getDesc());
-        if (ObjectNull.isNull(deptList)) {
-            //获取所有的部门
-            deptList = deptApi.getAll().getData();
-            SystemThreadLocal.set(DataFieldType.department.getDesc(), deptList);
+
+        // 优先使用预加载的部门名称Map缓存
+        Map<String, Object> deptNameMap = SystemThreadLocal.get("DEPT_NAME_MAP_CACHE");
+        List<SysDeptDto> deptList = null;
+        
+        if (ObjectNull.isNull(deptNameMap)) {
+            // 降级：尝试使用部门列表缓存
+            deptList = SystemThreadLocal.get("DEPT_LIST_CACHE");
+            
+            if (ObjectNull.isNull(deptList)) {
+                // 最终降级：调用远程API获取部门数据
+                long apiStart = System.currentTimeMillis();
+                deptList = deptApi.getAll().getData();
+                long apiDuration = System.currentTimeMillis() - apiStart;
+                
+                if (apiDuration > 50) {
+                    log.warn("[部门选择-Echo] 未找到预加载缓存，调用远程API耗时: {}ms，建议优化为批量预加载", apiDuration);
+                }
+            }
+            
+            if (ObjectNull.isNotNull(deptList)) {
+                // 构建部门名称Map
+                long mapBuildStart = System.currentTimeMillis();
+                deptNameMap = deptList.stream()
+                    .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
+                long mapBuildDuration = System.currentTimeMillis() - mapBuildStart;
+                
+                if (mapBuildDuration > 10) {
+                    log.warn("[部门选择-Echo] 构建部门名称Map耗时: {}ms，部门数量: {}", mapBuildDuration, deptList.size());
+                }
+            }
         }
-        Map<String, Object> deptMap = deptList.stream().collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName));
+        
+        // 如果需要路径处理但deptList为空，需要获取完整的部门列表
+        if (showPath && ObjectNull.isNull(deptList)) {
+            deptList = SystemThreadLocal.get("DEPT_LIST_CACHE");
+            if (ObjectNull.isNull(deptList)) {
+                deptList = deptApi.getAll().getData();
+            }
+        }
+        
         DataFieldHandler dataFieldHandler = SpringContextUtil.getBean(DataFieldHandler.class);
+        Object result;
 
         if (data instanceof List) {
             boolean finalShowPath = showPath;
             List<SysDeptDto> finalDeptList = deptList;
-            return ((List<?>) data).stream().map(e -> dataFieldHandler.handlePathId(e, isMulti, finalShowPath, finalDeptList, SysDeptDto::getId, SysDeptDto::getParentId)).map(e -> {
-                return dataFieldHandler.joinFormItems(deptMap, e, isMulti, finalShowPath);
+            Map<String, Object> finalDeptNameMap = deptNameMap;
+            
+            result = ((List<?>) data).stream().map(e -> {
+                Object processedData = e;
+                if (finalShowPath && ObjectNull.isNotNull(finalDeptList)) {
+                    processedData = dataFieldHandler.handlePathId(e, isMulti, finalShowPath, finalDeptList, 
+                        SysDeptDto::getId, SysDeptDto::getParentId);
+                }
+                return dataFieldHandler.joinFormItems(finalDeptNameMap, processedData, isMulti, finalShowPath);
             }).collect(Collectors.joining(","));
         } else {
-            data = dataFieldHandler.handlePathId(data, isMulti, showPath, deptList, SysDeptDto::getId, SysDeptDto::getParentId);
-            return dataFieldHandler.joinFormItems(deptMap, data, isMulti, showPath);
+            if (showPath && ObjectNull.isNotNull(deptList)) {
+                data = dataFieldHandler.handlePathId(data, isMulti, showPath, deptList, 
+                    SysDeptDto::getId, SysDeptDto::getParentId);
+            }
+            result = dataFieldHandler.joinFormItems(deptNameMap, data, isMulti, showPath);
         }
+        
+        long totalDuration = System.currentTimeMillis() - startTime;
+        if (totalDuration > 100) {
+            log.warn("[部门选择-Echo] 单次处理耗时过长: {}ms，数据: {}, 是否多选: {}, 是否显示路径: {}", 
+                totalDuration, data, isMulti, showPath);
+        }
+        
+        return result;
     }
 
     @Override

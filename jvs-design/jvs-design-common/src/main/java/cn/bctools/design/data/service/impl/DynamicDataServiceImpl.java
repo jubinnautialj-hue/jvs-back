@@ -1302,7 +1302,10 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             RequestAttributes finalContext = context;
             Map<String, FieldBasicsHtml> fieldMap = fieldBasicsHtmls.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity(), (e1, e2) -> e1));
 
-            dataList = dataList.parallelStream().map(e -> {
+            // 使用顺序流而非并行流，确保ThreadLocal数据可以正常传递
+            // 原因：并行流使用ForkJoinPool的工作线程，无法访问主线程的ThreadLocal数据
+            // 在树形结构查询场景下，部门数据预加载需要通过ThreadLocal传递
+            dataList = dataList.stream().map(e -> {
                 SystemThreadLocal.setAll(map);
                 TenantContextHolder.setTenantId(tenantId);
                 if (ObjectNull.isNotNull(finalContext)) {
@@ -1919,8 +1922,13 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
     @Override
     public Map<String, Object> echo(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function) {
+        long methodStart = System.currentTimeMillis();
+        
         //数据库的数据，用于多层下级数据
         Map<String, Object> olddata = new HashMap<>(data);
+        
+        // 步骤1：处理Tab字段
+        long step1Start = System.currentTimeMillis();
         //因为这个循环是改变内部对象，所以需要创建一个新的
         fieldMap.values().stream().collect(Collectors.toList()).stream().filter(e -> e.getType().equals(DataFieldType.tab))
                 //判断是否开启了数据脱离， 将过滤出有多个数据脱离的选项卡
@@ -1958,8 +1966,12 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         }
                     }
                 });
+        long step1Duration = System.currentTimeMillis() - step1Start;
 
-        // 处理回显数据
+        // 步骤2：处理回显数据
+        long step2Start = System.currentTimeMillis();
+        Map<String, Long> fieldHandlerDurations = new HashMap<>();
+        
         data.entrySet().stream().collect(Collectors.toList()).stream()
                 //有key的存在
                 .filter(e -> fieldMap.containsKey(e.getKey()))
@@ -1975,6 +1987,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
                             IDataFieldHandler fieldHandler = iDataFieldHandler.get(fieldDto.getType().getDesc());
                             if (ObjectNull.isNotNull(fieldHandler)) {
+                                long fieldStart = System.currentTimeMillis();
+                                
                                 if (ObjectNull.isNull(fieldDto.getDesignJson())) {
                                     Map generate = fieldHandler.generate(fieldDto.getLabel(), fieldDto.getFieldKey(), new ArrayList<>());
                                     fieldDto.setDesignJson(generate);
@@ -1991,6 +2005,10 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                 } else {
                                     fieldHandler.setDataOverride(data, fieldKey, html, path, override, echoValue);
                                 }
+                                
+                                long fieldDuration = System.currentTimeMillis() - fieldStart;
+                                String fieldType = fieldDto.getType().getDesc();
+                                fieldHandlerDurations.merge(fieldType, fieldDuration, Long::sum);
                             }
                         }
                     } catch (BusinessException be) {
@@ -2002,6 +2020,16 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                     }
 
                 });
+        long step2Duration = System.currentTimeMillis() - step2Start;
+        
+        long totalDuration = System.currentTimeMillis() - methodStart;
+        
+        // 单次echo调用超过100ms时记录详细日志
+        if (totalDuration > 100) {
+            log.warn("[Echo性能] 单条数据echo耗时过长: {}ms - 数据ID: {}, Tab处理: {}ms, 字段回显: {}ms, 字段类型耗时: {}",
+                totalDuration, data.get("id"), step1Duration, step2Duration, fieldHandlerDurations);
+        }
+        
         return data;
     }
 
