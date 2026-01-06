@@ -15,9 +15,7 @@ import cn.bctools.design.identification.service.IdentificationService;
 import cn.bctools.design.menu.entity.AppMenu;
 import cn.bctools.design.menu.service.AppMenuService;
 import cn.bctools.design.menu.service.AppMenuTypeService;
-import cn.bctools.design.project.entity.JvsApp;
 import cn.bctools.design.project.service.JvsAppService;
-import cn.bctools.design.util.CurrentAppUtils;
 import cn.bctools.design.util.DynamicDataUtils;
 import cn.bctools.design.util.ModeUtils;
 import cn.bctools.index.annotation.FormFormQuery;
@@ -37,7 +35,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.nio.file.Watchable;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -85,8 +86,7 @@ public class ComponentCrudServiceImpl extends DataModelIndexFieldOrLink implemen
             return null;
         } else {
             ModeUtils.setMode();
-            Optional<Identification> first = identificationService.getIdentificationModel(body.getModelIdentifier()).stream().findFirst();
-            String modelId = first.map(Identification::getDesignId).orElse(null);
+            String modelId = identificationService.getIdentificationModel(body.getModelIdentifier()).stream().findFirst().map(Identification::getDesignId).orElse(null);
             if (ObjectNull.isNotNull(modelId)) {
                 DataModelPo model = dataModelService.getModel(modelId);
                 List<FieldBasicsHtml> fields = dataFieldService.getFields(model.getAppId(), model.getId(), true, true);
@@ -131,10 +131,8 @@ public class ComponentCrudServiceImpl extends DataModelIndexFieldOrLink implemen
                     }
                     render.setData(maps);
                 }
-                JvsApp jvsApp = jvsAppService.getAppById(first.get().getJvsAppId());
-                // 将当前应用的版本号设置到上下文(用于sql自动添加应用版本号查询)
-                CurrentAppUtils.setApp(jvsApp);
-                List collect = menuService.list(Wrappers.query(new AppMenu().setDesignType(DesignType.page).setDataModelId(modelId))).stream().map(e -> new CrudPage().setName(e.getName()).setDataModelId(e.getDataModelId()).setJvsAppId(e.getJvsAppId()).setId(e.getDesignId())).collect(Collectors.toList());
+                List collect =
+                        menuService.list(Wrappers.query(new AppMenu().setDesignType(DesignType.page).setDataModelId(modelId))).stream().map(e -> new CrudPage().setName(e.getName()).setDataModelId(e.getDataModelId()).setJvsAppId(e.getJvsAppId()).setId(e.getDesignId())).collect(Collectors.toList());
                 render.setPages(collect);
                 return render;
             }
