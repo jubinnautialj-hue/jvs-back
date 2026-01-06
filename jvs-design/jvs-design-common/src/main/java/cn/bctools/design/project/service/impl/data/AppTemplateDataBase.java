@@ -9,6 +9,7 @@ import cn.bctools.design.sqlInjector.MapperMethodHandler;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.service.IService;
+import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Map;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
  * @author zhuxiaokang
  * 应用模板数据服务顶级类
  */
+@Slf4j
 public class AppTemplateDataBase {
 
     private final MapperMethodHandler mapperMethodHandler = SpringContextUtil.getBean(MapperMethodHandler.class);
