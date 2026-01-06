@@ -993,15 +993,33 @@ public class JvsAppTemplateServiceImpl extends ServiceImpl<JvsAppTemplateMapper,
      * @return 已存在的设计
      */
     private TemplateBo getTargetVersionTemplate(JvsAppVersion targetCurrentVersion) {
+        log.info("[getTargetVersionTemplate] 调用 - targetCurrentVersion: {}", targetCurrentVersion != null ? JSONObject.toJSONString(targetCurrentVersion) : "null");
         if (ObjectNull.isNull(targetCurrentVersion) || ObjectNull.isNull(targetCurrentVersion.getTemplateId())) {
+            log.info("[getTargetVersionTemplate] targetCurrentVersion或templateId为null，返回空TemplateBo");
             return new TemplateBo();
         }
         JvsAppTemplate template = getAppTemplate(targetCurrentVersion.getTemplateId());
+        log.info("[getTargetVersionTemplate] 获取到模板 - template.id={}, template.name={}",
+                template != null ? template.getId() : "null",
+                template != null ? template.getName() : "null");
         JvsApp jvsApp = JSONObject.parseObject(template.getData(), JvsApp.class);
+        log.info("[getTargetVersionTemplate] 解析应用 - jvsApp.id={}, jvsApp.name={}",
+                jvsApp != null ? jvsApp.getId() : "null",
+                jvsApp != null ? jvsApp.getName() : "null");
         String data = jvsApp.getData();
         // 解密模板内容
         data = des.decryptStr(data);
-        return JSONObject.parseObject(data, TemplateBo.class);
+        TemplateBo result = JSONObject.parseObject(data, TemplateBo.class);
+        log.info("[getTargetVersionTemplate] 解析完成 - 菜单目录数量={}, 菜单数量={}",
+                result.getAppMenuTypes() != null ? result.getAppMenuTypes().size() : 0,
+                result.getAppMenus() != null ? result.getAppMenus().size() : 0);
+        if (result.getAppMenus() != null && !result.getAppMenus().isEmpty()) {
+            log.info("[getTargetVersionTemplate] 目标版本菜单信息（前3个）:");
+            result.getAppMenus().stream().limit(3).forEach(menu -> 
+                log.info("  - id={}, name={}, jvsAppId={}", menu.getId(), menu.getName(), menu.getJvsAppId())
+            );
+        }
+        return result;
     }
 
     /**

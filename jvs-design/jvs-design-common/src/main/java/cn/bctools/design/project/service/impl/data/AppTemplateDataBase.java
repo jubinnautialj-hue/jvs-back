@@ -91,21 +91,29 @@ public class AppTemplateDataBase {
      * @param <R>       目标对象的id类型
      */
     protected <T, R> void saveOrUpdate(IService<T> iService, List<R> existsIds, List<T> list, Function<? super T, ? extends R> getId) {
+        log.info("[AppTemplateDataBase.saveOrUpdate] 调用saveOrUpdate - list.size={}, existsIds={}",
+                list != null ? list.size() : 0, existsIds != null ? existsIds.size() : 0);
         if (ObjectNull.isNull(list)) {
+            log.info("[AppTemplateDataBase.saveOrUpdate] list为null，直接返回");
             return;
         }
         if (ObjectNull.isNull(existsIds)) {
+            log.info("[AppTemplateDataBase.saveOrUpdate] existsIds为null，执行INSERT，数量={}", list.size());
             iService.saveBatch(list);
             return;
         }
         Map<Boolean, List<T>> map = list.stream().collect(Collectors.groupingBy(p -> {
             R id = getId.apply(p);
-            return existsIds.contains(id);
+            boolean exists = existsIds.contains(id);
+            log.info("[AppTemplateDataBase.saveOrUpdate] 检查ID={}, 是否存在={}", id, exists);
+            return exists;
         }));
         map.forEach((key, value) -> {
             if (key) {
+                log.info("[AppTemplateDataBase.saveOrUpdate] 执行UPDATE，数量={}", value.size());
                 iService.updateBatchById(value);
             } else {
+                log.info("[AppTemplateDataBase.saveOrUpdate] 执行INSERT，数量={}", value.size());
                 iService.saveBatch(value);
             }
         });
