@@ -11,6 +11,7 @@ import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.extension.service.IService;
 import lombok.extern.slf4j.Slf4j;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -112,8 +113,63 @@ public class AppTemplateDataBase {
         }));
         map.forEach((key, value) -> {
             if (key) {
-                log.info("[AppTemplateDataBase.saveOrUpdate] 执行UPDATE，数量={}", value.size());
-                iService.updateBatchById(value);
+                log.info("[AppTemplateDataBase.saveOrUpdate] 准备执行UPDATE，数量={}", value.size());
+                
+                if (value.size() > 0) {
+                    // 记录UPDATE前的ID列表
+                    List<R> allUpdateIds = value.stream().map(getId).collect(Collectors.toList());
+                    List<R> sampleIds = value.stream().limit(10).map(getId).collect(Collectors.toList());
+                    log.info("[AppTemplateDataBase.saveOrUpdate] UPDATE的ID列表（前10个）={}", sampleIds);
+                    
+                    // 执行UPDATE前，先检查这些ID在数据库中是否真实存在
+                    List<T> existingRecords = iService.listByIds((Collection) allUpdateIds);
+                    int existingCount = existingRecords != null ? existingRecords.size() : 0;
+                    log.info("[AppTemplateDataBase.saveOrUpdate]  UPDATE前数据库实际存在的记录数={}/{}",
+                            existingCount, allUpdateIds.size());
+                    
+                    if (existingCount == 0) {
+                        // 数据库中没有任何记录，全部执行INSERT
+                        log.warn("[AppTemplateDataBase.saveOrUpdate]  数据库中没有任何待UPDATE的记录！自动转为INSERT操作");
+                        log.warn("[AppTemplateDataBase.saveOrUpdate]  原因：这些ID只存在于映射表，但实际数据表为空（脏数据）");
+                        log.info("[AppTemplateDataBase.saveOrUpdate]  执行INSERT补偿操作，数量={}", value.size());
+                        iService.saveBatch(value);
+                        log.info("[AppTemplateDataBase.saveOrUpdate]  INSERT补偿操作完成");
+                    } else if (existingCount < allUpdateIds.size()) {
+                        // 部分记录存在，需要分别处理
+                        log.warn("[AppTemplateDataBase.saveOrUpdate]  部分数据不存在：期望UPDATE {} 条，实际存在 {} 条记录",
+                                allUpdateIds.size(), existingCount);
+                        
+                        // 获取存在的记录ID集合
+                        Set<R> existingIds = existingRecords.stream()
+                                .map(getId)
+                                .collect(Collectors.toSet());
+                        
+                        // 分组：存在的执行UPDATE，不存在的执行INSERT
+                        Map<Boolean, List<T>> splitMap = value.stream()
+                                .collect(Collectors.groupingBy(item -> existingIds.contains(getId.apply(item))));
+                        
+                        // 执行UPDATE（已存在的记录）
+                        List<T> toUpdate = splitMap.get(true);
+                        if (toUpdate != null && !toUpdate.isEmpty()) {
+                            log.info("[AppTemplateDataBase.saveOrUpdate] 对已存在的记录执行UPDATE，数量={}", toUpdate.size());
+                            boolean updateResult = iService.updateBatchById(toUpdate);
+                            log.info("[AppTemplateDataBase.saveOrUpdate] UPDATE操作完成，结果={}", updateResult);
+                        }
+                        
+                        // 执行INSERT（不存在的记录）
+                        List<T> toInsert = splitMap.get(false);
+                        if (toInsert != null && !toInsert.isEmpty()) {
+                            log.warn("[AppTemplateDataBase.saveOrUpdate]  对不存在的记录执行INSERT补偿操作，数量={}", toInsert.size());
+                            iService.saveBatch(toInsert);
+                            log.info("[AppTemplateDataBase.saveOrUpdate]  INSERT补偿操作完成");
+                        }
+                    } else {
+                        // 所有记录都存在，正常执行UPDATE
+                        log.info("[AppTemplateDataBase.saveOrUpdate]  所有记录在数据库中都存在，执行UPDATE操作");
+                        boolean updateResult = iService.updateBatchById(value);
+                        log.info("[AppTemplateDataBase.saveOrUpdate] UPDATE操作完成，结果={}", updateResult);
+                    }
+                }
             } else {
                 log.info("[AppTemplateDataBase.saveOrUpdate] 执行INSERT，数量={}", value.size());
                 iService.saveBatch(value);
