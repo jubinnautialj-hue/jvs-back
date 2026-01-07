@@ -1469,17 +1469,18 @@ public class DynamicDataUseController {
             // 使用预加载的数据进行回显，避免逐条查询数据库
             SystemThreadLocal.set("PRELOADED_DATA_CACHE", preloadedDataCache);
             try {
+                long echoStart2 = System.currentTimeMillis();
                 allDataList = allDataList.stream()
                     .map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false))
                     .collect(Collectors.toList());
+                log.info("[树形结构-批量查询] echo完成，耗时: {}ms", System.currentTimeMillis() - echoStart2);
             } finally {
                 SystemThreadLocal.remove("PRELOADED_DATA_CACHE");
             }
             
             designHandler.handleButtonInfo(allDataList, EnvConstant.PAGE_BUTTON_DISPLAY);
             dynamicDataService.echoModelDisplay(appId, allDataList, modelDisplayMap);
-            log.info("[树形结构-批量查询] 数据回显处理完成，耗时: {}ms", 
-                System.currentTimeMillis() - echoStart);
+            log.info("[树形结构-批量查询] 数据回显处理完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
             
             // 在内存中构建树形结构
             long buildTreeStart = System.currentTimeMillis();
