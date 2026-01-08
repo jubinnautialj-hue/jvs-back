@@ -277,20 +277,20 @@ public class UseComponent implements AppApi, TreeApi {
                     })
                     .collect(Collectors.joining(", ")));
             
-            // 查找是否有“智慧技术监管”菜单
+            // 查找是否有“业务管理系统”菜单
             List<AppMenu> targetMenus = appMenus.stream()
-                    .filter(m -> m.getName() != null && m.getName().contains("智慧技术监管"))
+                    .filter(m -> m.getName() != null && m.getName().contains("业务管理系统"))
                     .collect(Collectors.toList());
             if (!targetMenus.isEmpty()) {
-                log.info("[UseComponent.menu] 找到包含'智慧技术监管'的菜单数量={}", targetMenus.size());
+                log.info("[UseComponent.menu] 找到包含'业务管理系统'的菜单数量={}", targetMenus.size());
                 targetMenus.forEach(m -> {
                     JvsApp jvsApp = allAppMap.get(m.getJvsAppId());
-                    log.info("[UseComponent.menu] '智慧技术监管'菜单信息：菜单ID={}, 菜单名={}, 所属应用={}, 设计ID={}, 类型={}, 移动端显示={}, PC端显示={}, 菜单版本={}",
+                    log.info("[UseComponent.menu] '业务管理系统'菜单信息：菜单ID={}, 菜单名={}, 所属应用={}, 设计ID={}, 类型={}, 移动端显示={}, PC端显示={}, 菜单版本={}",
                             m.getId(), m.getName(), jvsApp != null ? jvsApp.getName() : m.getJvsAppId(), 
                             m.getDesignId(), m.getDesignType(), m.getMobileDisplay(), m.getPcDisplay(), m.getAppVersion());
                 });
             } else {
-                log.warn("[UseComponent.menu] 未找到包含'智慧技术监管'的菜单");
+                log.warn("[UseComponent.menu] 未找到包含'业务管理系统'的菜单");
             }
         }
         List<String> designIds = appMenus.stream().map(AppMenu::getDesignId).collect(Collectors.toList());
@@ -309,8 +309,8 @@ public class UseComponent implements AppApi, TreeApi {
                     // 移动端根据配置显示隐藏
                     if (mobile) {
                         boolean mobileDisplay = e.getMobileDisplay();
-                        if (!mobileDisplay && e.getName() != null && e.getName().contains("智慧技术监管")) {
-                            log.warn("[UseComponent.menu] 移动端过滤：'智慧技术监管'菜单被过滤，移动端显示={}", mobileDisplay);
+                        if (!mobileDisplay && e.getName() != null && e.getName().contains("业务管理系统")) {
+                            log.warn("[UseComponent.menu] 移动端过滤：'业务管理系统'菜单被过滤，移动端显示={}", mobileDisplay);
                         }
                         return mobileDisplay;
                     }
@@ -324,8 +324,8 @@ public class UseComponent implements AppApi, TreeApi {
                     }
                     // 无设计权限，根据配置显示隐藏
                     boolean pcDisplay = e.getPcDisplay();
-                    if (!pcDisplay && e.getName() != null && e.getName().contains("智慧技术监管")) {
-                        log.warn("[UseComponent.menu] PC端显示过滤：'智慧技术监管'菜单被过滤，PC端显示={}, 应用={}", pcDisplay, jvsApp != null ? jvsApp.getName() : e.getJvsAppId());
+                    if (!pcDisplay && e.getName() != null && e.getName().contains("业务管理系统")) {
+                        log.warn("[UseComponent.menu] PC端显示过滤：'业务管理系统'菜单被过滤，PC端显示={}, 应用={}", pcDisplay, jvsApp != null ? jvsApp.getName() : e.getJvsAppId());
                     }
                     return pcDisplay;
                 })
@@ -345,8 +345,8 @@ public class UseComponent implements AppApi, TreeApi {
                         List<DesignRole> roles = jvsApp.getEnableVersionFeature() ? operationPermissionMap.get(e.getDesignId()) : e.getRoles();
                         boolean hasPermit = RoleUtils.hasPermit(roles);
                         
-                        if (!hasPermit && e.getName() != null && e.getName().contains("智慧技术监管")) {
-                            log.warn("[UseComponent.menu] 权限过滤：'智慧技术监管'菜单被过滤，应用={}, 启用版本功能={}, 有权限={}, roles={}",
+                        if (!hasPermit && e.getName() != null && e.getName().contains("业务管理系统")) {
+                            log.warn("[UseComponent.menu] 权限过滤：'业务管理系统'菜单被过滤，应用={}, 启用版本功能={}, 有权限={}, roles={}",
                                     jvsApp != null ? jvsApp.getName() : e.getJvsAppId(), 
                                     jvsApp != null && jvsApp.getEnableVersionFeature(), 
                                     hasPermit,
@@ -382,18 +382,18 @@ public class UseComponent implements AppApi, TreeApi {
         //资源转树
         log.info("[UseComponent.menu] 菜单过滤完成，过滤后数量={}", menus.size());
         
-        // 检查过滤后是否还有“智慧技术监管”
+        // 检查过滤后是否还有“业务管理系统”
         List<JvsMenuVo> targetMenusAfterFilter = menus.stream()
-                .filter(m -> m.getName() != null && m.getName().contains("智慧技术监管"))
+                .filter(m -> m.getName() != null && m.getName().contains("业务管理系统"))
                 .collect(Collectors.toList());
         if (!targetMenusAfterFilter.isEmpty()) {
-            log.info("[UseComponent.menu] 过滤后仍然包含'智慧技术监管'的菜单数量={}", targetMenusAfterFilter.size());
+            log.info("[UseComponent.menu] 过滤后仍然包含'业务管理系统'的菜单数量={}", targetMenusAfterFilter.size());
             targetMenusAfterFilter.forEach(m -> {
-                log.info("[UseComponent.menu] 过滤后'智慧技术监管'菜单：ID={}, 名称={}, 应用ID={}", 
+                log.info("[UseComponent.menu] 过滤后'业务管理系统'菜单：ID={}, 名称={}, 应用ID={}", 
                         m.getId(), m.getName(), m.getJvsAppId());
             });
         } else {
-            log.warn("[UseComponent.menu] 过滤后'智慧技术监管'菜单已被完全过滤");
+            log.warn("[UseComponent.menu] 过滤后'业务管理系统'菜单已被完全过滤");
         }
         
         list.addAll(menus);

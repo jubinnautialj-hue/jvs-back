@@ -275,6 +275,7 @@ public class FlowTaskManageController {
 
         List<String> appIds = tree.stream().map(x -> String.valueOf(x.getId())).collect(Collectors.toList());
         log.info("[{}] 提取应用ID列表耗时: {}ms, 应用数量: {}", traceId, System.currentTimeMillis() - menuStart, appIds.size());
+        log.info("[{}] 提取应用appIds为: {}", appIds);
 
         //组装查询条件
         long queryBuildStart = System.currentTimeMillis();

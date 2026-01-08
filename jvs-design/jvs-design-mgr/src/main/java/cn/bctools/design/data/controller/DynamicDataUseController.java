@@ -1101,8 +1101,7 @@ public class DynamicDataUseController {
             log.info("[分页查询] 解析页面设计JSON耗时: {}ms", System.currentTimeMillis() - parsePageStart);
             //如果关键字查询条件不为空的时候
             if (ObjectNull.isNotNull(queryPageDto.getKeywords(), pageDesignHtml)) {
-                List<QueryConditionDto> list =
-                        pageDesignHtml.getDataPage().getAutoTableFields().stream().filter(DataTableFieldDesignHtml::getShow).map(e -> new QueryConditionDto().setFieldKey(e.getAliasColumnName()).setEnabledQueryTypes(DataQueryType.like).setValue(queryPageDto.getKeywords().trim())).collect(Collectors.toList());
+                List<QueryConditionDto> list = pageDesignHtml.getDataPage().getAutoTableFields().stream().filter(DataTableFieldDesignHtml::getShow).map(e -> new QueryConditionDto().setFieldKey(e.getAliasColumnName()).setEnabledQueryTypes(DataQueryType.like).setValue(queryPageDto.getKeywords().trim())).collect(Collectors.toList());
                 queryConditions.addAll(list);
             }
             if (StringUtils.isNotBlank(designId) && ObjectNull.isNotNull(pageDesignHtml)) {
@@ -1236,11 +1235,7 @@ public class DynamicDataUseController {
             }
         }
         //删除多余的字段
-        collectMap.keySet().
-
-                removeIf(e ->
-
-                {
+        collectMap.keySet().removeIf(e ->{
                     if (ObjectNull.isNull(queryField)) {
                         return false;
                     } else {
@@ -1270,25 +1265,11 @@ public class DynamicDataUseController {
         }
         // 条件值转换
         long convertStart = System.currentTimeMillis();
-        queryGroupConditions.stream()
-                        .
-
-                flatMap(Collection::stream)
-                        .
-
-                forEach(condition ->
-
-                        convertQueryValue(condition, collectMap));
+        queryGroupConditions.stream().flatMap(Collection::stream).forEach(condition ->convertQueryValue(condition, collectMap));
         log.info("[分页查询] 条件值转换耗时: {}ms", System.currentTimeMillis() - convertStart);
 
         Page<DynamicDataPo> page = new Page<>(queryPageDto.getCurrent(), queryPageDto.getSize());
-        collect.addAll(dataFieldService.getDoNotShowFields().
-
-                stream().
-
-                map(DataFieldPo::getFieldKey).
-
-                collect(Collectors.toList()));
+        collect.addAll(dataFieldService.getDoNotShowFields().stream().map(DataFieldPo::getFieldKey).collect(Collectors.toList()));
         if (ObjectNull.isNotNull(treeQuery.get())) {
             if (!queryGroupConditions.stream().flatMap(Collection::stream).filter(e -> e.getFieldKey().equals(treeQuery.get().getFieldKey())).findFirst().isPresent()) {
                 if (!queryGroupConditions.stream().flatMap(Collection::stream).filter(e -> e.getFieldKey().equals(treeTitleName.get())).findFirst().isPresent()) {
@@ -1460,10 +1441,8 @@ public class DynamicDataUseController {
             
             // 优化：批量预加载关联字段数据，避免N+1查询
             long preloadStart = System.currentTimeMillis();
-            Map<String, Map<String, Map<String, Object>>> preloadedDataCache = 
-                batchPreloadRelatedFieldData(allDataList, fieldBasicsHtmls, appId);
-            log.info("[树形结构-批量查询] 关联数据预加载完成，耗时: {}ms, 缓存大小: {}", 
-                System.currentTimeMillis() - preloadStart, preloadedDataCache.size());
+            Map<String, Map<String, Map<String, Object>>> preloadedDataCache = batchPreloadRelatedFieldData(allDataList, fieldBasicsHtmls, appId);
+            log.info("[树形结构-批量查询] 关联数据预加载完成，耗时: {}ms, 缓存大小: {}", System.currentTimeMillis() - preloadStart, preloadedDataCache.size());
             
             // 使用预加载的数据进行回显，避免逐条查询数据库
             SystemThreadLocal.set("PRELOADED_DATA_CACHE", preloadedDataCache);
@@ -1647,8 +1626,7 @@ public class DynamicDataUseController {
                     continue;
                 }
                 
-                log.info("[批量预加载] 字段[{}]需要查询{}条关联数据，关联模型: {}", 
-                    fieldKey, allIds.size(), formId);
+                log.info("[批量预加载] 字段[{}]需要查询{}条关联数据，关联模型: {}", fieldKey, allIds.size(), formId);
                 
                 // 批量查询关联数据
                 List<String> queryFields = Arrays.asList("id", labelField);
@@ -1663,8 +1641,7 @@ public class DynamicDataUseController {
                 SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
                 
                 try {
-                    List<Map<String, Object>> relatedDataList = 
-                        dynamicDataService.queryList(formId, queryFields, queryCondition);
+                    List<Map<String, Object>> relatedDataList = dynamicDataService.queryList(formId, queryFields, queryCondition);
                     
                     // 将查询结果缓存到Map中
                     Map<String, Object> relatedDataMap = new HashMap<>();
@@ -1677,13 +1654,12 @@ public class DynamicDataUseController {
                             ));
                     }
                     
-                    // 存储到缓存中：结构为 fieldKey -> formId -> (dataId -> dataObject)
-                    Map<String, Map<String, Object>> formIdMap = preloadedDataCache
-                        .computeIfAbsent(fieldKey, k -> new HashMap<>());
+                    // 存储到缓存中：结构为 prop -> formId -> (dataId -> dataObject)
+                    // 注意：使用 field.getProp() 作为key，与ISelectorDataHandler中的读取保持一致
+                    Map<String, Map<String, Object>> formIdMap = preloadedDataCache.computeIfAbsent(field.getProp(), k -> new HashMap<>());
                     formIdMap.put(formId, relatedDataMap);
                     
-                    log.info("[批量预加载] 字段[{}]预加载完成，加载{}条数据", 
-                        fieldKey, relatedDataMap.size());
+                    log.info("[批量预加载] 字段[{}]预加载完成，加载{}条数据", field.getProp(), relatedDataMap.size());
                         
                 } finally {
                     SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
@@ -1691,7 +1667,7 @@ public class DynamicDataUseController {
                 }
                 
             } catch (Exception e) {
-                log.error("[批量预加载] 字段[{}]预加载失败: {}", field.getFieldKey(), e.getMessage(), e);
+                log.error("[批量预加载] 字段[{}]预加载失败: {}", field.getProp(), e.getMessage(), e);
             }
         }
         
