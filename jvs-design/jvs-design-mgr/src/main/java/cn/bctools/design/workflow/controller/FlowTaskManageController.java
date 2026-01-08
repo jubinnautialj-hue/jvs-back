@@ -107,7 +107,7 @@ public class FlowTaskManageController {
             log.info("用户没有可访问的应用，返回空结果");
             return R.ok();
         }
-
+        log.info("查询用户应用菜单返回appIds: {}", appIds);
         // 构建查询条件
         long queryStart = System.currentTimeMillis();
         LambdaQueryWrapper<FlowTask> wrapper = Wrappers.<FlowTask>lambdaQuery()
