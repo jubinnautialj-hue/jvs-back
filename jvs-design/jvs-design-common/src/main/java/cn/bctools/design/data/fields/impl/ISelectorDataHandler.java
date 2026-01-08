@@ -5,12 +5,15 @@ import cn.bctools.auth.api.dto.SysDictItemDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
 import cn.bctools.design.data.fields.DataFieldHandler;
+import cn.bctools.design.data.fields.IDataFieldHandler;
 import cn.bctools.design.data.fields.dto.QueryConditionDto;
 import cn.bctools.design.data.fields.dto.enums.FormDataTypeEnum;
 import cn.bctools.design.data.fields.dto.form.FormValueHtml;
 import cn.bctools.design.data.fields.dto.form.MultipleHtml;
 import cn.bctools.design.data.fields.enums.DataQueryType;
 import cn.bctools.design.data.service.DynamicDataService;
+import cn.bctools.design.entity.DataModelPo;
+import cn.bctools.design.service.DataModelService;
 import cn.bctools.design.rule.RuleStartUtils;
 import cn.bctools.design.rule.entity.RuleDesignPo;
 import cn.bctools.design.rule.entity.RunLogPo;
@@ -380,6 +383,15 @@ public interface ISelectorDataHandler {
             if (ObjectNull.isNull(list)) {
                 log.warn("[回显优化-降级] 字段[{}]缓存未命中，降级为单条查询。formId: {}, dataId: {}", 
                     selectItem.getProp(), fromId, data);
+                
+                // 检测是否是系统扩展字段（部门/用户/角色/岗位），如果是则从对应的Handler处理
+                IDataFieldHandler extensionHandler = tryGetExtensionHandler(selectItem, fromId);
+                if (ObjectNull.isNotNull(extensionHandler)) {
+                    log.info("[回显优化-智能识别] 字段[{}]识别为系统扩展字段，转由{}处理", 
+                        selectItem.getProp(), extensionHandler.getClass().getSimpleName());
+                    return extensionHandler.getEchoValue(selectItem, data, override, lineData, paths);
+                }
+                
                 //需要跳过数据权限，避免
                 DynamicDataUtils.freePermit();
                 QueryConditionDto queryConditionDto = new QueryConditionDto();
@@ -463,6 +475,56 @@ public interface ISelectorDataHandler {
             }
         }
         return data;
+    }
+
+    /**
+     * 尝试获取系统扩展字段的Handler（部门/用户/角色/岗位）
+     * 通过formId匹配对应的数据模型，判断是否为系统扩展字段
+     * 
+     * @param selectItem 字段配置
+     * @param formId 关联模型ID
+     * @return 对应的Handler，如果不是系统扩展字段则返回null
+     */
+    private IDataFieldHandler tryGetExtensionHandler(MultipleHtml selectItem, String formId) {
+        if (ObjectNull.isNull(formId)) {
+            return null;
+        }
+        
+        try {
+            // 查询数据模型信息，判断是否为系统扩展数据
+            DataModelService dataModelService = SpringContextUtil.getBean(DataModelService.class);
+            DataModelPo modelPo = dataModelService.getById(formId);
+            
+            if (ObjectNull.isNull(modelPo)) {
+                return null;
+            }
+            
+            String modelName = modelPo.getName();
+            if (ObjectNull.isNull(modelName)) {
+                return null;
+            }
+            
+            // 根据模型名称匹配系统扩展字段
+            // 注意：这里的匹配规则可能需要根据实际业务调整
+            if (modelName.contains("部门") || modelName.equalsIgnoreCase("department") || modelName.equalsIgnoreCase("dept")) {
+                log.debug("[智能识别] 模型[{}({})]识别为部门数据", modelName, formId);
+                return SpringContextUtil.getBean("departmentFieldHandler", IDataFieldHandler.class);
+            } else if (modelName.contains("用户") || modelName.equalsIgnoreCase("user")) {
+                log.debug("[智能识别] 模型[{}({})]识别为用户数据", modelName, formId);
+                return SpringContextUtil.getBean("userFieldHandler", IDataFieldHandler.class);
+            } else if (modelName.contains("角色") || modelName.equalsIgnoreCase("role")) {
+                log.debug("[智能识别] 模型[{}({})]识别为角色数据", modelName, formId);
+                return SpringContextUtil.getBean("roleFieldHandler", IDataFieldHandler.class);
+            } else if (modelName.contains("岗位") || modelName.equalsIgnoreCase("job")) {
+                log.debug("[智能识别] 模型[{}({})]识别为岗位数据", modelName, formId);
+                return SpringContextUtil.getBean("jobFieldHandler", IDataFieldHandler.class);
+            }
+            
+        } catch (Exception e) {
+            log.warn("[智能识别] 获取系统扩展Handler失败: {}", e.getMessage());
+        }
+        
+        return null;
     }
 
 
