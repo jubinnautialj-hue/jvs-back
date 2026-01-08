@@ -378,6 +378,8 @@ public interface ISelectorDataHandler {
             
             // 如果缓存未命中，则进行单条查询（兼容老逻辑）
             if (ObjectNull.isNull(list)) {
+                log.warn("[回显优化-降级] 字段[{}]缓存未命中，降级为单条查询。formId: {}, dataId: {}", 
+                    selectItem.getProp(), fromId, data);
                 //需要跳过数据权限，避免
                 DynamicDataUtils.freePermit();
                 QueryConditionDto queryConditionDto = new QueryConditionDto();

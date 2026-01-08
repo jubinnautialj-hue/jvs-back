@@ -2,6 +2,9 @@ package cn.bctools.design.data.controller;
 
 import cn.bctools.ai.api.JvsAiDatasetApi;
 import cn.bctools.auth.api.api.AuthDeptServiceApi;
+import cn.bctools.auth.api.api.AuthUserServiceApi;
+import cn.bctools.auth.api.api.AuthRoleServiceApi;
+import cn.bctools.auth.api.api.AuthJobServiceApi;
 import cn.bctools.auth.api.dto.SysDeptDto;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.*;
@@ -237,6 +240,9 @@ public class DynamicDataUseController {
     CascaderFieldHandler cascaderFieldHandler;
     JvsTreeService jvsTreeService;
     AuthDeptServiceApi authDeptServiceApi;
+    AuthUserServiceApi authUserServiceApi;
+    AuthRoleServiceApi authRoleServiceApi;
+    AuthJobServiceApi authJobServiceApi;
     /**
      * The Field handler map.
      */
@@ -1579,10 +1585,26 @@ public class DynamicDataUseController {
         
         Map<String, Map<String, Map<String, Object>>> preloadedDataCache = new HashMap<>();
         
+        // ========== 第一步：预加载MySQL系统数据（部门、用户、角色、岗位） ==========
+        // 提前加载到ThreadLocal，避免后续echo时重复远程调用
+        preloadSystemExtensionData(fieldBasicsHtmls);
+        
+        // ========== 第二步：预加载MongoDB数据模型数据 ==========
+        
         // 过滤出需要关联查询的字段（下拉选择、级联选择等）
+        // 排除系统扩展字段（department、user、role、job），这些字段通过各自的Handler从MySQL获取数据
         List<FieldBasicsHtml> relatedFields = fieldBasicsHtmls.stream()
             .filter(field -> {
                 DataFieldType type = field.getType();
+                // 排除系统扩展字段（这些字段从MySQL获取，不需要从MongoDB预加载）
+                if (type == DataFieldType.department || 
+                    type == DataFieldType.user || 
+                    type == DataFieldType.role || 
+                    type == DataFieldType.job) {
+                    log.debug("[批量预加载] 跳过系统扩展字段[{}]，类型: {}", field.getProp(), type.getDesc());
+                    return false;
+                }
+                // 只处理下拉选择、级联选择、单选等类型
                 return type == DataFieldType.select || 
                        type == DataFieldType.cascader || 
                        type == DataFieldType.radio;
@@ -1635,7 +1657,8 @@ public class DynamicDataUseController {
                     continue;
                 }
                 
-                log.info("[批量预加载] 字段[{}]需要查询{}条关联数据，关联模型: {}", fieldKey, allIds.size(), formId);
+                log.info("[批量预加载] 字段[{}]需要查询{}条关联数据，关联模型: {}，ID列表: {}", 
+                    fieldKey, allIds.size(), formId, allIds.size() <= 10 ? allIds : allIds.stream().limit(10).collect(Collectors.toList()) + "...（共" + allIds.size() + "条）");
                 
                 // 批量查询关联数据
                 List<String> queryFields = Arrays.asList("id", labelField);
@@ -1668,7 +1691,13 @@ public class DynamicDataUseController {
                     Map<String, Map<String, Object>> formIdMap = preloadedDataCache.computeIfAbsent(field.getProp(), k -> new HashMap<>());
                     formIdMap.put(formId, relatedDataMap);
                     
-                    log.info("[批量预加载] 字段[{}]预加载完成，加载{}条数据", field.getProp(), relatedDataMap.size());
+                    if (relatedDataMap.isEmpty()) {
+                        log.warn("[批量预加载] 字段[{}]预加载完成但查询结果为空！期望{}条，实际0条。可能原因：数据不存在或权限过滤", 
+                            field.getProp(), allIds.size());
+                    } else {
+                        log.info("[批量预加载] 字段[{}]预加载完成，期望{}条，实际加载{}条数据", 
+                            field.getProp(), allIds.size(), relatedDataMap.size());
+                    }
                         
                 } finally {
                     SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
@@ -1682,6 +1711,119 @@ public class DynamicDataUseController {
         
         log.info("[批量预加载] 总计预加载{}个字段的关联数据", preloadedDataCache.size());
         return preloadedDataCache;
+    }
+    
+    /**
+     * 预加载MySQL系统扩展数据（部门、用户、角色、岗位）
+     * 这些数据通过Feign调用jvs-auth服务获取，提前加载到ThreadLocal避免N+1远程调用
+     * 
+     * @param fieldBasicsHtmls 字段配置列表
+     */
+    private void preloadSystemExtensionData(List<FieldBasicsHtml> fieldBasicsHtmls) {
+        long startTime = System.currentTimeMillis();
+        int preloadedCount = 0;
+        
+        // 检查是否需要预加载各类系统数据
+        boolean needDept = false;
+        boolean needUser = false;
+        boolean needRole = false;
+        boolean needJob = false;
+        
+        for (FieldBasicsHtml field : fieldBasicsHtmls) {
+            DataFieldType type = field.getType();
+            if (type == DataFieldType.department) {
+                needDept = true;
+            } else if (type == DataFieldType.user) {
+                needUser = true;
+            } else if (type == DataFieldType.role) {
+                needRole = true;
+            } else if (type == DataFieldType.job) {
+                needJob = true;
+            }
+        }
+        
+        // 预加载部门数据
+        if (needDept) {
+            try {
+                if (ObjectNull.isNull(SystemThreadLocal.get(DataFieldType.department.getDesc()))) {
+                    long deptStart = System.currentTimeMillis();
+                    List deptList = authDeptServiceApi.getAll().getData();
+                    SystemThreadLocal.set(DataFieldType.department.getDesc(), deptList);
+                    preloadedCount++;
+                    log.info("[系统数据预加载] 部门数据预加载完成，加载{}条数据，耗时: {}ms", 
+                        ObjectNull.isNotNull(deptList) ? deptList.size() : 0, 
+                        System.currentTimeMillis() - deptStart);
+                } else {
+                    log.debug("[系统数据预加载] 部门数据已存在ThreadLocal缓存中，跳过预加载");
+                }
+            } catch (Exception e) {
+                log.error("[系统数据预加载] 部门数据预加载失败: {}", e.getMessage(), e);
+            }
+        }
+        
+        // 预加载用户数据
+        if (needUser) {
+            try {
+                if (ObjectNull.isNull(SystemThreadLocal.get(DataFieldType.user.getDesc()))) {
+                    long userStart = System.currentTimeMillis();
+                    List userList = authUserServiceApi.users().getData();  // 注意：用户API使用users()方法
+                    SystemThreadLocal.set(DataFieldType.user.getDesc(), userList);
+                    preloadedCount++;
+                    log.info("[系统数据预加载] 用户数据预加载完成，加载{}条数据，耗时: {}ms", 
+                        ObjectNull.isNotNull(userList) ? userList.size() : 0, 
+                        System.currentTimeMillis() - userStart);
+                } else {
+                    log.debug("[系统数据预加载] 用户数据已存在ThreadLocal缓存中，跳过预加载");
+                }
+            } catch (Exception e) {
+                log.error("[系统数据预加载] 用户数据预加载失败: {}", e.getMessage(), e);
+            }
+        }
+        
+        // 预加载角色数据
+        if (needRole) {
+            try {
+                if (ObjectNull.isNull(SystemThreadLocal.get(DataFieldType.role.getDesc()))) {
+                    long roleStart = System.currentTimeMillis();
+                    List roleList = authRoleServiceApi.getAll().getData();
+                    SystemThreadLocal.set(DataFieldType.role.getDesc(), roleList);
+                    preloadedCount++;
+                    log.info("[系统数据预加载] 角色数据预加载完成，加载{}条数据，耗时: {}ms", 
+                        ObjectNull.isNotNull(roleList) ? roleList.size() : 0, 
+                        System.currentTimeMillis() - roleStart);
+                } else {
+                    log.debug("[系统数据预加载] 角色数据已存在ThreadLocal缓存中，跳过预加载");
+                }
+            } catch (Exception e) {
+                log.error("[系统数据预加载] 角色数据预加载失败: {}", e.getMessage(), e);
+            }
+        }
+        
+        // 预加载岗位数据  
+        if (needJob) {
+            try {
+                if (ObjectNull.isNull(SystemThreadLocal.get(DataFieldType.job.getDesc()))) {
+                    long jobStart = System.currentTimeMillis();
+                    List jobList = authJobServiceApi.getAll().getData();
+                    SystemThreadLocal.set(DataFieldType.job.getDesc(), jobList);
+                    preloadedCount++;
+                    log.info("[系统数据预加载] 岗位数据预加载完成，加载{}条数据，耗时: {}ms", 
+                        ObjectNull.isNotNull(jobList) ? jobList.size() : 0, 
+                        System.currentTimeMillis() - jobStart);
+                } else {
+                    log.debug("[系统数据预加载] 岗位数据已存在ThreadLocal缓存中，跳过预加载");
+                }
+            } catch (Exception e) {
+                log.error("[系统数据预加载] 岗位数据预加载失败: {}", e.getMessage(), e);
+            }
+        }
+        
+        if (preloadedCount > 0) {
+            log.info("[系统数据预加载] 完成{}类系统数据预加载，总耗时: {}ms", 
+                preloadedCount, System.currentTimeMillis() - startTime);
+        } else {
+            log.debug("[系统数据预加载] 没有需要预加载的系统数据或数据已缓存");
+        }
     }
 
     private List<List<QueryConditionDto>> getQueryConditions(List<List<QueryConditionDto>> conditions, Map<String, FieldBasicsHtml> collectMap, Object notification) {
