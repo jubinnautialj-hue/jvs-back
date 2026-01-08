@@ -12,8 +12,8 @@ import cn.bctools.design.data.fields.dto.form.FormValueHtml;
 import cn.bctools.design.data.fields.dto.form.MultipleHtml;
 import cn.bctools.design.data.fields.enums.DataQueryType;
 import cn.bctools.design.data.service.DynamicDataService;
-import cn.bctools.design.entity.DataModelPo;
-import cn.bctools.design.service.DataModelService;
+import cn.bctools.design.data.entity.DataModelPo;
+import cn.bctools.design.data.service.DataModelService;
 import cn.bctools.design.rule.RuleStartUtils;
 import cn.bctools.design.rule.entity.RuleDesignPo;
 import cn.bctools.design.rule.entity.RunLogPo;
@@ -389,7 +389,8 @@ public interface ISelectorDataHandler {
                 if (ObjectNull.isNotNull(extensionHandler)) {
                     log.info("[回显优化-智能识别] 字段[{}]识别为系统扩展字段，转由{}处理", 
                         selectItem.getProp(), extensionHandler.getClass().getSimpleName());
-                    return extensionHandler.getEchoValue(selectItem, data, override, lineData, paths);
+                    // 调用对应Handler的getEchoValue方法，使用false和lineData作为参数
+                    return extensionHandler.getEchoValue(selectItem, data, false, lineData);
                 }
                 
                 //需要跳过数据权限，避免
@@ -485,7 +486,7 @@ public interface ISelectorDataHandler {
      * @param formId 关联模型ID
      * @return 对应的Handler，如果不是系统扩展字段则返回null
      */
-    private IDataFieldHandler tryGetExtensionHandler(MultipleHtml selectItem, String formId) {
+    default IDataFieldHandler tryGetExtensionHandler(MultipleHtml selectItem, String formId) {
         if (ObjectNull.isNull(formId)) {
             return null;
         }
@@ -508,16 +509,37 @@ public interface ISelectorDataHandler {
             // 注意：这里的匹配规则可能需要根据实际业务调整
             if (modelName.contains("部门") || modelName.equalsIgnoreCase("department") || modelName.equalsIgnoreCase("dept")) {
                 log.debug("[智能识别] 模型[{}({})]识别为部门数据", modelName, formId);
-                return SpringContextUtil.getBean("departmentFieldHandler", IDataFieldHandler.class);
+                // 使用类型获取Bean，避免Bean名称问题
+                Map<String, IDataFieldHandler> beans = SpringContextUtil.getApplicationContext().getBeansOfType(IDataFieldHandler.class);
+                for (IDataFieldHandler handler : beans.values()) {
+                    if (handler.getClass().getSimpleName().equals("DepartmentFieldHandler")) {
+                        return handler;
+                    }
+                }
             } else if (modelName.contains("用户") || modelName.equalsIgnoreCase("user")) {
                 log.debug("[智能识别] 模型[{}({})]识别为用户数据", modelName, formId);
-                return SpringContextUtil.getBean("userFieldHandler", IDataFieldHandler.class);
+                Map<String, IDataFieldHandler> beans = SpringContextUtil.getApplicationContext().getBeansOfType(IDataFieldHandler.class);
+                for (IDataFieldHandler handler : beans.values()) {
+                    if (handler.getClass().getSimpleName().equals("UserFieldHandler")) {
+                        return handler;
+                    }
+                }
             } else if (modelName.contains("角色") || modelName.equalsIgnoreCase("role")) {
                 log.debug("[智能识别] 模型[{}({})]识别为角色数据", modelName, formId);
-                return SpringContextUtil.getBean("roleFieldHandler", IDataFieldHandler.class);
+                Map<String, IDataFieldHandler> beans = SpringContextUtil.getApplicationContext().getBeansOfType(IDataFieldHandler.class);
+                for (IDataFieldHandler handler : beans.values()) {
+                    if (handler.getClass().getSimpleName().equals("RoleFieldHandler")) {
+                        return handler;
+                    }
+                }
             } else if (modelName.contains("岗位") || modelName.equalsIgnoreCase("job")) {
                 log.debug("[智能识别] 模型[{}({})]识别为岗位数据", modelName, formId);
-                return SpringContextUtil.getBean("jobFieldHandler", IDataFieldHandler.class);
+                Map<String, IDataFieldHandler> beans = SpringContextUtil.getApplicationContext().getBeansOfType(IDataFieldHandler.class);
+                for (IDataFieldHandler handler : beans.values()) {
+                    if (handler.getClass().getSimpleName().equals("JobFieldHandler")) {
+                        return handler;
+                    }
+                }
             }
             
         } catch (Exception e) {
