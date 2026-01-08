@@ -365,8 +365,14 @@ public interface ISelectorDataHandler {
                                 list.add((Map<String, Object>) cachedDataObj);
                             }
                         }
-                        log.debug("[回显优化] 字段[{}]使用预加载缓存，命中{}条数据", selectItem.getProp(), list.size());
+                        if (list.size() > 0) {
+                            log.debug("[回显优化] 字段[{}]使用预加载缓存，命中{}  条数据", selectItem.getProp(), list.size());
+                        }
+                    } else {
+                        log.warn("[回显优化] 字段[{}]缓存中未找到模型id: {}", selectItem.getProp(), fromId);
                     }
+                } else {
+                    log.warn("[回显优化] 字段[{}]未找到预加载缓存", selectItem.getProp());
                 }
             }
             

@@ -1448,16 +1448,25 @@ public class DynamicDataUseController {
             SystemThreadLocal.set("PRELOADED_DATA_CACHE", preloadedDataCache);
             try {
                 long echoStart = System.currentTimeMillis();
+                log.info("[树形结构-批量查询] 开始echo处理，数据量: {}条", allDataList.size());
+                
+                // 逐条echo处理
                 allDataList = allDataList.stream()
                     .map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false))
                     .collect(Collectors.toList());
-                log.info("[树形结构-批量查询] echo完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
+                    
+                long echoTotalDuration = System.currentTimeMillis() - echoStart;
+                log.info("[树形结构-批量查询] echo完成，耗时: {}ms，平均每条: {}ms", 
+                    echoTotalDuration, echoTotalDuration / allDataList.size());
             } finally {
                 SystemThreadLocal.remove("PRELOADED_DATA_CACHE");
             }
             long handleStart = System.currentTimeMillis();
+            log.info("[树形结构-批量查询] 开始handleButtonInfo处理，数据量: {}条", allDataList.size());
             designHandler.handleButtonInfo(allDataList, EnvConstant.PAGE_BUTTON_DISPLAY);
-            log.info("[树形结构-批量查询] handleButtonInfo完成，耗时: {}ms", System.currentTimeMillis() - handleStart);
+            long handleDuration = System.currentTimeMillis() - handleStart;
+            log.info("[树形结构-批量查询] handleButtonInfo完成，耗时: {}ms，平均每条: {}ms", 
+                handleDuration, handleDuration / allDataList.size());
             // 数据转换和回显
             long echoDisplayStart = System.currentTimeMillis();
             dynamicDataService.echoModelDisplay(appId, allDataList, modelDisplayMap);

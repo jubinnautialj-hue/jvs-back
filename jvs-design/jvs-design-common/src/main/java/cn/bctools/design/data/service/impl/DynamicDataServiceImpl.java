@@ -2024,8 +2024,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
         long totalDuration = System.currentTimeMillis() - methodStart;
 
-        // 单次echo调用超过100ms时记录详细日志
-        if (totalDuration > 100) {
+        // 单次echo调用超过30ms时记录详细日志（降低阈值以便更好地发现性能问题）
+        if (totalDuration > 30) {
             log.warn("[Echo性能] 单条数据echo耗时过长: {}ms - 数据ID: {}, Tab处理: {}ms, 字段回显: {}ms, 字段类型耗时: {}",
                     totalDuration, data.get("id"), step1Duration, step2Duration, fieldHandlerDurations);
         }
