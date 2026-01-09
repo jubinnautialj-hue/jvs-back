@@ -340,8 +340,7 @@ public interface ISelectorDataHandler {
             
             // 优先尝试从预加载缓存中获取数据，避免N+1查询
             @SuppressWarnings("unchecked")
-            Map<String, Map<String, Map<String, Object>>> preloadedCache = 
-                (Map<String, Map<String, Map<String, Object>>>) SystemThreadLocal.get("PRELOADED_DATA_CACHE");
+            Map<String, Map<String, Map<String, Object>>> preloadedCache = (Map<String, Map<String, Map<String, Object>>>) SystemThreadLocal.get("PRELOADED_DATA_CACHE");
             
             List<Map<String, Object>> list = null;
             
