@@ -338,7 +338,9 @@ public interface ISelectorDataHandler {
             arrayList.add("id");
             arrayList.add(selectItem.getProps().getLabel());
             
-            // 优先尝试从预加载缓存中获取数据，避免N+1查询
+            // 缓存命中率统计
+            int totalCount = 0;
+            int hitCount = 0;
             @SuppressWarnings("unchecked")
             Map<String, Map<String, Map<String, Object>>> preloadedCache = (Map<String, Map<String, Map<String, Object>>>) SystemThreadLocal.get("PRELOADED_DATA_CACHE");
             
@@ -346,32 +348,43 @@ public interface ISelectorDataHandler {
             
             if (ObjectNull.isNotNull(preloadedCache)) {
                 // 从缓存中获取数据
-                Map<String, Map<String, Object>> fieldCache = preloadedCache.get(selectItem.getProp());
+                String cacheKey = selectItem.getProp();
+                Map<String, Map<String, Object>> fieldCache = preloadedCache.get(cacheKey);
                 if (ObjectNull.isNotNull(fieldCache)) {
                     Map<String, Object> modelCache = fieldCache.get(fromId);
                     if (ObjectNull.isNotNull(modelCache)) {
                         // 从缓存中查找数据
                         list = new ArrayList<>();
                         if (data instanceof Collection) {
-                            for (Object id : (Collection<?>) data) {
+                            Collection<?> dataCollection = (Collection<?>) data;
+                            totalCount = dataCollection.size();
+                            for (Object id : dataCollection) {
                                 Object cachedDataObj = modelCache.get(String.valueOf(id));
                                 if (ObjectNull.isNotNull(cachedDataObj) && cachedDataObj instanceof Map) {
                                     list.add((Map<String, Object>) cachedDataObj);
+                                    hitCount++;
                                 }
                             }
                         } else {
+                            totalCount = 1;
                             Object cachedDataObj = modelCache.get(String.valueOf(data));
                             if (ObjectNull.isNotNull(cachedDataObj) && cachedDataObj instanceof Map) {
                                 list.add((Map<String, Object>) cachedDataObj);
+                                hitCount++;
                             }
                         }
-                        log.debug("[回显优化] 字段[{}]使用预加载缓存，命中{}条数据", selectItem.getProp(), list.size());
+                        log.info("[回显优化] 字段[{}]使用预加载缓存，缓存key[{}]，命中{}/{}条数据", selectItem.getProp(), cacheKey, hitCount, totalCount);
+                    } else {
+                        log.debug("[回显优化] 字段[{}]缓存未命中，关联模型[{}]不存在", selectItem.getProp(), fromId);
                     }
+                } else {
+                    log.debug("[回显优化] 字段[{}]缓存未命中，缓存key[{}]不存在", selectItem.getProp(), cacheKey);
                 }
             }
             
             // 如果缓存未命中，则进行单条查询（兼容老逻辑）
             if (ObjectNull.isNull(list)) {
+                log.info("[回显优化] 字段[{}]预加载缓存未命中，执行数据库查询", selectItem.getProp());
                 //需要跳过数据权限，避免
                 DynamicDataUtils.freePermit();
                 QueryConditionDto queryConditionDto = new QueryConditionDto();

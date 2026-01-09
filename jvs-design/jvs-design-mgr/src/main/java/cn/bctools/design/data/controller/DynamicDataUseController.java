@@ -1638,9 +1638,16 @@ public class DynamicDataUseController {
                 String fieldKey = field.getFieldKey();
                 String formId = (String) JvsJsonPath.read(field.getDesignJson(), "$.formId");
                 String labelField = (String) JvsJsonPath.read(field.getDesignJson(), "$.props.label");
-                
+
                 if (ObjectNull.isNull(formId, labelField)) {
                     continue;
+                }
+
+                // 获取字段的prop值，用于缓存key（确保与ISelectorDataHandler中使用的key一致）
+                String fieldProp = field.getProp();
+                if (ObjectNull.isNull(fieldProp)) {
+                    // 如果prop为空，回退使用fieldKey
+                    fieldProp = fieldKey;
                 }
                 
                 // 收集所有需要查询的ID
@@ -1688,11 +1695,12 @@ public class DynamicDataUseController {
                                 (v1, v2) -> v1
                             ));
                     }
-                    // 存储到缓存中：结构为 fieldKey -> formId -> (dataId -> dataObject)
-                    Map<String, Map<String, Object>> formIdMap = preloadedDataCache.computeIfAbsent(fieldKey, k -> new HashMap<>());
+                    // 存储到缓存中：结构为 fieldProp -> formId -> (dataId -> dataObject)
+                    // 使用fieldProp作为key，确保与ISelectorDataHandler中获取缓存时使用的key一致
+                    Map<String, Map<String, Object>> formIdMap = preloadedDataCache.computeIfAbsent(fieldProp, k -> new HashMap<>());
                     formIdMap.put(formId, relatedDataMap);
-                    
-                    log.info("[批量预加载] 字段[{}]预加载完成，加载{}条数据", fieldKey, relatedDataMap.size());
+
+                    log.info("[批量预加载] 字段[{}]预加载完成，使用缓存key[{}]，加载{}条数据", fieldKey, fieldProp, relatedDataMap.size());
                         
                 } finally {
                     SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
