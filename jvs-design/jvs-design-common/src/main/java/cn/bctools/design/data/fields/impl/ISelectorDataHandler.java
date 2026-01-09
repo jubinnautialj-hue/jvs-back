@@ -348,11 +348,20 @@ public interface ISelectorDataHandler {
             
             if (ObjectNull.isNotNull(preloadedCache)) {
                 // 从缓存中获取数据
+                // 使用与DynamicDataUseController中相同的逻辑：优先使用prop，为null时回退使用fieldKey
                 String cacheKey = selectItem.getProp();
+                if (ObjectNull.isNull(cacheKey)) {
+                    // 如果prop为空，回退使用fieldKey
+                    cacheKey = selectItem.getFieldKey();
+                    log.debug("[回显优化-调试] 字段[{}]prop为null，回退使用fieldKey={}", selectItem.getFieldKey(), cacheKey);
+                }
+                log.debug("[回显优化-调试] 字段[{}]开始查找缓存，cacheKey={}, fromId={}, data={}", selectItem.getProp(), cacheKey, fromId, data);
                 Map<String, Map<String, Object>> fieldCache = preloadedCache.get(cacheKey);
                 if (ObjectNull.isNotNull(fieldCache)) {
+                    log.debug("[回显优化-调试] 字段[{}]fieldCache存在，包含{}个formId", selectItem.getProp(), fieldCache.size());
                     Map<String, Object> modelCache = fieldCache.get(fromId);
                     if (ObjectNull.isNotNull(modelCache)) {
+                        log.debug("[回显优化-调试] 字段[{}]modelCache存在，包含{}条数据", selectItem.getProp(), modelCache.size());
                         // 从缓存中查找数据
                         list = new ArrayList<>();
                         if (data instanceof Collection) {
@@ -376,10 +385,16 @@ public interface ISelectorDataHandler {
                         log.info("[回显优化] 字段[{}]使用预加载缓存，缓存key[{}]，命中{}/{}条数据", selectItem.getProp(), cacheKey, hitCount, totalCount);
                     } else {
                         log.debug("[回显优化] 字段[{}]缓存未命中，关联模型[{}]不存在", selectItem.getProp(), fromId);
+                        log.warn("[回显优化-调试] 字段[{}]modelCache为null，可能是fromId不匹配，fieldCache中的formId集合: {}", 
+                            selectItem.getProp(), fieldCache.keySet());
                     }
                 } else {
                     log.debug("[回显优化] 字段[{}]缓存未命中，缓存key[{}]不存在", selectItem.getProp(), cacheKey);
+                    log.warn("[回显优化-调试] 字段[{}]fieldCache为null，可能是cacheKey不匹配，preloadedCache中的key集合: {}", 
+                        selectItem.getProp(), preloadedCache.keySet());
                 }
+            } else {
+                log.warn("[回显优化-调试] 字段[{}]preloadedCache为null，ThreadLocal中可能没有设置缓存", selectItem.getProp());
             }
             
             // 如果缓存未命中，则进行单条查询（兼容老逻辑）

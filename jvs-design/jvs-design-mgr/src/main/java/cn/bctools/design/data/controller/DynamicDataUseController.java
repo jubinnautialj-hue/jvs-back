@@ -1670,6 +1670,7 @@ public class DynamicDataUseController {
                 }
                 
                 log.info("[批量预加载] 字段[{}]需要查询{}条关联数据，关联模型: {}", fieldKey, allIds.size(), formId);
+                log.info("[批量预加载-调试] 字段[{}]收集到的ID: {}", fieldKey, allIds);
                 
                 // 批量查询关联数据
                 List<String> queryFields = Arrays.asList("id", labelField);
@@ -1686,6 +1687,14 @@ public class DynamicDataUseController {
                 try {
                     List<Map<String, Object>> relatedDataList = dynamicDataService.queryList(formId, queryFields, queryCondition);
                     
+                    log.info("[批量预加载-调试] 字段[{}]查询结果: {}条", fieldKey, relatedDataList != null ? relatedDataList.size() : 0);
+                    if (relatedDataList != null && !relatedDataList.isEmpty()) {
+                        log.info("[批量预加载-调试] 字段[{}]第一条数据: {}", fieldKey, relatedDataList.get(0));
+                    } else {
+                        log.warn("[批量预加载-调试] 字段[{}]查询返回空，查询条件: formId={}, queryFields={}, allIds={}", 
+                            fieldKey, formId, queryFields, allIds);
+                    }
+                    
                     // 将查询结果缓存到Map中
                     Map<String, Object> relatedDataMap = new HashMap<>();
                     if (ObjectNull.isNotNull(relatedDataList)) {
@@ -1701,6 +1710,8 @@ public class DynamicDataUseController {
                     formIdMap.put(formId, relatedDataMap);
 
                     log.info("[批量预加载] 字段[{}]预加载完成，使用缓存key[{}]，加载{}条数据", fieldKey, fieldProp, relatedDataMap.size());
+                    log.info("[批量预加载-调试] 字段[{}]缓存结构: cacheKey={}, formId={}, dataCount={}", 
+                        fieldKey, fieldProp, formId, relatedDataMap.size());
                         
                 } finally {
                     SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
