@@ -82,12 +82,49 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                 //此处直接跳过数据模型
                 Object o = null;
                 if (showPath) {
-                    Object o1 = SystemThreadLocal.get(cascaderItem.getFormId() + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle());
-                    Map<String, Object> map = null;
-                    List<Map<String, Object>> dictList;
-                    if (ObjectNull.isNotNull(o1)) {
-                        dictList = (List<Map<String, Object>>) o1;
-                    } else {
+                    // 尝试从预加载缓存中获取数据
+                    @SuppressWarnings("unchecked")
+                    Map<String, Map<String, Map<String, Object>>> preloadedCache = (Map<String, Map<String, Map<String, Object>>>) SystemThreadLocal.get("PRELOADED_DATA_CACHE");
+                    
+                    List<Map<String, Object>> dictList = null;
+                    
+                    if (ObjectNull.isNotNull(preloadedCache)) {
+                        // 使用与预加载相同的key逻辑：优先使用prop，为null时回退使用fieldKey
+                        String cacheKey = cascaderItem.getProp();
+                        if (ObjectNull.isNull(cacheKey)) {
+                            cacheKey = cascaderItem.getFieldKey();
+                            log.debug("[级联选择-回显优化] 字段prop为null，回退使用fieldKey={}", cacheKey);
+                        }
+                        
+                        Map<String, Map<String, Object>> fieldCache = preloadedCache.get(cacheKey);
+                        if (ObjectNull.isNotNull(fieldCache)) {
+                            Map<String, Object> modelCache = fieldCache.get(cascaderItem.getFormId());
+                            if (ObjectNull.isNotNull(modelCache) && !modelCache.isEmpty()) {
+                                // 从缓存中构建字典列表
+                                dictList = new ArrayList<>(modelCache.values());
+                                log.info("[级联选择-回显优化] 字段[{}]使用预加载缓存，命中{}条数据", cacheKey, dictList.size());
+                            } else {
+                                log.debug("[级联选择-回显优化] 字段[{}]modelCache为空，fieldCache中的formId: {}", 
+                                    cacheKey, fieldCache.keySet());
+                            }
+                        } else {
+                            log.debug("[级联选择-回显优化] 字段[{}]fieldCache为null，preloadedCache中的key: {}", 
+                                cacheKey, preloadedCache.keySet());
+                        }
+                    }
+                    
+                    // 如果预加载缓存未命中，尝试使用旧的ThreadLocal缓存
+                    if (ObjectNull.isNull(dictList)) {
+                        Object o1 = SystemThreadLocal.get(cascaderItem.getFormId() + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle());
+                        if (ObjectNull.isNotNull(o1)) {
+                            dictList = (List<Map<String, Object>>) o1;
+                            log.debug("[级联选择-回显优化] 字段[{}]使用旧ThreadLocal缓存", cascaderItem.getProp());
+                        }
+                    }
+                    
+                    // 如果都没命中，查询数据库
+                    if (ObjectNull.isNull(dictList)) {
+                        log.warn("[级联选择-回显优化] 字段[{}]缓存未命中，执行数据库查询", cascaderItem.getProp());
                         List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
                         SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
                         List<String> fields = new ArrayList<>();
@@ -95,9 +132,11 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                         fields.add(cascaderItem.getProps().getSecTitle());
                         dictList = dynamicDataService.queryList(cascaderItem.getFormId(), fields, new QueryConditionDto());
                         SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                        // 存入旧的ThreadLocal缓存，兼容其他代码
                         SystemThreadLocal.set(cascaderItem.getFormId() + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle(), dictList);
                     }
-                    map = dictList
+                    
+                    Map<String, Object> map = dictList
                             .stream()
                             .filter(e -> ObjectNull.isNotNull(e.get(cascaderItem.getProps().getLabel())))
                             .collect(Collectors.toMap(e -> e.get("id").toString(), e -> e.get(cascaderItem.getProps().getLabel())));

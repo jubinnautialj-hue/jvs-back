@@ -1638,6 +1638,7 @@ public class DynamicDataUseController {
                 String fieldKey = field.getFieldKey();
                 String formId = (String) JvsJsonPath.read(field.getDesignJson(), "$.formId");
                 String labelField = (String) JvsJsonPath.read(field.getDesignJson(), "$.props.label");
+                DataFieldType fieldType = field.getType();
 
                 if (ObjectNull.isNull(formId, labelField)) {
                     continue;
@@ -1650,34 +1651,41 @@ public class DynamicDataUseController {
                     fieldProp = fieldKey;
                 }
                 
+                // 判断是否是级联选择
+                boolean isCascader = fieldType == DataFieldType.cascader;
+                
                 // 收集所有需要查询的ID
                 Set<String> allIds = new HashSet<>();
-                for (Map<String, Object> data : allDataList) {
-                    Object value = data.get(fieldKey);
-                    if (ObjectNull.isNull(value)) {
-                        continue;
+                if (!isCascader) {
+                    // 非级联选择：收集ID进行IN查询
+                    for (Map<String, Object> data : allDataList) {
+                        Object value = data.get(fieldKey);
+                        if (ObjectNull.isNull(value)) {
+                            continue;
+                        }
+                        
+                        if (value instanceof Collection) {
+                            ((Collection<?>) value).forEach(v -> allIds.add(String.valueOf(v)));
+                        } else {
+                            allIds.add(String.valueOf(value));
+                        }
                     }
                     
-                    if (value instanceof Collection) {
-                        ((Collection<?>) value).forEach(v -> allIds.add(String.valueOf(v)));
-                    } else {
-                        allIds.add(String.valueOf(value));
+                    if (allIds.isEmpty()) {
+                        continue;
                     }
                 }
                 
-                if (allIds.isEmpty()) {
-                    continue;
+                if (isCascader) {
+                    log.info("[批量预加载] 字段[{}]是级联选择，需要查询全表数据，关联模型: {}", fieldKey, formId);
+                } else {
+                    log.info("[批量预加载] 字段[{}]需要查询{}条关联数据，关联模型: {}", fieldKey, allIds.size(), formId);
+                    log.info("[批量预加载-调试] 字段[{}]收集到的ID: {}", fieldKey, allIds);
                 }
                 
-                log.info("[批量预加载] 字段[{}]需要查询{}条关联数据，关联模型: {}", fieldKey, allIds.size(), formId);
-                log.info("[批量预加载-调试] 字段[{}]收集到的ID: {}", fieldKey, allIds);
-                
                 // 批量查询关联数据
-                List<String> queryFields = Arrays.asList("id", labelField);
-                QueryConditionDto queryCondition = new QueryConditionDto();
-                queryCondition.setValue(new ArrayList<>(allIds));
-                queryCondition.setEnabledQueryTypes(DataQueryType.in);  // 使用IN查询
-                queryCondition.setFieldKey("id");
+                List<String> queryFields;
+                List<Map<String, Object>> relatedDataList;
                 
                 // 跳过数据权限
                 DynamicDataUtils.freePermit();
@@ -1685,14 +1693,35 @@ public class DynamicDataUseController {
                 SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
                 
                 try {
-                    List<Map<String, Object>> relatedDataList = dynamicDataService.queryList(formId, queryFields, queryCondition);
+                    if (isCascader) {
+                        // 级联选择：查询全表数据（需要label和secTitle字段）
+                        String secTitleField = (String) JvsJsonPath.read(field.getDesignJson(), "$.props.secTitle");
+                        queryFields = new ArrayList<>();
+                        queryFields.add("id");
+                        queryFields.add(labelField);
+                        if (ObjectNull.isNotNull(secTitleField)) {
+                            queryFields.add(secTitleField);
+                        }
+                        
+                        // 查询全表数据，不带条件
+                        relatedDataList = dynamicDataService.queryList(formId, queryFields, new QueryConditionDto());
+                    } else {
+                        // 下拉框/单选：按ID查询
+                        queryFields = Arrays.asList("id", labelField);
+                        QueryConditionDto queryCondition = new QueryConditionDto();
+                        queryCondition.setValue(new ArrayList<>(allIds));
+                        queryCondition.setEnabledQueryTypes(DataQueryType.in);  // 使用IN查询
+                        queryCondition.setFieldKey("id");
+                        
+                        relatedDataList = dynamicDataService.queryList(formId, queryFields, queryCondition);
+                    }
                     
                     log.info("[批量预加载-调试] 字段[{}]查询结果: {}条", fieldKey, relatedDataList != null ? relatedDataList.size() : 0);
                     if (relatedDataList != null && !relatedDataList.isEmpty()) {
                         log.info("[批量预加载-调试] 字段[{}]第一条数据: {}", fieldKey, relatedDataList.get(0));
                     } else {
-                        log.warn("[批量预加载-调试] 字段[{}]查询返回空，查询条件: formId={}, queryFields={}, allIds={}", 
-                            fieldKey, formId, queryFields, allIds);
+                        log.warn("[批量预加载-调试] 字段[{}]查询返回空，查询条件: formId={}, queryFields={}, isCascader={}, allIds={}", 
+                            fieldKey, formId, queryFields, isCascader, isCascader ? "N/A" : allIds);
                     }
                     
                     // 将查询结果缓存到Map中
