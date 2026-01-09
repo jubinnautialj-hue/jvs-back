@@ -7,10 +7,7 @@ import cn.bctools.auth.api.enums.ModeTypeEnum;
 import cn.bctools.auth.api.enums.PersonnelTypeEnum;
 import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.entity.po.TreePo;
-import cn.bctools.common.utils.BeanToMapUtils;
-import cn.bctools.common.utils.ObjectNull;
-import cn.bctools.common.utils.R;
-import cn.bctools.common.utils.SystemThreadLocal;
+import cn.bctools.common.utils.*;
 import cn.bctools.common.utils.jvs.JvsSystemConfig;
 import cn.bctools.design.config.MultipleMongoConfig;
 import cn.bctools.design.constant.AppConstant;
@@ -184,135 +181,83 @@ public class UseComponent implements AppApi, TreeApi {
      * @return
      */
     public Pair<List<Tree<Object>>, List<JvsMenuVo>> menu(String appId, String userId, boolean mobile, AppVersionTypeEnum mode, JvsApp app) {
-        log.info("[UseComponent.menu] 开始构建菜单，appId={}, userId={}, mobile={}, mode={}, app={}", 
-                appId, userId, mobile, mode, app != null ? app.getId() + "-" + app.getName() : "null");
-        
+        long totalStart = System.currentTimeMillis();
+        log.info("开始构建用户菜单，用户ID: {}, 应用ID: {}, 模式: {}", userId, appId, mode);
+
         List<JvsMenuVo> list = new ArrayList<>();
         Map<String, JvsApp> allAppMap = new HashMap<>(2);
         // 有设计权限的应用
         Map<String, JvsApp> withDesignPermissionAppMap = new HashMap<>();
         // 无设计权限的应用
         Map<String, JvsApp> noDesignPermissionAppMap = new HashMap<>();
-        
         if (ObjectNull.isNotNull(app)) {
-            log.info("[UseComponent.menu] 指定了app参数，appId={}, appName={}", app.getId(), app.getName());
             allAppMap.put(app.getId(), app);
             noDesignPermissionAppMap.put(app.getId(), app);
         } else {
-            log.info("[UseComponent.menu] app参数为null，开始查询应用列表");
             // 查询应用
+            long appQueryStart = System.currentTimeMillis();
             List<JvsApp> jvsApps = getJvsApps(appId, mode);
-            log.info("[UseComponent.menu] 查询到的应用数量={}", jvsApps != null ? jvsApps.size() : 0);
-            
-            if (jvsApps != null && !jvsApps.isEmpty()) {
-                log.info("[UseComponent.menu] 应用列表：{}", jvsApps.stream()
-                        .map(a -> a.getId() + "-" + a.getName())
-                        .collect(Collectors.joining(", ")));
-            }
-            
+            log.info("查询应用耗时: {}ms, 应用数量: {}", System.currentTimeMillis() - appQueryStart, jvsApps.size());
+
             // 有设计权限的应用
             withDesignPermissionAppMap = withDesignPermissionApp(userId, jvsApps);
-            log.info("[UseComponent.menu] 有设计权限的应用数量={}", withDesignPermissionAppMap.size());
-            if (!withDesignPermissionAppMap.isEmpty()) {
-                log.info("[UseComponent.menu] 有设计权限的应用：{}", withDesignPermissionAppMap.values().stream()
-                        .map(a -> a.getId() + "-" + a.getName())
-                        .collect(Collectors.joining(", ")));
-            }
-            
             // 无设计权限的应用
             noDesignPermissionAppMap = noDesignPermissionApp(jvsApps, withDesignPermissionAppMap, mode);
-            log.info("[UseComponent.menu] 无设计权限的应用数量={}, mode={}", noDesignPermissionAppMap.size(), mode);
-            if (!noDesignPermissionAppMap.isEmpty()) {
-                log.info("[UseComponent.menu] 无设计权限的应用：{}", noDesignPermissionAppMap.values().stream()
-                        .map(a -> a.getId() + "-" + a.getName() + "(发布:" + a.getIsDeploy() + ",推荐:" + a.getRecommend() + ")")
-                        .collect(Collectors.joining(", ")));
-            }
-            
             // 所有应用
             allAppMap.putAll(withDesignPermissionAppMap);
             allAppMap.putAll(noDesignPermissionAppMap);
         }
-        
-        log.info("[UseComponent.menu] 所有应用总数={}", allAppMap.size());
         // Map<应用id，版本号>
         Map<String, String> appVersionMap = allAppMap.values()
                 .stream()
                 .collect(Collectors.toMap(JvsApp::getId, jvsApp -> Optional.ofNullable(jvsApp.getUseVersion()).orElse("")));
-        log.info("[UseComponent.menu] 应用版本信息：{}", appVersionMap.entrySet().stream()
-                .map(e -> e.getKey() + ":版本" + (e.getValue().isEmpty() ? "未启用" : e.getValue()))
-                .collect(Collectors.joining(", ")));
 
         //构建应用树
+        long appTreeStart = System.currentTimeMillis();
         // 有模拟用户，不论是否有应用权限，都设置为没有设计权限
-        boolean whetherAnalogUser = ModeUtils.whetherAnalogUser();
-        log.info("[UseComponent.menu] 是否模拟用户={}", whetherAnalogUser);
-        
-        appTree(withDesignPermissionAppMap.values(), list, Boolean.FALSE.equals(whetherAnalogUser));
+        appTree(withDesignPermissionAppMap.values(), list, Boolean.FALSE.equals(ModeUtils.whetherAnalogUser()));
         appTree(noDesignPermissionAppMap.values(), list, Boolean.FALSE);
+        log.info("构建应用树耗时: {}ms", System.currentTimeMillis() - appTreeStart);
 
         if (MapUtils.isEmpty(appVersionMap)) {
-            log.warn("[UseComponent.menu] appVersionMap为空，直接返回");
+            long totalTime = System.currentTimeMillis() - totalStart;
+            log.info("构建用户菜单总耗时: {}ms", totalTime);
             return Pair.of(JvsMenuVo.tree(list), list);
         }
 
         //构建目录树
+        long dirTreeStart = System.currentTimeMillis();
         appDirectoryTree(appVersionMap, list, withDesignPermissionAppMap);
-        log.info("[UseComponent.menu] 构建目录树完成，当前列表数量={}", list.size());
+        log.info("构建目录树耗时: {}ms", System.currentTimeMillis() - dirTreeStart);
 
         //根据类型,判断是否开启快速创建,并支持哪些快速创建的类型
+        long workflowStart = System.currentTimeMillis();
         Set<String> enableWorkflowMap = enableWorkflowMap(appVersionMap.keySet());
+        log.info("获取工作流配置耗时: {}ms", System.currentTimeMillis() - workflowStart);
 
         //构建菜单树
+        long menuStart = System.currentTimeMillis();
         List<AppMenu> appMenus = getMenus(appVersionMap);
-        log.info("[UseComponent.menu] 查询到的原始菜单数量={}", appMenus.size());
-        
-        if (!appMenus.isEmpty()) {
-            // 按应用统计菜单
-            Map<String, Long> menuCountByApp = appMenus.stream()
-                    .collect(Collectors.groupingBy(AppMenu::getJvsAppId, Collectors.counting()));
-            log.info("[UseComponent.menu] 每个应用的菜单数量：{}", menuCountByApp.entrySet().stream()
-                    .map(e -> {
-                        JvsApp jvsApp = allAppMap.get(e.getKey());
-                        return (jvsApp != null ? jvsApp.getName() : e.getKey()) + ":" + e.getValue() + "个";
-                    })
-                    .collect(Collectors.joining(", ")));
-            
-            // 查找是否有“业务管理系统”菜单
-            List<AppMenu> targetMenus = appMenus.stream()
-                    .filter(m -> m.getName() != null && m.getName().contains("业务管理系统"))
-                    .collect(Collectors.toList());
-            if (!targetMenus.isEmpty()) {
-                log.info("[UseComponent.menu] 找到包含'业务管理系统'的菜单数量={}", targetMenus.size());
-                targetMenus.forEach(m -> {
-                    JvsApp jvsApp = allAppMap.get(m.getJvsAppId());
-                    log.info("[UseComponent.menu] '业务管理系统'菜单信息：菜单ID={}, 菜单名={}, 所属应用={}, 设计ID={}, 类型={}, 移动端显示={}, PC端显示={}, 菜单版本={}",
-                            m.getId(), m.getName(), jvsApp != null ? jvsApp.getName() : m.getJvsAppId(), 
-                            m.getDesignId(), m.getDesignType(), m.getMobileDisplay(), m.getPcDisplay(), m.getAppVersion());
-                });
-            } else {
-                log.warn("[UseComponent.menu] 未找到包含'业务管理系统'的菜单");
-            }
-        }
+        log.info("获取菜单列表耗时: {}ms, 菜单数量: {}", System.currentTimeMillis() - menuStart, appMenus.size());
+
+        long permStart = System.currentTimeMillis();
         List<String> designIds = appMenus.stream().map(AppMenu::getDesignId).collect(Collectors.toList());
         Map<String, List<DesignRole>> operationPermissionMap = designPermissionService.getBatchOperationPermission(designIds);
+        log.info("获取操作权限耗时: {}ms", System.currentTimeMillis() - permStart);
+
         SecurityContext context = SecurityContextHolder.getContext();
         Map<String, Object> threadMap = SystemThreadLocal.get();
         Map<String, JvsApp> finalWithDesignPermissionAppMap = withDesignPermissionAppMap;
         SwitchModeDto switchMode = ModeUtils.getSwitchMode();
-        
-        log.info("[UseComponent.menu] 开始过滤菜单，过滤前数量={}, mobile={}, mode={}", appMenus.size(), mobile, mode);
-        
+
+        long menuProcessStart = System.currentTimeMillis();
         List<JvsMenuVo> menus = appMenus
-                .parallelStream()
+                .stream() // 改为普通stream，避免并行流开销
                 //判断是否是移动端,还是Pc显示
                 .filter(e -> {
                     // 移动端根据配置显示隐藏
                     if (mobile) {
-                        boolean mobileDisplay = e.getMobileDisplay();
-                        if (!mobileDisplay && e.getName() != null && e.getName().contains("业务管理系统")) {
-                            log.warn("[UseComponent.menu] 移动端过滤：'业务管理系统'菜单被过滤，移动端显示={}", mobileDisplay);
-                        }
-                        return mobileDisplay;
+                        return e.getMobileDisplay();
                     }
                     // PC端
                     SystemThreadLocal.setAll(threadMap);
@@ -323,11 +268,7 @@ public class UseComponent implements AppApi, TreeApi {
                         return Boolean.TRUE;
                     }
                     // 无设计权限，根据配置显示隐藏
-                    boolean pcDisplay = e.getPcDisplay();
-                    if (!pcDisplay && e.getName() != null && e.getName().contains("业务管理系统")) {
-                        log.warn("[UseComponent.menu] PC端显示过滤：'业务管理系统'菜单被过滤，PC端显示={}, 应用={}", pcDisplay, jvsApp != null ? jvsApp.getName() : e.getJvsAppId());
-                    }
-                    return pcDisplay;
+                    return e.getPcDisplay();
                 })
                 //根据这些资源判断此用户是否包含权限,如果包含,则返回这些资源
                 .filter(e -> {
@@ -341,19 +282,8 @@ public class UseComponent implements AppApi, TreeApi {
                         // 兼容新旧版本的权限配置
                         SystemThreadLocal.setAll(threadMap);
                         SecurityContextHolder.setContext(context);
-                        JvsApp jvsApp = allAppMap.get(e.getJvsAppId());
-                        List<DesignRole> roles = jvsApp.getEnableVersionFeature() ? operationPermissionMap.get(e.getDesignId()) : e.getRoles();
-                        boolean hasPermit = RoleUtils.hasPermit(roles);
-                        
-                        if (!hasPermit && e.getName() != null && e.getName().contains("业务管理系统")) {
-                            log.warn("[UseComponent.menu] 权限过滤：'业务管理系统'菜单被过滤，应用={}, 启用版本功能={}, 有权限={}, roles={}",
-                                    jvsApp != null ? jvsApp.getName() : e.getJvsAppId(), 
-                                    jvsApp != null && jvsApp.getEnableVersionFeature(), 
-                                    hasPermit,
-                                    roles != null ? roles.size() : "null");
-                        }
-                        
-                        return hasPermit;
+                        List<DesignRole> roles = allAppMap.get(e.getJvsAppId()).getEnableVersionFeature() ? operationPermissionMap.get(e.getDesignId()) : e.getRoles();
+                        return RoleUtils.hasPermit(roles);
                     }
                 })
                 //转换为对象信息
@@ -380,29 +310,17 @@ public class UseComponent implements AppApi, TreeApi {
                 })
                 .collect(Collectors.toList());
         //资源转树
-        log.info("[UseComponent.menu] 菜单过滤完成，过滤后数量={}", menus.size());
-        
-        // 检查过滤后是否还有“业务管理系统”
-        List<JvsMenuVo> targetMenusAfterFilter = menus.stream()
-                .filter(m -> m.getName() != null && m.getName().contains("业务管理系统"))
-                .collect(Collectors.toList());
-        if (!targetMenusAfterFilter.isEmpty()) {
-            log.info("[UseComponent.menu] 过滤后仍然包含'业务管理系统'的菜单数量={}", targetMenusAfterFilter.size());
-            targetMenusAfterFilter.forEach(m -> {
-                log.info("[UseComponent.menu] 过滤后'业务管理系统'菜单：ID={}, 名称={}, 应用ID={}", 
-                        m.getId(), m.getName(), m.getJvsAppId());
-            });
-        } else {
-            log.warn("[UseComponent.menu] 过滤后'业务管理系统'菜单已被完全过滤");
-        }
-        
         list.addAll(menus);
-        
-        log.info("[UseComponent.menu] 最终列表数量={}, 开始构建树结构", list.size());
-        List<Tree<Object>> tree = JvsMenuVo.tree(list);
-        log.info("[UseComponent.menu] 菜单构建完成，树节点数量={}", tree != null ? tree.size() : 0);
+        log.info("处理菜单列表耗时: {}ms", System.currentTimeMillis() - menuProcessStart);
 
-        return Pair.of(tree, list);
+        long treeStart = System.currentTimeMillis();
+        List<Tree<Object>> treeList = JvsMenuVo.tree(list);
+        log.info("构建树结构耗时: {}ms", System.currentTimeMillis() - treeStart);
+
+        long totalTime = System.currentTimeMillis() - totalStart;
+        log.info("构建用户菜单总耗时: {}ms", totalTime);
+
+        return Pair.of(treeList, list);
     }
 
     private List<AppMenu> getMenus(Map<String, String> appVersionMap) {
@@ -616,10 +534,31 @@ public class UseComponent implements AppApi, TreeApi {
         if (ObjectNull.isNull(jvsApps)) {
             return Collections.emptyMap();
         }
+
+        // 添加缓存优化
+        String cacheKey = "user:design:permission:" + userId + ":" + TenantContextHolder.getTenantId();
+        Map<String, JvsApp> cachedPermissions = (Map<String, JvsApp>) redisUtils.get(cacheKey);
+        if (ObjectNull.isNotNull(cachedPermissions)) {
+            log.info("从缓存获取用户设计权限，用户ID: {}", userId);
+            return cachedPermissions;
+        }
+
+        long startTime = System.currentTimeMillis();
         // 筛选有权限的应用
-        return jvsApps.stream()
+        Map<String, JvsApp> result = jvsApps.stream()
                 .filter(app -> RoleUtils.checkAppDesignPermission(userId, app))
                 .collect(Collectors.toMap(JvsApp::getId, Function.identity()));
+
+        long costTime = System.currentTimeMillis() - startTime;
+        log.info("权限检查耗时: {}ms, 应用数量: {}, 有权限应用数量: {}", costTime, jvsApps.size(), result.size());
+
+        // 缓存5分钟
+        if (costTime > 1000) { // 如果计算耗时超过1秒，才缓存
+            redisUtils.set(cacheKey, result, 300L);
+            log.info("缓存用户设计权限，用户ID: {}", userId);
+        }
+
+        return result;
     }
 
 

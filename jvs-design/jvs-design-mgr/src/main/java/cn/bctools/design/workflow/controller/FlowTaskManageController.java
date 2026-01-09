@@ -107,7 +107,7 @@ public class FlowTaskManageController {
             log.info("用户没有可访问的应用，返回空结果");
             return R.ok();
         }
-        log.info("查询用户应用菜单返回appIds: {}", appIds);
+
         // 构建查询条件
         long queryStart = System.currentTimeMillis();
         LambdaQueryWrapper<FlowTask> wrapper = Wrappers.<FlowTask>lambdaQuery()
@@ -275,7 +275,6 @@ public class FlowTaskManageController {
 
         List<String> appIds = tree.stream().map(x -> String.valueOf(x.getId())).collect(Collectors.toList());
         log.info("[{}] 提取应用ID列表耗时: {}ms, 应用数量: {}", traceId, System.currentTimeMillis() - menuStart, appIds.size());
-        log.info("[{}] 提取应用appIds为: {}", appIds);
 
         //组装查询条件
         long queryBuildStart = System.currentTimeMillis();

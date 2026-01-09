@@ -18,7 +18,6 @@ import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -28,7 +27,6 @@ import java.util.stream.Collectors;
  * @author zhuxiaokang
  * 应用模板——菜单
  */
-@Slf4j
 @Service
 @AllArgsConstructor
 public class AppMenuAppTemplateDataServiceImpl extends AppTemplateDataBase implements AppTemplateDataService<AppMenu> {
@@ -75,15 +73,6 @@ public class AppMenuAppTemplateDataServiceImpl extends AppTemplateDataBase imple
 
     @Override
     public void save(JvsApp jvsApp, JvsAppVersion targetAppVersion, List<String> existsIds, TemplateBo templateBo, TemplateBo targetVersionTemplateBo) {
-        log.info("[AppMenuAppTemplateDataService.save] 开始保存菜单 - jvsApp.id={}, jvsApp.name={}, targetAppVersion={}, existsIds.size={}",
-                jvsApp.getId(), jvsApp.getName(), targetAppVersion != null ? targetAppVersion.getAppVersion() : "null", existsIds != null ? existsIds.size() : 0);
-        log.info("[AppMenuAppTemplateDataService.save] targetVersionTemplateBo菜单数量={}, templateBo菜单数量={}",
-                targetVersionTemplateBo.getAppMenus() != null ? targetVersionTemplateBo.getAppMenus().size() : 0,
-                templateBo.getAppMenus() != null ? templateBo.getAppMenus().size() : 0);
-        if (existsIds != null && !existsIds.isEmpty()) {
-            log.info("[AppMenuAppTemplateDataService.save] existsIds列表（前10个）={}", existsIds.stream().limit(10).collect(Collectors.toList()));
-        }
-        
         // 删除
         delete(appMenuService, existsIds, targetVersionTemplateBo.getAppMenus(), AppMenu::getId);
 
@@ -98,10 +87,7 @@ public class AppMenuAppTemplateDataServiceImpl extends AppTemplateDataBase imple
         if (ObjectNull.isNull(newAppMenus)) {
             return;
         }
-        log.info("[AppMenuAppTemplateDataService.save] 准备处理{}个菜单", newAppMenus.size());
         newAppMenus.forEach(e -> {
-            log.info("[AppMenuAppTemplateDataService.save] 处理菜单 - id={}, name={}, jvsAppId={}, designId={}",
-                    e.getId(), e.getName(), e.getJvsAppId(), e.getDesignId());
             // 设置版本号
             setAppVersion(e, AppMenu::setAppVersion, targetAppVersion);
             // 兼容新旧版权限功能
@@ -125,10 +111,7 @@ public class AppMenuAppTemplateDataServiceImpl extends AppTemplateDataBase imple
             clearDefaultData(e);
         });
 
-        log.info("[AppMenuAppTemplateDataService.save] 调用saveOrUpdate - existsIds.size={}, newAppMenus.size={}",
-                existsIds != null ? existsIds.size() : 0, newAppMenus.size());
         saveOrUpdate(appMenuService, existsIds, newAppMenus, AppMenu::getId);
-        log.info("[AppMenuAppTemplateDataService.save] 菜单保存完成");
     }
 
     @Override

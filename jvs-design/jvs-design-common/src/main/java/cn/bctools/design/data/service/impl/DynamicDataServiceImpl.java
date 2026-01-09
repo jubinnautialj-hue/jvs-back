@@ -1923,10 +1923,10 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
     @Override
     public Map<String, Object> echo(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function) {
         long methodStart = System.currentTimeMillis();
-
+        
         //数据库的数据，用于多层下级数据
         Map<String, Object> olddata = new HashMap<>(data);
-
+        
         // 步骤1：处理Tab字段
         long step1Start = System.currentTimeMillis();
         //因为这个循环是改变内部对象，所以需要创建一个新的
@@ -1971,7 +1971,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         // 步骤2：处理回显数据
         long step2Start = System.currentTimeMillis();
         Map<String, Long> fieldHandlerDurations = new HashMap<>();
-
+        
         data.entrySet().stream().collect(Collectors.toList()).stream()
                 //有key的存在
                 .filter(e -> fieldMap.containsKey(e.getKey()))
@@ -1988,7 +1988,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                             IDataFieldHandler fieldHandler = iDataFieldHandler.get(fieldDto.getType().getDesc());
                             if (ObjectNull.isNotNull(fieldHandler)) {
                                 long fieldStart = System.currentTimeMillis();
-
+                                
                                 if (ObjectNull.isNull(fieldDto.getDesignJson())) {
                                     Map generate = fieldHandler.generate(fieldDto.getLabel(), fieldDto.getFieldKey(), new ArrayList<>());
                                     fieldDto.setDesignJson(generate);
@@ -2005,7 +2005,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                 } else {
                                     fieldHandler.setDataOverride(data, fieldKey, html, path, override, echoValue);
                                 }
-
+                                
                                 long fieldDuration = System.currentTimeMillis() - fieldStart;
                                 String fieldType = fieldDto.getType().getDesc();
                                 fieldHandlerDurations.merge(fieldType, fieldDuration, Long::sum);
@@ -2021,15 +2021,15 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
                 });
         long step2Duration = System.currentTimeMillis() - step2Start;
-
+        
         long totalDuration = System.currentTimeMillis() - methodStart;
-
-        // 单次echo调用超过30ms时记录详细日志（降低阈值以便更好地发现性能问题）
-        if (totalDuration > 30) {
+        
+        // 单次echo调用超过100ms时记录详细日志
+        if (totalDuration > 100) {
             log.warn("[Echo性能] 单条数据echo耗时过长: {}ms - 数据ID: {}, Tab处理: {}ms, 字段回显: {}ms, 字段类型耗时: {}",
-                    totalDuration, data.get("id"), step1Duration, step2Duration, fieldHandlerDurations);
+                totalDuration, data.get("id"), step1Duration, step2Duration, fieldHandlerDurations);
         }
-
+        
         return data;
     }
 
@@ -2805,7 +2805,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             Object echoValue = linkageData.get(prop + DynamicDataUtils.SUFFIX_ECHO);
 
             log.debug("处理关联字段: prop={}, aliasProp={}, originalValue={}, echoValue={}",
-                    prop, aliasProp, originalValue, echoValue);
+                     prop, aliasProp, originalValue, echoValue);
 
             data.put(aliasProp, originalValue);
             data.put(aliasProp + DynamicDataUtils.SUFFIX_ECHO, echoValue);
