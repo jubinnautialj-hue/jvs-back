@@ -101,7 +101,12 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                             Map<String, Object> modelCache = fieldCache.get(cascaderItem.getFormId());
                             if (ObjectNull.isNotNull(modelCache) && !modelCache.isEmpty()) {
                                 // 从缓存中构建字典列表
-                                dictList = new ArrayList<>(modelCache.values());
+                                dictList = new ArrayList<>();
+                                for (Object value : modelCache.values()) {
+                                    if (value instanceof Map) {
+                                        dictList.add((Map<String, Object>) value);
+                                    }
+                                }
                                 log.info("[级联选择-回显优化] 字段[{}]使用预加载缓存，命中{}条数据", cacheKey, dictList.size());
                             } else {
                                 log.debug("[级联选择-回显优化] 字段[{}]modelCache为空，fieldCache中的formId: {}", 
