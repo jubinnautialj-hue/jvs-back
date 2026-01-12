@@ -401,8 +401,13 @@ public interface ISelectorDataHandler {
                             log.info("[回显优化] 字段[{}]使用预加载缓存，缓存key[{}]，命中{}/{}条数据", selectItem.getProp(), cacheKey, hitCount, totalCount);
                         } else {
                             // modelCache为空，说明预加载时查询结果为空（数据不存在）
-                            // 这种情况下，list已经是空的ArrayList，会走到后面的逻辑返回原值
-                            log.info("[回显优化] 字段[{}]使用预加载缓存，但关联数据不存在（数据完整性问题），将返回原ID值", selectItem.getProp());
+                            // 直接返回原ID值，不再继续处理
+                            log.info("[回显优化] 字段[{}]使用预加载缓存，但关联数据不存在（数据完整性问题），直接返回原ID值", selectItem.getProp());
+                            // 直接返回原值
+                            if (data instanceof Collection) {
+                                return ((Collection<?>) data).stream().map(e -> e.toString()).collect(Collectors.joining(","));
+                            }
+                            return data;
                         }
                     } else {
                         log.debug("[回显优化] 字段[{}]缓存未命中，关联模型[{}]不存在", selectItem.getProp(), fromId);
