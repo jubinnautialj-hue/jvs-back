@@ -330,8 +330,20 @@ public interface ISelectorDataHandler {
         // 接口数据
         if (FormDataTypeEnum.dataModel.equals(dataType)) {
             String sourceFieldId = selectItem.getProps().getSourceFieldId();
-            //获取 关联的模型
-            String fromId = selectItem.getFormId();
+            //获取 关联的模型 - 使用与预加载相同的逻辑：从Desi gnJson中读取formId
+            String fromId = null;
+            try {
+                fromId = (String) JvsJsonPath.read(selectItem.getDesignJson(), "$.formId");
+            } catch (Exception e) {
+                // 如果从 DesignJson读取失败，回退使用getFormId()
+                fromId = selectItem.getFormId();
+                log.debug("[回显优化-调试] 字段[{}]从DesignJson读取formId失败，回退使用getFormId()={}", selectItem.getProp(), fromId);
+            }
+            if (ObjectNull.isNull(fromId)) {
+                // 如果还是null，尝试从 getFormId()获取
+                fromId = selectItem.getFormId();
+                log.warn("[回显优化-调试] 字段[{}]DesignJson中的formId为null，使用getFormId()={}", selectItem.getProp(), fromId);
+            }
 
             DynamicDataService bean = SpringContextUtil.getBean(DynamicDataService.class);
             ArrayList<String> arrayList = new ArrayList<>();
@@ -355,13 +367,13 @@ public interface ISelectorDataHandler {
                     cacheKey = selectItem.getFieldKey();
                     log.debug("[回显优化-调试] 字段[{}]prop为null，回退使用fieldKey={}", selectItem.getFieldKey(), cacheKey);
                 }
-                log.debug("[回显优化-调试] 字段[{}]开始查找缓存，cacheKey={}, fromId={}, data={}", selectItem.getProp(), cacheKey, fromId, data);
+                log.info("[回显优化-调试] 字段[{}]开始查找缓存，cacheKey={}, fromId={}, data={}", selectItem.getProp(), cacheKey, fromId, data);
                 Map<String, Map<String, Object>> fieldCache = preloadedCache.get(cacheKey);
                 if (ObjectNull.isNotNull(fieldCache)) {
-                    log.debug("[回显优化-调试] 字段[{}]fieldCache存在，包含{}个formId", selectItem.getProp(), fieldCache.size());
+                    log.info("[回显优化-调试] 字段[{}]fieldCache存在，包含{}个formId: {}", selectItem.getProp(), fieldCache.size(), fieldCache.keySet());
                     Map<String, Object> modelCache = fieldCache.get(fromId);
                     if (ObjectNull.isNotNull(modelCache)) {
-                        log.debug("[回显优化-调试] 字段[{}]modelCache存在，包含{}条数据", selectItem.getProp(), modelCache.size());
+                        log.info("[回显优化-调试] 字段[{}]modelCache存在，包含{}条数据", selectItem.getProp(), modelCache.size());
                         // 从缓存中查找数据
                         list = new ArrayList<>();
                         if (data instanceof Collection) {

@@ -3,6 +3,7 @@ package cn.bctools.design.data.fields.impl.advance;
 import cn.bctools.common.entity.po.TreePo;
 import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.JvsJsonPath;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.common.utils.SystemThreadLocal;
 import cn.bctools.common.utils.TreeUtils;
@@ -88,6 +89,19 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                     
                     List<Map<String, Object>> dictList = null;
                     
+                    // 获取formId - 使用与预加载相同的逻辑：从Desi gnJson中读取
+                    String formId = null;
+                    try {
+                        formId = (String) JvsJsonPath.read(cascaderItem.getDesignJson(), "$.formId");
+                    } catch (Exception e) {
+                        formId = cascaderItem.getFormId();
+                        log.debug("[级联选择-回显优化] 字段从DesignJson读取formId失败，回退使用getFormId()={}", formId);
+                    }
+                    if (ObjectNull.isNull(formId)) {
+                        formId = cascaderItem.getFormId();
+                        log.warn("[级联选择-回显优化] 字段DesignJson中的formId为null，使用getFormId()={}", formId);
+                    }
+                    
                     if (ObjectNull.isNotNull(preloadedCache)) {
                         // 使用与预加载相同的key逻辑：优先使用prop，为null时回退使用fieldKey
                         String cacheKey = cascaderItem.getProp();
@@ -98,7 +112,7 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                         
                         Map<String, Map<String, Object>> fieldCache = preloadedCache.get(cacheKey);
                         if (ObjectNull.isNotNull(fieldCache)) {
-                            Map<String, Object> modelCache = fieldCache.get(cascaderItem.getFormId());
+                            Map<String, Object> modelCache = fieldCache.get(formId);
                             if (ObjectNull.isNotNull(modelCache) && !modelCache.isEmpty()) {
                                 // 从缓存中构建字典列表
                                 dictList = new ArrayList<>();
@@ -120,7 +134,7 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                     
                     // 如果预加载缓存未命中，尝试使用旧的ThreadLocal缓存
                     if (ObjectNull.isNull(dictList)) {
-                        Object o1 = SystemThreadLocal.get(cascaderItem.getFormId() + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle());
+                        Object o1 = SystemThreadLocal.get(formId + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle());
                         if (ObjectNull.isNotNull(o1)) {
                             dictList = (List<Map<String, Object>>) o1;
                             log.debug("[级联选择-回显优化] 字段[{}]使用旧ThreadLocal缓存", cascaderItem.getProp());
@@ -135,10 +149,10 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                         List<String> fields = new ArrayList<>();
                         fields.add(cascaderItem.getProps().getLabel());
                         fields.add(cascaderItem.getProps().getSecTitle());
-                        dictList = dynamicDataService.queryList(cascaderItem.getFormId(), fields, new QueryConditionDto());
+                        dictList = dynamicDataService.queryList(formId, fields, new QueryConditionDto());
                         SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
                         // 存入旧的ThreadLocal缓存，兼容其他代码
-                        SystemThreadLocal.set(cascaderItem.getFormId() + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle(), dictList);
+                        SystemThreadLocal.set(formId + "_" + cascaderItem.getProps().getLabel() + "_" + cascaderItem.getProps().getSecTitle(), dictList);
                     }
                     
                     Map<String, Object> map = dictList
@@ -152,8 +166,20 @@ public class CascaderFieldHandler extends IMultipleTypeHandler implements IDataF
                     }
                     return dataFieldHandler.joinFormItems(map, data, isMulti, showPath);
                 } else {
+                    // 非showPath场景：获取formId - 使用与预加载相同的逻辑：从Desi gnJson中读取
+                    String formId = null;
                     try {
-                        o = dynamicDataService.getById(cascaderItem.getFormId(), data.toString()).getJsonData().get(cascaderItem.getProps().getLabel());
+                        formId = (String) JvsJsonPath.read(cascaderItem.getDesignJson(), "$.formId");
+                    } catch (Exception e) {
+                        formId = cascaderItem.getFormId();
+                        log.debug("[级联选择-回显优化] 字段从DesignJson读取formId失败，回退使用getFormId()={}", formId);
+                    }
+                    if (ObjectNull.isNull(formId)) {
+                        formId = cascaderItem.getFormId();
+                    }
+                    
+                    try {
+                        o = dynamicDataService.getById(formId, data.toString()).getJsonData().get(cascaderItem.getProps().getLabel());
                     } catch (Exception e) {
                         log.error("找不到数据");
                     }

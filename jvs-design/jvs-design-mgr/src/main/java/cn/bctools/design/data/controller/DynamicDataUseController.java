@@ -1294,9 +1294,7 @@ public class DynamicDataUseController {
         List<Map<String, Object>> allData = new ArrayList<>();
         //如果是树，并关联自己，需要对数据进行关联查询下级直到查询不到结果为止
         long treeStructureStart = System.currentTimeMillis();
-        List<Map<String, Object>> mapList = treeStructure(allData, modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, queryGroup, queryPageDto.getSorts(), collect,
-                ObjectNull.isNull(queryPageDto.getKeywords()),
-                new ArrayList<>(collectMap.values()), stringSet);
+        List<Map<String, Object>> mapList = treeStructure(allData, modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, queryGroup, queryPageDto.getSorts(), collect, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
         log.info("[分页查询] 树形结构处理耗时: {}ms", System.currentTimeMillis() - treeStructureStart);
         pageResult.setRecords(mapList);
         if (ObjectNull.isNotNull(dateField)) {
