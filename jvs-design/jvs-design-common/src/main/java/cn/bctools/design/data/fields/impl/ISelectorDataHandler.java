@@ -371,34 +371,43 @@ public interface ISelectorDataHandler {
                 Map<String, Map<String, Object>> fieldCache = preloadedCache.get(cacheKey);
                 if (ObjectNull.isNotNull(fieldCache)) {
                     log.info("[回显优化-调试] 字段[{}]fieldCache存在，包含{}个formId: {}", selectItem.getProp(), fieldCache.size(), fieldCache.keySet());
-                    Map<String, Object> modelCache = fieldCache.get(fromId);
-                    if (ObjectNull.isNotNull(modelCache)) {
-                        log.info("[回显优化-调试] 字段[{}]modelCache存在，包含{}条数据", selectItem.getProp(), modelCache.size());
-                        // 从缓存中查找数据
+                    // 检查fieldCache中是否包含该formId（使用containsKey而不是get判空）
+                    if (fieldCache.containsKey(fromId)) {
+                        Map<String, Object> modelCache = fieldCache.get(fromId);
+                        log.info("[回显优化-调试] 字段[{}]找到formId对应的缓存，modelCache包含{}条数据", selectItem.getProp(), modelCache != null ? modelCache.size() : 0);
+                        
+                        // 即使modelCache为空或数据为空，也使用缓存结果（避免重复查询不存在的数据）
                         list = new ArrayList<>();
-                        if (data instanceof Collection) {
-                            Collection<?> dataCollection = (Collection<?>) data;
-                            totalCount = dataCollection.size();
-                            for (Object id : dataCollection) {
-                                Object cachedDataObj = modelCache.get(String.valueOf(id));
+                        if (ObjectNull.isNotNull(modelCache) && !modelCache.isEmpty()) {
+                            // 从缓存中查找数据
+                            if (data instanceof Collection) {
+                                Collection<?> dataCollection = (Collection<?>) data;
+                                totalCount = dataCollection.size();
+                                for (Object id : dataCollection) {
+                                    Object cachedDataObj = modelCache.get(String.valueOf(id));
+                                    if (ObjectNull.isNotNull(cachedDataObj) && cachedDataObj instanceof Map) {
+                                        list.add((Map<String, Object>) cachedDataObj);
+                                        hitCount++;
+                                    }
+                                }
+                            } else {
+                                totalCount = 1;
+                                Object cachedDataObj = modelCache.get(String.valueOf(data));
                                 if (ObjectNull.isNotNull(cachedDataObj) && cachedDataObj instanceof Map) {
                                     list.add((Map<String, Object>) cachedDataObj);
                                     hitCount++;
                                 }
                             }
+                            log.info("[回显优化] 字段[{}]使用预加载缓存，缓存key[{}]，命中{}/{}条数据", selectItem.getProp(), cacheKey, hitCount, totalCount);
                         } else {
-                            totalCount = 1;
-                            Object cachedDataObj = modelCache.get(String.valueOf(data));
-                            if (ObjectNull.isNotNull(cachedDataObj) && cachedDataObj instanceof Map) {
-                                list.add((Map<String, Object>) cachedDataObj);
-                                hitCount++;
-                            }
+                            // modelCache为空，说明预加载时查询结果为空（数据不存在）
+                            // 这种情况下，list已经是空的ArrayList，会走到后面的逻辑返回原值
+                            log.info("[回显优化] 字段[{}]使用预加载缓存，但关联数据不存在（数据完整性问题），将返回原ID值", selectItem.getProp());
                         }
-                        log.info("[回显优化] 字段[{}]使用预加载缓存，缓存key[{}]，命中{}/{}条数据", selectItem.getProp(), cacheKey, hitCount, totalCount);
                     } else {
                         log.debug("[回显优化] 字段[{}]缓存未命中，关联模型[{}]不存在", selectItem.getProp(), fromId);
-                        log.warn("[回显优化-调试] 字段[{}]modelCache为null，可能是fromId不匹配，fieldCache中的formId集合: {}", 
-                            selectItem.getProp(), fieldCache.keySet());
+                        log.warn("[回显优化-调试] 字段[{}]fieldCache中不包含fromId={}，fieldCache中的formId集合: {}", 
+                            selectItem.getProp(), fromId, fieldCache.keySet());
                     }
                 } else {
                     log.debug("[回显优化] 字段[{}]缓存未命中，缓存key[{}]不存在", selectItem.getProp(), cacheKey);
@@ -425,7 +434,8 @@ public interface ISelectorDataHandler {
                 SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
             }
             
-            if (ObjectNull.isNull(list)) {
+            // 如果list为null或为空，返回原ID值
+            if (ObjectNull.isNull(list) || list.isEmpty()) {
                 if (data instanceof Collection) {
                     return ((Collection<?>) data).stream().map(e -> e.toString()).collect(Collectors.joining(","));
                 }
