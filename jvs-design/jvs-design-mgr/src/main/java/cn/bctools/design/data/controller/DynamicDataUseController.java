@@ -1286,26 +1286,64 @@ public class DynamicDataUseController {
         if (ObjectNull.isNotNull(dateField)) {
             collect.addAll(dateField);
         }
-        long queryPageStart = System.currentTimeMillis();
-        log.info("[分页查询] 开始执行数据库分页查询，查询字段数: {}, 查询条件组数: {}", collect.size(), queryGroupConditions.size());
-        Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, combiningFieldFormulaContentMap, queryGroupConditions, queryPageDto.getSorts(), collect, true, true, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
-        log.info("[分页查询] 数据库分页查询耗时: {}ms, 返回记录数: {}", System.currentTimeMillis() - queryPageStart, pageResult.getRecords().size());
-        List<List<QueryConditionDto>> queryGroup = Collections.singletonList(Collections.singletonList(treeQuery.get()));
-        List<Map<String, Object>> allData = new ArrayList<>();
-        //如果是树，并关联自己，需要对数据进行关联查询下级直到查询不到结果为止
-        long treeStructureStart = System.currentTimeMillis();
-        List<Map<String, Object>> mapList = treeStructure(allData, modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, queryGroup, queryPageDto.getSorts(), collect, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
-        log.info("[分页查询] 树形结构处理耗时: {}ms", System.currentTimeMillis() - treeStructureStart);
-        pageResult.setRecords(mapList);
-        if (ObjectNull.isNotNull(dateField)) {
-            long ganttStart = System.currentTimeMillis();
-            R result = R.ok(GanttChartUtils.setFiled(pageResult, dateField));
-            log.info("[分页查询] 甘特图处理耗时: {}ms", System.currentTimeMillis() - ganttStart);
-            log.info("[分页查询] ====== 总耗时: {}ms ======", System.currentTimeMillis() - startTime);
-            return result;
+        
+        // 批量预加载部门数据，避免每条数据都调用远程API
+        // 注意：部门预加载对树形查询和普通分页查询都适用
+        long deptPreloadStart = System.currentTimeMillis();
+        try {
+            List<SysDeptDto> allDepts = authDeptServiceApi.getAll().getData();
+            if (ObjectNull.isNotNull(allDepts) && !allDepts.isEmpty()) {
+                // 构建部门名称Map（ID -> Name），用于加速回显
+                Map<String, Object> deptNameMap = allDepts.stream()
+                    .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
+                
+                // 将部门数据存入ThreadLocal，供DepartmentFieldHandler使用
+                // 缓存key固定为 "DEPT_NAME_MAP_CACHE" 和 "DEPT_LIST_CACHE"
+                // 与 buildTreeStructureByBatchQuery 方法中的缓存key保持一致（1479-1480行）
+                SystemThreadLocal.set("DEPT_NAME_MAP_CACHE", deptNameMap);
+                SystemThreadLocal.set("DEPT_LIST_CACHE", allDepts);
+                
+                log.info("[分页查询] 部门数据预加载完成，耗时: {}ms, 部门数量: {}", System.currentTimeMillis() - deptPreloadStart, allDepts.size());
+            } else {
+                log.warn("[分页查询] 部门数据为空，跳过预加载");
+            }
+        } catch (Exception e) {
+            log.error("[分页查询] 部门数据预加载失败: {}", e.getMessage(), e);
         }
-        log.info("[分页查询] ====== 总耗时: {}ms ======", System.currentTimeMillis() - startTime);
-        return R.ok(pageResult);
+        
+        // 使用try-finally确保部门缓存一定会被清理，避免内存泄漏
+        try {
+            long queryPageStart = System.currentTimeMillis();
+            log.info("[分页查询] 开始执行数据库分页查询，查询字段数: {}, 查询条件组数: {}", collect.size(), queryGroupConditions.size());
+            
+            // 执行分页查询（内部会调用echo，此时可以使用预加载的部门缓存）
+            Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, combiningFieldFormulaContentMap, queryGroupConditions, queryPageDto.getSorts(), collect, true, true, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
+            log.info("[分页查询] 数据库分页查询耗时: {}ms, 返回记录数: {}", System.currentTimeMillis() - queryPageStart, pageResult.getRecords().size());
+            List<List<QueryConditionDto>> queryGroup = Collections.singletonList(Collections.singletonList(treeQuery.get()));
+            List<Map<String, Object>> allData = new ArrayList<>();
+            //如果是树，并关联自己，需要对数据进行关联查询下级直到查询不到结果为止
+            long treeStructureStart = System.currentTimeMillis();
+            List<Map<String, Object>> mapList = treeStructure(allData, modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, queryGroup, queryPageDto.getSorts(), collect, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
+            log.info("[分页查询] 树形结构处理耗时: {}ms", System.currentTimeMillis() - treeStructureStart);
+            
+            pageResult.setRecords(mapList);
+            if (ObjectNull.isNotNull(dateField)) {
+                long ganttStart = System.currentTimeMillis();
+                R result = R.ok(GanttChartUtils.setFiled(pageResult, dateField));
+                log.info("[分页查询] 甘特图处理耗时: {}ms", System.currentTimeMillis() - ganttStart);
+                log.info("[分页查询] ====== 总耗时: {}ms ======", System.currentTimeMillis() - startTime);
+                return result;
+            }
+            log.info("[分页查询] ====== 总耗时: {}ms ======", System.currentTimeMillis() - startTime);
+            return R.ok(pageResult);
+        } finally {
+            // 无论是否发生异常，都必须清理部门缓存，防止内存泄漏
+            // 普通查询：echo在 dynamicDataService.queryPage 中完成
+            // 树形查询：echo在 buildTreeStructureByBatchQuery 中完成
+            SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
+            SystemThreadLocal.remove("DEPT_LIST_CACHE");
+            log.debug("[分页查询] 已清理部门缓存");
+        }
     }
 
     /**
@@ -1465,27 +1503,9 @@ public class DynamicDataUseController {
             Map<String, Map<String, Map<String, Object>>> preloadedDataCache = batchPreloadRelatedFieldData(allDataList, fieldBasicsHtmls, appId);
             log.info("[树形结构-批量查询] 关联数据预加载完成，耗时: {}ms, 缓存大小: {}", System.currentTimeMillis() - preloadStart, preloadedDataCache.size());
             
-            // 批量预加载部门数据，避免每条数据都调用远程API
-            long deptPreloadStart = System.currentTimeMillis();
-            try {
-                List<SysDeptDto> allDepts = authDeptServiceApi.getAll().getData();
-                if (ObjectNull.isNotNull(allDepts) && !allDepts.isEmpty()) {
-                    // 构建部门名称Map（ID -> Name），用于加速回显
-                    Map<String, Object> deptNameMap = allDepts.stream()
-                        .collect(Collectors.toMap(SysDeptDto::getId, SysDeptDto::getName, (v1, v2) -> v1));
-                    
-                    // 将部门数据存入ThreadLocal，供DepartmentFieldHandler使用
-                    // 注意：这里使用ThreadLocal而不是InheritableThreadLocal，因为并行流会复用线程池
-                    SystemThreadLocal.set("DEPT_NAME_MAP_CACHE", deptNameMap);
-                    SystemThreadLocal.set("DEPT_LIST_CACHE", allDepts);
-                    
-                    log.info("[树形结构-批量查询] 部门数据预加载完成，耗时: {}ms, 部门数量: {}", System.currentTimeMillis() - deptPreloadStart, allDepts.size());
-                } else {
-                    log.warn("[树形结构-批量查询] 部门数据为空，跳过预加载");
-                }
-            } catch (Exception e) {
-                log.error("[树形结构-批量查询] 部门数据预加载失败: {}", e.getMessage(), e);
-            }
+            // 注意：部门数据已在 queryPage 方法中预加载（第1292-1312行）
+            // 这里直接使用外层的部门缓存，无需重复加载
+            log.debug("[树形结构-批量查询] 使用外层预加载的部门缓存");
             
             // 使用预加载的数据进行回显，避免逐条查询数据库
             long echoStart = System.currentTimeMillis();
@@ -1494,9 +1514,10 @@ public class DynamicDataUseController {
                 log.info("[树形结构-批量查询] 开始echo处理，数据条数: {}", allDataList.size());
                 allDataList = allDataList.stream().map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false)).collect(Collectors.toList());
             } finally {
+                // 只清理 PRELOADED_DATA_CACHE
+                // 部门缓存由外层 queryPage 方法统一管理，在第1327-1332行清理
                 SystemThreadLocal.remove("PRELOADED_DATA_CACHE");
-                SystemThreadLocal.remove("DEPT_NAME_MAP_CACHE");
-                SystemThreadLocal.remove("DEPT_LIST_CACHE");
+                log.debug("[树形结构-批量查询] 已清理 PRELOADED_DATA_CACHE");
             }
             log.info("[树形结构-批量查询] echo完成，耗时: {}ms", System.currentTimeMillis() - echoStart);
             
