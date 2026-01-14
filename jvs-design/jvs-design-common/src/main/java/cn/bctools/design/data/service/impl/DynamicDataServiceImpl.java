@@ -1922,15 +1922,42 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
     @Override
     public Map<String, Object> echo(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function) {
-        long methodStart = System.currentTimeMillis();
-        
-        //数据库的数据，用于多层下级数据
-        Map<String, Object> olddata = new HashMap<>(data);
-        
         // 步骤1：处理Tab字段
-        long step1Start = System.currentTimeMillis();
-        //因为这个循环是改变内部对象，所以需要创建一个新的
-        fieldMap.values().stream().collect(Collectors.toList()).stream().filter(e -> e.getType().equals(DataFieldType.tab))
+        renderFieldMap(fieldMap);
+        // 步骤2：处理回显数据
+        renderMap(data, fieldMap, override, function);
+        return data;
+    }
+
+    @Override
+    public List<Map<String, Object>> echo(List<Map<String, Object>> list, Map<String, FieldBasicsHtml> fieldMap, boolean override) {
+        return echo(list, fieldMap, override, ExportFieldDto::getObject);
+    }
+
+    @Override
+    public List<Map<String, Object>> echo(List<Map<String, Object>> list, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function) {
+        // 步骤1：处理Tab字段
+        renderFieldMap(fieldMap);
+        // 步骤2：处理回显数据
+        long startTime = System.currentTimeMillis();
+        List<Long> listDurations = new ArrayList<>();
+        list.parallelStream().forEach(data -> {
+            long itemStartTime = System.currentTimeMillis();
+            renderMap(data, fieldMap, override, function);
+            listDurations.add(System.currentTimeMillis() - itemStartTime);
+        });
+        long duration = System.currentTimeMillis() - startTime;
+        Optional<Long> max = listDurations.stream().max(Long::compareTo);
+        Optional<Long> min = listDurations.stream().min(Long::compareTo);
+        log.debug("[Echo性能分解] list循环处理情况: 耗时{}ms - 处理记录数: {} - 最大耗时{}ms - 最小耗时{}ms",
+                duration, list.size(), max, min);
+        return list;
+    }
+
+    private void renderFieldMap(Map<String, FieldBasicsHtml> fieldMap) {
+        long startTime = System.currentTimeMillis();
+        fieldMap.values().stream()
+                .filter(e -> e.getType().equals(DataFieldType.tab))
                 //判断是否开启了数据脱离， 将过滤出有多个数据脱离的选项卡
                 .filter(e -> {
                     Object eval = JvsJsonPath.read(e.getDesignJson(), Get.name(TabItemHtml::getDetachData));
@@ -1940,7 +1967,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         //兼容老的选项卡数据值
                         return true;
                     }
-                }).forEach(e -> {
+                })
+                .forEach(e -> {
                     //将数据脱离的 key ， 组装为对象属性值
                     TabItemHtml html = (TabItemHtml) iDataFieldHandler.get(DataFieldType.tab.getDesc()).toHtml(e);
                     if (ObjectNull.isNotNull(html)) {
@@ -1966,16 +1994,22 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         }
                     }
                 });
-        long step1Duration = System.currentTimeMillis() - step1Start;
+        long count = fieldMap.values().stream().filter(e -> e.getType().equals(DataFieldType.tab)).count();
+        long duration = System.currentTimeMillis() - startTime;
+        log.debug("[Echo性能分解] renderFieldMap（Tab）处理情况: 耗时{}ms - 处理字段数: {}",
+                duration, count);
+    }
 
-        // 步骤2：处理回显数据
-        long step2Start = System.currentTimeMillis();
+    private void renderMap(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function) {
+        //因为这个循环是改变内部对象，所以需要创建一个新的
+        long startTime = System.currentTimeMillis();
+        Map<String, Object> olddata = new HashMap<>(data);
         Map<String, Long> fieldHandlerDurations = new HashMap<>();
-        
-        data.entrySet().stream().collect(Collectors.toList()).stream()
+        data.entrySet().stream()
                 //有key的存在
                 .filter(e -> fieldMap.containsKey(e.getKey()))
                 .forEach(entry -> {
+                    long fieldHandlerStartTime = System.currentTimeMillis();
                     try {
                         if (ObjectNull.isNull(entry.getValue())) {
                             //可能是空数组 ，或空对象。当选择了用户部门，后又取消。
@@ -1987,8 +2021,6 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
                             IDataFieldHandler fieldHandler = iDataFieldHandler.get(fieldDto.getType().getDesc());
                             if (ObjectNull.isNotNull(fieldHandler)) {
-                                long fieldStart = System.currentTimeMillis();
-                                
                                 if (ObjectNull.isNull(fieldDto.getDesignJson())) {
                                     Map generate = fieldHandler.generate(fieldDto.getLabel(), fieldDto.getFieldKey(), new ArrayList<>());
                                     fieldDto.setDesignJson(generate);
@@ -2005,10 +2037,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                 } else {
                                     fieldHandler.setDataOverride(data, fieldKey, html, path, override, echoValue);
                                 }
-                                
-                                long fieldDuration = System.currentTimeMillis() - fieldStart;
-                                String fieldType = fieldDto.getType().getDesc();
-                                fieldHandlerDurations.merge(fieldType, fieldDuration, Long::sum);
+
                             }
                         }
                     } catch (BusinessException be) {
@@ -2018,27 +2047,19 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         log.error("格式转换异常{}", JSONObject.toJSONString(entry), e);
                         throw new RuntimeException("格式转换异常:" + entry.getKey() + " : " + entry.getValue());
                     }
-
+                    fieldHandlerDurations.put(entry.getKey() + fieldMap.get(entry.getKey()).getType().getDesc(), System.currentTimeMillis() - fieldHandlerStartTime);
                 });
-        long step2Duration = System.currentTimeMillis() - step2Start;
-        
-        long totalDuration = System.currentTimeMillis() - methodStart;
-        
-        // 单次echo调用超过100ms时记录详细日志
-        if (totalDuration > 100) {
-            log.warn("[Echo性能] 单条数据echo耗时过长: {}ms - 数据ID: {}, Tab处理: {}ms, 字段回显: {}ms, 字段类型耗时: {}",
-                totalDuration, data.get("id"), step1Duration, step2Duration, fieldHandlerDurations);
-        }
-        
-        return data;
+        long count = data.entrySet().stream().filter(e -> fieldMap.containsKey(e.getKey())).count();
+        long duration = System.currentTimeMillis() - startTime;
+        Optional<Map.Entry<String, Long>> max = fieldHandlerDurations.entrySet().stream().max(Map.Entry.comparingByValue());
+        log.debug("[Echo性能分解] renderMap处理情况: 耗时{}ms - 处理字段数: {} - 最大字段处理时长: {} 耗时{}ms",
+                duration, count, max.get().getKey(), max.get().getValue());
     }
 
     @Override
-    public List echo(List<Map> list, Collection<FieldBasicsHtml> fields, boolean override) {
-        for (Map data : list) {
-            echo(data, fields, override);
-        }
-        return list;
+    public List<Map<String, Object>> echo(List<Map<String, Object>> list, Collection<FieldBasicsHtml> fields, boolean override) {
+        Map<String, FieldBasicsHtml> fieldMap = fields.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity(), (e1, e2) -> e1));
+        return echo(list, fieldMap, override);
     }
 
     @Override
@@ -2797,7 +2818,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         // 记录回显后的linkageData状态
         log.debug("回显后linkageData: {}", linkageData);
 
-        log.info("echoModelDisplay2 ,data:{} ,linkageData:{},linkageFieldKeys{}",data,linkageData,linkageFieldKeys);
+        log.info("echoModelDisplay2 ,data:{} ,linkageData:{},linkageFieldKeys{}", data, linkageData, linkageFieldKeys);
         linkageFieldKeys.forEach(linkageFieldKey -> {
             String prop = linkageFieldKey.getProp();
             String aliasProp = linkageFieldKey.getAliasProp();
@@ -2805,7 +2826,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             Object echoValue = linkageData.get(prop + DynamicDataUtils.SUFFIX_ECHO);
 
             log.debug("处理关联字段: prop={}, aliasProp={}, originalValue={}, echoValue={}",
-                     prop, aliasProp, originalValue, echoValue);
+                    prop, aliasProp, originalValue, echoValue);
 
             data.put(aliasProp, originalValue);
             data.put(aliasProp + DynamicDataUtils.SUFFIX_ECHO, echoValue);

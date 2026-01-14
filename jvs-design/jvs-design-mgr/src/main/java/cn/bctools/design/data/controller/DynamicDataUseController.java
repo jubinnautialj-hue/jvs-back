@@ -1512,7 +1512,8 @@ public class DynamicDataUseController {
             SystemThreadLocal.set("PRELOADED_DATA_CACHE", preloadedDataCache);
             try {
                 log.info("[树形结构-批量查询] 开始echo处理，数据条数: {}", allDataList.size());
-                allDataList = allDataList.stream().map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false)).collect(Collectors.toList());
+//                allDataList = allDataList.parallelStream().map(e -> dynamicDataService.echo(e, fieldBasicsHtmls, false)).collect(Collectors.toList());
+                allDataList = dynamicDataService.echo(allDataList,fieldBasicsHtmls,false);
             } finally {
                 // 只清理 PRELOADED_DATA_CACHE
                 // 部门缓存由外层 queryPage 方法统一管理，在第1327-1332行清理
