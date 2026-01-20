@@ -79,26 +79,89 @@ public class FileUploadController {
     @PostMapping("/upload/{bucketName}")
     public R<FileNameDto> upload(@RequestPart("file") MultipartFile file, @RequestParam(value = "module", required = false) String module, @PathVariable String bucketName, @RequestParam(value = "label",
             defaultValue = "默认") String label) throws BusinessException {
+        // 校验 file 参数
+        if (ObjectNull.isNull(file)) {
+            log.error("[文件上传] 上传失败 - file参数为null, bucketName: {}, module: {}", bucketName, module);
+            return R.failed(null, "上传文件不能为空");
+        }
+        
+        String originalFileName = file.getOriginalFilename();
+        Long fileSize = file.getSize();
+        
+        // 校验文件名
+        if (ObjectNull.isNull(originalFileName) || originalFileName.trim().isEmpty()) {
+            log.error("[文件上传] 上传失败 - 文件名为空, bucketName: {}, module: {}, fileSize: {}", bucketName, module, fileSize);
+            return R.failed(null, "文件名不能为空");
+        }
+        
+        log.info("[文件上传] 开始上传文件 - bucketName: {}, module: {}, label: {}, originalFileName: {}, fileSize: {}", bucketName, module, label, originalFileName, fileSize);
+        
+        // 校验 module 参数
         if (ObjectNull.isNull(module)) {
+            log.warn("[文件上传] 上传失败 - module参数不存在, bucketName: {}, fileName: {}", bucketName, originalFileName);
             return R.failed(null, "'module' 目录参数不存在,需根据上传规范(需要包含上传路径)上传文件,推荐:/前端项目名/功能名/");
         }
         SystemThreadLocal.set("label", label);
 
-        BaseFile source = ossTemplate.putFile(bucketName, module, file.getOriginalFilename(), file);
-        FileNameDto target = BeanCopyUtil.copy(source, FileNameDto.class);
-        OssFileLabel entity = new OssFileLabel().setLabel(label);
-        Long l = fileLabelMapper.selectCount(Wrappers.lambdaQuery(entity));
-        if (l == 0) {
-            fileLabelMapper.insert(entity);
+        try {
+            log.debug("[文件上传] 调用OSS存储 - bucketName: {}, module: {}, fileName: {}", bucketName, module, originalFileName);
+            
+            BaseFile source = ossTemplate.putFile(bucketName, module, originalFileName, file);
+            
+            // 校验 OSS 返回结果
+            if (ObjectNull.isNull(source)) {
+                log.error("[文件上传] OSS存储失败 - 返回结果为null, bucketName: {}, module: {}, fileName: {}", bucketName, module, originalFileName);
+                throw new BusinessException("文件存储失败");
+            }
+            
+            log.debug("[文件上传] OSS存储成功 - fileName: {}, size: {}", source.getFileName(), source.getSize());
+            
+            FileNameDto target = BeanCopyUtil.copy(source, FileNameDto.class);
+            
+            // 校验复制结果
+            if (ObjectNull.isNull(target)) {
+                log.error("[文件上传] 对象复制失败 - target为null, source: {}", source);
+                throw new BusinessException("文件信息处理失败");
+            }
+            
+            OssFileLabel entity = new OssFileLabel().setLabel(label);
+            Long l = fileLabelMapper.selectCount(Wrappers.lambdaQuery(entity));
+            if (l == 0) {
+                log.debug("[文件上传] 插入新标签 - label: {}", label);
+                fileLabelMapper.insert(entity);
+            }
+            target.setOriginalFileName(originalFileName);
+            
+            // 生成文件链接
+            String fileName = target.getFileName();
+            if (ObjectNull.isNull(fileName)) {
+                log.error("[文件上传] 文件名为空 - target: {}", target);
+                throw new BusinessException("文件名获取失败");
+            }
+            
+            if (bucketName.equals(PUBLIC_BUCKET_NAME)) {
+                target.setFileLink(ossTemplate.fileJvsPublicLink(fileName));
+                log.debug("[文件上传] 生成公共文件链接 - fileLink: {}", target.getFileLink());
+            } else {
+                String targetBucketName = target.getBucketName();
+                if (ObjectNull.isNull(targetBucketName)) {
+                    log.warn("[文件上传] target.bucketName为空，使用请求参数bucketName: {}", bucketName);
+                    targetBucketName = bucketName;
+                }
+                target.setFileLink(ossTemplate.fileLink(fileName, targetBucketName));
+                log.debug("[文件上传] 生成私有文件链接 - fileLink: {}", target.getFileLink());
+            }
+            target.setFileSize(source.getSize());
+            
+            log.info("[文件上传] 上传成功 - bucketName: {}, fileName: {}, originalFileName: {}, fileSize: {}, fileLink: {}",
+                    target.getBucketName(), target.getFileName(), target.getOriginalFileName(), target.getFileSize(), target.getFileLink());
+            
+            return R.ok(target);
+        } catch (Exception e) {
+            log.error("[文件上传] 上传失败 - bucketName: {}, module: {}, fileName: {}, 异常: {}",
+                    bucketName, module, originalFileName, e.getMessage(), e);
+            throw e;
         }
-        target.setOriginalFileName(file.getOriginalFilename());
-        if (bucketName.equals(PUBLIC_BUCKET_NAME)) {
-            target.setFileLink(ossTemplate.fileJvsPublicLink(target.getFileName()));
-        } else {
-            target.setFileLink(ossTemplate.fileLink(target.getFileName(), target.getBucketName()));
-        }
-        target.setFileSize(source.getSize());
-        return R.ok(target);
     }
     @ApiOperation("获取文件类型集")
     @GetMapping("/fileTypes")
