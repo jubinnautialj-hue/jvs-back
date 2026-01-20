@@ -516,10 +516,6 @@ public interface DynamicDataService {
      */
     Map<String, Object> echo(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function);
 
-    List<Map<String, Object>> echo(List<Map<String, Object>> list, Map<String, FieldBasicsHtml> fieldMap, boolean override);
-
-    List<Map<String, Object>> echo(List<Map<String, Object>> list, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function);
-
     /**
      * 数据对象转Map结构数据
      * <p>
@@ -532,7 +528,7 @@ public interface DynamicDataService {
      * @param override 是否覆盖
      * @return list
      */
-    List<Map<String, Object>> echo(List<Map<String, Object>> data, Collection<FieldBasicsHtml> fields, boolean override);
+    List<Map> echo(List<Map> data, Collection<FieldBasicsHtml> fields, boolean override);
 
     /**
      * 转换数据
