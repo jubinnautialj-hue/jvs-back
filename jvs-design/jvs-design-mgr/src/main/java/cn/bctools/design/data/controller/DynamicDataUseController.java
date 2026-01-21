@@ -1485,7 +1485,8 @@ public class DynamicDataUseController {
                     
                     // 关键修复：递归向上查找真正的根节点（shangJiGongCheng为空的节点）
                     // 而不是直接使用这些父节点ID作为根节点
-                    rootIds = findTrueRootIds(appId, modelId, parentIds, parentFieldKey);
+                    // 重要：传递用户查询条件，确保找到的根节点也满足查询条件
+                    rootIds = findTrueRootIds(appId, modelId, parentIds, parentFieldKey, queryGroupConditions);
                     log.info("[树形结构] 向上递归查找后，找到{}个真正的根节点ID: {}", rootIds.size(), rootIds);
                 } else {
                     log.info("[树形结构] 从{}条分页记录中识别出{}个真正的根节点: {}", records.size(), rootIds.size(), rootIds);
@@ -1508,9 +1509,10 @@ public class DynamicDataUseController {
      * @param modelId 模型ID
      * @param parentIds 父节点ID集合（初始起点）
      * @param parentFieldKey 父级字段名
+     * @param userQueryConditions 用户查询条件（确保找到的根节点也满足查询条件）
      * @return 真正的根节点ID集合
      */
-    private List<String> findTrueRootIds(String appId, String modelId, Set<String> parentIds, String parentFieldKey) {
+    private List<String> findTrueRootIds(String appId, String modelId, Set<String> parentIds, String parentFieldKey, List<List<QueryConditionDto>> userQueryConditions) {
         log.info("[树形结构-查找根节点] 开始递归查找真正的根节点，初始父节点ID数量: {}", parentIds.size());
         
         // 防止无限循环
@@ -1527,6 +1529,30 @@ public class DynamicDataUseController {
             
             // 批量查询当前层级的节点
             Query query = new Query(Criteria.where("id").in(currentLevelIds));
+            
+            // 关键修复：应用用户的查询条件，确保查询到的节点满足条件（如 shiFuJianYanPi=6）
+            if (ObjectNull.isNotNull(userQueryConditions) && !userQueryConditions.isEmpty()) {
+                List<QueryConditionDto> flatConditions = userQueryConditions.stream()
+                    .flatMap(Collection::stream)
+                    .filter(condition -> !parentFieldKey.equals(condition.getFieldKey())) // 排除树形父字段条件
+                    .collect(Collectors.toList());
+                
+                if (!flatConditions.isEmpty()) {
+                    List<Criteria> criteriaList = DynamicDataUtils.buildDynamicCriteriaList(flatConditions);
+                    if (ObjectNull.isNotNull(criteriaList) && !criteriaList.isEmpty()) {
+                        // 将ID条件和用户条件组合
+                        Criteria combinedCriteria = new Criteria().andOperator(
+                            Stream.concat(
+                                Stream.of(Criteria.where("id").in(currentLevelIds)),
+                                criteriaList.stream()
+                            ).toArray(Criteria[]::new)
+                        );
+                        query = new Query(combinedCriteria);
+                        log.debug("[树形结构-查找根节点] 应用{}个用户查询条件", flatConditions.size());
+                    }
+                }
+            }
+            
             query.fields().include("id", parentFieldKey);
             
             List<Map> nodes = dataModelHandler.find(query, Map.class, modelId);
