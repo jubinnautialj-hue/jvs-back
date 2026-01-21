@@ -1482,12 +1482,13 @@ public class DynamicDataUseController {
                         .map(Object::toString)
                         .filter(s -> !s.isEmpty())
                         .collect(Collectors.toSet());
-                    // 使用父节点ID作为根节点来构建树
-                    // 这样可以确保树的完整性，即使父节点不在分页结果中
-                    rootIds = new ArrayList<>(parentIds);
-                    log.info("[树形结构] 使用{}个父节点ID作为树的起点", rootIds.size());
+                    
+                    // 关键修复：递归向上查找真正的根节点（shangJiGongCheng为空的节点）
+                    // 而不是直接使用这些父节点ID作为根节点
+                    rootIds = findTrueRootIds(appId, modelId, parentIds, parentFieldKey);
+                    log.info("[树形结构] 向上递归查找后，找到{}个真正的根节点ID: {}", rootIds.size(), rootIds);
                 } else {
-                    log.info("[树形结构] 从{}条分页记录中识别出{}个真正的根节点", records.size(), rootIds.size());
+                    log.info("[树形结构] 从{}条分页记录中识别出{}个真正的根节点: {}", records.size(), rootIds.size(), rootIds);
                 }
                 // 使用批量分层查询优化方案，完全消除递归查询
                 return buildTreeStructureByBatchQuery(appId, modelId, rootIds, parentFieldKey,fields, fieldBasicsHtmls, modelDisplayMap, totalCount);
@@ -1495,6 +1496,89 @@ public class DynamicDataUseController {
         }
         log.info("[树形结构] 无树查询条件，直接返回");
         return records;
+    }
+    
+    /**
+     * 递归向上查找真正的根节点（父字段为null或空字符串的节点）
+     * 解决问题：当分页查询结果中没有根节点时，不能直接使用子节点的父ID作为根节点
+     * 必须递归向上查找，直到找到没有父节点的记录
+     * 
+     * @param appId 应用ID
+     * @param modelId 模型ID
+     * @param parentIds 父节点ID集合（初始起点）
+     * @param parentFieldKey 父级字段名
+     * @return 真正的根节点ID集合
+     */
+    private List<String> findTrueRootIds(String appId, String modelId, Set<String> parentIds, String parentFieldKey) {
+        log.info("[树形结构-查找根节点] 开始递归查找真正的根节点，初始父节点ID数量: {}", parentIds.size());
+        
+        // 防止无限循环
+        Set<String> visited = new HashSet<>();
+        Set<String> currentLevelIds = new HashSet<>(parentIds);
+        Set<String> trueRootIds = new HashSet<>();
+        
+        int maxDepth = 100; // 防止数据异常导致无限循环
+        int depth = 0;
+        
+        while (!currentLevelIds.isEmpty() && depth < maxDepth) {
+            depth++;
+            log.debug("[树形结构-查找根节点] 第{}层查找，当前ID数量: {}", depth, currentLevelIds.size());
+            
+            // 批量查询当前层级的节点
+            Query query = new Query(Criteria.where("id").in(currentLevelIds));
+            query.fields().include("id", parentFieldKey);
+            
+            List<Map> nodes = dataModelHandler.find(query, Map.class, modelId);
+            log.debug("[树形结构-查找根节点] 查询到{}条记录", nodes.size());
+            
+            // 下一层级要查询的父节点ID
+            Set<String> nextLevelIds = new HashSet<>();
+            
+            for (Map node : nodes) {
+                String nodeId = node.get("id").toString();
+                
+                // 防止循环引用
+                if (visited.contains(nodeId)) {
+                    log.warn("[树形结构-查找根节点] 发现循环引用，跳过节点: {}", nodeId);
+                    continue;
+                }
+                visited.add(nodeId);
+                
+                Object parentValue = node.get(parentFieldKey);
+                
+                // 判断是否是根节点：父字段为null或空字符串
+                if (ObjectNull.isNull(parentValue) || parentValue.toString().isEmpty()) {
+                    // 找到真正的根节点
+                    trueRootIds.add(nodeId);
+                    log.debug("[树形结构-查找根节点] 找到根节点: id={}", nodeId);
+                } else {
+                    // 还不是根节点，继续向上查找
+                    String parentId = parentValue.toString();
+                    if (!visited.contains(parentId)) {
+                        nextLevelIds.add(parentId);
+                    }
+                }
+            }
+            
+            // 处理没有查询到的节点（可能已被删除）
+            Set<String> notFoundIds = new HashSet<>(currentLevelIds);
+            notFoundIds.removeAll(nodes.stream().map(n -> n.get("id").toString()).collect(Collectors.toSet()));
+            if (!notFoundIds.isEmpty()) {
+                log.warn("[树形结构-查找根节点] 有{}个节点未查询到（可能已删除）: {}", notFoundIds.size(), notFoundIds);
+            }
+            
+            // 准备查询下一层级
+            currentLevelIds = nextLevelIds;
+        }
+        
+        if (depth >= maxDepth) {
+            log.error("[树形结构-查找根节点] 超过最大递归深度{}，可能存在循环引用或数据异常", maxDepth);
+        }
+        
+        List<String> result = new ArrayList<>(trueRootIds);
+        log.info("[树形结构-查找根节点] 查找完成，递归{}层，找到{}个真正的根节点", depth, result.size());
+        
+        return result;
     }
     
     /**
@@ -1621,6 +1705,14 @@ public class DynamicDataUseController {
                 log.warn("[树形结构-批量查询] 共发现并修复 {} 处循环引用，建议修复数据库中的数据", circularReferenceCount);
             }
             
+            // 添加诊断日志：查看allDataList和rootIds的详细信息
+            log.info("[树形结构-批量查询] 准备构建树: allDataList总数={}, rootIds={}", allDataList.size(), rootIds);
+            log.info("[树形结构-批量查询] allDataList中每条记录的id和{}:", parentFieldKey);
+            for (Map<String, Object> data : allDataList) {
+                Object parentValue = data.get(parentFieldKey);
+                log.info("  - id={}, {}={}", data.get("id"), parentFieldKey, parentValue);
+            }
+            
             List<Map<String, Object>> tree = TreeUtils.list2Tree(allDataList, rootIds,
                 e -> e.get("id").toString(),
                 (Function<Map<String, Object>, String>) e -> {
@@ -1638,6 +1730,14 @@ public class DynamicDataUseController {
                     }
                 }
             );
+            
+            // 添加诊断日志：查看树构建结果
+            log.info("[树形结构-批量查询] 树构建完成，返回的树节点数: {}", tree.size());
+            log.info("[树形结构-批量查询] 树根节点的id列表:");
+            for (Map<String, Object> root : tree) {
+                log.info("  - 根节点id={}, children数量={}", root.get("id"), 
+                    root.containsKey("children") ? ((List)root.get("children")).size() : 0);
+            }
             
             log.info("[树形结构-批量查询] 内存构建树形结构完成，树节点数: {}, 耗时: {}ms", tree.size(), System.currentTimeMillis() - buildTreeStart);
             log.info("[树形结构-批量查询] 总耗时: {}ms，性能提升: 消除了N+1递归查询问题", System.currentTimeMillis() - startTime);
