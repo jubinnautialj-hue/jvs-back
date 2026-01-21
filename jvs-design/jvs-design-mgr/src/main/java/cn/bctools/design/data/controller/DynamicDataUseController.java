@@ -1640,6 +1640,12 @@ public class DynamicDataUseController {
             // 关键修复：构建查询条件，应用用户的过滤条件（如 shiFuJianYanPi=5）
             Query query = new Query();
             
+            // 诊断日志：检查用户查询条件是否传递
+            log.info("[树形结构-批量查询] userQueryConditions是否为null: {}, 是否为空: {}, 内容: {}", 
+                ObjectNull.isNull(userQueryConditions), 
+                userQueryConditions == null ? "N/A" : userQueryConditions.isEmpty(),
+                userQueryConditions);
+            
             // 应用用户的查询条件
             if (ObjectNull.isNotNull(userQueryConditions) && !userQueryConditions.isEmpty()) {
                 List<QueryConditionDto> flatConditions = userQueryConditions.stream()
@@ -1647,8 +1653,13 @@ public class DynamicDataUseController {
                     .filter(condition -> !parentFieldKey.equals(condition.getFieldKey())) // 排除树形父字段条件
                     .collect(Collectors.toList());
                 
+                log.info("[树形结构-批量查询] flatConditions数量: {}, 内容: {}", flatConditions.size(), flatConditions);
+                
                 if (!flatConditions.isEmpty()) {
                     List<Criteria> criteriaList = DynamicDataUtils.buildDynamicCriteriaList(flatConditions);
+                    log.info("[树形结构-批量查询2] criteriaList是否为null: {}, 是否为空: {}", 
+                        ObjectNull.isNull(criteriaList), 
+                        criteriaList == null ? "N/A" : criteriaList.isEmpty());
                     if (ObjectNull.isNotNull(criteriaList) && !criteriaList.isEmpty()) {
                         Criteria combinedCriteria = new Criteria().andOperator(criteriaList.toArray(new Criteria[0]));
                         query.addCriteria(combinedCriteria);
