@@ -1491,7 +1491,8 @@ public class DynamicDataUseController {
                     log.info("[树形结构] 从{}条分页记录中识别出{}个真正的根节点: {}", records.size(), rootIds.size(), rootIds);
                 }
                 // 使用批量分层查询优化方案，完全消除递归查询
-                return buildTreeStructureByBatchQuery(appId, modelId, rootIds, parentFieldKey,fields, fieldBasicsHtmls, modelDisplayMap, totalCount);
+                // 关键修复：传递用户的查询条件，确保树形结构查询也能正确过滤数据
+                return buildTreeStructureByBatchQuery(appId, modelId, rootIds, parentFieldKey,fields, fieldBasicsHtmls, modelDisplayMap, totalCount, queryGroupConditions);
             }
         }
         log.info("[树形结构] 无树查询条件，直接返回");
@@ -1598,7 +1599,8 @@ public class DynamicDataUseController {
     private List<Map<String, Object>> buildTreeStructureByBatchQuery(
             String appId, String modelId, List<String> rootIds, String parentFieldKey,
             List<String> fields, List<FieldBasicsHtml> fieldBasicsHtmls, 
-            Map<String, ModelDisplayHtml> modelDisplayMap, long totalCount) {
+            Map<String, ModelDisplayHtml> modelDisplayMap, long totalCount,
+            List<List<QueryConditionDto>> userQueryConditions) {
         
         long startTime = System.currentTimeMillis();
         log.info("[树形结构-批量查询] 开始构建树形结构，根节点数: {}, 数据总量: {}", rootIds.size(), totalCount);
@@ -1609,11 +1611,32 @@ public class DynamicDataUseController {
             fieldKeys.add(Get.name(DynamicDataPo::getId));
             fieldKeys.add(parentFieldKey);
             
+            // 关键修复：构建查询条件，应用用户的过滤条件（如 shiFuJianYanPi=5）
             Query query = new Query();
+            
+            // 应用用户的查询条件
+            if (ObjectNull.isNotNull(userQueryConditions) && !userQueryConditions.isEmpty()) {
+                List<QueryConditionDto> flatConditions = userQueryConditions.stream()
+                    .flatMap(Collection::stream)
+                    .filter(condition -> !parentFieldKey.equals(condition.getFieldKey())) // 排除树形父字段条件
+                    .collect(Collectors.toList());
+                
+                if (!flatConditions.isEmpty()) {
+                    List<Criteria> criteriaList = DynamicDataUtils.buildDynamicCriteriaList(flatConditions);
+                    if (ObjectNull.isNotNull(criteriaList) && !criteriaList.isEmpty()) {
+                        Criteria combinedCriteria = new Criteria().andOperator(criteriaList.toArray(new Criteria[0]));
+                        query.addCriteria(combinedCriteria);
+                        log.info("[树形结构-批量查询] 已应用{}个用户查询条件：{}", flatConditions.size(), 
+                            flatConditions.stream().map(c -> c.getFieldKey() + "=" + c.getValue()).collect(Collectors.joining(", ")));
+                    }
+                }
+            }
+            
+            // 指定查询字段
             String[] fieldArray = new String[fieldKeys.size()];
             query.fields().include(fieldKeys.toArray(fieldArray));
             
-            // 批量查询所有数据（一次查询，消除N+1问题）
+            // 批量查询数据（已应用用户查询条件）
             long batchQueryStart = System.currentTimeMillis();
             List<Map> mapList = dataModelHandler.find(query, Map.class, modelId);
             log.info("[树形结构-批量查询] 批量查询完成，查询到{}条数据，耗时: {}ms", mapList.size(), System.currentTimeMillis() - batchQueryStart);
