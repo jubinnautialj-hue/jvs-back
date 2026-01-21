@@ -1265,8 +1265,30 @@ public class DynamicDataUseController {
         }
         // 条件值转换
         long convertStart = System.currentTimeMillis();
+        
+        // 诊断日志：打印 shiFuJianYanPi 查询条件转换前的值和类型
+        queryGroupConditions.stream().flatMap(Collection::stream)
+            .filter(condition -> "shiFuJianYanPi".equals(condition.getFieldKey()))
+            .forEach(condition -> {
+                Object value = condition.getValue();
+                if (ObjectNull.isNotNull(value)) {
+                    log.info("[类型诊断] 转换前 - shiFuJianYanPi查询条件值: {}, 类型: {}", value, value.getClass().getSimpleName());
+                }
+            });
+        
         queryGroupConditions.stream().flatMap(Collection::stream).forEach(condition ->
                 convertQueryValue(condition, collectMap));
+        
+        // 诊断日志：打印 shiFuJianYanPi 查询条件转换后的值和类型
+        queryGroupConditions.stream().flatMap(Collection::stream)
+            .filter(condition -> "shiFuJianYanPi".equals(condition.getFieldKey()))
+            .forEach(condition -> {
+                Object value = condition.getValue();
+                if (ObjectNull.isNotNull(value)) {
+                    log.info("[类型诊断] 转换后 - shiFuJianYanPi查询条件值: {}, 类型: {}", value, value.getClass().getSimpleName());
+                }
+            });
+        
         log.info("[分页查询] 条件值转换耗时: {}ms", System.currentTimeMillis() - convertStart);
 
         Page<DynamicDataPo> page = new Page<>(queryPageDto.getCurrent(), queryPageDto.getSize());
@@ -1319,6 +1341,19 @@ public class DynamicDataUseController {
             // 执行分页查询（内部会调用echo，此时可以使用预加载的部门缓存）
             Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, combiningFieldFormulaContentMap, queryGroupConditions, queryPageDto.getSorts(), collect, true, true, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
             log.info("[分页查询] 数据库分页查询耗时: {}ms, 返回记录数: {}", System.currentTimeMillis() - queryPageStart, pageResult.getRecords().size());
+            
+            // 诊断日志：打印查询结果中 shiFuJianYanPi 字段的值和类型
+            if (!pageResult.getRecords().isEmpty() && pageResult.getRecords().get(0).containsKey("shiFuJianYanPi")) {
+                Object shiFuJianYanPiValue = pageResult.getRecords().get(0).get("shiFuJianYanPi");
+                if (ObjectNull.isNotNull(shiFuJianYanPiValue)) {
+                    log.info("[类型诊断] shiFuJianYanPi字段 - 值: {}, 类型: {}, 类名: {}", 
+                        shiFuJianYanPiValue, 
+                        shiFuJianYanPiValue.getClass().getSimpleName(),
+                        shiFuJianYanPiValue.getClass().getName());
+                } else {
+                    log.info("[类型诊断] shiFuJianYanPi字段值为null");
+                }
+            }
             List<List<QueryConditionDto>> queryGroup = Collections.singletonList(Collections.singletonList(treeQuery.get()));
             List<Map<String, Object>> allData = new ArrayList<>();
             //如果是树，并关联自己，需要对数据进行关联查询下级直到查询不到结果为止

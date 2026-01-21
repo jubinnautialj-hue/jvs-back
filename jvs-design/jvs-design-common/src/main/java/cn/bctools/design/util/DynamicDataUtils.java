@@ -28,6 +28,7 @@ import cn.bctools.web.utils.WebUtils;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.collections4.CollectionUtils;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -45,6 +46,7 @@ import java.util.stream.Stream;
  *
  * @Author: GuoZi
  */
+@Slf4j
 public class DynamicDataUtils {
     /**
      * 将所有返回给前端的展示数据进行添加_1后缀，用于前端展示，
@@ -152,6 +154,21 @@ public class DynamicDataUtils {
         if (ObjectUtils.isEmpty(conditions)) {
             return null;
         }
+        
+        // 诊断日志：打印构建 MongoDB Criteria 时的条件
+        conditions.stream()
+            .filter(condition -> "shiFuJianYanPi".equals(condition.getFieldKey()))
+            .forEach(condition -> {
+                Object value = condition.getValue();
+                if (ObjectNull.isNotNull(value)) {
+                    log.info("[MongoDB查询构建] 字段: {}, 查询类型: {}, 查询值: {}, 类型: {}", 
+                        condition.getFieldKey(), 
+                        condition.getEnabledQueryTypes(),
+                        value,
+                        value.getClass().getSimpleName());
+                }
+            });
+        
         List<Criteria> criteriaList = new ArrayList<>();
         for (QueryConditionDto condition : conditions) {
             String fieldId = condition.getFieldKey();
