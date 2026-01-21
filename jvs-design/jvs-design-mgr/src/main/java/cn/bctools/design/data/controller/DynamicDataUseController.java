@@ -1457,8 +1457,11 @@ public class DynamicDataUseController {
                 long totalCount = dataModelHandler.estimatedCount(modelId);
                 log.info("[树形结构] 统计数据总量: {}, 耗时: {}ms", totalCount, System.currentTimeMillis() - countStart);
                 
-                // 获取父级字段名
-                String parentFieldKey = queryGroupConditions.get(0).get(0).getFieldKey();
+                // 获取父级字段名：使用 treeQuery 中的 fieldKey，这才是真正的父字段名
+                // 修复：之前错误地使用 queryGroupConditions.get(0).get(0).getFieldKey()，
+                // 导致将用户查询条件的字段（如 yanPingBiaoid）误当作父字段
+                String parentFieldKey = treeQuery.get().getFieldKey();
+                log.info("[树形结构] 识别父字段名: {}", parentFieldKey);
                 
                 // 关键修复：从分页查询结果中筛选出真正的根节点
                 // 只有父字段为null或空字符串的才是真正的根节点
