@@ -1489,7 +1489,7 @@ public class DynamicDataUseController {
                 
                 // 第2步：过滤掉那些父节点ID也在allNodeIds中的记录（说明它们是其他节点的子节点）
                 // 这些节点会在TreeUtils.list2Tree中自动挂在它们的父节点下，不需要单独作为根节点
-                List<String> rootIds = records.stream()
+                List<Map<String, Object>> relativeRootRecords = records.stream()
                     .filter(record -> {
                         Object parentValue = record.get(parentFieldKey);
                         // 如果没有父节点，肯定是根节点
@@ -1500,10 +1500,38 @@ public class DynamicDataUseController {
                         // 如果父节点ID不在分页结果中，说明这是相对的根节点
                         return !allNodeIds.contains(parentId);
                     })
+                    .collect(Collectors.toList());
+                
+                log.info("[树形结构] 层级递进式查询，从{}条记录中过滤出{}个相对根节点", records.size(), relativeRootRecords.size());
+                
+                // 第3步：检查这些相对根节点是否是真正的根节点（shangJiGongCheng为空）
+                // 如果不是，需要向上递归查找真正的根节点
+                List<String> trueRootNodeIds = relativeRootRecords.stream()
+                    .filter(record -> {
+                        Object parentValue = record.get(parentFieldKey);
+                        return ObjectNull.isNull(parentValue) || parentValue.toString().isEmpty();
+                    })
                     .map(e -> e.get("id").toString())
                     .collect(Collectors.toList());
                 
-                log.info("[树形结构] 层级递进式查询，从{}条记录中过滤出{}个真正的根节点: {}", records.size(), rootIds.size(), rootIds);
+                List<String> rootIds;
+                if (!trueRootNodeIds.isEmpty()) {
+                    // 已经找到真正的根节点，直接使用
+                    rootIds = trueRootNodeIds;
+                    log.info("[树形结构] 分页结果中包含{}个真正的根节点（{}为null）", rootIds.size(), parentFieldKey);
+                } else {
+                    // 所有相对根节点都有父节点，需要向上递归查找
+                    Set<String> parentIdsToFind = relativeRootRecords.stream()
+                        .map(e -> e.get(parentFieldKey))
+                        .filter(ObjectNull::isNotNull)
+                        .filter(p -> !p.toString().isEmpty())
+                        .map(Object::toString)
+                        .collect(Collectors.toSet());
+                    
+                    log.info("[树形结构] 相对根节点的父节点不在分页结果中，向上递归查找真正的根节点，父节点ID数量: {}", parentIdsToFind.size());
+                    rootIds = findTrueRootIds(appId, modelId, parentIdsToFind, parentFieldKey, queryGroupConditions);
+                    log.info("[树形结构] 递归查找完成，找到{}个真正的根节点: {}", rootIds.size(), rootIds);
+                }
                 // 使用批量分层查询优化方案，完全消除递归查询
                 // 关键修复：传递用户的查询条件，确保树形结构查询也能正确过滤数据
                 return buildTreeStructureByBatchQuery(appId, modelId, rootIds, parentFieldKey,fields, fieldBasicsHtmls, modelDisplayMap, totalCount, queryGroupConditions);
