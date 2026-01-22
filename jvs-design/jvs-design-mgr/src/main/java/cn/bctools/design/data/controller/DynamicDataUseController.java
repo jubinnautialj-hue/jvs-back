@@ -1471,34 +1471,14 @@ public class DynamicDataUseController {
                 String parentFieldKey = treeQuery.get().getFieldKey();
                 log.info("[树形结构] 识别父字段名: {}", parentFieldKey);
                 
-                // 关键修复：从分页查询结果中筛选出真正的根节点
-                // 只有父字段为null或空字符串的才是真正的根节点
-                List<String> rootIds = records.stream().filter(record -> {
-                        Object parentValue = record.get(parentFieldKey);
-                        // 只有父字段为空才是真正的根节点
-                        return ObjectNull.isNull(parentValue) || parentValue.toString().isEmpty();
-                    }).map(e -> e.get("id").toString())
+                // 层级递进式查询：直接使用分页查询结果中满足条件的节点作为根节点
+                // 不需要向上查找父节点，满足查询条件的节点本身就是根节点
+                // 例如：查询 shiFuJianYanPi=5，返回所有 shiFuJianYanPi=5 的节点作为根节点
+                List<String> rootIds = records.stream()
+                    .map(e -> e.get("id").toString())
                     .collect(Collectors.toList());
                 
-                // 如果没有找到根节点，说明查询结果都是子节点
-                // 需要从这些子节点向上查找父节点，构建完整的树结构
-                if (rootIds.isEmpty()) {
-                    log.warn("[树形结构] 分页查询结果中没有根节点，所有记录都是子节点，需要向上查找父节点");
-                    // 收集所有父节点ID
-                    Set<String> parentIds = records.stream().map(record -> record.get(parentFieldKey))
-                        .filter(ObjectNull::isNotNull)
-                        .map(Object::toString)
-                        .filter(s -> !s.isEmpty())
-                        .collect(Collectors.toSet());
-                    
-                    // 关键修复：递归向上查找真正的根节点（shangJiGongCheng为空的节点）
-                    // 而不是直接使用这些父节点ID作为根节点
-                    // 重要：传递用户查询条件，确保找到的根节点也满足查询条件
-                    rootIds = findTrueRootIds(appId, modelId, parentIds, parentFieldKey, queryGroupConditions);
-                    log.info("[树形结构] 向上递归查找后，找到{}个真正的根节点ID: {}", rootIds.size(), rootIds);
-                } else {
-                    log.info("[树形结构] 从{}条分页记录中识别出{}个真正的根节点: {}", records.size(), rootIds.size(), rootIds);
-                }
+                log.info("[树形结构] 层级递进式查询，直接使用{}条满足条件的记录作为根节点: {}", rootIds.size(), rootIds);
                 // 使用批量分层查询优化方案，完全消除递归查询
                 // 关键修复：传递用户的查询条件，确保树形结构查询也能正确过滤数据
                 return buildTreeStructureByBatchQuery(appId, modelId, rootIds, parentFieldKey,fields, fieldBasicsHtmls, modelDisplayMap, totalCount, queryGroupConditions);
@@ -1732,12 +1712,8 @@ public class DynamicDataUseController {
             }
             
             // 添加诊断日志：查看allDataList和rootIds的详细信息
-            log.info("[树形结构-批量查询] 准备构建树: allDataList总数={}, rootIds={}", allDataList.size(), rootIds);
-            log.info("[树形结构-批量查询] allDataList中每条记录的id和{}:", parentFieldKey);
-            for (Map<String, Object> data : allDataList) {
-                Object parentValue = data.get(parentFieldKey);
-                log.info("  - id={}, {}={}", data.get("id"), parentFieldKey, parentValue);
-            }
+            log.info("[树形结构-批量查询] 准备构建树: allDataList总数={}, rootIds数量={}", allDataList.size(), rootIds.size());
+            log.debug("[树形结构-批量查询] rootIds详细列表: {}", rootIds);
             
             List<Map<String, Object>> tree = TreeUtils.list2Tree(allDataList, rootIds,
                 e -> e.get("id").toString(),
