@@ -1535,31 +1535,11 @@ public class DynamicDataUseController {
             depth++;
             log.debug("[树形结构-查找根节点] 第{}层查找，当前ID数量: {}", depth, currentLevelIds.size());
             
-            // 批量查询当前层级的节点
+            // 批量查询当前层级的节点（不应用业务查询条件，只查询ID）
+            // 原因：向上递归查找根节点时，父节点的 shiFuJianYanPi 可能与子节点不同
+            // 例如：子节点 shiFuJianYanPi=6，父节点可能是5,4,3...，如果应用条件就查不到父节点
             Query query = new Query(Criteria.where("id").in(currentLevelIds));
-            
-            // 关键修复：应用用户的查询条件，确保查询到的节点满足条件（如 shiFuJianYanPi=6）
-            if (ObjectNull.isNotNull(userQueryConditions) && !userQueryConditions.isEmpty()) {
-                List<QueryConditionDto> flatConditions = userQueryConditions.stream()
-                    .flatMap(Collection::stream)
-                    .filter(condition -> !parentFieldKey.equals(condition.getFieldKey())) // 排除树形父字段条件
-                    .collect(Collectors.toList());
-                
-                if (!flatConditions.isEmpty()) {
-                    List<Criteria> criteriaList = DynamicDataUtils.buildDynamicCriteriaList(flatConditions);
-                    if (ObjectNull.isNotNull(criteriaList) && !criteriaList.isEmpty()) {
-                        // 将ID条件和用户条件组合
-                        Criteria combinedCriteria = new Criteria().andOperator(
-                            Stream.concat(
-                                Stream.of(Criteria.where("id").in(currentLevelIds)),
-                                criteriaList.stream()
-                            ).toArray(Criteria[]::new)
-                        );
-                        query = new Query(combinedCriteria);
-                        log.debug("[树形结构-查找根节点] 应用{}个用户查询条件", flatConditions.size());
-                    }
-                }
-            }
+            log.info("[树形结构-查找根节点] 不应用业务查询条件，只根据ID查询父节点，查询ID数量: {}", currentLevelIds.size());
             
             query.fields().include("id", parentFieldKey);
             
