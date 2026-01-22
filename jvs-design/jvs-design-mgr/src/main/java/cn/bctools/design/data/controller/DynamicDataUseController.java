@@ -1472,13 +1472,38 @@ public class DynamicDataUseController {
                 log.info("[树形结构] 识别父字段名: {}", parentFieldKey);
                 
                 // 层级递进式查询：直接使用分页查询结果中满足条件的节点作为根节点
-                // 不需要向上查找父节点，满足查询条件的节点本身就是根节点
+                // 但需要过滤掉那些同时也是其他节点子节点的记录，避免数据重复
                 // 例如：查询 shiFuJianYanPi=5，返回所有 shiFuJianYanPi=5 的节点作为根节点
+                
+                // 第1步：收集所有节点的ID和父节点ID
+                Set<String> allNodeIds = records.stream()
+                    .map(e -> e.get("id").toString())
+                    .collect(Collectors.toSet());
+                
+                Set<String> allParentIds = records.stream()
+                    .map(e -> e.get(parentFieldKey))
+                    .filter(ObjectNull::isNotNull)
+                    .filter(p -> !p.toString().isEmpty())
+                    .map(Object::toString)
+                    .collect(Collectors.toSet());
+                
+                // 第2步：过滤掉那些父节点ID也在allNodeIds中的记录（说明它们是其他节点的子节点）
+                // 这些节点会在TreeUtils.list2Tree中自动挂在它们的父节点下，不需要单独作为根节点
                 List<String> rootIds = records.stream()
+                    .filter(record -> {
+                        Object parentValue = record.get(parentFieldKey);
+                        // 如果没有父节点，肯定是根节点
+                        if (ObjectNull.isNull(parentValue) || parentValue.toString().isEmpty()) {
+                            return true;
+                        }
+                        String parentId = parentValue.toString();
+                        // 如果父节点ID不在分页结果中，说明这是相对的根节点
+                        return !allNodeIds.contains(parentId);
+                    })
                     .map(e -> e.get("id").toString())
                     .collect(Collectors.toList());
                 
-                log.info("[树形结构] 层级递进式查询，直接使用{}条满足条件的记录作为根节点: {}", rootIds.size(), rootIds);
+                log.info("[树形结构] 层级递进式查询，从{}条记录中过滤出{}个真正的根节点: {}", records.size(), rootIds.size(), rootIds);
                 // 使用批量分层查询优化方案，完全消除递归查询
                 // 关键修复：传递用户的查询条件，确保树形结构查询也能正确过滤数据
                 return buildTreeStructureByBatchQuery(appId, modelId, rootIds, parentFieldKey,fields, fieldBasicsHtmls, modelDisplayMap, totalCount, queryGroupConditions);
