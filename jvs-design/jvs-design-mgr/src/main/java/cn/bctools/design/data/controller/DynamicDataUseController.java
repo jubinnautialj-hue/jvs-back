@@ -953,7 +953,6 @@ public class DynamicDataUseController {
         log.info("[分页查询] CrudPage列表查询耗时: {}ms, 数量: {}", System.currentTimeMillis() - crudPageStart, crudPage != null ? crudPage.size() : 0);
         //记录甘特图的设置属性值，确定是哪哪几个字段进行处理的，需要对其数据进行排列并取最大最小
         List<String> dateField = new ArrayList<>();
-        Optional<String> retrievalKey = Optional.empty();
         if (ObjectNull.isNotNull(crudPage)) {
             crudPage.sort(Comparator.comparing(CrudPage::getUpdateTime).reversed());
             CrudPage page = crudPage.stream().filter(e -> e.getId().equals(designId)).findAny().orElseGet(() -> crudPage.get(0));
@@ -967,12 +966,6 @@ public class DynamicDataUseController {
                     dateField.add(pageDesignHtml.getGanttForm().getReallyEnd());
                 }
                 List<QueryConditionDto> finalQueryConditions = queryConditions;
-                retrievalKey = pageDesignHtml.getDataPage().getAutoTableFields().stream()
-                        .filter(e -> ObjectNull.isNotNull(e.getEnableRetrieval()))
-                        .filter(DataTableFieldDesignHtml::getEnableRetrieval)
-                        .filter(e -> collectMap.containsKey(e.getAliasColumnName()))
-                        .filter(e -> collectMap.get(e.getAliasColumnName()).getFieldType().equals(DataFieldType.select))
-                        .map(DataTableFieldDesignHtml::getAliasColumnName).findFirst();
                 long retrievalStart = System.currentTimeMillis();
                 pageDesignHtml.getDataPage().getAutoTableFields().stream()
                         .filter(e -> ObjectNull.isNotNull(e.getEnableRetrieval()))
