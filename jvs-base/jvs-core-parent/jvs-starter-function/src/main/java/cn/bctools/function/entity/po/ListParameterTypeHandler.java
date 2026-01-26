@@ -11,18 +11,25 @@ import org.apache.ibatis.type.MappedTypes;
 
 import java.util.List;
 
+/**
+ * @author jvs
+ */
 @Slf4j
 @MappedTypes({Object.class})
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class ListParameterTypeHandler extends AbstractJsonTypeHandler<List<Parameter>> {
 
+    public ListParameterTypeHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected List<Parameter> parse(String json) {
+    public List<Parameter> parse(String json) {
         return JSONArray.parseArray(json, Parameter.class);
     }
 
     @Override
-    protected String toJson(List<Parameter> obj) {
+    public String toJson(List<Parameter> obj) {
         return JSONUtil.toJsonStr(obj);
     }
 }

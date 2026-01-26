@@ -114,7 +114,7 @@ public class ThumbnailUtil {
             String base64 = ImgUtil.toBase64DataUri(image, "png");
             CACHE.put(name, base64);
             return base64;
-        } catch (IOException e) {
+        } catch (Exception e) {
             log.error("获取默认缩略图失败。exception:{}", e);
         }
         return null;

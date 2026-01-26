@@ -1,12 +1,14 @@
 package cn.bctools.common.enums;
 
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 /**
  * @author zhuxiaokang
  * 移动端
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
 public class SysConfigApp extends SysConfigBase<SysConfigApp> {

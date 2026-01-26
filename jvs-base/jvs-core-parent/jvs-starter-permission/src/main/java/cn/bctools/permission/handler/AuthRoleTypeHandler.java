@@ -8,22 +8,28 @@ import org.apache.ibatis.type.JdbcType;
 import org.apache.ibatis.type.MappedJdbcTypes;
 import org.apache.ibatis.type.MappedTypes;
 
-
+/**
+ * 角色类型处理器
+ *
+ * @author guojing
+ */
 @Slf4j
-@MappedTypes({Object.class})
+@MappedTypes({ Object.class })
 @MappedJdbcTypes(JdbcType.VARCHAR)
-public class AuthRoleTypeHandler  extends AbstractJsonTypeHandler<AuthRole> {
+public class AuthRoleTypeHandler extends AbstractJsonTypeHandler<AuthRole> {
+
 
     public AuthRoleTypeHandler(Class<?> type) {
+        super(type);
     }
 
     @Override
-    protected AuthRole parse(String json) {
+    public AuthRole parse(String json) {
         return JSONUtil.toBean(json, AuthRole.class);
     }
 
     @Override
-    protected String toJson(AuthRole obj) {
+    public String toJson(AuthRole obj) {
         return JSONUtil.toJsonStr(obj);
     }
 }

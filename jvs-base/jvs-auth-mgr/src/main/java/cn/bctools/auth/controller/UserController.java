@@ -720,10 +720,10 @@ public class UserController {
         userTenant.setId(updateUserTenant.getId());
         userTenantService.updateById(userTenant);
         //将部门保存到一个新的表中
+        //删除历史的用户部门数据， 再添加新的用户部门数据
+        String id = user.getId();
+        userDeptService.remove(Wrappers.query(new UserDept().setUserId(id)));
         if (ObjectNull.isNotNull(userTenant.getDeptId())) {
-            String id = user.getId();
-            //删除历史的用户部门数据
-            userDeptService.remove(Wrappers.query(new UserDept().setUserId(id)));
             List<UserDept> collect = userTenant.getDeptId().stream().map(e -> {
                 return new UserDept().setUserId(id).setDeptId(e).setTenantId(tenantId);
             }).collect(Collectors.toList());

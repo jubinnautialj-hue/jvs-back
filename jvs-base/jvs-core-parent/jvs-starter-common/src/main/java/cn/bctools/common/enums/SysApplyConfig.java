@@ -2,6 +2,7 @@ package cn.bctools.common.enums;
 
 import cn.bctools.common.utils.ObjectNull;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
@@ -10,6 +11,7 @@ import java.io.Serializable;
 /**
  * @author guojing
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
 public class SysApplyConfig extends SysConfigBase<SysApplyConfig> implements Serializable {

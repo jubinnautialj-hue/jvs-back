@@ -20,14 +20,14 @@
         <dependency>
             <groupId>com.github.binarywang</groupId>
             <artifactId>wx-java-miniapp-spring-boot-starter</artifactId>
-            <version>4.2.0</version>
+            <version>${weixin-java-miniapp.version}</version>
         </dependency>
 
         <!-- https://mvnrepository.com/artifact/com.xkcoding.justauth/justauth-spring-boot-starter -->
         <dependency>
             <groupId>com.xkcoding.justauth</groupId>
             <artifactId>justauth-spring-boot-starter</artifactId>
-            <version>1.4.0</version>
+            <version>${justauth.version}</version>
             <exclusions>
                 <exclusion>
                     <groupId>cn.hutool</groupId>
@@ -51,7 +51,7 @@
         <dependency>
             <groupId>org.hibernate.validator</groupId>
             <artifactId>hibernate-validator</artifactId>
-            <version>7.0.2.Final</version>
+            <version>${hibernate-validator.version}</version>
         </dependency>
 
         <!--数据库-->
@@ -84,7 +84,17 @@
         <dependency>
             <groupId>com.github.binarywang</groupId>
             <artifactId>weixin-java-miniapp</artifactId>
-            <version>4.2.0</version>
+            <version>${weixin-java-miniapp.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>commons-io</artifactId>
+                    <groupId>commons-io</groupId>
+                </exclusion>
+                <exclusion>
+                    <artifactId>xstream</artifactId>
+                    <groupId>com.thoughtworks.xstream</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>
@@ -96,7 +106,13 @@
         <dependency>
             <groupId>com.aliyun</groupId>
             <artifactId>alibaba-dingtalk-service-sdk</artifactId>
-            <version>2.0.0</version>
+            <version>${dingtalk.version}</version>
+            <exclusions>
+                <exclusion>
+                    <artifactId>log4j</artifactId>
+                    <groupId>log4j</groupId>
+                </exclusion>
+            </exclusions>
         </dependency>
 
         <dependency>

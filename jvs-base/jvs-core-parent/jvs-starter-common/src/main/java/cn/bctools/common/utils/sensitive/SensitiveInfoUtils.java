@@ -26,7 +26,7 @@ public class SensitiveInfoUtils {
     /**
      * 默认的脱敏方法操作
      */
-    static Function DEFAULT_SENSITIVE_FUNCTION = (e) -> JSONObject.parseObject(SensitiveDataConverter.processor(e), e.getClass());
+    static Function DEFAULT_SENSITIVE_FUNCTION = e -> e;
 
     /**
      * 获取默认的解析器

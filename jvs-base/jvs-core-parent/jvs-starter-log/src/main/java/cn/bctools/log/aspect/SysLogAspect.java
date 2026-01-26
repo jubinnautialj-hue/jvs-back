@@ -42,6 +42,7 @@ import java.lang.reflect.Method;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -266,12 +267,13 @@ public class SysLogAspect {
         for (int i = 0; i < point.getArgs().length; i++) {
             Object arg = point.getArgs()[i];
             //增加参数忽略匹配  如果是返回对象不记录
-            if (arg instanceof com.baomidou.mybatisplus.extension.plugins.pagination.Page) {
+            if (arg instanceof Page) {
                 //改造排序参数
                 Page page = (Page) arg;
-                for (Object order : page.getOrders()) {
-                    OrderItem orderItem = (OrderItem) order;
-                    orderItem.setColumn(StringUtils.camelToUnderline(((OrderItem) order).getColumn()));
+                List<OrderItem> orders = page.orders();
+                for (OrderItem order : orders) {
+                    OrderItem orderItem = order;
+                    orderItem.setColumn(StringUtils.camelToUnderline((order).getColumn()));
                 }
                 point.getArgs()[i] = page;
                 continue;

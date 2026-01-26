@@ -11,13 +11,10 @@ import cn.bctools.database.getter.ITableFieldGetter;
 import cn.bctools.database.mapper.TableInfoMapper;
 import cn.bctools.database.util.DatabaseUtils;
 import cn.hutool.core.lang.ClassScanner;
-import cn.hutool.core.util.PageUtil;
-import com.alibaba.excel.util.ClassUtils;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeansException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.core.Ordered;
@@ -92,7 +89,6 @@ public class DataSourceInit extends SpringContextUtil {
             }
         } catch (Exception e) {
             log.error(">>>> 数据源信息初始化异常, 部分功能可能无法正常使用,退出启动", e);
-            System.exit(-1);
         }
     }
 

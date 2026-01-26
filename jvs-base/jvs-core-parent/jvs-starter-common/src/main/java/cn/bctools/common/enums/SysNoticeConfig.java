@@ -3,6 +3,7 @@ package cn.bctools.common.enums;
 import com.alibaba.fastjson2.JSONObject;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 import java.util.List;
@@ -12,6 +13,7 @@ import java.util.Map;
  * @author zhuxiaokang
  * 通知配置
  */
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
 public class SysNoticeConfig extends SysConfigBase<SysNoticeConfig> {

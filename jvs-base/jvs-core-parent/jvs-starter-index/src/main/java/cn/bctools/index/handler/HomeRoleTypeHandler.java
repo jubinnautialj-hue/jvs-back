@@ -13,14 +13,18 @@ import java.util.List;
  */
 public class HomeRoleTypeHandler extends AbstractJsonTypeHandler<List<HomeRole>> {
 
+    public HomeRoleTypeHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected List<HomeRole> parse(String json) {
+    public List<HomeRole> parse(String json) {
         List<HomeRole> list = JSON.parseArray(json, HomeRole.class);
         return new ArrayList(list);
     }
 
     @Override
-    protected String toJson(List<HomeRole> obj) {
+    public String toJson(List<HomeRole> obj) {
         return JSON.toJSONString(obj, JSONWriter.Feature.WriteMapNullValue, JSONWriter.Feature.WriteNullListAsEmpty, JSONWriter.Feature.WriteNullStringAsEmpty);
     }
 }

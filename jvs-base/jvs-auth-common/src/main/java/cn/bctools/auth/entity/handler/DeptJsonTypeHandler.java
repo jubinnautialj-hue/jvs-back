@@ -21,8 +21,12 @@ import java.util.List;
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class DeptJsonTypeHandler extends AbstractJsonTypeHandler<List<String>> {
 
+    public DeptJsonTypeHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected List<String> parse(String json) {
+    public List<String> parse(String json) {
         if (JSONUtil.isTypeJSON(json)) {
             //判断是数组，
             return JSONArray.parseArray(json, String.class);
@@ -37,7 +41,7 @@ public class DeptJsonTypeHandler extends AbstractJsonTypeHandler<List<String>> {
     }
 
     @Override
-    protected String toJson(List<String> obj) {
+    public String toJson(List<String> obj) {
         return JSONObject.toJSONString(obj);
     }
 

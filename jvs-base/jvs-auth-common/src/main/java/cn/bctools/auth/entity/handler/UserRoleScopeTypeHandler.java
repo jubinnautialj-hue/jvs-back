@@ -12,14 +12,18 @@ import java.util.List;
  * @author zhuxiaokang
  */
 public class UserRoleScopeTypeHandler extends AbstractJsonTypeHandler<List<UserRoleScope>> {
+    public UserRoleScopeTypeHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected List<UserRoleScope> parse(String json) {
+    public List<UserRoleScope> parse(String json) {
         List<UserRoleScope> list = JSON.parseArray(json, UserRoleScope.class);
         return new ArrayList(list);
     }
 
     @Override
-    protected String toJson(List<UserRoleScope> obj) {
+    public String toJson(List<UserRoleScope> obj) {
         return JSON.toJSONString(obj, JSONWriter.Feature.WriteMapNullValue, JSONWriter.Feature.WriteNullListAsEmpty, JSONWriter.Feature.WriteNullStringAsEmpty);
     }
 }

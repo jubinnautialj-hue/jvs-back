@@ -78,14 +78,15 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
     @Override
     public Object calculate(String functionName, Object... params) {
         ScriptDto scriptDto = this.getScriptDtoFromCache(functionName, params);
-        //判断类型是否符合
+        // 判断类型是否符合
         if (ObjectNull.isNotNull(scriptDto.getInParamTypes())) {
             for (int i = 0; i < scriptDto.getInParamTypes().size(); i++) {
                 JvsParamType inParamType = scriptDto.getInParamTypes().get(i);
                 switch (inParamType) {
                     case number:
                         if (NumberUtil.isNumber(params[i].toString())) {
-                            if (NumberUtil.parseNumber(params[i].toString()).intValue() == NumberUtil.parseNumber(params[i].toString()).doubleValue()) {
+                            if (NumberUtil.parseNumber(params[i].toString()).intValue() == NumberUtil
+                                    .parseNumber(params[i].toString()).doubleValue()) {
                                 params[i] = NumberUtil.parseNumber(params[i].toString()).intValue();
                             } else {
                                 params[i] = NumberUtil.parseNumber(params[i].toString()).doubleValue();
@@ -100,6 +101,8 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
                     case text:
                     case date:
                     case any:
+                    default:
+                        break;
                 }
             }
         }
@@ -132,7 +135,8 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
             return scriptDto;
         }
         // 查询函数体
-        BaseFunctionPo baseFunctionPo = sysFunctionMapper.selectOne(Wrappers.<BaseFunctionPo>lambdaQuery().eq(BaseFunctionPo::getName, functionName));
+        BaseFunctionPo baseFunctionPo = sysFunctionMapper
+                .selectOne(Wrappers.<BaseFunctionPo>lambdaQuery().eq(BaseFunctionPo::getName, functionName));
         if (Objects.isNull(baseFunctionPo)) {
             throw new BusinessException("未知的函数", functionName);
         }
@@ -146,10 +150,13 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
             // 存在可变参数时, 期望参数数量取最大值
             expectedParamCount = validParamCount.stream().max(Integer::compareTo).orElse(0);
             if (expectedParamCount > paramCount) {
-                throw new BusinessException("[{}]参数数量异常, 期望的参数数量: {}, 实际数量: {}", functionName, expectedParamCount, paramCount);
+                throw new BusinessException("[{}]参数数量异常, 期望的参数数量: {}, 实际数量: {}", functionName, expectedParamCount,
+                        paramCount);
             }
+            expectedParamCount = paramCount;
         } else if (!validParamCount.contains(paramCount)) {
-            throw new BusinessException("[{}]参数数量异常, 期望的参数数量: {}, 实际数量: {}", functionName, JSONUtil.toJsonStr(validParamCount), paramCount);
+            throw new BusinessException("[{}]参数数量异常, 期望的参数数量: {}, 实际数量: {}", functionName,
+                    JSONUtil.toJsonStr(validParamCount), paramCount);
         }
         String body = baseFunctionPo.getBody();
         if (StringUtils.isBlank(body)) {
@@ -162,7 +169,8 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
         scriptDto.setHasDynamicParam(hasDynamicParam);
         scriptDto.setExpectedParamCount(expectedParamCount);
         if (ObjectNull.isNotNull(baseFunctionPo.getInParamTypes())) {
-            List<JvsParamType> collect = (List<JvsParamType>) baseFunctionPo.getInParamTypes().stream().map(e -> JvsParamType.valueOf(e.toString())).collect(Collectors.toList());
+            List<JvsParamType> collect = (List<JvsParamType>) baseFunctionPo.getInParamTypes().stream()
+                    .map(e -> JvsParamType.valueOf(e.toString())).collect(Collectors.toList());
             scriptDto.setInParamTypes(collect);
         }
         scriptCache.put(cacheKey, scriptDto);
@@ -179,7 +187,8 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
      * @param expectedParamCount 期待的参数数量
      * @return 执行对象
      */
-    public static Script buildScript(String functionName, String functionBody, boolean hasDynamicParam, int paramCount, int expectedParamCount) {
+    public static Script buildScript(String functionName, String functionBody, boolean hasDynamicParam, int paramCount,
+            int expectedParamCount) {
         StringBuilder builder = new StringBuilder(functionBody);
         builder.append("\nreturn ");
         builder.append(functionName);
@@ -244,7 +253,6 @@ public class BaseFunctionImpl implements IJvsFunction<ElementVo> {
             function.setId(function.getName());
         }
     }
-
 
     @Data
     private static class ScriptDto {

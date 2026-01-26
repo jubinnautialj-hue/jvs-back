@@ -20,8 +20,12 @@ import org.apache.ibatis.type.MappedTypes;
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class JsonStrTypeHandler extends AbstractJsonTypeHandler<Object> {
 
+    public JsonStrTypeHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected Object parse(String json) {
+    public Object parse(String json) {
         if (JSONUtil.isTypeJSONArray(json)) {
             return JSONArray.parseArray(json);
         } else if (JSONUtil.isTypeJSON(json)) {
@@ -31,7 +35,7 @@ public class JsonStrTypeHandler extends AbstractJsonTypeHandler<Object> {
     }
 
     @Override
-    protected String toJson(Object obj) {
+    public String toJson(Object obj) {
         if (obj instanceof String) {
             return obj.toString();
         }

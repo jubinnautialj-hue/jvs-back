@@ -18,8 +18,6 @@
         <module>jvs-starter-database</module>
         <!--多数据源-->
         <module>jvs-starter-dynamic</module>
-        <!--数据源代理-->
-        <module>jvs-starter-dynamic-proxy</module>
         <!--基础包-->
         <module>jvs-starter-common</module>
         <!--web-starter启动初始化容器包-注册中心基础服务-->
@@ -46,8 +44,6 @@
         <module>jvs-starter-knife4j</module>
         <!--钉钉接入-->
         <module>jvs-starter-dingding</module>
-        <!--监控服务-->
-        <module>jvs-starter-prometheus</module>
         <!--Mq-->
         <module>jvs-starter-rabbit</module>
         <!--wps在线文档编辑-->

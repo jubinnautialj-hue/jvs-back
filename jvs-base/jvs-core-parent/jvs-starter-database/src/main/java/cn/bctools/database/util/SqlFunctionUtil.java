@@ -16,13 +16,14 @@ import java.util.stream.Collectors;
 
 /**
  * @author zhuxiaokang
- * SQL函数
+ *         SQL函数
  */
 public class SqlFunctionUtil {
 
     private static VendorDatabaseIdProvider provider = SpringContextUtil.getBean(VendorDatabaseIdProvider.class);
     private static DataSource dataSource = SpringContextUtil.getBean(DataSource.class);
     static DbType type = null;
+    private static final int STEP = 2;
 
     private static DbType dbType() {
         if (ObjectNull.isNotNull(type)) {
@@ -49,7 +50,7 @@ public class SqlFunctionUtil {
             case DM:
                 // dm数据库支持JSON_CONTAINS和CONCAT函数
             default:
-                //默认Mysql
+                // 默认Mysql
                 return "JSON_CONTAINS(" + columnName + ", CONCAT('\"', '" + val + "', '\"'), '" + path + "')";
         }
     }
@@ -67,7 +68,8 @@ public class SqlFunctionUtil {
      * 查询包含 bbbb 的数据
      * <p>
      * - 数组对象
-     * 如：[{"name":"小明","id":"xxxxxxxxxxx","type":"user"}, {"name":"小红","id":"xxxxxxxxxxx11","type":"user"}]
+     * 如：[{"name":"小明","id":"xxxxxxxxxxx","type":"user"},
+     * {"name":"小红","id":"xxxxxxxxxxx11","type":"user"}]
      * 查询name为小明的数据
      *
      * @param columnName json字段
@@ -112,7 +114,7 @@ public class SqlFunctionUtil {
 
                 if (ObjectNull.isNotNull(objectStr)) {
                     Map<Object, Object> objectMap = new HashMap<>(objects.length);
-                    for (int i = 0; i < objects.length; i += 2) {
+                    for (int i = 0; i < objects.length; i += STEP) {
                         objectMap.put(objects[i], objects[i + 1]);
                     }
                     candidate = buildCandidate.apply(objectMap);
@@ -132,7 +134,7 @@ public class SqlFunctionUtil {
                 }
                 return "JSON_CONTAINS(" + columnName + ", " + candidate + ", '" + path + "')";
             default:
-                throw new BusinessException("数据库未支持",dbType());
+                throw new BusinessException("数据库未支持", dbType());
         }
     }
 
@@ -153,7 +155,7 @@ public class SqlFunctionUtil {
             case DM:
                 return "REPLACE(JSON_EXTRACT(" + columnName + ", '$." + path + "'), '\"', '')";
             default:
-                throw new BusinessException("数据库未支持",dbType());
+                throw new BusinessException("数据库未支持", dbType());
         }
     }
 }

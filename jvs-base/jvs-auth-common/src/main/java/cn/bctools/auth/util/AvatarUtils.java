@@ -1,11 +1,11 @@
 package cn.bctools.auth.util;
 
+import lombok.experimental.UtilityClass;
+
 import javax.imageio.ImageIO;
 import java.awt.*;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Random;
@@ -17,17 +17,8 @@ import java.util.regex.Pattern;
  *
  * @author xh
  */
+@UtilityClass
 public class AvatarUtils {
-
-//    /**
-//     * @throws IOException
-//     * @throws
-//     **/
-//    public static void main(String[] args) throws IOException {
-//        String name = "朝秦";
-//        //name 姓名  outputPath 存放路径 fillet 圆角大小
-//        generateImg(name, new FileOutputStream(new File("/Users/guojing/Desktop/朝秦暮楚sbcc.jpg")));
-//    }
 
 
     /**
@@ -42,6 +33,8 @@ public class AvatarUtils {
         Matcher m = p.matcher(str);
         return m.find();
     }
+
+    static Random random = new Random();
 
     /**
      * 获得随机颜色
@@ -67,7 +60,6 @@ public class AvatarUtils {
                         "38,157,128", "201,138,131", "220,162,151", "137,157,192", "175,215,237", "92,167,186",
                         "255,66,93", "147,224,255", "247,68,97", "185,227,217"};
         int len = beautifulColors.length;
-        Random random = new Random();
         String[] color = beautifulColors[random.nextInt(len)].split(",");
         return new Color(Integer.parseInt(color[0]), Integer.parseInt(color[1]),
                 Integer.parseInt(color[2]));

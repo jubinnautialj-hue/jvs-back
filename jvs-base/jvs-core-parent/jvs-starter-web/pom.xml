@@ -50,6 +50,8 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-undertow</artifactId>
+            <version>${spring-boot-undertow.version}</version>
+
         </dependency>
 
         <dependency>

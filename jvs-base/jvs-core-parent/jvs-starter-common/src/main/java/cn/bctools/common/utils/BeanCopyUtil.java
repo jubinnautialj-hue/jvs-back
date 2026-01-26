@@ -72,13 +72,16 @@ public class BeanCopyUtil {
             }
             return o;
         } catch (InstantiationException e) {
-            log.info("转化错误", e);
+            if (log.isInfoEnabled()) {
+                log.info("转化错误", e);
+            }
         } catch (IllegalAccessException e) {
-            log.info("转化错误", e);
+            if (log.isInfoEnabled()) {
+                log.info("转化错误", e);
+            }
         }
         return o;
     }
-
 
     /**
      * 将对象装换为map
@@ -134,7 +137,9 @@ public class BeanCopyUtil {
             ObjectInputStream in = new ObjectInputStream(byteIn);
             return (List<T>) in.readObject();
         } catch (IOException | ClassNotFoundException e) {
-            log.info("deepCopy failure!! error={}", e.getMessage());
+            if (log.isInfoEnabled()) {
+                log.info("deepCopy failure!! error={}", e.getMessage());
+            }
             return null;
         }
     }
