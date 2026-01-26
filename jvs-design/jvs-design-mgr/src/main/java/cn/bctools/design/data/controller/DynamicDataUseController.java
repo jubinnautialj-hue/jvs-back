@@ -1468,16 +1468,9 @@ public class DynamicDataUseController {
                 // 但需要过滤掉那些同时也是其他节点子节点的记录，避免数据重复
                 // 例如：查询 shiFuJianYanPi=5，返回所有 shiFuJianYanPi=5 的节点作为根节点
                 
-                // 第1步：收集所有节点的ID和父节点ID
+                // 第1步：收集所有节点的ID
                 Set<String> allNodeIds = records.stream()
                     .map(e -> e.get("id").toString())
-                    .collect(Collectors.toSet());
-                
-                Set<String> allParentIds = records.stream()
-                    .map(e -> e.get(parentFieldKey))
-                    .filter(ObjectNull::isNotNull)
-                    .filter(p -> !p.toString().isEmpty())
-                    .map(Object::toString)
                     .collect(Collectors.toSet());
                 
                 // 第2步：过滤掉那些父节点ID也在allNodeIds中的记录（说明它们是其他节点的子节点）
