@@ -3,6 +3,7 @@ package cn.bctools.design.util;
 import cn.bctools.common.constant.SysConstant;
 import cn.bctools.common.entity.dto.UserDto;
 import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.BeanCopyUtil;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.SpringContextUtil;
 import cn.bctools.common.utils.TenantContextHolder;
@@ -12,6 +13,7 @@ import cn.bctools.design.project.entity.enums.AppVersionTypeEnum;
 import cn.bctools.oauth2.dto.CustomUser;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.redis.utils.RedisUtils;
+import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.ttl.TransmittableThreadLocal;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -118,10 +120,11 @@ public class ModeUtils {
         // 从缓存中获取模式信息，若缓存不存在，则默认正式模式
         String token = getCurrentToken();
         if (ObjectNull.isNull(token)) {
+            mode_thread.remove();
             return;
         }
         String key = getModeCacheKey(token);
-        SwitchModeDto mode = Optional.ofNullable((SwitchModeDto) REDIS_UTILS.get(key))
+        SwitchModeDto mode = Optional.ofNullable((SwitchModeDto) BeanCopyUtil.copy(JSONObject.toJSONString(REDIS_UTILS.get(key)), SwitchModeDto.class))
                 //只有主租户才生效这个配置
                 .orElseGet(() -> new SwitchModeDto().setMode(TenantContextHolder.getTenantId().equals("1") ? AppVersionTypeEnum.valueOf(jvsSystemConfig.getDesignDefaultMode()) : AppVersionTypeEnum.GA));
         // 正式模式不能模拟用户

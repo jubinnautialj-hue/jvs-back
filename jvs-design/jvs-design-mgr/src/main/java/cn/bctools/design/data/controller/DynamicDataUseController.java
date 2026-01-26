@@ -354,7 +354,7 @@ public class DynamicDataUseController {
         byId.getJsonData().put("userId", UserCurrentUtils.getUserId());
         byId.getJsonData().put("token", token);
 
-        Document document = NoticeVariableUtils.replacement(address.replaceAll("&nbsp;", "").replaceAll("&amp;",""), byId.getJsonData());
+        Document document = NoticeVariableUtils.replacement(address.replaceAll("&nbsp;", "").replaceAll("&amp;", ""), byId.getJsonData());
         StringBuilder text = new StringBuilder();
         document.getElementsByTag("p").forEach(p -> text.append(p.text()));
 
@@ -465,7 +465,7 @@ public class DynamicDataUseController {
             }
         });
         //自动触发表格的数据筛选功能
-        if (ObjectNull.isNotNull(tablePathMap) && ObjectNull.isNull(body.getIndex())) {
+        if (ObjectNull.isNotNull(tablePathMap) && ObjectNull.isNull(body.getIndex()) && init) {
             //对数据的筛选条件进行判断是否有关联筛选如果有自动触发
             for (String key : tablePathMap.keySet()) {
                 TableFormItemHtml tableFormItemHtml = tablePathMap.get(key);
@@ -1229,12 +1229,12 @@ public class DynamicDataUseController {
         }
         //删除多余的字段
         collectMap.keySet().removeIf(e ->{
-            if (ObjectNull.isNull(queryField)) {
-                return false;
-            } else {
-                return !queryField.contains(e);
-            }
-        });
+                    if (ObjectNull.isNull(queryField)) {
+                        return false;
+                    } else {
+                        return !queryField.contains(e);
+                    }
+                });
         List<String> collect = new ArrayList<>(collectMap.keySet());
 
         List<List<QueryConditionDto>> queryGroupConditions = new ArrayList<>();
@@ -1258,7 +1258,7 @@ public class DynamicDataUseController {
         }
         // 条件值转换
         long convertStart = System.currentTimeMillis();
-        
+
         // 诊断日志：打印 shiFuJianYanPi 查询条件转换前的值和类型
         queryGroupConditions.stream().flatMap(Collection::stream)
             .filter(condition -> "shiFuJianYanPi".equals(condition.getFieldKey()))
@@ -1268,9 +1268,9 @@ public class DynamicDataUseController {
                     log.info("[类型诊断] 转换前 - shiFuJianYanPi查询条件值: {}, 类型: {}", value, value.getClass().getSimpleName());
                 }
             });
-        
+
         queryGroupConditions.stream().flatMap(Collection::stream).forEach(condition ->
-                convertQueryValue(condition, collectMap));
+                        convertQueryValue(condition, collectMap));
         
         // 诊断日志：打印 shiFuJianYanPi 查询条件转换后的值和类型
         queryGroupConditions.stream().flatMap(Collection::stream)
@@ -1332,7 +1332,7 @@ public class DynamicDataUseController {
             log.info("[分页查询] 开始执行数据库分页查询，查询字段数: {}, 查询条件组数: {}", collect.size(), queryGroupConditions.size());
             
             // 执行分页查询（内部会调用echo，此时可以使用预加载的部门缓存）
-            Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, combiningFieldFormulaContentMap, queryGroupConditions, queryPageDto.getSorts(), collect, true, true, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
+        Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, combiningFieldFormulaContentMap, queryGroupConditions, queryPageDto.getSorts(), collect, true, true, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
             log.info("[分页查询] 数据库分页查询耗时: {}ms, 返回记录数: {}", System.currentTimeMillis() - queryPageStart, pageResult.getRecords().size());
             
             // 诊断日志：打印查询结果中 shiFuJianYanPi 字段的值和类型
@@ -1347,7 +1347,7 @@ public class DynamicDataUseController {
                     log.info("[类型诊断] shiFuJianYanPi字段值为null");
                 }
             }
-            List<List<QueryConditionDto>> queryGroup = Collections.singletonList(Collections.singletonList(treeQuery.get()));
+        List<List<QueryConditionDto>> queryGroup = Collections.singletonList(Collections.singletonList(treeQuery.get()));
             
             // 关键修复：将用户的业务查询条件也传递给树形结构处理
             // queryGroup 只包含树形查询条件，需要合并 queryGroupConditions（用户查询条件）
@@ -1355,23 +1355,23 @@ public class DynamicDataUseController {
             log.info("[树形结构] 用户查询条件组数: {}, 内容: {}", queryGroupConditions.size(), queryGroupConditions);
             log.info("[树形结构] 树形查询条件: {}", queryGroup);
             
-            List<Map<String, Object>> allData = new ArrayList<>();
-            //如果是树，并关联自己，需要对数据进行关联查询下级直到查询不到结果为止
+        List<Map<String, Object>> allData = new ArrayList<>();
+        //如果是树，并关联自己，需要对数据进行关联查询下级直到查询不到结果为止
             long treeStructureStart = System.currentTimeMillis();
             // 关键修复：传递 combinedQueryConditions（包含用户查询条件），而不是 queryGroup（只包含树形条件）
             List<Map<String, Object>> mapList = treeStructure(allData, modelDisplayMap, pageResult.getRecords(), treeQuery, appId, modelId, combiningFieldFormulaContentMap, combinedQueryConditions, queryPageDto.getSorts(), collect, ObjectNull.isNull(queryPageDto.getKeywords()), new ArrayList<>(collectMap.values()), stringSet);
             log.info("[分页查询] 树形结构处理耗时: {}ms", System.currentTimeMillis() - treeStructureStart);
             
-            pageResult.setRecords(mapList);
-            if (ObjectNull.isNotNull(dateField)) {
+        pageResult.setRecords(mapList);
+        if (ObjectNull.isNotNull(dateField)) {
                 long ganttStart = System.currentTimeMillis();
                 R result = R.ok(GanttChartUtils.setFiled(pageResult, dateField));
                 log.info("[分页查询] 甘特图处理耗时: {}ms", System.currentTimeMillis() - ganttStart);
                 log.info("[分页查询] ====== 总耗时: {}ms ======", System.currentTimeMillis() - startTime);
                 return result;
-            }
+        }
             log.info("[分页查询] ====== 总耗时: {}ms ======", System.currentTimeMillis() - startTime);
-            return R.ok(pageResult);
+        return R.ok(pageResult);
         } finally {
             // 无论是否发生异常，都必须清理部门缓存，防止内存泄漏
             // 普通查询：echo在 dynamicDataService.queryPage 中完成
@@ -1669,8 +1669,8 @@ public class DynamicDataUseController {
         
         try {
             // 准备查询字段
-            Set<String> fieldKeys = new HashSet<>(fields);
-            fieldKeys.add(Get.name(DynamicDataPo::getId));
+                    Set<String> fieldKeys = new HashSet<>(fields);
+                    fieldKeys.add(Get.name(DynamicDataPo::getId));
             fieldKeys.add(parentFieldKey);
             
             // 关键逻辑：批量查询根节点下的所有子孙节点，不应用业务查询条件
@@ -1686,7 +1686,7 @@ public class DynamicDataUseController {
             
             // 批量查询数据（不应用业务查询条件，返回根节点下所有子孙节点）
             long batchQueryStart = System.currentTimeMillis();
-            List<Map> mapList = dataModelHandler.find(query, Map.class, modelId);
+                    List<Map> mapList = dataModelHandler.find(query, Map.class, modelId);
             log.info("[树形结构-批量查询] 批量查询完成，查询到{}条数据，耗时: {}ms", mapList.size(), System.currentTimeMillis() - batchQueryStart);
 
             List<Map<String, Object>> allDataList = mapList.stream().map(e -> (Map<String, Object>) e).collect(Collectors.toList());
@@ -1781,21 +1781,21 @@ public class DynamicDataUseController {
             log.debug("[树形结构-批量查询] rootIds详细列表: {}", rootIds);
             
             List<Map<String, Object>> tree = TreeUtils.list2Tree(allDataList, rootIds,
-                e -> e.get("id").toString(),
-                (Function<Map<String, Object>, String>) e -> {
-                    try {
+                            e -> e.get("id").toString(),
+                            (Function<Map<String, Object>, String>) e -> {
+                                try {
                         Object parentValue = e.get(parentFieldKey);
                         return parentValue != null ? parentValue.toString() : "";
-                    } catch (Exception ex) {
+                                } catch (Exception ex) {
                         log.warn("[树形结构-批量查询] 获取父级字段值异常: {}", ex.getMessage());
                         return "";
-                    }
-                },
+                                }
+                            },
                 (parent, children) -> {
                     if (ObjectNull.isNotNull(children) && !children.isEmpty()) {
                         parent.put("children", children);
                     }
-                }
+                                }
             );
             
             // 添加诊断日志：查看树构建结果
@@ -1809,7 +1809,7 @@ public class DynamicDataUseController {
             log.info("[树形结构-批量查询] 内存构建树形结构完成，树节点数: {}, 耗时: {}ms", tree.size(), System.currentTimeMillis() - buildTreeStart);
             log.info("[树形结构-批量查询] 总耗时: {}ms，性能提升: 消除了N+1递归查询问题", System.currentTimeMillis() - startTime);
             
-            return tree;
+                    return tree;
             
         } catch (Exception e) {
             log.error("[树形结构-批量查询] 构建树形结构失败: {}", e.getMessage(), e);
@@ -1893,7 +1893,7 @@ public class DynamicDataUseController {
                         } else {
                             allIds.add(String.valueOf(value));
                         }
-                    }
+            }
                     
                     if (allIds.isEmpty()) {
                         continue;
@@ -1929,7 +1929,7 @@ public class DynamicDataUseController {
                         
                         // 查询全表数据，不带条件
                         relatedDataList = dynamicDataService.queryList(formId, queryFields, new QueryConditionDto());
-                    } else {
+        } else {
                         // 下拉框/单选：按ID查询
                         queryFields = Arrays.asList("id", labelField);
                         QueryConditionDto queryCondition = new QueryConditionDto();
@@ -1946,7 +1946,7 @@ public class DynamicDataUseController {
                     } else {
                         log.warn("[批量预加载-调试] 字段[{}]查询返回空，查询条件: formId={}, queryFields={}, isCascader={}, allIds={}", 
                             fieldKey, formId, queryFields, isCascader, isCascader ? "N/A" : allIds);
-                    }
+        }
                     
                     // 将查询结果缓存到Map中
                     Map<String, Object> relatedDataMap = new HashMap<>();

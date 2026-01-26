@@ -1,6 +1,7 @@
 package cn.bctools.design.workflow.support.listener.notify;
 
 import cn.bctools.design.notice.handler.DataNoticeHandler;
+import cn.bctools.design.util.ModeUtils;
 import cn.bctools.design.workflow.entity.FlowTask;
 import com.alibaba.fastjson2.JSON;
 import lombok.AllArgsConstructor;
@@ -41,6 +42,7 @@ public class FlowNotifyListener implements ApplicationRunner {
      */
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onNotifyEvent(FlowNotifyEvent event) {
+        event.setMode(ModeUtils.getSwitchMode());
         // 加入队列
         TASK_NOTIFY_QUEUE.offer(event);
 
@@ -57,7 +59,7 @@ public class FlowNotifyListener implements ApplicationRunner {
             try {
                 FlowNotifyEvent flowNotifyEvent = TASK_NOTIFY_QUEUE.take();
                 FlowTask flowTask = flowNotifyEvent.getFlowTask();
-                dataNoticeHandler.sendNotify(flowNotifyEvent.getTenantId(), flowTask.getJvsAppId(), flowNotifyEvent.getTriggerType(), flowTask.getDataModelId(), flowTask.getDataId(), flowTask, flowNotifyEvent.getNodeIds());
+                dataNoticeHandler.sendNotify(flowNotifyEvent.getTenantId(), flowTask.getJvsAppId(), flowNotifyEvent.getTriggerType(), flowTask.getDataModelId(), flowTask.getDataId(), flowTask, flowNotifyEvent.getNodeIds(), flowNotifyEvent.getMode());
             } catch (Exception e) {
                 log.error("发送流程通知异常：" + e);
             }

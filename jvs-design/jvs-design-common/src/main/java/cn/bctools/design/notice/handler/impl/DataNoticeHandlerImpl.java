@@ -11,6 +11,8 @@ import cn.bctools.design.notice.handler.send.mq.SendNotice;
 import cn.bctools.design.notice.handler.send.mq.SendNoticeConfig;
 import cn.bctools.design.notice.handler.util.NoticeTriggerUtils;
 import cn.bctools.design.notice.service.DataNoticeService;
+import cn.bctools.design.project.dto.SwitchModeDto;
+import cn.bctools.design.util.ModeUtils;
 import cn.bctools.design.workflow.entity.FlowTask;
 import cn.bctools.design.workflow.entity.FlowTaskNode;
 import cn.bctools.design.workflow.service.FlowDynamicDataService;
@@ -90,7 +92,8 @@ public class DataNoticeHandlerImpl implements DataNoticeHandler {
 
     @Async
     @Override
-    public void sendNotify(String tenantId, String appId, TriggerTypeEnum triggerType, String modelId, String dataId, FlowTask flowTask, List<String> taskNodeIds) {
+    public void sendNotify(String tenantId, String appId, TriggerTypeEnum triggerType, String modelId, String dataId, FlowTask flowTask, List<String> taskNodeIds, SwitchModeDto mode) {
+        ModeUtils.setSwitchModel(mode);
         SendNoticeReqBo req = new SendNoticeReqBo()
                 .setTenantId(tenantId)
                 .setAppId(appId)

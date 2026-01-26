@@ -9,17 +9,22 @@ import java.util.List;
 
 /**
  * The type Index fields handler.
+ * @author jvs
  */
 public class IndexFieldsHandler extends AbstractJsonTypeHandler<ArrayList<IndexFields>> {
 
+    public IndexFieldsHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected ArrayList<IndexFields> parse(String json) {
+    public ArrayList<IndexFields> parse(String json) {
         List<IndexFields> list = JSON.parseArray(json, IndexFields.class);
         return new ArrayList<>(list);
     }
 
     @Override
-    protected String toJson(ArrayList<IndexFields> obj) {
+    public String toJson(ArrayList<IndexFields> obj) {
         return JSON.toJSONString(obj);
     }
 }

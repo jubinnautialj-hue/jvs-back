@@ -1,15 +1,18 @@
 package cn.bctools.design.util;
 
+import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.rule.entity.ParameterMap;
 import cn.bctools.design.rule.entity.RuleExternalPo;
+import cn.hutool.core.bean.BeanUtil;
+import cn.hutool.core.collection.CollectionUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.core.util.XmlUtil;
 import cn.hutool.http.HttpUtil;
 import cn.hutool.http.Method;
 import cn.hutool.http.webservice.SoapClient;
 import cn.hutool.http.webservice.SoapProtocol;
-import com.jayway.jsonpath.JsonPath;
+import cn.hutool.json.JSONUtil;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.w3c.dom.Element;
@@ -32,7 +35,6 @@ import java.util.stream.Collectors;
 @Slf4j
 @UtilityClass
 public class WebServiceUtils {
-    static final String DOCUMENTATION = "wsdl:documentation";
 
     /**
      * 获取所有的方法入参和出参
@@ -45,9 +47,30 @@ public class WebServiceUtils {
          * 解析 url地址
          */
         Map<String, Object> stringObjectMap = XmlUtil.xmlToMap(HttpUtil.downloadString(wsdlUrl, Charset.defaultCharset()));
-        List<Map<String, Object>> o = (List<Map<String, Object>>) stringObjectMap.get("wsdl:portType");
-        List<Map<String, String>> o1 = (List) o.get(0).get("wsdl:operation");
-        List<String> collect1 = o1.stream().map(e -> e.get(DOCUMENTATION)).collect(Collectors.toList());
+
+        List<Map<String, String>> o1 = new ArrayList<>();
+        if(Optional.of(JSONUtil.isTypeJSONObject( stringObjectMap.get("wsdl:portType").toString())).orElse(false)){
+            Map<String, Object> o = (Map<String, Object>) stringObjectMap.get("wsdl:portType");
+            Object o2 = o.get("wsdl:operation");
+            if(o2 instanceof Map){
+                o1.add((Map)o2);
+            }
+            if(o2 instanceof Collection){
+                o1.addAll((List) o2);
+            }
+        }else if(Optional.of(JSONUtil.isTypeJSONArray( stringObjectMap.get("wsdl:portType").toString())).orElse(false)){
+            List<Map<String, Object>> o = (List<Map<String, Object>>) stringObjectMap.get("wsdl:portType");
+            Map<String, Object> objectMap = o.get(0);
+            Object o2 = objectMap.get("wsdl:operation");
+            if(o2 instanceof Map){
+                o1.add((Map)o2);
+            }
+            if(o2 instanceof Collection){
+                o1.addAll((List) o2);
+            }
+        }
+
+        List<String> collect1 = o1.stream().map(e -> e.get("wsdl:documentation")).collect(Collectors.toList());
 
         int i = 0;
         Set<RuleExternalPo> list = new HashSet<>();
@@ -58,6 +81,13 @@ public class WebServiceUtils {
 
             // 读取并解析WSDL文件
             Definition definition = reader.readWSDL(wsdlUrl);
+            Map<?, ?> portTypesa = definition.getAllPortTypes();
+            // 打印所有接口名称
+            for (Object key : portTypesa.keySet()) {
+                PortType portType = (PortType) portTypesa.get(key);
+                log.info("Interface Name: " + portType.getQName().getLocalPart());
+            }
+
             // 打印types部分
             Types types = definition.getTypes();
             if (types != null) {
@@ -114,7 +144,7 @@ public class WebServiceUtils {
                 }
             }
 
-        } catch (Exception ignored) {
+        } catch (Exception e) {
         }
         return list;
 
@@ -122,21 +152,23 @@ public class WebServiceUtils {
 
     private static void printSchemaElements(Element element) {
         if (element != null) {
-            NodeList elementsByTagName = element.getElementsByTagName(DOCUMENTATION);
+            NodeList elementsByTagName = element.getElementsByTagName("wsdl:documentation");
             for (int v = 0; v < elementsByTagName.getLength(); v++) {
                 log.info("Documentation: " + elementsByTagName.item(v).getTextContent());
             }
             NodeList children = element.getChildNodes();
             for (int i = 0; i < children.getLength(); i++) {
-                org.w3c.dom.Node node = children.item(i);
+                Node node = children.item(i);
                 if (node.getNodeType() == Node.ELEMENT_NODE) {
                     Element childElement = (Element) node;
-                    NodeList docNodes = childElement.getElementsByTagName(DOCUMENTATION);
+                    NodeList docNodes = childElement.getElementsByTagName("wsdl:documentation");
                     for (int v = 0; v < docNodes.getLength(); v++) {
                         log.info("Documentation: " + docNodes.item(v).getTextContent());
                     }
                     String name = childElement.getAttribute("name");
                     log.info("type: " + name);
+                    // 如果需要进一步处理嵌套元素，可以递归调用
+//                    printSchemaElements(childElement);
                 }
             }
         }
@@ -146,14 +178,14 @@ public class WebServiceUtils {
      * 执行方法调用
      *
      * @param wsdlUrl      url地址
-     * @param namespaceUrl the namespace uri  命名空间
+     * @param namespaceURI the namespace uri  命名空间
      * @param methodName   the method name  方法名
      * @param bodyMap      the body map   请求参数信息
      * @return object
      */
-    public static Object execute(String wsdlUrl, String namespaceUrl, String methodName, Map<String, Object> bodyMap, Map<String, String> hashMap) {
-        SoapClient soapClient = SoapClient.create(wsdlUrl, SoapProtocol.SOAP_1_1, namespaceUrl)
-                .setMethod(methodName, namespaceUrl)
+    public static Object execute(String wsdlUrl, String namespaceURI, String methodName, Map<String, Object> bodyMap, Map<String, String> hashMap) {
+        SoapClient soapClient = SoapClient.create(wsdlUrl, SoapProtocol.SOAP_1_1, namespaceURI)
+                .setMethod(methodName, namespaceURI)
                 .charset(Charset.defaultCharset())
                 .timeout(10000);
         if (ObjectNull.isNotNull(hashMap)) {
@@ -163,19 +195,34 @@ public class WebServiceUtils {
             soapClient.setParams(bodyMap);
         }
         log.info("发起 webservice 请求" + soapClient.getMsgStr(true));
-        String send = soapClient.send(true);
-        Map resultMap = XmlUtil.xmlToMap(send);
-        Object read = Optional.ofNullable(resultMap).map(e ->
-        {
-            try {
-                return JsonPath.read(e, "soap:Body." + String.format("%sResponse.%sResult", methodName, methodName));
-            } catch (Exception ex) {
-                return null;
+        String send = null;
+        try {
+            send = soapClient.send(true);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new BusinessException("webservice请求发送异常");
+        }
+        Map<String, Object> resultMap = XmlUtil.xmlToMap(send);
+        log.info("webservice 响应：{}",resultMap);
+
+        if(resultMap==null){
+            throw new BusinessException("响应结果解析失败");
+        }
+
+        Object value = CollectionUtil.getFirst(resultMap.entrySet()).getValue();
+
+        Map<String, Object> resultBody = BeanUtil.beanToMap(value);
+        String responseKey = String.format("%sResponse", methodName);
+        if(resultBody.containsKey(responseKey)){
+            Object o = resultBody.get(responseKey);
+            Map<String, Object> response = BeanUtil.beanToMap(o);
+            String resultKey = String.format("%sResult", methodName);
+            if(response.containsKey(resultKey)) {
+                return response.get(resultKey);
             }
-        }).orElseGet(() -> {
-            return Optional.ofNullable(JsonPath.read(resultMap, "soap:Body.soap:Fault")).orElse("").toString();
-        });
-        return read;
+        }
+        return value;
     }
+
 
 }

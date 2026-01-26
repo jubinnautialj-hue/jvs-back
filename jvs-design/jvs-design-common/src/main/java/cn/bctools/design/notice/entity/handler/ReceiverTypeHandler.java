@@ -14,14 +14,18 @@ import java.util.List;
  */
 public class ReceiverTypeHandler extends AbstractJsonTypeHandler<List<ReceiverBo>> {
 
+    public ReceiverTypeHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected List<ReceiverBo> parse(String json) {
+    public List<ReceiverBo> parse(String json) {
         List<ReceiverBo> list = JSON.parseArray(json, ReceiverBo.class);
         return new LinkedList<>(list);
     }
 
     @Override
-    protected String toJson(List<ReceiverBo> obj) {
+    public String toJson(List<ReceiverBo> obj) {
         return JSON.toJSONString(obj, JSONWriter.Feature.WriteMapNullValue, JSONWriter.Feature.WriteNullListAsEmpty, JSONWriter.Feature.WriteNullStringAsEmpty);
     }
 

@@ -3,7 +3,7 @@ package cn.bctools.design.project.handler;
 import cn.bctools.design.project.dto.ButtonSettingDto;
 import cn.bctools.design.project.dto.DesignRoleSettingDto;
 
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import javax.validation.constraints.NotNull;
 import java.util.List;
 

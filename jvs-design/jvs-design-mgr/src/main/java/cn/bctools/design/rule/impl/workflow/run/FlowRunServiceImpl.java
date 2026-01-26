@@ -29,6 +29,8 @@ import org.apache.commons.collections4.MapUtils;
 
 import java.util.Map;
 
+import static com.alibaba.nacos.client.config.common.ConfigConstants.DATA_ID;
+
 /**
  * @author wl
  */
@@ -59,8 +61,8 @@ public class FlowRunServiceImpl implements BaseCustomFunctionInterface<FlowRunDt
         if (ObjectNull.isNotNull(flowRunDto.getUserId()) && JSONUtil.isTypeJSON(flowRunDto.getUserId())) {
             throw new BusinessException("指定流程发起人必须是单个用户id");
         }
-        if (!flowRunDto.getData().containsKey(ID)) {
-            flowRunDto.getData().put(ID, map.get(ID));
+        if (!flowRunDto.getData().containsKey(DATA_ID) && flowRunDto.getData().containsKey(ID)) {
+            flowRunDto.getData().put(DATA_ID, flowRunDto.getData().get(ID));
         }
         if (!flowRunDto.getData().containsKey(MODEL_ID)) {
             flowRunDto.getData().put(MODEL_ID, map.get(MODEL_ID));
@@ -87,6 +89,7 @@ public class FlowRunServiceImpl implements BaseCustomFunctionInterface<FlowRunDt
                 //处理兼容问题
                 copy.getData().put("dataId", dataId);
                 if (!NULL.equals(dataId)) {
+                    startFlowDto.getData().put("dataId", dataId);
                     startFlowDto.setDataId(dataId);
                     // 不是保存数据前置后置触发逻辑调用的工作流，要保存数据版本
                     if (Boolean.FALSE.equals(DataModelUtil.whetherCurrentSaveData())) {

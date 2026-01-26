@@ -13,14 +13,18 @@ import java.util.List;
  */
 public class TaskNodeApprovalPersonHandler extends AbstractJsonTypeHandler<List<UserDto>> {
 
+    public TaskNodeApprovalPersonHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected List<UserDto> parse(String json) {
+    public List<UserDto> parse(String json) {
         List<UserDto> list = JSON.parseArray(json, UserDto.class);
         return new ArrayList(list);
     }
 
     @Override
-    protected String toJson(List<UserDto> obj) {
+    public String toJson(List<UserDto> obj) {
         return JSON.toJSONString(obj, JSONWriter.Feature.WriteMapNullValue, JSONWriter.Feature.WriteNullListAsEmpty, JSONWriter.Feature.WriteNullStringAsEmpty);
     }
 }

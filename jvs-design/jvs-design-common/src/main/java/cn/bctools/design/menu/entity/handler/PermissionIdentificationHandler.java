@@ -11,13 +11,17 @@ import com.baomidou.mybatisplus.extension.handlers.AbstractJsonTypeHandler;
 public class PermissionIdentificationHandler extends AbstractJsonTypeHandler<PermissionIdentificationDto> {
 
 
+    public PermissionIdentificationHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected PermissionIdentificationDto parse(String json) {
+    public PermissionIdentificationDto parse(String json) {
         return JSONObject.parseObject(json, PermissionIdentificationDto.class);
     }
 
     @Override
-    protected String toJson(PermissionIdentificationDto obj) {
+    public String toJson(PermissionIdentificationDto obj) {
         return JSONObject.toJSONString(obj);
     }
 }

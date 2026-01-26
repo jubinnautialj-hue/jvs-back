@@ -1,6 +1,7 @@
 package cn.bctools.design.workflow.support.listener.notify;
 
 import cn.bctools.design.notice.handler.enums.TriggerTypeEnum;
+import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.workflow.entity.FlowTask;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,12 +20,14 @@ public class FlowNotifyEvent extends ApplicationEvent {
     private TriggerTypeEnum triggerType;
     private List<String> nodeIds;
     private String tenantId;
+    private SwitchModeDto mode;
 
-    public FlowNotifyEvent(Object source, FlowTask flowTask, TriggerTypeEnum triggerType, List<String> nodeIds, String tenantId) {
+    public FlowNotifyEvent(Object source, FlowTask flowTask, TriggerTypeEnum triggerType, List<String> nodeIds, String tenantId, SwitchModeDto mode) {
         super(source);
         this.flowTask = flowTask;
         this.nodeIds = nodeIds;
         this.triggerType = triggerType;
         this.tenantId = tenantId;
+        this.mode = mode;
     }
 }

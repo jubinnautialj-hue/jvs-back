@@ -229,16 +229,16 @@ public class CompositeFlowHandler extends AbstractCompositeFlowHandler {
         FlowTask flowTask = runtimeData.getFlowTask();
         // 启动流程
         if (flowContext.getStart()) {
-            applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_CREATED, null, TenantContextHolder.getTenantId()));
+            applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_CREATED, null, TenantContextHolder.getTenantId(), null));
         }
         // 流程已结束，发送审批结果通知
         if (Boolean.FALSE.equals(FlowTaskStatusEnum.PENDING.equals(flowTask.getTaskStatus()))) {
-            applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_APPROVAL_RESULTS, null, TenantContextHolder.getTenantId()));
+            applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_APPROVAL_RESULTS, null, TenantContextHolder.getTenantId(), null));
         }
         // 待办任务通知
         if (ObjectNull.isNotNull(FlowTaskNodeUtil.getNodeIds())) {
-            applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_APPROVAL_NODE, FlowTaskNodeUtil.getNodeIds(), TenantContextHolder.getTenantId()));
-            applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_REMIND, FlowTaskNodeUtil.getNodeIds(), TenantContextHolder.getTenantId()));
+            applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_APPROVAL_NODE, FlowTaskNodeUtil.getNodeIds(), TenantContextHolder.getTenantId(), null));
+            applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_REMIND, FlowTaskNodeUtil.getNodeIds(), TenantContextHolder.getTenantId(), null));
         }
     }
 }

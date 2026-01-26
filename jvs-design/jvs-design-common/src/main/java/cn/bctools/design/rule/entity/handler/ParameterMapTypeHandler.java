@@ -13,14 +13,18 @@ import java.util.List;
  * 自定义typeHandler，支持LinkedList<CourseDto>
  */
 public class ParameterMapTypeHandler extends AbstractJsonTypeHandler<List<ParameterMap>> {
+    public ParameterMapTypeHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected List<ParameterMap> parse(String json) {
+    public List<ParameterMap> parse(String json) {
         List<ParameterMap> list = JSON.parseArray(json, ParameterMap.class);
         return new LinkedList<>(list);
     }
 
     @Override
-    protected String toJson(List<ParameterMap> obj) {
+    public String toJson(List<ParameterMap> obj) {
         return JSON.toJSONString(obj, JSONWriter.Feature.WriteMapNullValue, JSONWriter.Feature.WriteNullListAsEmpty, JSONWriter.Feature.WriteNullStringAsEmpty);
     }
 

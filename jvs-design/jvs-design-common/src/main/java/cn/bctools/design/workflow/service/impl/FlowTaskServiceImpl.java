@@ -521,7 +521,7 @@ public class FlowTaskServiceImpl extends ServiceImpl<FlowTaskMapper, FlowTask> i
             throw new BusinessException("任务已结束");
         }
         List<String> taskNodeIds = flowTaskNodeService.getCurrentNodesByTaskId(taskId).stream().map(FlowTaskNode::getNodeId).collect(Collectors.toList());
-        applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_URGE, taskNodeIds, TenantContextHolder.getTenantId()));
+        applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_URGE, taskNodeIds, TenantContextHolder.getTenantId(), null));
     }
 
 

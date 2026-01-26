@@ -242,7 +242,7 @@ public class FlowTaskController {
         // 撤回流程任务
         FlowTask flowTask = taskStopService.withdrawTask(UserCurrentUtils.getCurrentUser(), id, stopTaskDto);
         // 发送消息通知
-        applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_APPROVAL_RESULTS, null, TenantContextHolder.getTenantId()));
+        applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_APPROVAL_RESULTS, null, TenantContextHolder.getTenantId(), null));
         return R.ok();
     }
 

@@ -13,14 +13,18 @@ import java.util.List;
  */
 public class FlowManualNodeTypeHandler extends AbstractJsonTypeHandler<LinkedList<FlowManualNode>> {
 
+    public FlowManualNodeTypeHandler(Class<?> type) {
+        super(type);
+    }
+
     @Override
-    protected LinkedList<FlowManualNode> parse(String json) {
+    public LinkedList<FlowManualNode> parse(String json) {
         List<FlowManualNode> list = JSON.parseArray(json, FlowManualNode.class);
         return new LinkedList<>(list);
     }
 
     @Override
-    protected String toJson(LinkedList<FlowManualNode> obj) {
+    public String toJson(LinkedList<FlowManualNode> obj) {
         return JSON.toJSONString(obj, JSONWriter.Feature.WriteMapNullValue, JSONWriter.Feature.WriteNullListAsEmpty, JSONWriter.Feature.WriteNullStringAsEmpty);
     }
 }

@@ -29,8 +29,7 @@ import lombok.experimental.UtilityClass;
 import org.apache.commons.lang3.ObjectUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.jetbrains.annotations.NotNull;
-
-import javax.annotation.Nullable;
+import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -293,7 +292,7 @@ public class DesignUtils {
     }
 
     @NotNull
-    private static DataFieldPo getDataFieldPo(@org.jetbrains.annotations.Nullable String dataModelId, @org.jetbrains.annotations.Nullable String designId, Map<String, Object> e, FieldPublicHtml baseDto) {
+    private static DataFieldPo getDataFieldPo(@Nullable String dataModelId, @Nullable String designId, Map<String, Object> e, FieldPublicHtml baseDto) {
         //根据这个确定类型
         List<DataQueryType> enabledQueryTypes = DATA_FIELD_HANDLER.getEnabledQueryTypes(baseDto.getType(), e);
         DataFieldPo fieldDto = new DataFieldPo();
