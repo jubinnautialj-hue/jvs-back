@@ -88,7 +88,7 @@ public class MybatisPlusConfig {
         DynamicTableNameInnerInterceptor dynamicTableNameInnerInterceptor = new DynamicTableNameInnerInterceptor() {
 
             @Override
-            public String changeTable(String sql) {
+            protected String changeTable(String sql) {
                 TableNameParser parser = new TableNameParser(sql);
                 List<TableNameParser.SqlToken> names = new ArrayList<>();
                 parser.accept(names::add);

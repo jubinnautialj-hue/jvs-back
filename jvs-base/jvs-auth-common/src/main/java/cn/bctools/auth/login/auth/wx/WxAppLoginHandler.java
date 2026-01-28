@@ -110,7 +110,7 @@ public class WxAppLoginHandler implements LoginHandler<WxAppDto> {
         user.setRealName(userInfo.getNickName());
         // 微信头像持久化存储
         String avatar = LoginHandler.getDurableAvatar(userInfo.getNickName(), userInfo.getAvatarUrl());
-        UserExtension userExtension = userExtensionService.getOne(Wrappers.lambdaQuery(new UserExtension().setType(OtherLoginTypeEnum.wxapp.name()).setOpenId(userInfo.getUnionId())));
+        UserExtension userExtension = userExtensionService.getOne(Wrappers.lambdaQuery(new UserExtension().setType(OtherLoginTypeEnum.wxapp.name()).setOpenId(userInfo.getOpenId())));
         userExtension.setNickname(userInfo.getNickName());
         //设置扩展字段
         userExtension.setExtension(JSONObject.parseObject(JSONObject.toJSONString(userInfo)));

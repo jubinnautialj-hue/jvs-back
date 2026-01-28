@@ -467,19 +467,6 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
                     JSONPath.set(map, paths, "<p></p>");
                 }
                 break;
-            case user:
-            case department:
-            case role:
-                if (read instanceof List) {
-                    Object o = maps.stream().map(a -> JvsJsonPath.read(a, e.getLinkageFieldKey())).collect(Collectors.toList()).get(0);
-                    JSONPath.set(map, paths, o);
-                } else {
-                    if(ObjectNull.isNotNull( maps)) {
-                        Object o = maps.get(0).get(e.getLinkageFieldKey());
-                        JSONPath.set(map, paths, o);
-                    }
-                }
-                break;
             default:
                 if (read instanceof List) {
                     JSONPath.set(map, paths, maps);

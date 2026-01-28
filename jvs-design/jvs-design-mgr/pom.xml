@@ -17,7 +17,7 @@
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-design-common</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>
@@ -34,73 +34,73 @@
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-tools</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-base</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-common</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-system</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-data</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-encryption</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-api-open-platform</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-starter-oauth2</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-api-tencent-ess-plug</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-api-gentleman-plug</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-dingding-plug</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-discriminate</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
 
         <!--        <dependency>-->
         <!--            <groupId>cn.bctools</groupId>-->
         <!--            <artifactId>jvs-function-aliyun-plug</artifactId>-->
-        <!--             <version>2.3</version>-->
+        <!--            <version>${project.version}</version>-->
         <!--        </dependency>-->
 
         <!-- quartz ：quartz-2.2.3/c3p0-0.9.1.1/slf4j-api-1.6.6 -->

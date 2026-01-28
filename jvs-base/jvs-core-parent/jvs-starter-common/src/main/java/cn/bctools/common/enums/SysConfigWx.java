@@ -2,7 +2,6 @@ package cn.bctools.common.enums;
 
 import com.alibaba.fastjson2.JSONObject;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 import java.util.List;
@@ -10,7 +9,6 @@ import java.util.List;
 /**
  * @author xh
  */
-@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
 public class SysConfigWx extends SysConfigBase<SysConfigWx> {

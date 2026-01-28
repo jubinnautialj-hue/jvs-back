@@ -16,11 +16,7 @@
 
 
     <dependencies>
-        <dependency>
-            <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.79</version>
-        </dependency>
+
         <dependency>
             <groupId>commons-net</groupId>
             <artifactId>commons-net</artifactId>
@@ -37,36 +33,32 @@
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-starter-oss</artifactId>
-            <version>2.3</version>
         </dependency>
 
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-starter-dingding</artifactId>
-            <version>2.3</version>
         </dependency>
 
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-starter-email</artifactId>
-            <version>2.3</version>
         </dependency>
 
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-starter-sms</artifactId>
-            <version>2.3</version>
         </dependency>
 
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>message-push-api</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-base</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>

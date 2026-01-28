@@ -15,15 +15,16 @@
 
     <dependencies>
 
+        <!--支持国密  Hutool针对Bouncy Castle做了简化包装，用于实现国密算法中的SM2、SM3、SM4。 -->
         <dependency>
             <groupId>org.bouncycastle</groupId>
-            <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.79</version>
+            <artifactId>bcprov-jdk15to18</artifactId>
+            <version>1.66</version>
         </dependency>
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-function-base</artifactId>
-             <version>2.3</version>
+            <version>${project.version}</version>
         </dependency>
 
 

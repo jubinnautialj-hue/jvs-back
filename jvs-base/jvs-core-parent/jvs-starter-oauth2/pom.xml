@@ -14,11 +14,7 @@
     <artifactId>jvs-starter-oauth2</artifactId>
 
     <dependencies>
-        <dependency>
-            <groupId>com.nimbusds</groupId>
-            <artifactId>nimbus-jose-jwt</artifactId>
-            <version>${nimbus-jose-jwt.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-starter-database</artifactId>
@@ -39,6 +35,7 @@
             <artifactId>spring-security-oauth2-authorization-server</artifactId>
             <version>0.4.1</version>
         </dependency>
+
         <dependency>
             <groupId>javax.servlet</groupId>
             <artifactId>javax.servlet-api</artifactId>
@@ -53,7 +50,6 @@
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-starter-knife4j</artifactId>
         </dependency>
-
 
     </dependencies>
 

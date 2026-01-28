@@ -2,13 +2,11 @@ package cn.bctools.common.enums;
 
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 /**
  * @author xh
  */
-@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
 public class SysConfigLdap extends SysConfigBase<SysConfigLdap> {

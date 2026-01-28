@@ -13,23 +13,19 @@
     <artifactId>jvs-starter-common</artifactId>
 
     <dependencies>
-        <dependency>
-            <groupId>org.apache.commons</groupId>
-            <artifactId>commons-compress</artifactId>
-            <version>1.28.0</version>
-        </dependency>
-        <!-- https://mvnrepository.com/artifact/io.github.classgraph/classgraph -->
-        <dependency>
-            <groupId>io.github.classgraph</groupId>
-            <artifactId>classgraph</artifactId>
-            <version>4.8.184</version>
-        </dependency>
+
         <!-- 中文拼音工具 -->
         <dependency>
             <groupId>com.belerweb</groupId>
             <artifactId>pinyin4j</artifactId>
             <version>2.5.1</version>
         </dependency>
+
+        <!--        <dependency>-->
+        <!--            <groupId>com.taobao.arthas</groupId>-->
+        <!--            <artifactId>arthas-spring-boot-starter</artifactId>-->
+        <!--            <version>3.4.5</version>-->
+        <!--        </dependency>-->
 
         <dependency>
             <!-- 阿里巴巴EasyExcel-->
@@ -44,7 +40,11 @@
                 </exclusion>
             </exclusions>
         </dependency>
-
+        <dependency>
+            <groupId>org.apache.commons</groupId>
+            <artifactId>commons-compress</artifactId>
+            <version>1.21</version>
+        </dependency>
         <dependency>
             <groupId>com.github.oshi</groupId>
             <artifactId>oshi-core</artifactId>
@@ -57,13 +57,7 @@
         <dependency>
             <groupId>org.apache.poi</groupId>
             <artifactId>poi-ooxml</artifactId>
-            <version>${poi.version}</version>
-            <!--            <exclusions>-->
-<!--                <exclusion>-->
-<!--                    <artifactId>commons-compress</artifactId>-->
-<!--                    <groupId>org.apache.commons</groupId>-->
-<!--                </exclusion>-->
-<!--            </exclusions>-->
+            <version>4.1.2</version>
         </dependency>
 
         <dependency>
@@ -78,10 +72,28 @@
             <version>2.12.2</version>
         </dependency>
 
-        <!--这里只有升级 到 17.-->
+        <!--        &lt;!&ndash;链路日志追踪   日志追踪&ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.skywalking</groupId>-->
+        <!--            <artifactId>apm-toolkit-trace</artifactId>-->
+        <!--            <version>8.8.0</version>-->
+        <!--        </dependency>-->
+        <!--        &lt;!&ndash; 自定义功能相关, 比如自定义tag &ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.skywalking</groupId>-->
+        <!--            <artifactId>apm-toolkit-opentracing</artifactId>-->
+        <!--            <version>8.8.0</version>-->
+        <!--        </dependency>-->
+        <!--        &lt;!&ndash;链路日志追踪&ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>org.apache.skywalking</groupId>-->
+        <!--            <artifactId>apm-toolkit-logback-1.x</artifactId>-->
+        <!--            <version>8.8.0</version>-->
+        <!--        </dependency>-->
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-web</artifactId>
+            <version>5.3.27</version>
             <scope>compile</scope>
         </dependency>
         <dependency>
@@ -89,12 +101,6 @@
             <artifactId>springfox-swagger2</artifactId>
             <version>3.0.0</version>
             <scope>compile</scope>
-            <exclusions>
-                <exclusion>
-                    <artifactId>spring-context</artifactId>
-                    <groupId>org.springframework</groupId>
-                </exclusion>
-            </exclusions>
         </dependency>
 
         <dependency>
@@ -120,18 +126,7 @@
         <dependency>
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
-            <version>1.5.22</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>logback-core</artifactId>
-                    <groupId>ch.qos.logback</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>ch.qos.logback</groupId>
-            <artifactId>logback-core</artifactId>
-            <version>1.5.22</version>
+            <version>1.2.9</version>
         </dependency>
         <dependency>
             <groupId>org.apache.commons</groupId>

@@ -5,6 +5,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Random;
 
 /**
  * 统一的文件工具
@@ -115,6 +116,24 @@ public class FileUtil {
         return new String(uuidFileName.getBytes(), StandardCharsets.UTF_8);
     }
 
+    public static String makeNewFileName(String oldFileName) {
+        String fileType = getFileTypeByName(oldFileName);
+        String tempFileName = oldFileName.replace("." + fileType, "");
+        //实例化一个random的对象ne
+        Random ne = new Random();
+        //为变量赋随机值10000-99999
+        int uuid = ne.nextInt(90000) + 10000;
+        return tempFileName + uuid + "." + fileType;
+    }
+
+    public static String makeNewFileName(String oldFileName, String fileType) {
+        String tempFileName = oldFileName.replace("." + fileType, "");
+        //实例化一个random的对象ne
+        Random ne = new Random();
+        //为变量赋随机值10000-99999
+        int uuid = ne.nextInt(90000) + 10000;
+        return tempFileName + uuid + "." + fileType;
+    }
 
     public static int getFileSize(String fileUrl) {
         if (fileUrl == null || "".equals(fileUrl)) {

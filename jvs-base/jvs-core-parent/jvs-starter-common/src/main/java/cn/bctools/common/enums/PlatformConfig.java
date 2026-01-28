@@ -2,16 +2,14 @@ package cn.bctools.common.enums;
 
 
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 /**
  * @author wl
  */
-@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
-public class PlatformConfig extends SysConfigBase<PlatformConfig> {
+public class PlatformConfig extends SysConfigBase {
 
     /**
      * 平台名称

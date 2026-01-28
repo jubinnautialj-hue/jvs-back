@@ -31,21 +31,21 @@
         </dependency>
 
         <dependency>
-            <groupId>org.apache.groovy</groupId>
+            <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy</artifactId>
-            <version>4.0.28</version>
+            <version>3.0.6</version>
         </dependency>
 
         <dependency>
-            <groupId>org.apache.groovy</groupId>
+            <groupId>org.codehaus.groovy</groupId>
             <artifactId>groovy-json</artifactId>
-            <version>4.0.22</version>
+            <version>3.0.6</version>
         </dependency>
 
         <dependency>
             <groupId>com.google.guava</groupId>
             <artifactId>guava</artifactId>
-            <version>33.5.0-jre</version>
+            <version>32.1.1-jre</version>
         </dependency>
 
         <dependency>

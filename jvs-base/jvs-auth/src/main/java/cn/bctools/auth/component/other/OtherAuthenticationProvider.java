@@ -161,7 +161,6 @@ public class OtherAuthenticationProvider extends AccountStatusUserDetailsChecker
         } else {
             throw new AccountExpiredException("登录失效", new BusinessException("登录失效", -2));
         }
-        userDetails.setLoginURL(token.getLoginURL());
         //生成唯一标识写入cookie, 通过租户Id进行拼接
         userDetails.setJvs(userDetails.getUserDto().getTenantId() + DigestUtils.md5Hex(userDetails.getUserDto().getId() + userDetails.getUserDto().getIp() + userDetails.getUserDto().getUserAgent()));
         token.setPrincipal(userDetails);

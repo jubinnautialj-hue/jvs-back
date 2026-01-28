@@ -14,18 +14,14 @@ import java.util.List;
  */
 public class ParallelBranchTypeHandler extends AbstractJsonTypeHandler<List<ParallelBranchDto>> {
 
-    public ParallelBranchTypeHandler(Class<?> type) {
-        super(type);
-    }
-
     @Override
-    public List<ParallelBranchDto> parse(String json) {
+    protected List<ParallelBranchDto> parse(String json) {
         List<ParallelBranchDto> list = JSON.parseArray(json, ParallelBranchDto.class);
         return new ArrayList(list);
     }
 
     @Override
-    public String toJson(List<ParallelBranchDto> obj) {
+    protected String toJson(List<ParallelBranchDto> obj) {
         return JSON.toJSONString(obj, JSONWriter.Feature.WriteMapNullValue, JSONWriter.Feature.WriteNullListAsEmpty, JSONWriter.Feature.WriteNullStringAsEmpty);
    }
 }

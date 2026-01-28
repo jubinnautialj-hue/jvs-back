@@ -14,28 +14,7 @@
     <packaging>jar</packaging>
 
     <dependencies>
-        <dependency>
-            <groupId>io.undertow</groupId>
-            <artifactId>undertow-core</artifactId>
-            <version>${undertow.version}</version>
-        </dependency>
-        <!--undertow容器-->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-undertow</artifactId>
-            <version>${spring-boot-undertow.version}</version>
-            <exclusions>
-                <exclusion>
-                    <artifactId>undertow-core</artifactId>
-                    <groupId>io.undertow</groupId>
-                </exclusion>
-            </exclusions>
-        </dependency>
-        <dependency>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-core</artifactId>
-            <version>${tomcat-embed.version}</version>
-        </dependency>
+
         <dependency>
             <groupId>cn.bctools</groupId>
             <artifactId>jvs-starter-dingding</artifactId>
@@ -48,7 +27,7 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-oauth2-jose</artifactId>
-            <version>${oauth2-jose.version}</version>
+            <version>5.8.4</version>
         </dependency>
 
         <dependency>
@@ -75,7 +54,7 @@
         <dependency>
             <groupId>com.github.binarywang</groupId>
             <artifactId>weixin-java-mp</artifactId>
-            <version>${weixin-java.version}</version>
+            <version>4.1.0</version>
             <exclusions>
                 <exclusion>
                     <artifactId>commons-lang3</artifactId>

@@ -60,8 +60,7 @@ public class SpringContextUtil implements ApplicationContextAware {
     }
 
     /**
-     * {@value applicationContextName} 直接获取系统的命名默认获取规则为 spring.application.name
-     * 方式，由于此配置默认使用@project.artifactId@ ,所以会直接使用pom中的项目名
+     * {@value applicationContextName} 直接获取系统的命名默认获取规则为 spring.application.name 方式，由于此配置默认使用@project.artifactId@  ,所以会直接使用pom中的项目名
      */
     @Getter
     protected static String applicationContextName = "";
@@ -71,14 +70,12 @@ public class SpringContextUtil implements ApplicationContextAware {
     @Getter
     protected static String platformName = "jvs 快速开发平台";
     /**
-     * 整个项目的密码key配置，默认使用jvs 如果需要自定义，需要前端配置修改配置
+     * 整个项目的密码key配置，默认使用jvs  如果需要自定义，需要前端配置修改配置
      */
     @Getter
     protected static String key = "jvs";
     /**
-     * {@value env} 直接获取系统的命名默认获取规则为 spring.profiles.active
-     * 方式，由于此配置默认使用@profiles.active@ ,所以会直接使用打包的时候的环境,或由项目启动时指定
-     * 目前已经设置有dev|sit|uat|beta|pro五个环境，实际情况根据项目来
+     * {@value env} 直接获取系统的命名默认获取规则为 spring.profiles.active 方式，由于此配置默认使用@profiles.active@  ,所以会直接使用打包的时候的环境,或由项目启动时指定 目前已经设置有dev|sit|uat|beta|pro五个环境，实际情况根据项目来
      */
     @Getter
     protected static String env = "";
@@ -101,8 +98,7 @@ public class SpringContextUtil implements ApplicationContextAware {
     @Getter
     protected static String mybatis_cache_prefix = "";
     /**
-     * {@value version} 直接获取系统的命名默认获取规则为 project.version
-     * 方式，由于此配置默认使用@project.version@ ,所以会直接使用pom中的项版本号
+     * {@value version} 直接获取系统的命名默认获取规则为 project.version 方式，由于此配置默认使用@project.version@  ,所以会直接使用pom中的项版本号
      * 业务系统版本号
      */
     @Getter
@@ -110,7 +106,7 @@ public class SpringContextUtil implements ApplicationContextAware {
     protected static LocalDateTime dateTime;
 
     /**
-     * 公共工具，可直调用此方法直接获取任何Spring管理的Bean对象，可以获取Mapper Service Component Configuration等
+     * 公共工具，可直调用此方法直接获取任何Spring管理的Bean对象，可以获取Mapper  Service  Component Configuration等
      *
      * @param var Bean的Class
      * @author: guojing
@@ -145,6 +141,7 @@ public class SpringContextUtil implements ApplicationContextAware {
         return StrUtil.format(message, o);
     }
 
+
     /**
      * 重写Bean，主要为了初始化公共 {@linkplain ApplicationContext} 和初始化环境和名称对象
      *
@@ -160,17 +157,46 @@ public class SpringContextUtil implements ApplicationContextAware {
         mybatis_cache_prefix = context.getEnvironment().getProperty("jvs.mybatis_cache_prefix", "auth");
         platformName = context.getEnvironment().getProperty("jvs.platform.name", "jvs 快速开发平台");
         key = context.getEnvironment().getProperty("gateway.encryptKey", "jvs");
+        mode = context.getEnvironment().getProperty("jvs.dev", Boolean.class, false);
         JvsAppSecretUtils.setSecretKey(context.getEnvironment().getProperty("design.secretKey"));
         serverPort = String.valueOf(context.getBean(ServerProperties.class).getPort());
         String namespace = context.getEnvironment().getProperty("spring.cloud.nacos.discovery.namespace");
         String envformat = "[%s]-[%s]-[%s]-[%s]";
         env = String.format(envformat, mode, applicationContextName, serverPort, namespace);
+        disableSSLVerification();
+    }
+
+    public static void disableSSLVerification() {
+        try {
+            TrustManager[] trustAllCertificates = new TrustManager[]{
+                    new X509TrustManager() {
+                        public X509Certificate[] getAcceptedIssuers() {
+                            return null;
+                        }
+
+                        public void checkClientTrusted(X509Certificate[] certs, String authType) {
+                        }
+
+                        public void checkServerTrusted(X509Certificate[] certs, String authType) {
+                        }
+                    }
+            };
+
+            SSLContext sc = SSLContext.getInstance("TLS");
+            sc.init(null, trustAllCertificates, new java.security.SecureRandom());
+            HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+
+            HostnameVerifier allHostsValid = (hostname, session) -> true;
+            HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * 默认初始化{@linkplain RestTemplate}
      *
-     * @return org.springframework.web.client.RestTemplate
+     * @return: org.springframework.web.client.RestTemplate
      */
     @Bean
     @Primary
@@ -230,9 +256,7 @@ public class SpringContextUtil implements ApplicationContextAware {
     public static boolean thisServerStats() {
         NacosDiscoveryProperties bean = getBean(NacosDiscoveryProperties.class);
         String ip = bean.getIp();
-        return SpringContextUtil.getBean(NacosDiscoveryClient.class)
-                .getInstances(SpringContextUtil.getApplicationContextName()).stream()
-                .anyMatch(e -> e.getHost().equals(ip) && e.getPort() == bean.getPort());
+        return SpringContextUtil.getBean(NacosDiscoveryClient.class).getInstances(SpringContextUtil.getApplicationContextName()).stream().anyMatch(e -> e.getHost().equals(ip) && e.getPort() == bean.getPort());
     }
 
     /**

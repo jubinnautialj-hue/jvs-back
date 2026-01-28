@@ -63,7 +63,7 @@ public class RedisConfiguration {
      * 则直接使用此种方式即可实现动态关联删除缓存
      * 当角色授权发生变化后,某个业务系统需要同时清空缓存逻辑
      * 使用方式
-     * 将需要关联的key存放到{@link CacheCons#putCacheLink(String, String...)}
+     * 将需要关联的key存放到{@link CacheCons#putCacheLink(java.lang.String, java.lang.String...)}
      * 建议使用此方式 ,不使用{@link org.springframework.cache.annotation.CacheEvict}value 值中的数组,使用数组需要在starter或基础框架中把所有变量写死
      *
      * @return
@@ -122,9 +122,8 @@ public class RedisConfiguration {
         template.setConnectionFactory(factory);
         Jackson2JsonRedisSerializer<Object> jackson2JsonRedisSerializer = new Jackson2JsonRedisSerializer<Object>(Object.class);
         ObjectMapper om = new ObjectMapper();
-//        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        // 移除多态类型处理以避免ObjectCodec访问问题
-        // om.activateDefaultTyping(ObjectMapper.DefaultTyping.NON_FINAL);
+        om.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
+        om.activateDefaultTyping(om.getPolymorphicTypeValidator(), ObjectMapper.DefaultTyping.NON_FINAL);
         jackson2JsonRedisSerializer.setObjectMapper(om);
 
         StringRedisSerializer stringRedisSerializer = new StringRedisSerializer();

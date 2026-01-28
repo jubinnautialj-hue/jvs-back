@@ -11,25 +11,21 @@ import org.apache.ibatis.type.MappedTypes;
 import java.util.List;
 
 
-/**
- * @author jvs
- */
 @Slf4j
 @MappedTypes({Object.class})
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class ListAuthRoleTypeHandler extends AbstractJsonTypeHandler<List<AuthRole>> {
 
     public ListAuthRoleTypeHandler(Class<?> type) {
-        super(type);
     }
 
     @Override
-    public List<AuthRole> parse(String json) {
+    protected List<AuthRole> parse(String json) {
         return JSONUtil.toList(json, AuthRole.class);
     }
 
     @Override
-    public String toJson(List<AuthRole> obj) {
+    protected String toJson(List<AuthRole> obj) {
         return JSONUtil.toJsonStr(obj);
     }
 }

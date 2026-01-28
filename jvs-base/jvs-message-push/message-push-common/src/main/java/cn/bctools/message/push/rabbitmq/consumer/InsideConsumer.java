@@ -1,5 +1,6 @@
 package cn.bctools.message.push.rabbitmq.consumer;
 
+import cn.bctools.log.po.LogPo;
 import cn.bctools.message.push.dto.enums.MessageTypeEnum;
 import cn.bctools.message.push.dto.enums.PlatformEnum;
 import cn.bctools.message.push.dto.messagepush.InsideNotificationDto;
@@ -7,6 +8,7 @@ import cn.bctools.message.push.handler.InsideNotificationHandler;
 import cn.bctools.message.push.utils.MessagePushHisUtils;
 import cn.bctools.message.push.utils.RabbitMqUtils;
 import cn.bctools.rabbit.config.MyRabbitConfig;
+import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSON;
 import com.rabbitmq.client.Channel;
 import lombok.AllArgsConstructor;
@@ -31,7 +33,7 @@ public class InsideConsumer {
     private final MessagePushHisUtils messagePushHisUtils;
     private final InsideNotificationHandler insideNotificationHandler;
 
-    @RabbitListener(queues = RabbitMqUtils.QUEUE_INFORM_INSIDE, containerFactory = MyRabbitConfig.BATCH_LISTENER_CONTAINER_FACTORY, concurrency = "1-5")
+    @RabbitListener(queues = RabbitMqUtils.QUEUE_INFORM_INSIDE,containerFactory = MyRabbitConfig.BATCH_LISTENER_CONTAINER_FACTORY, concurrency = "1-5")
     public void receiveMessage(Channel channel, List<Message> messages) throws IOException {
         log.info("-----初始化发送站内信");
         try {
@@ -44,8 +46,8 @@ public class InsideConsumer {
             log.info("-----站内信发送完成");
         } catch (Exception e) {
             log.error(" send error", e);
-        } finally {
-            channel.basicAck(messages.get(messages.size() - 1).getMessageProperties().getDeliveryTag(), true);
+        }finally {
+            channel.basicAck(messages.get(messages.size()-1).getMessageProperties().getDeliveryTag(), true);
         }
     }
 }

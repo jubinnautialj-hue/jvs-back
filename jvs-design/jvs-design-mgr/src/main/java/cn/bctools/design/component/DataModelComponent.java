@@ -82,10 +82,8 @@ public class DataModelComponent implements DataModelApi {
     @Override
     public R<Long> getCount(String dataModelId, String mode) {
         ModeUtils.setSwitchModel(new SwitchModeDto().setMode(AppVersionTypeEnum.getMsgType(mode)));
-        JvsApp app = getJvsApp(dataModelId, mode);
-        Identification one = identificationService.getOne(Wrappers.query(new Identification().setJvsAppId(app.getId()).setIdentifier(dataModelId)));
         Query query = new Query(Criteria.where(DynamicDataService.MONGO_ID).exists(true).andOperator(Criteria.where("delFlag").is(false)));
-        long count = dataModelHandler.count(query, Map.class, one.getDesignId());
+        long count = dataModelHandler.count(query, Map.class, dataModelId);
         return R.ok(count);
     }
 
@@ -98,9 +96,7 @@ public class DataModelComponent implements DataModelApi {
             long skip = size * (current - 1);
             query.skip(skip).limit((int) size);
         }
-        JvsApp app = getJvsApp(dataModelId, mode);
-        Identification one = identificationService.getOne(Wrappers.query(new Identification().setJvsAppId(app.getId()).setIdentifier(dataModelId)));
-        List<Map> mapList = dataModelHandler.find(query, Map.class, one.getDesignId());
+        List<Map> mapList = dataModelHandler.find(query, Map.class, dataModelId);
         return R.ok(mapList);
     }
 
@@ -114,9 +110,7 @@ public class DataModelComponent implements DataModelApi {
             long skip = searchDto.getSize() * (searchDto.getCurrent() - 1);
             query.skip(skip).limit((int) searchDto.getSize());
         }
-        JvsApp app = getJvsApp(searchDto.getId(), searchDto.getMode());
-        Identification one = identificationService.getOne(Wrappers.query(new Identification().setJvsAppId(app.getId()).setIdentifier(searchDto.getId())));
-        List<Map> mapList = dataModelHandler.find(query, Map.class, one.getDesignId());
+        List<Map> mapList = dataModelHandler.find(query, Map.class, searchDto.getId());
         return R.ok(mapList);
     }
 
@@ -126,9 +120,7 @@ public class DataModelComponent implements DataModelApi {
 
         Criteria criteria = buildQuery(searchDto);
         Query query = new Query(criteria);
-        JvsApp app = getJvsApp(searchDto.getId(), searchDto.getMode());
-        Identification one = identificationService.getOne(Wrappers.query(new Identification().setJvsAppId(app.getId()).setIdentifier(searchDto.getId())));
-        long count = dataModelHandler.count(query, Map.class, one.getDesignId());
+        long count = dataModelHandler.count(query, Map.class, searchDto.getId());
         return R.ok(count);
     }
 

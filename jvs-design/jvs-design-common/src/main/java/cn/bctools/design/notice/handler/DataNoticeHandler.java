@@ -1,7 +1,6 @@
 package cn.bctools.design.notice.handler;
 
 import cn.bctools.design.notice.handler.enums.TriggerTypeEnum;
-import cn.bctools.design.project.dto.SwitchModeDto;
 import cn.bctools.design.workflow.entity.FlowTask;
 
 import java.util.Collection;
@@ -51,7 +50,7 @@ public interface DataNoticeHandler {
      * @param flowTask    工作流任务消息
      * @param taskNodeIds 待办任务节点id
      */
-    void sendNotify(String tenantId, String appId, TriggerTypeEnum triggerType, String modelId, String dataId, FlowTask flowTask, List<String> taskNodeIds, SwitchModeDto mode);
+    void sendNotify(String tenantId, String appId, TriggerTypeEnum triggerType, String modelId, String dataId, FlowTask flowTask, List<String> taskNodeIds);
 
     void sendNotify(String tenantId, String appId, TriggerTypeEnum triggerTypeEnum, String modelId, List<Object> objects);
 }

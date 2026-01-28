@@ -1,6 +1,5 @@
 package cn.bctools.word.utils;
 
-import org.apache.poi.openxml4j.util.ZipSecureFile;
 import org.docx4j.fonts.IdentityPlusMapper;
 import org.docx4j.fonts.Mapper;
 import org.docx4j.fonts.PhysicalFonts;
@@ -16,8 +15,6 @@ public class FontUtil {
     public static Mapper fontMapper = new IdentityPlusMapper();
 
     public static void init() {
-        // 设置为 0.001，允许更高的压缩比
-        ZipSecureFile.setMinInflateRatio(0.001);
         //加载系统字体。
         Font[] allFonts = GraphicsEnvironment.getLocalGraphicsEnvironment().getAllFonts();
         for (Font allFont : allFonts) {

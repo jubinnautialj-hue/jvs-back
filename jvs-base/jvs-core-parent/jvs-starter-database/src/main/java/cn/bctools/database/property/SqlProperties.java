@@ -7,8 +7,6 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 /**
- * Sql配置属性
- *
  * @author guojing
  */
 @ConfigurationProperties("sql")

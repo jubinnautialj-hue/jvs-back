@@ -13,18 +13,14 @@ import java.util.List;
  */
 public class NoticeExtendHandler extends AbstractJsonTypeHandler<List<NoticeExtendTemplateDto>> {
 
-    public NoticeExtendHandler(Class<?> type) {
-        super(type);
-    }
-
     @Override
-    public List<NoticeExtendTemplateDto> parse(String json) {
+    protected List<NoticeExtendTemplateDto> parse(String json) {
         List<NoticeExtendTemplateDto> list = JSON.parseArray(json, NoticeExtendTemplateDto.class);
         return new LinkedList<>(list);
     }
 
     @Override
-    public String toJson(List<NoticeExtendTemplateDto> obj) {
+    protected String toJson(List<NoticeExtendTemplateDto> obj) {
         return JSON.toJSONString(obj, JSONWriter.Feature.WriteMapNullValue, JSONWriter.Feature.WriteNullListAsEmpty, JSONWriter.Feature.WriteNullStringAsEmpty);
     }
 }

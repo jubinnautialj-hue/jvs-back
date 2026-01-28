@@ -27,6 +27,5 @@ public class UserInfoDto<T extends UserDto> implements Serializable {
     private List<String> childDeptIds = new ArrayList<>();
     private List<DataScopeDto> dataScope = new ArrayList<>();
     private String jvs;
-    private String loginURL;
 
 }

@@ -1241,7 +1241,6 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         //限制查询字段
         query.fields().exclude(MONGO_ID);
         if (ObjectUtils.isNotEmpty(fieldKeyList)) {
-            fieldKeyList.add("deptId");
             Set<String> fieldKeys = new HashSet<>(fieldKeyList);
             // 默认加上数据id
             fieldKeys.add(Get.name(DynamicDataPo::getId));

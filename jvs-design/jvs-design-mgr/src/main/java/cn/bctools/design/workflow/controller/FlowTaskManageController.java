@@ -187,7 +187,7 @@ public class FlowTaskManageController {
             taskNodeIdMap = Optional.ofNullable(flowTaskNodeService.getCurrentNodeByTaskIds(taskIds))
                     .orElseGet(ArrayList::new)
                     .stream()
-                    .collect(Collectors.groupingBy(FlowTaskNode::getFlowTaskId,Collectors.mapping(FlowTaskNode::getNodeId, Collectors.toList())));
+                    .collect(Collectors.groupingBy(FlowTaskNode::getFlowTaskId, Collectors.mapping(FlowTaskNode::getNodeId, Collectors.toList())));
             log.info("查询待办节点耗时: {}ms", System.currentTimeMillis() - nodeStart);
 
             // 查询任务节点待处理人
@@ -537,7 +537,7 @@ public class FlowTaskManageController {
         // 发布事件：同步流程信息到业务数据
         applicationEventPublisher.publishEvent(new AsyncTaskDynamicDataEvent(this, task));
         // 发送消息通知
-        applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_APPROVAL_RESULTS, null, TenantContextHolder.getTenantId(), null));
+        applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_APPROVAL_RESULTS, null, TenantContextHolder.getTenantId()));
         return R.ok();
     }
 

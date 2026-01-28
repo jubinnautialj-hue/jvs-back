@@ -13,18 +13,14 @@ import java.util.List;
  * 自定义typeHandler，支持LinkedList<CourseDto>
  */
 public class CoursesTypeHandler extends AbstractJsonTypeHandler<LinkedList<CourseDto>> {
-    public CoursesTypeHandler(Class<?> type) {
-        super(type);
-    }
-
     @Override
-    public LinkedList<CourseDto> parse(String json) {
+    protected LinkedList<CourseDto> parse(String json) {
         List<CourseDto> list = JSON.parseArray(json, CourseDto.class);
         return new LinkedList<>(list);
     }
 
     @Override
-    public String toJson(LinkedList<CourseDto> obj) {
+    protected String toJson(LinkedList<CourseDto> obj) {
         return JSON.toJSONString(obj, JSONWriter.Feature.WriteMapNullValue, JSONWriter.Feature.WriteNullListAsEmpty, JSONWriter.Feature.WriteNullStringAsEmpty);
     }
 

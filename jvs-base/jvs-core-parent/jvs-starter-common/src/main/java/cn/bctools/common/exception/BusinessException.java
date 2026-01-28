@@ -2,7 +2,6 @@ package cn.bctools.common.exception;
 
 import cn.bctools.common.utils.SpringContextUtil;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 import lombok.experimental.Accessors;
 
 import java.io.Serializable;
@@ -11,7 +10,6 @@ import java.io.Serializable;
  * @author guojing
  * @describe 运行业务运行时异常
  */
-@EqualsAndHashCode(callSuper = true)
 @Data
 @Accessors(chain = true)
 public class BusinessException extends RuntimeException implements Serializable {

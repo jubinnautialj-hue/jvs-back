@@ -28,13 +28,4 @@ public class DataDictDto implements Serializable {
     @ApiModelProperty(value = "下级资源")
     List<DataDictDto> dataDictDto;
 
-    public List<DataDictDto> getDataDictDto() {
-        return dataDictDto == null ? null : new ArrayList<>(dataDictDto);
-    }
-
-    public DataDictDto setDataDictDto(List<DataDictDto> dataDictDto) {
-        this.dataDictDto = dataDictDto == null ? null : new ArrayList<>(dataDictDto);
-        return this;
-    }
-
 }

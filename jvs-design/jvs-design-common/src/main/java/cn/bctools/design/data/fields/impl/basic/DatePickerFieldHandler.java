@@ -15,7 +15,6 @@ import com.alibaba.fastjson2.JSONObject;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -217,63 +216,27 @@ public class DatePickerFieldHandler implements IDataFieldHandler<DatePickerHtml>
                     throw new RuntimeException("正确格式为yyyy-MM-dd HH:mm:ss");
                 }
             case datetimerange:
-                DateTimeFormatter formatter = DatePattern.createFormatter("yyyy-MM-dd HH:mm:ss");
-                if (o instanceof String) {
-                    if (((String) o).contains("~")) {
-                        try {
-                            List<LocalDateTime> collect = Arrays.stream(((String) o).split("~")).map(e -> LocalDateTime.from(formatter.parse(e))).collect(Collectors.toList());
-                            o = collect;
-                        } catch (Exception e) {
-                            throw new RuntimeException("正确格式为yyyy-MM-dd HH:mm:ss");
-                        }
-                    }
-                } else if (o instanceof List) {
-                    try {
-                        DatePattern.createFormatter("yyyy-MM-dd HH:mm:ss").parse(((List) o).get(0).toString());
-                        DatePattern.createFormatter("yyyy-MM-dd HH:mm:ss").parse(((List) o).get(1).toString());
-                    } catch (Exception e) {
-                        throw new RuntimeException("正确格式为yyyy-MM-dd HH:mm:ss");
-                    }
+                try {
+                    DatePattern.createFormatter("yyyy-MM-dd HH:mm:ss").parse(((List) o).get(0).toString());
+                    DatePattern.createFormatter("yyyy-MM-dd HH:mm:ss").parse(((List) o).get(1).toString());
+                } catch (Exception e) {
+                    throw new RuntimeException("正确格式为yyyy-MM-dd HH:mm:ss");
                 }
                 break;
             case daterange:
-                DateTimeFormatter dateTimeFormatter = DatePattern.createFormatter("yyyy-MM-dd");
-                if (o instanceof String) {
-                    if (((String) o).contains("~")) {
-                        try {
-                            List<LocalDate> collect = Arrays.stream(((String) o).split("~")).map(e -> LocalDate.from(dateTimeFormatter.parse(e))).collect(Collectors.toList());
-                            o = collect;
-                        } catch (Exception e) {
-                            throw new RuntimeException("正确格式为yyyy-MM-dd");
-                        }
-                    }
-                } else if (o instanceof List) {
-                    try {
-                        DatePattern.createFormatter("yyyy-MM-dd").parse(((List) o).get(0).toString());
-                        DatePattern.createFormatter("yyyy-MM-dd").parse(((List) o).get(1).toString());
-                    } catch (Exception e) {
-                        throw new RuntimeException("正确格式为yyyy-MM-dd");
-                    }
+                try {
+                    DatePattern.createFormatter("yyyy-MM-dd").parse(((List) o).get(0).toString());
+                    DatePattern.createFormatter("yyyy-MM-dd").parse(((List) o).get(1).toString());
+                } catch (Exception e) {
+                    throw new RuntimeException("正确格式为yyyy-MM-dd");
                 }
                 break;
             case monthrange:
-                DateTimeFormatter monthrangeFormatter = DatePattern.createFormatter("yyyy-MM");
-                if (o instanceof String) {
-                    if (((String) o).contains("~")) {
-                        try {
-                            Arrays.stream(((String) o).split("~")).map(e -> LocalDateTime.from(monthrangeFormatter.parse(e))).collect(Collectors.toList());
-                            o = Arrays.stream(((String) o).split("~")).collect(Collectors.toList());
-                        } catch (Exception e) {
-                            throw new RuntimeException("正确格式为yyyy-MM");
-                        }
-                    }
-                } else if (o instanceof List) {
-                    try {
-                        DatePattern.createFormatter("yyyy-MM").parse(((List) o).get(0).toString());
-                        DatePattern.createFormatter("yyyy-MM").parse(((List) o).get(1).toString());
-                    } catch (Exception e) {
-                        throw new RuntimeException("正确格式为yyyy-MM");
-                    }
+                try {
+                    DatePattern.createFormatter("yyyy-MM").parse(((List) o).get(0).toString());
+                    DatePattern.createFormatter("yyyy-MM").parse(((List) o).get(1).toString());
+                } catch (Exception e) {
+                    throw new RuntimeException("正确格式为yyyy-MM");
                 }
             default:
 

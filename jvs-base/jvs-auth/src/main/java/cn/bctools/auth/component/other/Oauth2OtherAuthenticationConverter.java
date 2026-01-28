@@ -37,9 +37,8 @@ public class Oauth2OtherAuthenticationConverter implements AuthenticationConvert
         String refreshToken = request.getParameter(OAuth2ParameterNames.REFRESH_TOKEN);
         String userAgent = request.getHeader("User-Agent");
         String tenantId = request.getParameter(SysConstant.TENANTID);
-        String loginURL = request.getParameter("loginURL");
         if (ObjectNull.isNotNull(clientId)) {
-            return new OtherAuthenticationToken(parameter, ch, clientId, username, password, grantType, refreshToken, tenantId, userAgent,loginURL);
+            return new OtherAuthenticationToken(parameter, ch, clientId, username, password, grantType, refreshToken, tenantId, userAgent);
         }
         return null;
     }

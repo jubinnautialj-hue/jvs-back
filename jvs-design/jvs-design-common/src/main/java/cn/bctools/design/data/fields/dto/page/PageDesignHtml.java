@@ -78,8 +78,6 @@ public class PageDesignHtml {
     private List<JSONObject> pageTableTitle;
     @ApiModelProperty("是否开启甘特图")
     private Boolean gantt = false;
-    @ApiModelProperty("是否开启斑马纹")
-    private Boolean openZebra = false;
     @ApiModelProperty("甘特图配置")
     private GanttFormHtml ganttForm;
 

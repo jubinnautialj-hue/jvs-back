@@ -23,7 +23,7 @@ public abstract class CustomAbstractMethod extends AbstractMethod {
     @Override
     protected String sqlWhereEntityWrapper(boolean newLine, TableInfo table) {
         String sqlScript;
-        sqlScript = table.getAllSqlWhere(false, true, true, "ew.entity.");
+        sqlScript = table.getAllSqlWhere(false, true, "ew.entity.");
         sqlScript = SqlScriptUtils.convertIf(sqlScript, String.format("%s != null", "ew.entity"), true);
         sqlScript = sqlScript + "\n";
         sqlScript = sqlScript + SqlScriptUtils.convertIf(String.format(SqlScriptUtils.convertIf(" AND", String.format("%s and %s", "ew.nonEmptyOfEntity", "ew.nonEmptyOfNormal"), false) + " ${%s}", "ew.sqlSegment"), String.format("%s != null and %s != '' and %s", "ew.sqlSegment", "ew.sqlSegment", "ew.nonEmptyOfWhere"), true);

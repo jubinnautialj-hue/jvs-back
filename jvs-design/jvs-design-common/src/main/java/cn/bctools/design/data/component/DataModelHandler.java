@@ -11,7 +11,6 @@ import com.mongodb.bulk.BulkWriteResult;
 import com.mongodb.client.MongoCollection;
 import com.mongodb.client.result.DeleteResult;
 import com.mongodb.client.result.UpdateResult;
-import lombok.extern.slf4j.Slf4j;
 import org.bson.Document;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.BulkOperations;
@@ -29,12 +28,12 @@ import javax.annotation.Resource;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * @author zhuxiaokang
  * 模型数据操作
  */
-@Slf4j
 @Component
 public class DataModelHandler {
     @Resource(name = "devMongoTemplate")
@@ -51,11 +50,7 @@ public class DataModelHandler {
      */
     private MongoTemplate getMongoTemplate() {
         // 得到当前模式，若当前模式为空，默认为正式模式
-        AppVersionTypeEnum currentMode = ModeUtils.getMode();
-        if (currentMode == null) {
-            currentMode = AppVersionTypeEnum.GA;
-            log.info("上下文中没有模式，默认设置为正式模式");
-        }
+        AppVersionTypeEnum currentMode = Optional.ofNullable(ModeUtils.getMode()).orElse(AppVersionTypeEnum.GA);
         switch (currentMode) {
             case DEV:
                 return devMongoTemplate;

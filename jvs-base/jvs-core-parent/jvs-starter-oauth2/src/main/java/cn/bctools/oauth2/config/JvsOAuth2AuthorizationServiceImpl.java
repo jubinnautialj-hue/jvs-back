@@ -2,6 +2,8 @@ package cn.bctools.oauth2.config;
 
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.redis.utils.RedisUtils;
+import cn.hutool.cache.CacheUtil;
+import cn.hutool.cache.impl.TimedCache;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.serializer.RedisSerializer;
@@ -34,6 +36,11 @@ public class JvsOAuth2AuthorizationServiceImpl implements OAuth2AuthorizationSer
 
     RedisUtils redisUtils;
     public static final RedisSerializer<Object> SERIALIZER = RedisSerializer.java();
+
+    /**
+     * 用户本地缓存,避免序列化导致的速度降低问题
+     */
+    static TimedCache<String, OAuth2Authorization> userMap = CacheUtil.newTimedCache(900);
 
     @Override
     public void save(OAuth2Authorization authorization) {

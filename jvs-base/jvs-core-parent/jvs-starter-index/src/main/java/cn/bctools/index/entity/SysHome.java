@@ -25,7 +25,7 @@ import java.util.List;
  * @author admin
  * @since 2023-03-16
  */
-@EqualsAndHashCode(callSuper = true)
+@EqualsAndHashCode(callSuper = false)
 @Data
 @Accessors(chain = true)
 @TableName(value = "sys_home_design", autoResultMap = true)

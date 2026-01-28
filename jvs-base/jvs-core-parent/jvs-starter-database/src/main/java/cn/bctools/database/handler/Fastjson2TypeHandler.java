@@ -1,5 +1,6 @@
 package cn.bctools.database.handler;
 
+import cn.hutool.core.lang.Assert;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONWriter;
 import com.baomidou.mybatisplus.extension.handlers.AbstractJsonTypeHandler;
@@ -16,18 +17,23 @@ import org.apache.ibatis.type.MappedTypes;
 @MappedJdbcTypes(JdbcType.VARCHAR)
 public class Fastjson2TypeHandler extends AbstractJsonTypeHandler<Object> {
 
+    private final Class<?> type;
+
     public Fastjson2TypeHandler(Class<?> type) {
-        super(type);
+        if (log.isTraceEnabled()) {
+            log.trace("FastjsonTypeHandler(" + type + ")");
+        }
+        Assert.notNull(type, "Type argument cannot be null");
+        this.type = type;
     }
 
-
     @Override
-    public Object parse(String json) {
+    protected Object parse(String json) {
         return JSON.parseObject(json, type);
     }
 
     @Override
-    public String toJson(Object obj) {
+    protected String toJson(Object obj) {
         return JSON.toJSONString(obj, JSONWriter.Feature.WriteMapNullValue, JSONWriter.Feature.WriteNullListAsEmpty, JSONWriter.Feature.WriteNullStringAsEmpty);
     }
 

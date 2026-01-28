@@ -2,17 +2,20 @@ package cn.bctools.gateway.controller;
 
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.common.utils.R;
+import cn.bctools.gateway.utils.CodeKaptchaUtils;
 import cn.bctools.redis.utils.RedisUtils;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.lang.Dict;
 import com.alibaba.cloud.nacos.NacosConfigManager;
 import com.alibaba.fastjson2.JSONObject;
+import com.alibaba.nacos.api.config.listener.Listener;
 import com.alibaba.nacos.api.exception.NacosException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
+import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -23,6 +26,8 @@ import org.springframework.web.reactive.function.server.RouterFunction;
 import org.springframework.web.reactive.function.server.RouterFunctions;
 import org.springframework.web.reactive.function.server.ServerResponse;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.math.BigDecimal;
@@ -59,13 +64,29 @@ public class ResourceController {
 
     private final static String NACOS_GROUP = "jvs_web_configuration";
 
+    @Bean
+    public RouterFunction random() {
+        return RouterFunctions
+                .route(RequestPredicates.path("/auth/random").and(RequestPredicates.accept(MediaType.ALL)),
+                        request -> {
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            int i = CodeKaptchaUtils.get(baos);
+                            String random = request.exchange().getRequest().getQueryParams().getFirst("random");
+                            redisUtils.set("code:" + random, i, Duration.ofMinutes(2));
+                            InputStreamResource inputStreamResource = new InputStreamResource(new ByteArrayInputStream(baos.toByteArray()));
+                            return ServerResponse.status(HttpStatus.OK)
+                                    .contentType(MediaType.IMAGE_JPEG)
+                                    .body(BodyInserters.fromResource(inputStreamResource));
+                        });
+    }
+
     /**
      * 获取icon
      */
     @Bean
     public RouterFunction iconFunction() {
         return RouterFunctions
-                .route(RequestPredicates.GET("/icon/all/**").and(RequestPredicates.accept(MediaType.ALL)),
+                .route(RequestPredicates.path("/icon/all/**").and(RequestPredicates.accept(MediaType.ALL)),
                         request -> {
                             List<String> names = request.queryParams().getOrDefault("names[]", new ArrayList<>());
 

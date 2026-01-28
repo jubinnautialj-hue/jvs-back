@@ -6,7 +6,6 @@ import cn.bctools.design.data.fields.enums.DataFieldType;
 import cn.bctools.design.data.fields.enums.DataQueryType;
 import cn.hutool.core.util.StrUtil;
 import io.swagger.annotations.ApiModelProperty;
-import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -54,8 +53,6 @@ public class DataTableFieldDesignHtml {
     private Boolean supportStatistics;
     @ApiModelProperty("列名")
     private String columnName;
-    @Schema(description = "启用平均值")
-    private Boolean enableAvg;
     @ApiModelProperty("默认值")
     private String columnDefault;
     @ApiModelProperty("是否为空")

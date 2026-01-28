@@ -1,12 +1,11 @@
 package cn.bctools.common.exception;
 
-
-import lombok.EqualsAndHashCode;
+import lombok.Data;
 
 /**
  * @author guojing
  */
-@EqualsAndHashCode(callSuper = true)
+@Data
 public class LicenseException extends BusinessException {
 
     /**

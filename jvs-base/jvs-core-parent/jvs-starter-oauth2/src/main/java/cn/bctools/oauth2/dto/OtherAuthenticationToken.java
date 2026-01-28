@@ -50,11 +50,8 @@ public class OtherAuthenticationToken extends AbstractAuthenticationToken {
     @Getter
     @Setter
     private String ch;
-    @Getter
-    @Setter
-    private String loginURL;
 
-    public OtherAuthenticationToken(String parameter, String ch, String clientId, String username, String password, String grantType, String refreshToken, String tenantId, String userAgent, String loginURL) {
+    public OtherAuthenticationToken(String parameter, String ch, String clientId, String username, String password, String grantType, String refreshToken, String tenantId, String userAgent) {
         super(null);
         this.otherParameter = parameter;
         this.ch = ch;
@@ -65,7 +62,6 @@ public class OtherAuthenticationToken extends AbstractAuthenticationToken {
         this.tenantId = tenantId;
         this.refreshToken = refreshToken;
         this.userAgent = userAgent;
-        this.loginURL = loginURL;
     }
 
     public OtherAuthenticationToken(String otherParameter, String clientId) {

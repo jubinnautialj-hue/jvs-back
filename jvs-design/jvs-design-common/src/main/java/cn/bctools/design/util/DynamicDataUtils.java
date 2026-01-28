@@ -25,7 +25,6 @@ import cn.bctools.design.project.handler.DesignHandler;
 import cn.bctools.oauth2.utils.AuthorityManagementUtils;
 import cn.bctools.oauth2.utils.UserCurrentUtils;
 import cn.bctools.web.utils.WebUtils;
-import cn.hutool.core.date.DateUtil;
 import cn.hutool.json.JSONUtil;
 import com.alibaba.fastjson2.JSONArray;
 import com.alibaba.fastjson2.JSONObject;
@@ -336,7 +335,7 @@ public class DynamicDataUtils {
                         }
                     }
                     if (ObjectNull.isNotNull(queryValues) && queryValues.size() == 2) {
-                        criteria = new Criteria(fieldId).gte(DateUtil.parse(queryValues.get(0).toString())).lte(DateUtil.parse(queryValues.get(1).toString()));
+                        criteria = new Criteria(fieldId).gte(queryValues.get(0)).lte(queryValues.get(1));
                     }
                     break;
                 default:
@@ -622,15 +621,15 @@ public class DynamicDataUtils {
             case self:
                 return Criteria.where(Get.name(DynamicDataPo::getCreateById)).is(user.getId());
             case curr_dept_tree:
-                if (ObjectNull.isNull(user.getDept())) {
-                    return falseCriteria();
-                }
                 Set childDeptIds = user.getDept().stream().filter(e -> DeptEnum.dept.equals(e.getType())).map(DeptDto::getDeptId)
                         .map(AuthorityManagementUtils::getChildDepts)
                         .flatMap(Collection::stream)
                         .map(SysDeptDto::getId)
                         .collect(Collectors.toSet());
-                user.getDept().forEach(e -> childDeptIds.add(e.getDeptId()));
+
+                if (ObjectUtils.isEmpty(childDeptIds)) {
+                    return falseCriteria();
+                }
                 return Criteria.where(Get.name(DynamicDataPo::getDeptId)).in(childDeptIds);
             case form_item:
                 return buildCriteria(conditionList);
