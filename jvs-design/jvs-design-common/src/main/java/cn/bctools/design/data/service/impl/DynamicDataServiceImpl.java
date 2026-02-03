@@ -25,6 +25,7 @@ import cn.bctools.design.data.fields.IDataFieldHandler;
 import cn.bctools.design.data.fields.dto.*;
 import cn.bctools.design.data.fields.dto.form.FormDesignHtml;
 import cn.bctools.design.data.fields.dto.form.FormValueHtml;
+import cn.bctools.design.data.fields.dto.form.MultipleHtml;
 import cn.bctools.design.data.fields.dto.form.html.TableFormItemHtml;
 import cn.bctools.design.data.fields.dto.form.item.SelectItemHtml;
 import cn.bctools.design.data.fields.dto.form.item.TabGenerateItemHtml;
@@ -1924,6 +1925,9 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
     public Map<String, Object> echo(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function) {
         long methodStart = System.currentTimeMillis();
         
+        // 预处理：规范化MongoDB关联查询结果
+        normalizeMongoLookupFields(data, fieldMap);
+        
         //数据库的数据，用于多层下级数据
         Map<String, Object> olddata = new HashMap<>(data);
         
@@ -2012,11 +2016,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                             }
                         }
                     } catch (BusinessException be) {
-                        log.error("格式转换异常{}", JSONObject.toJSONString(entry), be);
+                        log.error("格式转换异常{}", safeJsonString(entry), be);
                         throw new RuntimeException("格式转换异常" + be.getMessage());
                     } catch (Exception e) {
-                        log.error("格式转换异常{}", JSONObject.toJSONString(entry), e);
-                        throw new RuntimeException("格式转换异常:" + entry.getKey() + " : " + entry.getValue());
+                        log.error("格式转换异常{}", safeJsonString(entry), e);
+                        throw new RuntimeException("格式转换异常:" + entry.getKey() + " : " + safeValueString(entry.getValue()));
                     }
 
                 });
@@ -2031,6 +2035,107 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         }
         
         return data;
+    }
+
+    /**
+     * 规范化MongoDB关联查询字段
+     * 处理MongoDB $lookup返回的文档数组，提取ID值
+     *
+     * @param data     数据对象
+     * @param fieldMap 字段映射
+     */
+    private void normalizeMongoLookupFields(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap) {
+        if (ObjectNull.isNull(data) || ObjectNull.isNull(fieldMap)) {
+            return;
+        }
+
+        fieldMap.values().stream()
+            .filter(field -> {
+                // 判断是否是关联字段（下拉框、级联、多选框等类型）
+                DataFieldType type = field.getType();
+                return type == DataFieldType.select
+                    || type == DataFieldType.cascader
+                    || type == DataFieldType.checkbox
+                    || type == DataFieldType.radio;
+            })
+            .forEach(field -> {
+                String fieldKey = field.getFieldKey();
+                Object value = data.get(fieldKey);
+
+                // 如果值是MongoDB lookup返回的文档数组，提取ID
+                if (value instanceof List) {
+                    List<?> list = (List<?>) value;
+                    if (!list.isEmpty() && list.get(0) instanceof Map) {
+                        Map<String, Object> firstItem = (Map<String, Object>) list.get(0);
+                        // 检查是否包含MongoDB文档的特征字段（_id表示是MongoDB返回的完整文档）
+                        if (firstItem.containsKey("_id")) {
+                            log.warn("[数据预处理] 字段[{}]包含MongoDB lookup结果，自动提取id字段。原始数据: {}",
+                                fieldKey, safeValueString(value));
+
+                            // 提取id字段值
+                            List<String> ids = list.stream()
+                                .filter(item -> item instanceof Map)
+                                .map(item -> {
+                                    Map<String, Object> doc = (Map<String, Object>) item;
+                                    Object id = doc.get("id");
+                                    return id != null ? id.toString() : null;
+                                })
+                                .filter(Objects::nonNull)
+                                .collect(Collectors.toList());
+
+                            // 根据字段是否多选，设置正确的格式
+                            if (field instanceof MultipleHtml && ((MultipleHtml) field).getMultiple()) {
+                                data.put(fieldKey, ids); // 多选：保持数组
+                                log.info("[数据预处理] 字段[{}]处理完成（多选），提取了{}个ID: {}",
+                                    fieldKey, ids.size(), ids);
+                            } else {
+                                data.put(fieldKey, ids.isEmpty() ? null : ids.get(0)); // 单选：取第一个
+                                log.info("[数据预处理] 字段[{}]处理完成（单选），提取ID: {}",
+                                    fieldKey, ids.isEmpty() ? "null" : ids.get(0));
+                            }
+                        }
+                    }
+                }
+            });
+    }
+
+    /**
+     * 安全的JSON序列化
+     * 防止序列化MongoDB特殊类型时抛出异常
+     *
+     * @param entry 数据项
+     * @return JSON字符串
+     */
+    private String safeJsonString(Map.Entry<String, Object> entry) {
+        try {
+            return JSONObject.toJSONString(entry);
+        } catch (Exception e) {
+            return "{\"key\":\"" + entry.getKey() + "\",\"value\":\"<序列化失败>\" }";
+        }
+    }
+
+    /**
+     * 安全的值转字符串
+     * 对MongoDB文档数组进行友好的描述
+     *
+     * @param value 值
+     * @return 字符串描述
+     */
+    private String safeValueString(Object value) {
+        try {
+            if (value instanceof List) {
+                List<?> list = (List<?>) value;
+                if (!list.isEmpty() && list.get(0) instanceof Map) {
+                    Map<String, Object> firstItem = (Map<String, Object>) list.get(0);
+                    if (firstItem.containsKey("_id")) {
+                        return "[MongoDB文档数组，包含" + list.size() + "个文档]";
+                    }
+                }
+            }
+            return String.valueOf(value);
+        } catch (Exception e) {
+            return "<无法转换>";
+        }
     }
 
     @Override
