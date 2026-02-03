@@ -1925,8 +1925,15 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
     public Map<String, Object> echo(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function) {
         long methodStart = System.currentTimeMillis();
         
+        log.info("[Echo入口] 开始处理，数据字段: {}, override: {}", data.keySet(), override);
+        
         // 预处理：规范化MongoDB关联查询结果
-        normalizeMongoLookupFields(data, fieldMap);
+        try {
+            normalizeMongoLookupFields(data, fieldMap);
+        } catch (Exception e) {
+            log.error("[数据预处理] 预处理失败", e);
+            throw e;
+        }
         
         //数据库的数据，用于多层下级数据
         Map<String, Object> olddata = new HashMap<>(data);
@@ -1989,16 +1996,49 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                             Object value = entry.getValue();
                             FieldBasicsHtml fieldDto = fieldMap.get(fieldKey);
 
+                            log.debug("[字段处理] 处理字段[{}]，类型: {}, 值类型: {}", 
+                                fieldKey, fieldDto.getType(), value.getClass().getSimpleName());
+
                             IDataFieldHandler fieldHandler = iDataFieldHandler.get(fieldDto.getType().getDesc());
                             if (ObjectNull.isNotNull(fieldHandler)) {
                                 long fieldStart = System.currentTimeMillis();
+                                
+                                // 如果是关联字段且值是数组，记录详细信息
+                                if (value instanceof List && (fieldDto.getType() == DataFieldType.select 
+                                    || fieldDto.getType() == DataFieldType.cascader 
+                                    || fieldDto.getType() == DataFieldType.checkbox 
+                                    || fieldDto.getType() == DataFieldType.radio)) {
+                                    List<?> list = (List<?>) value;
+                                    if (!list.isEmpty()) {
+                                        Object firstItem = list.get(0);
+                                        log.info("[字段处理] 关联字段[{}]值为数组，大小: {}, 第一个元素类型: {}",
+                                            fieldKey, list.size(), firstItem.getClass().getSimpleName());
+                                        if (firstItem instanceof Map) {
+                                            Map<?, ?> mapItem = (Map<?, ?>) firstItem;
+                                            log.warn("[字段处理] 关联字段[{}]包含Map对象，keys: {}", fieldKey, mapItem.keySet());
+                                        }
+                                    }
+                                }
                                 
                                 if (ObjectNull.isNull(fieldDto.getDesignJson())) {
                                     Map generate = fieldHandler.generate(fieldDto.getLabel(), fieldDto.getFieldKey(), new ArrayList<>());
                                     fieldDto.setDesignJson(generate);
                                 }
                                 FieldBasicsHtml html = fieldHandler.toHtml(fieldDto);
-                                Object echoValue = fieldHandler.getEcho(html, value, override, olddata);
+                                
+                                log.debug("[字段处理] 调用getEcho前 - 字段[{}]，handler: {}", 
+                                    fieldKey, fieldHandler.getClass().getSimpleName());
+                                
+                                Object echoValue = null;
+                                try {
+                                    echoValue = fieldHandler.getEcho(html, value, override, olddata);
+                                    log.debug("[字段处理] getEcho返回 - 字段[{}]，结果类型: {}", 
+                                        fieldKey, echoValue != null ? echoValue.getClass().getSimpleName() : "null");
+                                } catch (ClassCastException cce) {
+                                    log.error("[字段处理] ClassCastException - 字段[{}]，原始值类型: {}, handler: {}", 
+                                        fieldKey, value.getClass().getName(), fieldHandler.getClass().getSimpleName(), cce);
+                                    throw cce;
+                                }
                                 if (ObjectNull.isNotNull(echoValue)) {
                                     //如果是导出进行特殊处理
                                     echoValue = function.apply(new ExportFieldDto().setField(fieldKey).setType(html.getType()).setObject(echoValue));
@@ -2046,31 +2086,84 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      */
     private void normalizeMongoLookupFields(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap) {
         if (ObjectNull.isNull(data) || ObjectNull.isNull(fieldMap)) {
+            log.warn("[数据预处理] 跳过处理 - data为null: {}, fieldMap为null: {}", 
+                ObjectNull.isNull(data), ObjectNull.isNull(fieldMap));
             return;
         }
 
-        fieldMap.values().stream()
-            .filter(field -> {
-                // 判断是否是关联字段（下拉框、级联、多选框等类型）
-                DataFieldType type = field.getType();
-                return type == DataFieldType.select
-                    || type == DataFieldType.cascader
-                    || type == DataFieldType.checkbox
-                    || type == DataFieldType.radio;
-            })
-            .forEach(field -> {
-                String fieldKey = field.getFieldKey();
-                Object value = data.get(fieldKey);
+        log.info("[数据预处理] 开始处理，数据字段: {}, fieldMap大小: {}", data.keySet(), fieldMap.size());
+        
+        // 记录所有关联字段的fieldKey和prop
+        fieldMap.forEach((mapKey, field) -> {
+            DataFieldType type = field.getType();
+            if (type == DataFieldType.select || type == DataFieldType.cascader 
+                || type == DataFieldType.checkbox || type == DataFieldType.radio) {
+                log.debug("[数据预处理] 发现关联字段 - mapKey: {}, fieldKey: {}, prop: {}, type: {}",
+                    mapKey, field.getFieldKey(), field.getProp(), type);
+            }
+        });
 
-                // 如果值是MongoDB lookup返回的文档数组，提取ID
-                if (value instanceof List) {
-                    List<?> list = (List<?>) value;
-                    if (!list.isEmpty() && list.get(0) instanceof Map) {
-                        Map<String, Object> firstItem = (Map<String, Object>) list.get(0);
+        // 遍历fieldMap，查找关联字段并处理
+        fieldMap.forEach((mapKey, field) -> {
+            // 判断是否是关联字段（下拉框、级联、多选框等类型）
+            DataFieldType type = field.getType();
+            if (type != DataFieldType.select
+                && type != DataFieldType.cascader
+                && type != DataFieldType.checkbox
+                && type != DataFieldType.radio) {
+                return;
+            }
+
+            // 尝试使用mapKey(就是fieldMap的key)来获取数据
+            String dataKey = mapKey;
+            Object value = data.get(dataKey);
+            log.debug("[数据预处理] 尝试mapKey[{}]获取数据: {}", dataKey, value != null ? "成功" : "失败");
+
+            if (ObjectNull.isNull(value)) {
+                // 如果mapKey找不到，尝试使用fieldKey
+                String oldKey = dataKey;
+                dataKey = field.getFieldKey();
+                value = data.get(dataKey);
+                log.debug("[数据预处理] mapKey[{}]未找到，尝试fieldKey[{}]: {}", 
+                    oldKey, dataKey, value != null ? "成功" : "失败");
+            }
+
+            if (ObjectNull.isNull(value)) {
+                // 如果还找不到，尝试使用prop
+                String oldKey = dataKey;
+                dataKey = field.getProp();
+                value = data.get(dataKey);
+                log.debug("[数据预处理] fieldKey[{}]未找到，尝试prop[{}]: {}", 
+                    oldKey, dataKey, value != null ? "成功" : "失败");
+            }
+
+            if (ObjectNull.isNull(value)) {
+                log.debug("[数据预处理] 字段[mapKey={}, fieldKey={}, prop={}]在数据中未找到，跳过",
+                    mapKey, field.getFieldKey(), field.getProp());
+                return; // 数据中没有这个字段，跳过
+            }
+
+            log.info("[数据预处理] 检查字段[{}]，类型: {}, 值类型: {}, 值内容: {}",
+                dataKey, type, value.getClass().getSimpleName(), safeValueString(value));
+
+            // 如果值是MongoDB lookup返回的文档数组，提取ID
+            if (value instanceof List) {
+                List<?> list = (List<?>) value;
+                log.debug("[数据预处理] 字段[{}]是List，大小: {}", dataKey, list.size());
+                
+                if (!list.isEmpty()) {
+                    Object firstItem = list.get(0);
+                    log.debug("[数据预处理] 字段[{}]第一个元素类型: {}", 
+                        dataKey, firstItem.getClass().getSimpleName());
+                    
+                    if (firstItem instanceof Map) {
+                        Map<String, Object> firstMap = (Map<String, Object>) firstItem;
+                        log.debug("[数据预处理] 字段[{}]第一个元素是Map，keys: {}", dataKey, firstMap.keySet());
+                        
                         // 检查是否包含MongoDB文档的特征字段（_id表示是MongoDB返回的完整文档）
-                        if (firstItem.containsKey("_id")) {
+                        if (firstMap.containsKey("_id")) {
                             log.warn("[数据预处理] 字段[{}]包含MongoDB lookup结果，自动提取id字段。原始数据: {}",
-                                fieldKey, safeValueString(value));
+                                dataKey, safeValueString(value));
 
                             // 提取id字段值
                             List<String> ids = list.stream()
@@ -2085,18 +2178,21 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
                             // 根据字段是否多选，设置正确的格式
                             if (field instanceof MultipleHtml && ((MultipleHtml) field).getMultiple()) {
-                                data.put(fieldKey, ids); // 多选：保持数组
+                                data.put(dataKey, ids); // 多选：保持数组
                                 log.info("[数据预处理] 字段[{}]处理完成（多选），提取了{}个ID: {}",
-                                    fieldKey, ids.size(), ids);
+                                    dataKey, ids.size(), ids);
                             } else {
-                                data.put(fieldKey, ids.isEmpty() ? null : ids.get(0)); // 单选：取第一个
+                                data.put(dataKey, ids.isEmpty() ? null : ids.get(0)); // 单选：取第一个
                                 log.info("[数据预处理] 字段[{}]处理完成（单选），提取ID: {}",
-                                    fieldKey, ids.isEmpty() ? "null" : ids.get(0));
+                                    dataKey, ids.isEmpty() ? "null" : ids.get(0));
                             }
                         }
                     }
                 }
-            });
+            }
+        });
+
+        log.info("[数据预处理] 处理完成");
     }
 
     /**
