@@ -2097,7 +2097,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         fieldMap.forEach((mapKey, field) -> {
             DataFieldType type = field.getType();
             if (type == DataFieldType.select || type == DataFieldType.cascader 
-                || type == DataFieldType.checkbox || type == DataFieldType.radio) {
+                || type == DataFieldType.checkbox || type == DataFieldType.radio 
+                || type == DataFieldType.user) {
                 log.debug("[数据预处理] 发现关联字段 - mapKey: {}, fieldKey: {}, prop: {}, type: {}",
                     mapKey, field.getFieldKey(), field.getProp(), type);
             }
@@ -2105,12 +2106,13 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
 
         // 遍历fieldMap，查找关联字段并处理
         fieldMap.forEach((mapKey, field) -> {
-            // 判断是否是关联字段（下拉框、级联、多选框等类型）
+            // 判断是否是关联字段（下拉框、级联、多选框、用户选择等类型）
             DataFieldType type = field.getType();
             if (type != DataFieldType.select
                 && type != DataFieldType.cascader
                 && type != DataFieldType.checkbox
-                && type != DataFieldType.radio) {
+                && type != DataFieldType.radio
+                && type != DataFieldType.user) {
                 return;
             }
 
