@@ -444,16 +444,6 @@ public interface DynamicDataService {
     DynamicDataPo parseBean(Map<String, Object> data);
 
     /**
-     * Echo map.
-     *
-     * @param data     the data
-     * @param fields   the fields
-     * @param override the override
-     * @return the map
-     */
-    Map<String, Object> echo(Map<String, Object> data, Collection<FieldBasicsHtml> fields, boolean override);
-
-    /**
      * 校验模型的唯一性
      *
      * @param data    检查的数据
@@ -494,6 +484,15 @@ public interface DynamicDataService {
      */
     Map<String, Object> paresMapWithEcho(String appId, Map<String, Object> data, String modelId, String designId, boolean override);
 
+    /**
+     * Echo map.
+     *
+     * @param data     the data
+     * @param fields   the fields
+     * @param override the override
+     * @return the map
+     */
+    Map<String, Object> echo(Map<String, Object> data, Collection<FieldBasicsHtml> fields, boolean override);
 
     /**
      * Echo map.
@@ -529,6 +528,10 @@ public interface DynamicDataService {
      * @return list
      */
     List<Map> echo(List<Map> data, Collection<FieldBasicsHtml> fields, boolean override);
+
+    List<Map> echo(List<Map> list, Map<String, FieldBasicsHtml> fieldMap, boolean override);
+
+    List<Map> echo(List<Map> list, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function);
 
     /**
      * 转换数据

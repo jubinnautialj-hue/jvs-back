@@ -1906,6 +1906,12 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         return list;
     }
 
+    @Override
+    public Map<String, Object> echo(Map<String, Object> data, Collection<FieldBasicsHtml> fields, boolean override) {
+        Map<String, FieldBasicsHtml> fieldMap = fields.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity(), (e1, e2) -> e1));
+        return echo(data, fieldMap, override);
+    }
+
     /**
      * 数据对象转Map结构数据
      * <p>
@@ -1924,23 +1930,87 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
     @Override
     public Map<String, Object> echo(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function) {
         long methodStart = System.currentTimeMillis();
-        
-        log.info("[Echo入口] 开始处理，数据字段: {}, override: {}", data.keySet(), override);
-        
+
         // 预处理：规范化MongoDB关联查询结果
+        log.info("[Echo入口] 开始处理，数据字段: {}, override: {}", data.keySet(), override);
         try {
             normalizeMongoLookupFields(data, fieldMap);
         } catch (Exception e) {
             log.error("[数据预处理] 预处理失败", e);
             throw e;
         }
-        
-        //数据库的数据，用于多层下级数据
-        Map<String, Object> olddata = new HashMap<>(data);
-        
+
         // 步骤1：处理Tab字段
         long step1Start = System.currentTimeMillis();
-        //因为这个循环是改变内部对象，所以需要创建一个新的
+        renderFieldMap(fieldMap);
+        long step1Duration = System.currentTimeMillis() - step1Start;
+
+        // 步骤2：处理回显数据
+        long step2Start = System.currentTimeMillis();
+        renderMap(data, fieldMap, override, function);
+        long step2Duration = System.currentTimeMillis() - step2Start;
+
+        long totalDuration = System.currentTimeMillis() - methodStart;
+
+        log.debug("[Echo性能分解] 总体处理情况: 耗时{}ms - 第一阶段: {}ms - 第二阶段: {}ms",
+                totalDuration, step1Duration, step2Duration);
+        return data;
+    }
+
+    @Override
+    public List echo(List<Map> list, Collection<FieldBasicsHtml> fields, boolean override) {
+        Map<String, FieldBasicsHtml> fieldMap = fields.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity(), (e1, e2) -> e1));
+        return echo(list, fieldMap, override);
+    }
+
+    @Override
+    public List<Map> echo(List<Map> list, Map<String, FieldBasicsHtml> fieldMap, boolean override) {
+        return echo(list, fieldMap, override, ExportFieldDto::getObject);
+    }
+
+    @Override
+    public List<Map> echo(List<Map> list, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function) {
+        long methodStart = System.currentTimeMillis();
+
+        list.parallelStream().forEach(data -> {
+            // 预处理：规范化MongoDB关联查询结果
+            log.info("[Echo入口] 开始处理，数据字段: {}, override: {}", data.keySet(), override);
+            try {
+                normalizeMongoLookupFields(data, fieldMap);
+            } catch (Exception e) {
+                log.error("[数据预处理] 预处理失败", e);
+                throw e;
+            }
+        });
+
+        // 步骤1：处理Tab字段
+        long step1Start = System.currentTimeMillis();
+        renderFieldMap(fieldMap);
+        long step1Duration = System.currentTimeMillis() - step1Start;
+
+        // 步骤2：处理回显数据
+        long step2Start = System.currentTimeMillis();
+        List<Long> listDurations = new ArrayList<>();
+        list.parallelStream().forEach(data -> {
+            long itemStartTime = System.currentTimeMillis();
+            renderMap(data, fieldMap, override, function);
+            listDurations.add(System.currentTimeMillis() - itemStartTime);
+        });
+        long step2Duration = System.currentTimeMillis() - step2Start;
+
+        Optional<Long> max = listDurations.stream().max(Long::compareTo);
+        Optional<Long> min = listDurations.stream().min(Long::compareTo);
+        log.debug("[Echo性能分解] list循环处理情况: 耗时{}ms - 处理记录数: {} - 最大耗时{}ms - 最小耗时{}ms",
+                step2Duration, list.size(), max, min);
+
+        long totalDuration = System.currentTimeMillis() - methodStart;
+
+        log.debug("[Echo性能分解] 总体处理情况: 耗时{}ms - 第一阶段: {}ms - 第二阶段: {}ms",
+                totalDuration, step1Duration, step2Duration);
+        return list;
+    }
+
+    private void renderFieldMap(Map<String, FieldBasicsHtml> fieldMap) {
         fieldMap.values().stream().collect(Collectors.toList()).stream().filter(e -> e.getType().equals(DataFieldType.tab))
                 //判断是否开启了数据脱离， 将过滤出有多个数据脱离的选项卡
                 .filter(e -> {
@@ -1951,7 +2021,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         //兼容老的选项卡数据值
                         return true;
                     }
-                }).forEach(e -> {
+                })
+                .forEach(e -> {
                     //将数据脱离的 key ， 组装为对象属性值
                     TabItemHtml html = (TabItemHtml) iDataFieldHandler.get(DataFieldType.tab.getDesc()).toHtml(e);
                     if (ObjectNull.isNotNull(html)) {
@@ -1977,12 +2048,14 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         }
                     }
                 });
-        long step1Duration = System.currentTimeMillis() - step1Start;
+    }
 
+    private void renderMap(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap, boolean override, Function<ExportFieldDto, Object> function) {
         // 步骤2：处理回显数据
-        long step2Start = System.currentTimeMillis();
+        //数据库的数据，用于多层下级数据
+        Map<String, Object> olddata = new HashMap<>(data);
         Map<String, Long> fieldHandlerDurations = new HashMap<>();
-        
+
         data.entrySet().stream().collect(Collectors.toList()).stream()
                 //有key的存在
                 .filter(e -> fieldMap.containsKey(e.getKey()))
@@ -1996,47 +2069,47 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                             Object value = entry.getValue();
                             FieldBasicsHtml fieldDto = fieldMap.get(fieldKey);
 
-                            log.debug("[字段处理] 处理字段[{}]，类型: {}, 值类型: {}", 
-                                fieldKey, fieldDto.getType(), value.getClass().getSimpleName());
+                            log.debug("[字段处理] 处理字段[{}]，类型: {}, 值类型: {}",
+                                    fieldKey, fieldDto.getType(), value.getClass().getSimpleName());
 
                             IDataFieldHandler fieldHandler = iDataFieldHandler.get(fieldDto.getType().getDesc());
                             if (ObjectNull.isNotNull(fieldHandler)) {
                                 long fieldStart = System.currentTimeMillis();
-                                
+
                                 // 如果是关联字段且值是数组，记录详细信息
-                                if (value instanceof List && (fieldDto.getType() == DataFieldType.select 
-                                    || fieldDto.getType() == DataFieldType.cascader 
-                                    || fieldDto.getType() == DataFieldType.checkbox 
-                                    || fieldDto.getType() == DataFieldType.radio)) {
+                                if (value instanceof List && (fieldDto.getType() == DataFieldType.select
+                                        || fieldDto.getType() == DataFieldType.cascader
+                                        || fieldDto.getType() == DataFieldType.checkbox
+                                        || fieldDto.getType() == DataFieldType.radio)) {
                                     List<?> list = (List<?>) value;
                                     if (!list.isEmpty()) {
                                         Object firstItem = list.get(0);
                                         log.info("[字段处理] 关联字段[{}]值为数组，大小: {}, 第一个元素类型: {}",
-                                            fieldKey, list.size(), firstItem.getClass().getSimpleName());
+                                                fieldKey, list.size(), firstItem.getClass().getSimpleName());
                                         if (firstItem instanceof Map) {
                                             Map<?, ?> mapItem = (Map<?, ?>) firstItem;
                                             log.warn("[字段处理] 关联字段[{}]包含Map对象，keys: {}", fieldKey, mapItem.keySet());
                                         }
                                     }
                                 }
-                                
+
                                 if (ObjectNull.isNull(fieldDto.getDesignJson())) {
                                     Map generate = fieldHandler.generate(fieldDto.getLabel(), fieldDto.getFieldKey(), new ArrayList<>());
                                     fieldDto.setDesignJson(generate);
                                 }
                                 FieldBasicsHtml html = fieldHandler.toHtml(fieldDto);
-                                
-                                log.debug("[字段处理] 调用getEcho前 - 字段[{}]，handler: {}", 
-                                    fieldKey, fieldHandler.getClass().getSimpleName());
-                                
+
+                                log.debug("[字段处理] 调用getEcho前 - 字段[{}]，handler: {}",
+                                        fieldKey, fieldHandler.getClass().getSimpleName());
+
                                 Object echoValue = null;
                                 try {
                                     echoValue = fieldHandler.getEcho(html, value, override, olddata);
-                                    log.debug("[字段处理] getEcho返回 - 字段[{}]，结果类型: {}", 
-                                        fieldKey, echoValue != null ? echoValue.getClass().getSimpleName() : "null");
+                                    log.debug("[字段处理] getEcho返回 - 字段[{}]，结果类型: {}",
+                                            fieldKey, echoValue != null ? echoValue.getClass().getSimpleName() : "null");
                                 } catch (ClassCastException cce) {
-                                    log.error("[字段处理] ClassCastException - 字段[{}]，原始值类型: {}, handler: {}", 
-                                        fieldKey, value.getClass().getName(), fieldHandler.getClass().getSimpleName(), cce);
+                                    log.error("[字段处理] ClassCastException - 字段[{}]，原始值类型: {}, handler: {}",
+                                            fieldKey, value.getClass().getName(), fieldHandler.getClass().getSimpleName(), cce);
                                     throw cce;
                                 }
                                 if (ObjectNull.isNotNull(echoValue)) {
@@ -2049,7 +2122,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                 } else {
                                     fieldHandler.setDataOverride(data, fieldKey, html, path, override, echoValue);
                                 }
-                                
+
                                 long fieldDuration = System.currentTimeMillis() - fieldStart;
                                 String fieldType = fieldDto.getType().getDesc();
                                 fieldHandlerDurations.merge(fieldType, fieldDuration, Long::sum);
@@ -2062,20 +2135,9 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         log.error("格式转换异常{}", safeJsonString(entry), e);
                         throw new RuntimeException("格式转换异常:" + entry.getKey() + " : " + safeValueString(entry.getValue()));
                     }
-
                 });
-        long step2Duration = System.currentTimeMillis() - step2Start;
-        
-        long totalDuration = System.currentTimeMillis() - methodStart;
-        
-        // 单次echo调用超过100ms时记录详细日志
-        if (totalDuration > 100) {
-            log.warn("[Echo性能] 单条数据echo耗时过长: {}ms - 数据ID: {}, Tab处理: {}ms, 字段回显: {}ms, 字段类型耗时: {}",
-                totalDuration, data.get("id"), step1Duration, step2Duration, fieldHandlerDurations);
-        }
-        
-        return data;
     }
+
 
     /**
      * 规范化MongoDB关联查询字段
@@ -2086,21 +2148,21 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
      */
     private void normalizeMongoLookupFields(Map<String, Object> data, Map<String, FieldBasicsHtml> fieldMap) {
         if (ObjectNull.isNull(data) || ObjectNull.isNull(fieldMap)) {
-            log.warn("[数据预处理] 跳过处理 - data为null: {}, fieldMap为null: {}", 
-                ObjectNull.isNull(data), ObjectNull.isNull(fieldMap));
+            log.warn("[数据预处理] 跳过处理 - data为null: {}, fieldMap为null: {}",
+                    ObjectNull.isNull(data), ObjectNull.isNull(fieldMap));
             return;
         }
 
         log.info("[数据预处理] 开始处理，数据字段: {}, fieldMap大小: {}", data.keySet(), fieldMap.size());
-        
+
         // 记录所有关联字段的fieldKey和prop
         fieldMap.forEach((mapKey, field) -> {
             DataFieldType type = field.getType();
-            if (type == DataFieldType.select || type == DataFieldType.cascader 
-                || type == DataFieldType.checkbox || type == DataFieldType.radio 
-                || type == DataFieldType.user) {
+            if (type == DataFieldType.select || type == DataFieldType.cascader
+                    || type == DataFieldType.checkbox || type == DataFieldType.radio
+                    || type == DataFieldType.user) {
                 log.debug("[数据预处理] 发现关联字段 - mapKey: {}, fieldKey: {}, prop: {}, type: {}",
-                    mapKey, field.getFieldKey(), field.getProp(), type);
+                        mapKey, field.getFieldKey(), field.getProp(), type);
             }
         });
 
@@ -2109,10 +2171,10 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             // 判断是否是关联字段（下拉框、级联、多选框、用户选择等类型）
             DataFieldType type = field.getType();
             if (type != DataFieldType.select
-                && type != DataFieldType.cascader
-                && type != DataFieldType.checkbox
-                && type != DataFieldType.radio
-                && type != DataFieldType.user) {
+                    && type != DataFieldType.cascader
+                    && type != DataFieldType.checkbox
+                    && type != DataFieldType.radio
+                    && type != DataFieldType.user) {
                 return;
             }
 
@@ -2126,8 +2188,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 String oldKey = dataKey;
                 dataKey = field.getFieldKey();
                 value = data.get(dataKey);
-                log.debug("[数据预处理] mapKey[{}]未找到，尝试fieldKey[{}]: {}", 
-                    oldKey, dataKey, value != null ? "成功" : "失败");
+                log.debug("[数据预处理] mapKey[{}]未找到，尝试fieldKey[{}]: {}",
+                        oldKey, dataKey, value != null ? "成功" : "失败");
             }
 
             if (ObjectNull.isNull(value)) {
@@ -2135,58 +2197,58 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 String oldKey = dataKey;
                 dataKey = field.getProp();
                 value = data.get(dataKey);
-                log.debug("[数据预处理] fieldKey[{}]未找到，尝试prop[{}]: {}", 
-                    oldKey, dataKey, value != null ? "成功" : "失败");
+                log.debug("[数据预处理] fieldKey[{}]未找到，尝试prop[{}]: {}",
+                        oldKey, dataKey, value != null ? "成功" : "失败");
             }
 
             if (ObjectNull.isNull(value)) {
                 log.debug("[数据预处理] 字段[mapKey={}, fieldKey={}, prop={}]在数据中未找到，跳过",
-                    mapKey, field.getFieldKey(), field.getProp());
+                        mapKey, field.getFieldKey(), field.getProp());
                 return; // 数据中没有这个字段，跳过
             }
 
             log.info("[数据预处理] 检查字段[{}]，类型: {}, 值类型: {}, 值内容: {}",
-                dataKey, type, value.getClass().getSimpleName(), safeValueString(value));
+                    dataKey, type, value.getClass().getSimpleName(), safeValueString(value));
 
             // 如果值是MongoDB lookup返回的文档数组，提取ID
             if (value instanceof List) {
                 List<?> list = (List<?>) value;
                 log.debug("[数据预处理] 字段[{}]是List，大小: {}", dataKey, list.size());
-                
+
                 if (!list.isEmpty()) {
                     Object firstItem = list.get(0);
-                    log.debug("[数据预处理] 字段[{}]第一个元素类型: {}", 
-                        dataKey, firstItem.getClass().getSimpleName());
-                    
+                    log.debug("[数据预处理] 字段[{}]第一个元素类型: {}",
+                            dataKey, firstItem.getClass().getSimpleName());
+
                     if (firstItem instanceof Map) {
                         Map<String, Object> firstMap = (Map<String, Object>) firstItem;
                         log.debug("[数据预处理] 字段[{}]第一个元素是Map，keys: {}", dataKey, firstMap.keySet());
-                        
+
                         // 检查是否包含MongoDB文档的特征字段（_id表示是MongoDB返回的完整文档）
                         if (firstMap.containsKey("_id")) {
                             log.warn("[数据预处理] 字段[{}]包含MongoDB lookup结果，自动提取id字段。原始数据: {}",
-                                dataKey, safeValueString(value));
+                                    dataKey, safeValueString(value));
 
                             // 提取id字段值
                             List<String> ids = list.stream()
-                                .filter(item -> item instanceof Map)
-                                .map(item -> {
-                                    Map<String, Object> doc = (Map<String, Object>) item;
-                                    Object id = doc.get("id");
-                                    return id != null ? id.toString() : null;
-                                })
-                                .filter(Objects::nonNull)
-                                .collect(Collectors.toList());
+                                    .filter(item -> item instanceof Map)
+                                    .map(item -> {
+                                        Map<String, Object> doc = (Map<String, Object>) item;
+                                        Object id = doc.get("id");
+                                        return id != null ? id.toString() : null;
+                                    })
+                                    .filter(Objects::nonNull)
+                                    .collect(Collectors.toList());
 
                             // 根据字段是否多选，设置正确的格式
                             if (field instanceof MultipleHtml && ((MultipleHtml) field).getMultiple()) {
                                 data.put(dataKey, ids); // 多选：保持数组
                                 log.info("[数据预处理] 字段[{}]处理完成（多选），提取了{}个ID: {}",
-                                    dataKey, ids.size(), ids);
+                                        dataKey, ids.size(), ids);
                             } else {
                                 data.put(dataKey, ids.isEmpty() ? null : ids.get(0)); // 单选：取第一个
                                 log.info("[数据预处理] 字段[{}]处理完成（单选），提取ID: {}",
-                                    dataKey, ids.isEmpty() ? "null" : ids.get(0));
+                                        dataKey, ids.isEmpty() ? "null" : ids.get(0));
                             }
                         }
                     }
@@ -2234,20 +2296,6 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         } catch (Exception e) {
             return "<无法转换>";
         }
-    }
-
-    @Override
-    public List echo(List<Map> list, Collection<FieldBasicsHtml> fields, boolean override) {
-        for (Map data : list) {
-            echo(data, fields, override);
-        }
-        return list;
-    }
-
-    @Override
-    public Map<String, Object> echo(Map<String, Object> data, Collection<FieldBasicsHtml> fields, boolean override) {
-        Map<String, FieldBasicsHtml> fieldMap = fields.stream().collect(Collectors.toMap(FieldBasicsHtml::getFieldKey, Function.identity(), (e1, e2) -> e1));
-        return echo(data, fieldMap, override);
     }
 
     /**
@@ -3000,7 +3048,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
         // 记录回显后的linkageData状态
         log.debug("回显后linkageData: {}", linkageData);
 
-        log.info("echoModelDisplay2 ,data:{} ,linkageData:{},linkageFieldKeys{}",data,linkageData,linkageFieldKeys);
+        log.info("echoModelDisplay2 ,data:{} ,linkageData:{},linkageFieldKeys{}", data, linkageData, linkageFieldKeys);
         linkageFieldKeys.forEach(linkageFieldKey -> {
             String prop = linkageFieldKey.getProp();
             String aliasProp = linkageFieldKey.getAliasProp();
@@ -3008,7 +3056,7 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             Object echoValue = linkageData.get(prop + DynamicDataUtils.SUFFIX_ECHO);
 
             log.debug("处理关联字段: prop={}, aliasProp={}, originalValue={}, echoValue={}",
-                     prop, aliasProp, originalValue, echoValue);
+                    prop, aliasProp, originalValue, echoValue);
 
             data.put(aliasProp, originalValue);
             data.put(aliasProp + DynamicDataUtils.SUFFIX_ECHO, echoValue);
