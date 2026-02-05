@@ -2166,6 +2166,15 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
             }
         });
 
+        // 添加额外的调试信息，帮助定位字段污染问题
+        log.debug("[数据预处理-调试] 原始数据快照: {}", data.entrySet().stream()
+                .filter(entry -> entry.getValue() instanceof List)
+                .collect(Collectors.toMap(
+                        Map.Entry::getKey,
+                        entry -> entry.getValue() instanceof List
+                                ? "List(size=" + ((List<?>) entry.getValue()).size() + ")"
+                                : entry.getValue().getClass().getSimpleName())));
+
         // 遍历fieldMap，查找关联字段并处理
         fieldMap.forEach((mapKey, field) -> {
             // 判断是否是关联字段（下拉框、级联、多选框、用户选择等类型）
@@ -2225,7 +2234,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                         log.debug("[数据预处理] 字段[{}]第一个元素是Map，keys: {}", dataKey, firstMap.keySet());
 
                         // 检查是否包含MongoDB文档的特征字段（_id表示是MongoDB返回的完整文档）
-                        if (firstMap.containsKey("_id")) {
+                        // 同时检查该字段是否真的是关联查询返回的数据（通过检查是否有预期的字段）
+                        if (firstMap.containsKey("_id") && (firstMap.containsKey("id") || type == DataFieldType.user || type == DataFieldType.select || type == DataFieldType.cascader || type == DataFieldType.checkbox || type == DataFieldType.radio)) {
                             log.warn("[数据预处理] 字段[{}]包含MongoDB lookup结果，自动提取id字段。原始数据: {}",
                                     dataKey, safeValueString(value));
 
@@ -2234,7 +2244,11 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                     .filter(item -> item instanceof Map)
                                     .map(item -> {
                                         Map<String, Object> doc = (Map<String, Object>) item;
+                                        // 优先获取 id 字段，如果没有则尝试 _id
                                         Object id = doc.get("id");
+                                        if (id == null) {
+                                            id = doc.get("_id");
+                                        }
                                         return id != null ? id.toString() : null;
                                     })
                                     .filter(Objects::nonNull)
@@ -2250,6 +2264,8 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                                 log.info("[数据预处理] 字段[{}]处理完成（单选），提取ID: {}",
                                         dataKey, ids.isEmpty() ? "null" : ids.get(0));
                             }
+                        } else {
+                            log.debug("[数据预处理] 字段[{}]不是MongoDB lookup结果，跳过处理", dataKey);
                         }
                     }
                 }
@@ -2288,9 +2304,17 @@ public class DynamicDataServiceImpl implements DynamicDataService, ExpressionAft
                 if (!list.isEmpty() && list.get(0) instanceof Map) {
                     Map<String, Object> firstItem = (Map<String, Object>) list.get(0);
                     if (firstItem.containsKey("_id")) {
-                        return "[MongoDB文档数组，包含" + list.size() + "个文档]";
+                        // 显示更多MongoDB文档的信息，便于调试
+                        String firstDocInfo = "";
+                        if (firstItem.containsKey("id")) {
+                            firstDocInfo = ", 第一个文档id: " + firstItem.get("id");
+                        }
+                        return "[MongoDB文档数组，包含" + list.size() + "个文档" + firstDocInfo + "]";
                     }
                 }
+                // 对于非MongoDB文档的列表，也显示更多信息
+                return "[数组，包含" + list.size() + "个元素，首元素类型: " +
+                        (list.get(0) != null ? list.get(0).getClass().getSimpleName() : "null") + "]";
             }
             return String.valueOf(value);
         } catch (Exception e) {
