@@ -58,36 +58,67 @@ public class UserFieldHandler extends IMultipleTypeHandler implements IDataField
         if (ObjectNull.isNull(data)) {
             return "";
         }
+        
+        // 诊断日志：记录输入数据类型和值
+        log.info("[UserFieldHandler] 处理用户字段，原始数据类型: {}, 值: {}", 
+                 data.getClass().getSimpleName(), data);
+        
         List<String> userIds;
         if (data instanceof List) {
             userIds = (List<String>) data;
+            log.info("[UserFieldHandler] 识别为数组类型，用户ID列表: {}", userIds);
         } else {
             userIds = new ArrayList<>();
             userIds.add(data.toString());
+            log.info("[UserFieldHandler] 识别为字符串类型，转换为单元素列表: {}", userIds);
         }
+        
         //如果全部都是空，则直接返回
         if (userIds.stream().allMatch(ObjectNull::isNull)) {
             return "";
         }
+        
         Map<String, Object> userMap = new HashMap<>();
         List<String> queryUserId = new ArrayList<>();
+        
+        // 检查缓存
         userIds.forEach(e -> {
             String value = userNameMapCache.get(e, () -> "");
+            log.debug("[UserFieldHandler] 用户ID {} 缓存查找结果: {}", e, value);
             if (ObjectNull.isNull(value)) {
                 queryUserId.add(e);
+                log.debug("[UserFieldHandler] 用户ID {} 需要远程查询", e);
             }
             userMap.put(e, value);
         });
+        
+        log.info("[UserFieldHandler] 需要远程查询的用户ID: {}", queryUserId);
+        
         if (ObjectNull.isNotNull(queryUserId)) {
-            Map<String, String> queryMap = userApi.getBasicInfoById(queryUserId, USER_FIELD_LIST).getData().stream().collect(Collectors.toMap(UserDto::getId, user -> StringUtils.defaultIfBlank(user.getRealName(), "")));
-            queryMap.entrySet().forEach(e ->
-                    userNameMapCache.put(e.getKey(), e.getValue())
-            );
+            log.info("[UserFieldHandler] 调用userApi.getBasicInfoById，参数: {}", queryUserId);
+            Map<String, String> queryMap = userApi.getBasicInfoById(queryUserId).getData()
+                .stream()
+                .collect(Collectors.toMap(UserDto::getId, user -> StringUtils.defaultIfBlank(user.getRealName(), "")));
+            
+            log.info("[UserFieldHandler] API返回结果映射: {}", queryMap);
+            
+            queryMap.entrySet().forEach(e -> {
+                userNameMapCache.put(e.getKey(), e.getValue());
+                log.debug("[UserFieldHandler] 缓存用户信息: {} -> {}", e.getKey(), e.getValue());
+            });
             userMap.putAll(queryMap);
         }
+        
+        // 记录最终的userMap状态
+        log.info("[UserFieldHandler] 最终用户映射表: {}", userMap);
+        
         DataFieldHandler dataFieldHandler = SpringContextUtil.getBean(DataFieldHandler.class);
         boolean isMulti = ObjectNull.isNull(fieldDto.getMultiple()) ? false : fieldDto.getMultiple();
-        return dataFieldHandler.joinFormItems(userMap, data, isMulti, false);
+        
+        Object result = dataFieldHandler.joinFormItems(userMap, data, isMulti, false);
+        log.info("[UserFieldHandler] 最终返回结果: {}", result);
+        
+        return result;
     }
 
     @Override
