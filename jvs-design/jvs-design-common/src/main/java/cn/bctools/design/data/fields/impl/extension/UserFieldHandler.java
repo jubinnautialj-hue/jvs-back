@@ -113,7 +113,16 @@ public class UserFieldHandler extends IMultipleTypeHandler implements IDataField
         log.info("[UserFieldHandler] 最终用户映射表: {}", userMap);
         
         DataFieldHandler dataFieldHandler = SpringContextUtil.getBean(DataFieldHandler.class);
-        boolean isMulti = ObjectNull.isNull(fieldDto.getMultiple()) ? false : fieldDto.getMultiple();
+        // 智能判断是否应该按多选处理：如果字段配置为多选则使用配置；如果字段配置为单选但实际数据是数组，则根据数据类型智能处理
+        boolean fieldConfigIsMulti = ObjectNull.isNull(fieldDto.getMultiple()) ? false : fieldDto.getMultiple();
+        boolean actualDataIsArray = data instanceof List;
+        
+        // 重要：当字段配置为单选但实际数据是数组时，我们应该按数组处理以避免丢失数据
+        boolean isMulti = actualDataIsArray || fieldConfigIsMulti;
+        
+        log.info("[UserFieldHandler] 字段配置的多选属性: {}, 实际数据类型: {}, 实际数据: {}", fieldDto.getMultiple(), data.getClass().getSimpleName(), data);
+        log.info("[UserFieldHandler] 处理参数 - userMap: {}, fieldConfigIsMulti: {}, actualDataIsArray: {}, isMulti: {}, showPath: {}", 
+                userMap, fieldConfigIsMulti, actualDataIsArray, isMulti, false);
         
         Object result = dataFieldHandler.joinFormItems(userMap, data, isMulti, false);
         log.info("[UserFieldHandler] 最终返回结果: {}", result);
