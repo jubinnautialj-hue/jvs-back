@@ -428,6 +428,9 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
         }
         log.info("[数据联动setValue] 字段: {}, 类型: {}, linkageFieldKey: {}, paths: {}, 查询结果数量: {}", 
                 e.getProp(), e.getType(), e.getLinkageFieldKey(), paths, maps == null ? "null" : maps.size());
+        if (ObjectNull.isNotNull(maps) && !maps.isEmpty()) {
+            log.info("[数据联动setValue] 查询结果第一条数据: {}", maps.get(0));
+        }
         //如果是表格组件才处理
         if (e.getType().equals(DataFieldType.tableForm)) {
             if (ObjectNull.isNull(maps)) {
@@ -471,6 +474,22 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
                     //同时触发一下公式， 看是否有其它数据执行
                 } else {
                     JSONPath.set(map, paths, "<p></p>");
+                }
+                break;
+            case user:
+            case department:
+            case role:
+                if (read instanceof List) {
+                    log.info("[数据联动setValue] user类型字段 {} 为数组,从查询结果提取linkageFieldKey", e.getProp());
+                    Object o = maps.stream().map(a -> JvsJsonPath.read(a, e.getLinkageFieldKey())).collect(Collectors.toList()).get(0);
+                    log.info("[数据联动setValue] user类型字段 {} 提取结果: {}", e.getProp(), o);
+                    JSONPath.set(map, paths, o);
+                } else {
+                    if (ObjectNull.isNotNull(maps)) {
+                        Object o = maps.get(0).get(e.getLinkageFieldKey());
+                        log.info("[数据联动setValue] user类型字段 {} 单值模式,提取linkageFieldKey值: {}", e.getProp(), o);
+                        JSONPath.set(map, paths, o);
+                    }
                 }
                 break;
             default:
