@@ -20,6 +20,7 @@ import cn.hutool.core.util.StrUtil;
 import com.alibaba.fastjson2.JSON;
 import com.alibaba.fastjson2.JSONObject;
 import com.alibaba.fastjson2.JSONPath;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.mongodb.core.query.Criteria;
 
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
  * @param <T> the type parameter
  * @Author: GuoZi
  */
+@Slf4j
 public interface IDataFieldHandler<T extends FieldBasicsHtml> {
 
     /**
@@ -422,6 +424,8 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
         if (ObjectNull.isNull(paths)) {
             return;
         }
+        log.info("[数据联动setValue] 字段: {}, 类型: {}, linkageFieldKey: {}, paths: {}, 查询结果数量: {}", 
+                e.getProp(), e.getType(), e.getLinkageFieldKey(), paths, maps == null ? "null" : maps.size());
         //如果是表格组件才处理
         if (e.getType().equals(DataFieldType.tableForm)) {
             if (ObjectNull.isNull(maps)) {
@@ -469,14 +473,20 @@ public interface IDataFieldHandler<T extends FieldBasicsHtml> {
                 break;
             default:
                 if (read instanceof List) {
+                    log.info("[数据联动setValue] 字段 {} 为数组类型,设置联动结果数组", e.getProp());
                     JSONPath.set(map, paths, maps);
                 } else {
                     if (ObjectNull.isNotNull(maps)) {
                         Map<String, Object> stringObjectMap = maps.get(0);
-                        JSONPath.set(map, paths, stringObjectMap.getOrDefault(e.getLinkageFieldKey(), ""));
+                        Object linkageValue = stringObjectMap.getOrDefault(e.getLinkageFieldKey(), "");
+                        Object originalValue = map.get(e.getProp());
+                        log.info("[数据联动setValue] 字段 {} 设置联动值 - 原始值: {}, 联动键: {}, 联动值: {}", 
+                                e.getProp(), originalValue, e.getLinkageFieldKey(), linkageValue);
+                        JSONPath.set(map, paths, linkageValue);
                         //同时触发一下公式， 看是否有其它数据执行
                     } else {
                         //联动筛选为空,直接设置为空
+                        log.warn("[数据联动setValue] 字段 {} 联动查询结果为空,设置为空值", e.getProp());
                         JSONPath.set(map, paths, "");
                     }
                 }
