@@ -244,7 +244,7 @@ public class FlowTaskNoticeServiceImpl extends ServiceImpl<FlowTaskNoticeMapper,
         flowTaskNoticeLog.setRequestData(requestData);
         try {
             String response = sendRequest(apiUrl, jsonRequest, appTaskDto.getTaskAppId(), appTaskDto.getTaskAppSecret());
-            log.info("打印统一待办response:{}", response);
+            log.info("打印统一待办 type:{} ,appId:{} ,request{} ,response:{}", flowTaskNoticeEnum.name(), appTaskDto.getTaskAppId(), jsonRequest, response);
             if (response != null) {
                 responseDto = JSON.parseObject(response, FlowNoticeResponseDto.class);
                 flowTaskNoticeLog.setResponseData(responseDto);
