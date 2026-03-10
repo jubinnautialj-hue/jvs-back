@@ -291,6 +291,8 @@ public class DynamicDataUseController {
      */
     FlowDynamicDataService flowDynamicDataService;
 
+    DataIdService dataIdService;
+
     /**
      * 获取字段列表
      *
@@ -3335,5 +3337,25 @@ public class DynamicDataUseController {
         Page<Map<String, Object>> pageResult = dynamicDataService.queryPage(appId, page, modelId, null, queryGroupConditions, orderBys, linkageQueryFieldKeys, true, true, true, new ArrayList<>(collectMap.values()), null);
         pageResult.getRecords().forEach(data -> dynamicDataService.echoModelDisplay(data, data, collectMap.values(), dto.getLinkageFieldKeys()));
         return R.ok(pageResult);
+    }
+    /**
+     * 同步数据序号至指定最大值
+     * <p>适用于通过数据库直接导入历史数据后，修正流水号计数器与实际数据不同步的问题</p>
+     *
+     * @param appId    应用id
+     * @param modelId  模型id
+     * @param maxValue 当前数据中已存在的最大序号数字值（下次新增将从此值+1开始）
+     * @return 操作结果
+     */
+    @ApiOperation("同步数据序号至指定最大值")
+    @PutMapping("/serialNumber/sync/{modelId}")
+    public R<Void> syncSerialNumber(@PathVariable String appId, @PathVariable String modelId,
+                                    @RequestParam int maxValue) {
+        DataModelPo dataModel = dataModelService.getById(modelId);
+        if (ObjectNull.isNull(dataModel) || !appId.equals(dataModel.getAppId())) {
+            throw new BusinessException("应用错误或模型不存在");
+        }
+        dataIdService.syncIdByMaxValue(modelId, maxValue);
+        return R.ok();
     }
 }

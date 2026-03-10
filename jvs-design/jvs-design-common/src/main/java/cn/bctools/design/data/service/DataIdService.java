@@ -48,5 +48,15 @@ public interface DataIdService extends IService<DataIdPo> {
      * @param designIds 设计id集合
      */
     void removeId(DesignType designType, Collection<String> designIds);
+
+    /**
+     * 按照指定最大值同步数据序号
+     * <p>适用于通过数据库直接导入历史数据后，计数器与实际数据不同步的场景</p>
+     *
+     * @param modelId  表单模型id
+     * @param maxValue 当前数据中已存在的最大序号值
+     * @return 更新后的序号对象
+     */
+    DataIdPo syncIdByMaxValue(String modelId, int maxValue);
 }
 

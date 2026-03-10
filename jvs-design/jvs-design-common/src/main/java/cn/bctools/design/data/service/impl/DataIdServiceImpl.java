@@ -435,4 +435,34 @@ public class DataIdServiceImpl extends ServiceImpl<DataIdMapper, DataIdPo> imple
         redisUtils.del(lastTimeKeys);
 
     }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public DataIdPo syncIdByMaxValue(String modelId, int maxValue) {
+        if (StringUtils.isBlank(modelId)) {
+            return null;
+        }
+        final int size = Math.max(maxValue, 1);
+        LambdaQueryWrapper<DataIdPo> wrapper = Wrappers.<DataIdPo>lambdaQuery()
+                .eq(DataIdPo::getModelId, modelId);
+        DataIdPo dataIdPo = this.getOne(wrapper);
+        if (Objects.isNull(dataIdPo)) {
+            dataIdPo = new DataIdPo();
+            dataIdPo.setModelId(modelId);
+        }
+        // 仅修正全局不重置序号，按年/月/天/小时的计数器保持原值不变
+        dataIdPo.setCurrentId(size)
+                .setUpdateTime(LocalDateTime.now());
+        this.saveOrUpdate(dataIdPo);
+        // 清除 Redis 缓存，确保下次 nextId 从数据库重新加载
+        String currentIdKey = MODE_NEXT_ID_CACHE + modelId;
+        String yearIdKey = MODE_YEAR_NEXT_ID_CACHE + modelId;
+        String monthIdKey = MODE_MONTH_NEXT_ID_CACHE + modelId;
+        String dayIdKey = MODE_DAY_NEXT_ID_CACHE + modelId;
+        String hourIdKey = MODE_HOUR_NEXT_ID_CACHE + modelId;
+        String lastTimeKey = MODE_NEXT_ID_LAST_TIME_CACHE + modelId;
+        redisUtils.del(currentIdKey, yearIdKey, monthIdKey, dayIdKey, hourIdKey, lastTimeKey);
+        log.info("同步数据序号完成, modelId={}, maxValue={}", modelId, size);
+        return dataIdPo;
+    }
 }
