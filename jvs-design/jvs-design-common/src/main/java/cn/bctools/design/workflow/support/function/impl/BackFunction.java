@@ -64,7 +64,7 @@ public class BackFunction extends AbstractFunctionHandler<Boolean, RuntimeData> 
         // 退回操作：关闭当前任务下所有未处理的待办通知
         List<String> removeBizTaskIds = flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
                         .eq(FlowTaskNotice::getInstanceId, flowTask.getId())
-                        .eq(FlowTaskNotice::getNodeId, backNode.getId())
+                        .eq(FlowTaskNotice::getNodeId, sendBackNode.getId())
                         .eq(FlowTaskNotice::getStatus, 0))
                 .stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
         if (removeBizTaskIds != null && !removeBizTaskIds.isEmpty()) {
