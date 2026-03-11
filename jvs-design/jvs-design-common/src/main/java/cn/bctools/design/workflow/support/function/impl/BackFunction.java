@@ -12,6 +12,8 @@ import cn.bctools.design.workflow.model.Node;
 import cn.bctools.design.workflow.model.enums.NodeTypeEnum;
 import cn.bctools.design.workflow.model.enums.NodeTypeGroupEnum;
 import cn.bctools.design.workflow.model.properties.BackProperties;
+import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
+import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
 import cn.bctools.design.workflow.service.*;
 import cn.bctools.design.workflow.support.RuntimeData;
 import cn.bctools.design.workflow.support.function.AbstractFunctionHandler;
@@ -40,6 +42,7 @@ public class BackFunction extends AbstractFunctionHandler<Boolean, RuntimeData> 
     private final FlowTaskParallelService flowTaskParallelService;
     private final FlowTaskNodeService flowTaskNodeService;
     private final FlowTaskPersonService flowTaskPersonService;
+    private final FlowTaskNoticeService flowTaskNoticeService;
 
     @Override
     public Boolean invoke(Node backNode, RuntimeData runtimeData) {
@@ -58,6 +61,15 @@ public class BackFunction extends AbstractFunctionHandler<Boolean, RuntimeData> 
         backParallel(flowTask, backNode, backProperties, backDto.getParentParallelBranchIds(), backDto.getChildParallelBranchIds());
         // 重置回退目标节点的所有下级节点待办信息
         backTask(flowTask, backProperties, backDto.getChildNodeIds());
+        // 退回操作：关闭当前任务下所有未处理的待办通知
+        List<String> removeBizTaskIds = flowTaskNoticeService.list(Wrappers.<FlowTaskNotice>lambdaQuery()
+                        .eq(FlowTaskNotice::getInstanceId, flowTask.getId())
+                        .eq(FlowTaskNotice::getNodeId, backNode.getId())
+                        .eq(FlowTaskNotice::getStatus, 0))
+                .stream().map(FlowTaskNotice::getBizTaskId).collect(Collectors.toList());
+        if (removeBizTaskIds != null && !removeBizTaskIds.isEmpty()) {
+            flowTaskNoticeService.close(flowTask, removeBizTaskIds);
+        }
         return Boolean.TRUE;
     }
 
