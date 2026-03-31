@@ -89,11 +89,16 @@ public class DeptServiceImpl implements BaseCustomFunctionInterface<DeptDto> {
     }
 
     public SysDeptDto getParentBranchOffice(String parentId) {
+        if (ObjectNull.isNull(parentId)) {
+            return null;
+        }
         SysDeptDto deptById = AuthorityManagementUtils.getDeptById(parentId);
         if (ObjectNull.isNotNull(deptById)) {
             if (deptById.getType().equals(DeptEnum.branchOffice)) {
                 return deptById;
             }
+            // 当前节点不是分公司，继续向上追溯父级
+            return getParentBranchOffice(deptById.getParentId());
         }
         return null;
     }
