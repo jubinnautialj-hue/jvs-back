@@ -59,7 +59,7 @@ public class ZipFileServiceImpl implements BaseCustomFunctionInterface<ZipFileDt
             } else {
                 fileNames = (List<String>) dto.getFiles().stream().map(e -> ObjectNull.isNull(JvsJsonPath.read(e, "originalName")) ? JvsJsonPath.read(e, "fileName").toString() : JvsJsonPath.read(e, "originalName").toString()).collect(Collectors.toList());
                 byteArrayInputStreams = (List<ByteArrayInputStream>) dto.getFiles().stream().map(e -> ossTemplate.fileLink(JvsJsonPath.read(e, "fileName").toString(), JvsJsonPath.read(e, "bucketName").toString()))
-                        .map(e -> new ByteArrayInputStream(HttpUtil.downloadBytes(e.toString())));
+                        .map(e -> new ByteArrayInputStream(HttpUtil.downloadBytes(e.toString()))).collect(Collectors.toList());
             }
         } else {
             throw new BusinessException("文件链接必须填写");
