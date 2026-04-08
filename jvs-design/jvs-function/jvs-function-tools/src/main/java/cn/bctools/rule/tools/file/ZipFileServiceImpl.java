@@ -73,6 +73,11 @@ public class ZipFileServiceImpl implements BaseCustomFunctionInterface<ZipFileDt
             }
         }
         fileNames = fileNames.stream().map(URLUtil::decode).collect(Collectors.toList());
+        //统一添加ZIP包内目录前缀,确保所有文件在同一目录下
+        String zipDirName = dto.getName() + "/";
+        fileNames = fileNames.stream()
+                .map(name -> zipDirName + FileNameUtil.getName(name))
+                .collect(Collectors.toList());
         //获取输接受文件
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         ZipUtil.zip(out, fileNames.toArray(new String[0]), byteArrayInputStreams.toArray(new ByteArrayInputStream[0]));
