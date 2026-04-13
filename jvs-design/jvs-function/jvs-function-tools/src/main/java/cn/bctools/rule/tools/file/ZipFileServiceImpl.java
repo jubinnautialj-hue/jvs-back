@@ -64,6 +64,11 @@ public class ZipFileServiceImpl implements BaseCustomFunctionInterface<ZipFileDt
         } else {
             throw new BusinessException("文件链接必须填写");
         }
+        // 先提取纯文件名,去除可能包含的路径
+        fileNames = fileNames.stream()
+                .map(FileNameUtil::getName)
+                .map(URLUtil::decode)
+                .collect(Collectors.toList());
         //压缩文件可能存在同名的情况下对名称进行重命名
         for (int i = 0; i < fileNames.size() - 1; i++) {
             for (int j = i + 1; j < fileNames.size(); j++) {
@@ -72,11 +77,10 @@ public class ZipFileServiceImpl implements BaseCustomFunctionInterface<ZipFileDt
                 }
             }
         }
-        fileNames = fileNames.stream().map(URLUtil::decode).collect(Collectors.toList());
         //统一添加ZIP包内目录前缀,确保所有文件在同一目录下
         String zipDirName = dto.getName() + "/";
         fileNames = fileNames.stream()
-                .map(name -> zipDirName + FileNameUtil.getName(name))
+                .map(name -> zipDirName + name)
                 .collect(Collectors.toList());
         //获取输接受文件
         ByteArrayOutputStream out = new ByteArrayOutputStream();
