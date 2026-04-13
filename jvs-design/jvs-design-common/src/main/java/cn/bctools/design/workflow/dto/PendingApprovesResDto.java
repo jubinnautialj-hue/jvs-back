@@ -27,4 +27,13 @@ public class PendingApprovesResDto extends FlowTask {
 
     @ApiModelProperty(value = "发起人头像")
     private String headImg;
+
+    @ApiModelProperty(value = "上个节点名称")
+    private String previousNodeName;
+
+    @ApiModelProperty(value = "上个节点审批人")
+    private String previousApproverName;
+
+    @ApiModelProperty(value = "上个节点审批时间")
+    private String previousApproveTime;
 }

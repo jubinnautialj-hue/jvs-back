@@ -17,6 +17,8 @@ import cn.bctools.design.workflow.dto.startflow.StartFlowVariables;
 import cn.bctools.design.workflow.entity.FlowDesign;
 import cn.bctools.design.workflow.entity.FlowTask;
 import cn.bctools.design.workflow.entity.FlowTaskNode;
+import cn.bctools.design.workflow.entity.dto.ApproveResultDto;
+import cn.bctools.design.workflow.entity.dto.CourseDto;
 import cn.bctools.design.workflow.entity.dto.FlowExtendDto;
 import cn.bctools.design.workflow.entity.enums.FlowTaskStatusEnum;
 import cn.bctools.design.workflow.entity.enums.ProcessStatusEnum;
@@ -46,6 +48,7 @@ import java.util.*;
 import java.util.concurrent.Future;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.LinkedList;
 
 /**
  * @author zhuxiaokang
@@ -161,6 +164,8 @@ public class FlowTaskController {
                     .eq(FlowTaskNode::getFlowTaskId, res.getId())
                     .eq(FlowTaskNode::getNodeId, res.getNodeId())).getId();
             res.setTaskNodeId(taskNodeId);
+            // 填充上个节点信息
+            fillPreviousNodeInfo(res);
             FlowUtil.clearNodeCache();
             res.setFlowDesign(null);
             res.setDesignBody(null);
@@ -388,5 +393,38 @@ public class FlowTaskController {
     @GetMapping("/can/back/node/{taskId}/{nodeId}")
     public R<List<CanBackNodeDto>> getCanBackNode(@PathVariable String taskId, @PathVariable String nodeId) {
         return R.ok(taskService.getCanBackNode(taskId, nodeId));
+    }
+
+    /**
+     * 填充上个节点信息（上个节点名称、审批人、审批时间）
+     *
+     * @param res 待审批响应对象
+     */
+    private void fillPreviousNodeInfo(PendingApprovesResDto res) {
+        // 从 courses 字段获取历史审批记录
+        LinkedList<CourseDto> courses = res.getCourses();
+        if (CollectionUtils.isEmpty(courses)) {
+            return;
+        }
+
+        // 获取最后一个已审批节点（即上个节点）
+        CourseDto lastCourse = courses.get(courses.size() - 1);
+
+        // 上个节点名称
+        res.setPreviousNodeName(lastCourse.getNodeName());
+
+        // 上个节点审批时间
+        res.setPreviousApproveTime(lastCourse.getTime());
+
+        // 上个节点审批人（可能有多个）
+        List<ApproveResultDto> approveResults = lastCourse.getApproveResultDtos();
+        if (CollectionUtils.isNotEmpty(approveResults)) {
+            String approvers = approveResults.stream()
+                    .map(ApproveResultDto::getUserName)
+                    .filter(StringUtils::isNotBlank)
+                    .distinct()
+                    .collect(Collectors.joining(","));
+            res.setPreviousApproverName(approvers);
+        }
     }
 }
