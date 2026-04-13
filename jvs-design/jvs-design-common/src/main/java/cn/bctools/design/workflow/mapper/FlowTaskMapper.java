@@ -24,7 +24,7 @@ public interface FlowTaskMapper extends BaseMapper<FlowTask> {
      * @return
      */
     @Options(useCache = false)
-    @Select(" SELECT t.*, taskPerson.node_id" +
+    @Select(" SELECT t.*, taskPerson.node_id, t.courses" +
             " FROM jvs_flow_task_person taskPerson inner JOIN jvs_flow_task t ON taskPerson.flow_task_id = t.id " +
             " ${ew.customSqlSegment} " +
             " ORDER BY t.create_time DESC")
