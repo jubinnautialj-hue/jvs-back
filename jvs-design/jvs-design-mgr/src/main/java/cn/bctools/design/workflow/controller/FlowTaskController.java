@@ -151,6 +151,16 @@ public class FlowTaskController {
         // 填充工作流任务使用的设计
         flowTaskService.fillBatchTaskDesignBody(page.getRecords());
 
+        // 批量查询完整的FlowTask实体(包含courses字段)
+        List<String> taskIds = page.getRecords().stream().map(PendingApprovesResDto::getId).collect(Collectors.toList());
+        final Map<String, FlowTask> flowTaskMap;
+        if (CollectionUtils.isNotEmpty(taskIds)) {
+            flowTaskMap = flowTaskService.listByIds(taskIds).stream()
+                    .collect(Collectors.toMap(FlowTask::getId, Function.identity()));
+        } else {
+            flowTaskMap = Collections.emptyMap();
+        }
+
         page.getRecords().forEach(res -> {
             // 发起人头像
             UserDto user = users.get(res.getCreateById());
@@ -164,7 +174,11 @@ public class FlowTaskController {
                     .eq(FlowTaskNode::getFlowTaskId, res.getId())
                     .eq(FlowTaskNode::getNodeId, res.getNodeId())).getId();
             res.setTaskNodeId(taskNodeId);
-            // 填充上个节点信息
+            // 填充上个节点信息(使用完整FlowTask实体的courses字段)
+            FlowTask fullTask = flowTaskMap.get(res.getId());
+            if (ObjectNull.isNotNull(fullTask)) {
+                res.setCourses(fullTask.getCourses());
+            }
             fillPreviousNodeInfo(res);
             FlowUtil.clearNodeCache();
             res.setFlowDesign(null);
@@ -403,12 +417,15 @@ public class FlowTaskController {
     private void fillPreviousNodeInfo(PendingApprovesResDto res) {
         // 从 courses 字段获取历史审批记录
         LinkedList<CourseDto> courses = res.getCourses();
+        log.debug("待审批任务[{}]的courses字段: {}", res.getId(), courses);
         if (CollectionUtils.isEmpty(courses)) {
+            log.debug("待审批任务[{}]的courses为空,不填充上个节点信息", res.getId());
             return;
         }
 
         // 获取最后一个已审批节点（即上个节点）
         CourseDto lastCourse = courses.get(courses.size() - 1);
+        log.debug("待审批任务[{}]的上个节点: {}", res.getId(), lastCourse.getNodeName());
 
         // 上个节点名称
         res.setPreviousNodeName(lastCourse.getNodeName());
@@ -425,6 +442,7 @@ public class FlowTaskController {
                     .distinct()
                     .collect(Collectors.joining(","));
             res.setPreviousApproverName(approvers);
+            log.debug("待审批任务[{}]的上个节点审批人: {}", res.getId(), approvers);
         }
     }
 }
