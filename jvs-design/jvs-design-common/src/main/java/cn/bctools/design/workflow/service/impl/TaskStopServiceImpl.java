@@ -5,6 +5,7 @@ import cn.bctools.common.exception.BusinessException;
 import cn.bctools.common.utils.ObjectNull;
 import cn.bctools.design.taskNotice.entity.FlowTaskNotice;
 import cn.bctools.design.taskNotice.service.FlowTaskNoticeService;
+import cn.bctools.design.workflow.dto.BatchStopTaskResDto;
 import cn.bctools.design.workflow.dto.StopTaskReqDto;
 import cn.bctools.design.workflow.entity.FlowTask;
 import cn.bctools.design.workflow.entity.FlowTaskNode;
@@ -24,20 +25,19 @@ import cn.hutool.core.date.DatePattern;
 import cn.hutool.core.date.LocalDateTimeUtil;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * @author zhuxiaokang
  * 结束任务服务
  */
+@Slf4j
 @Service
 @AllArgsConstructor
 public class TaskStopServiceImpl implements TaskStopService {
@@ -81,6 +81,63 @@ public class TaskStopServiceImpl implements TaskStopService {
         // 结束任务
         stopTask(userDto, flowTask, stopTaskDto, TerminatedTypeEnum.TERMINATION, extend);
         return flowTask;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public BatchStopTaskResDto batchTerminationTask(UserDto userDto, List<String> taskIds, StopTaskReqDto stopTaskDto) {
+        log.info("开始批量终止任务，用户ID: {}, 任务数量: {}", userDto.getId(), taskIds.size());
+        
+        BatchStopTaskResDto result = new BatchStopTaskResDto();
+        result.setSuccessCount(0);
+        result.setFailCount(0);
+        result.setFailDetails(new HashMap<>());
+        result.setSuccessTaskIds(new ArrayList<>());
+        
+        // 批量查询所有任务
+        List<FlowTask> flowTasks = flowTaskService.listByIds(taskIds);
+        Map<String, FlowTask> taskMap = flowTasks.stream()
+                .collect(Collectors.toMap(FlowTask::getId, task -> task));
+        
+        // 逐个处理任务
+        for (String taskId : taskIds) {
+            try {
+                FlowTask flowTask = taskMap.get(taskId);
+                if (flowTask == null) {
+                    result.getFailDetails().put(taskId, "任务不存在");
+                    result.setFailCount(result.getFailCount() + 1);
+                    log.warn("批量终止任务失败，任务不存在，任务ID: {}", taskId);
+                    continue;
+                }
+                
+                // 检查任务状态
+                if (!FlowTaskStatusEnum.PENDING.equals(flowTask.getTaskStatus())) {
+                    result.getFailDetails().put(taskId, "任务已结束");
+                    result.setFailCount(result.getFailCount() + 1);
+                    log.warn("批量终止任务失败，任务已结束，任务ID: {}, 状态: {}", taskId, flowTask.getTaskStatus());
+                    continue;
+                }
+                
+                // 终止任务
+                FlowExtendDto extend = flowDesignService.getFlowExtend(flowTask.getFlowDesignId());
+                stopTask(userDto, flowTask, stopTaskDto, TerminatedTypeEnum.TERMINATION, extend);
+                
+                // 发布事件：同步流程信息到业务数据
+                applicationEventPublisher.publishEvent(new AsyncTaskDynamicDataEvent(this, flowTask));
+                
+                result.setSuccessCount(result.getSuccessCount() + 1);
+                result.getSuccessTaskIds().add(taskId);
+                log.info("批量终止任务成功，任务ID: {}", taskId);
+                
+            } catch (Exception e) {
+                result.getFailDetails().put(taskId, e.getMessage() != null ? e.getMessage() : "未知错误");
+                result.setFailCount(result.getFailCount() + 1);
+                log.error("批量终止任务异常，任务ID: {}, 错误: {}", taskId, e.getMessage(), e);
+            }
+        }
+        
+        log.info("批量终止任务完成，成功: {}, 失败: {}", result.getSuccessCount(), result.getFailCount());
+        return result;
     }
 
     /**

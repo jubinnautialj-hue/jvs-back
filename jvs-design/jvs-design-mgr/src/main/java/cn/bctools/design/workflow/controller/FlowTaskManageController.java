@@ -543,6 +543,37 @@ public class FlowTaskManageController {
 
     @Log
     @Transactional(rollbackFor = Exception.class)
+    @ApiOperation("批量终止任务")
+    @PostMapping("/stop/batch")
+    public R<BatchStopTaskResDto> batchStop(@RequestBody StopTaskReqDto stopTaskDto) {
+        // 验证参数
+        if (CollectionUtils.isEmpty(stopTaskDto.getTaskIds())) {
+            throw new BusinessException("任务ID列表不能为空");
+        }
+        
+        // 批量终止任务
+        UserDto userDto = UserCurrentUtils.getCurrentUser();
+        BatchStopTaskResDto result = taskStopService.batchTerminationTask(userDto, stopTaskDto.getTaskIds(), stopTaskDto);
+        
+        // 对成功的任务发送消息通知
+        if (CollectionUtils.isNotEmpty(result.getSuccessTaskIds())) {
+            for (String taskId : result.getSuccessTaskIds()) {
+                try {
+                    FlowTask flowTask = flowTaskService.getById(taskId);
+                    if (flowTask != null) {
+                        applicationEventPublisher.publishEvent(new FlowNotifyEvent(this, flowTask, TriggerTypeEnum.FLOW_APPROVAL_RESULTS, null, TenantContextHolder.getTenantId()));
+                    }
+                } catch (Exception e) {
+                    log.error("发送任务通知失败，任务ID: {}", taskId, e);
+                }
+            }
+        }
+        
+        return R.ok(result);
+    }
+
+    @Log
+    @Transactional(rollbackFor = Exception.class)
     @ApiOperation("转交")
     @ApiImplicitParams({
             @ApiImplicitParam(name = "id", value = "工作流任务id", required = true)

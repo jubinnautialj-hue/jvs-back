@@ -15,4 +15,7 @@ public class StopTaskReqDto {
 
     @ApiModelProperty(value = "终止任务原因")
     private String reason;
+    
+    @ApiModelProperty(value = "任务ID列表（用于批量终止）")
+    private java.util.List<String> taskIds;
 }
