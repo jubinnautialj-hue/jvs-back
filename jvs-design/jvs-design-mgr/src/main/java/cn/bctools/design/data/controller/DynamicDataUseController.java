@@ -2049,7 +2049,7 @@ public class DynamicDataUseController {
                     e.setValue(value);
                 } else {
                     Object o1 = dynamicDataService.getByIds(formId1, (List<String>) e.getValue()).stream().map(m -> m.get(label)).collect(Collectors.toList());
-                    if (ObjectNull.isNotNull(o1)) {
+                    if (ObjectNull.isNotNull(o1) && !"1".equals(notification)) {
                         Criteria haoCaiMingChen = DynamicDataUtils.like(new Criteria(), label, o1);
                         DynamicDataUtils.freePermit();
                         ArrayList<String> objects = new ArrayList<>();
