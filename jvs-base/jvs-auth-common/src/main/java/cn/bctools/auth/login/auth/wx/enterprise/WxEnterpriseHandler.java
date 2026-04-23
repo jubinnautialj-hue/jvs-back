@@ -25,7 +25,7 @@ import org.springframework.stereotype.Component;
  */
 @Slf4j
 @AllArgsConstructor
-@Component("WECHAT_ENTERPRISE")
+@Component("WX_ENTERPRISE")
 public class WxEnterpriseHandler extends BaseWxEnterprise implements LoginHandler<AuthCallback> {
     AuthRequestCustomFactory factory;
 
