@@ -1,0 +1,20 @@
+server:
+  port: 7790
+
+spring:
+  application:
+    name: seatunnel-demo
+
+seatunnel:
+  api:
+    submit-job-url: /hazelcast/rest/maps/submit-job
+    get-job-info-url: /hazelcast/rest/maps/job-info/%s
+    stop-job-url: /hazelcast/rest/maps/stop-job
+  server:
+    url: http://localhost:8080
+    enabled: false
+
+logging:
+  level:
+    com.seatunnel: DEBUG
+    org.springframework.web: INFO
