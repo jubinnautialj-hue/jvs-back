@@ -601,11 +601,12 @@
 
 <script setup>
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import api from '@/api'
 
 const router = useRouter()
+const route = useRoute()
 
 const activeStep = ref(0)
 const submitting = ref(false)
@@ -659,6 +660,10 @@ const sinkForm = ref({
   kafkaTopic: 'processed_events',
   redisKeyPattern: 'result:*'
 })
+
+const fromConnector = ref(false)
+const connectorName = ref('')
+const connectorRole = ref('')
 
 const currentJobName = computed(() => {
   if (selectedTemplate.value) {
@@ -811,8 +816,31 @@ const submitJob = async () => {
   }
 }
 
+const processRouteParams = () => {
+  const { connectorName: cName, role } = route.query
+  
+  if (cName && role) {
+    fromConnector.value = true
+    connectorName.value = cName
+    connectorRole.value = role
+    
+    if (role === 'source') {
+      sourceType.value = cName
+      customForm.value.jobName = `从 ${cName} 同步任务`
+      customForm.value.description = `数据源：${cName}`
+      ElMessage.info(`已预设 ${cName} 作为数据源，请选择目标平台并配置连接信息`)
+    } else if (role === 'sink') {
+      sinkType.value = cName
+      customForm.value.jobName = `同步到 ${cName} 任务`
+      customForm.value.description = `目标：${cName}`
+      ElMessage.info(`已预设 ${cName} 作为目标，请选择数据源并配置连接信息`)
+    }
+  }
+}
+
 onMounted(() => {
   loadTemplates()
+  processRouteParams()
 })
 </script>
 

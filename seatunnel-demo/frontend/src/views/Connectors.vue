@@ -134,8 +134,61 @@
 
       <template #footer>
         <el-button @click="detailVisible = false">关闭</el-button>
-        <el-button type="primary" @click="quickCreate(selectedConnector)">
+        <el-button type="primary" @click="quickCreateFromDetail(selectedConnector)">
           使用此连接器创建任务
+        </el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="roleSelectVisible" title="选择连接器用途" width="500px">
+      <div v-if="pendingConnector">
+        <el-alert :type="getConnectorTypeTagType(pendingConnector.type)" show-icon>
+          <template #title>
+            连接器：{{ pendingConnector.name }}
+          </template>
+          <template #default>
+            <span v-if="pendingConnector.type === 'both'">
+              此连接器<strong>既可作为数据源 (Source)</strong>，也可<strong>作为目标 (Sink)</strong>
+            </span>
+            <span v-else-if="pendingConnector.type === 'source'">
+              此连接器<strong>只能作为数据源 (Source)</strong>
+            </span>
+            <span v-else-if="pendingConnector.type === 'sink'">
+              此连接器<strong>只能作为目标 (Sink)</strong>
+            </span>
+          </template>
+        </el-alert>
+
+        <div style="margin-top: 30px;">
+          <el-radio-group v-model="selectedRole">
+            <el-radio
+              v-if="pendingConnector.type === 'both' || pendingConnector.type === 'source'"
+              value="source"
+              style="display: block; margin-bottom: 20px; padding: 15px; background: #f5f7fa; border-radius: 8px;"
+            >
+              <span style="font-size: 16px; font-weight: bold;">📥 作为数据源 (Source)</span>
+              <p style="margin: 5px 0 0 20px; color: #909399; font-size: 13px;">
+                从 {{ pendingConnector.name }} 读取数据，同步到其他平台
+              </p>
+            </el-radio>
+            <el-radio
+              v-if="pendingConnector.type === 'both' || pendingConnector.type === 'sink'"
+              value="sink"
+              style="display: block; padding: 15px; background: #f5f7fa; border-radius: 8px;"
+            >
+              <span style="font-size: 16px; font-weight: bold;">📤 作为目标 (Sink)</span>
+              <p style="margin: 5px 0 0 20px; color: #909399; font-size: 13px;">
+                将数据从其他平台写入 {{ pendingConnector.name }}
+              </p>
+            </el-radio>
+          </el-radio-group>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="roleSelectVisible = false">取消</el-button>
+        <el-button type="primary" @click="confirmCreateTask">
+          确认并创建任务
         </el-button>
       </template>
     </el-dialog>
@@ -154,6 +207,10 @@ const connectorType = ref('all')
 const connectors = ref([])
 const detailVisible = ref(false)
 const selectedConnector = ref(null)
+
+const roleSelectVisible = ref(false)
+const pendingConnector = ref(null)
+const selectedRole = ref('source')
 
 const filteredConnectors = computed(() => {
   if (connectorType.value === 'all') {
@@ -313,9 +370,38 @@ const showConnectorDetail = (connector) => {
 }
 
 const quickCreate = (connector) => {
+  pendingConnector.value = connector
+  
+  if (connector.type === 'source') {
+    selectedRole.value = 'source'
+    roleSelectVisible.value = true
+  } else if (connector.type === 'sink') {
+    selectedRole.value = 'sink'
+    roleSelectVisible.value = true
+  } else {
+    selectedRole.value = 'source'
+    roleSelectVisible.value = true
+  }
+}
+
+const quickCreateFromDetail = (connector) => {
   detailVisible.value = false
-  router.push('/create')
-  ElMessage.info(`已选择 ${connector.name} 连接器，进入任务创建页面`)
+  quickCreate(connector)
+}
+
+const confirmCreateTask = () => {
+  roleSelectVisible.value = false
+  
+  const params = {
+    connectorName: pendingConnector.value.name,
+    role: selectedRole.value
+  }
+  
+  ElMessage.info(`已选择 ${pendingConnector.value.name} 作为 ${selectedRole.value === 'source' ? '数据源' : '目标'}`)
+  router.push({
+    path: '/create',
+    query: params
+  })
 }
 
 const getConfigSample = (connector) => {
