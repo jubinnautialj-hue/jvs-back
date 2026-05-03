@@ -24,8 +24,8 @@
             <span class="connector-icon">{{ connector.icon }}</span>
             <div>
               <h4 class="connector-name">{{ connector.name }}</h4>
-              <el-tag :type="connector.type === 'source' ? 'primary' : 'success'" size="small">
-                {{ connector.type === 'source' ? '数据源' : '目标' }}
+              <el-tag :type="getConnectorTypeTagType(connector.type)" size="small">
+                {{ getConnectorTypeText(connector.type) }}
               </el-tag>
             </div>
           </div>
@@ -97,8 +97,8 @@
           <span class="detail-icon">{{ selectedConnector.icon }}</span>
           <div>
             <h3>{{ selectedConnector.name }}</h3>
-            <el-tag :type="selectedConnector.type === 'source' ? 'primary' : 'success'" size="small">
-              {{ selectedConnector.type === 'source' ? '数据源 (Source)' : '目标 (Sink)' }}
+            <el-tag :type="getConnectorTypeTagType(selectedConnector.type)" size="small">
+              {{ getConnectorTypeText(selectedConnector.type) }}
             </el-tag>
           </div>
         </div>
@@ -115,7 +115,7 @@
           <el-tag
             v-for="feature in selectedConnector.features"
             :key="feature"
-            :type="selectedConnector.type === 'source' ? 'primary' : 'success'"
+            :type="getConnectorTypeTagType(selectedConnector.type)"
             size="large"
             effect="dark"
             style="margin: 5px;"
@@ -159,8 +159,39 @@ const filteredConnectors = computed(() => {
   if (connectorType.value === 'all') {
     return connectors.value
   }
-  return connectors.value.filter(c => c.type === connectorType.value)
+  return connectors.value.filter(c => {
+    if (c.type === 'both') {
+      return true
+    }
+    return c.type === connectorType.value
+  })
 })
+
+const getConnectorTypeText = (type) => {
+  switch (type) {
+    case 'source':
+      return '数据源'
+    case 'sink':
+      return '目标'
+    case 'both':
+      return '双向支持'
+    default:
+      return type
+  }
+}
+
+const getConnectorTypeTagType = (type) => {
+  switch (type) {
+    case 'source':
+      return 'primary'
+    case 'sink':
+      return 'success'
+    case 'both':
+      return 'warning'
+    default:
+      return 'info'
+  }
+}
 
 const sourceSteps = ref([
   {
@@ -288,8 +319,155 @@ const quickCreate = (connector) => {
 }
 
 const getConfigSample = (connector) => {
-  if (connector.type === 'source') {
-    if (connector.name === 'MySQL') {
+  const name = connector.name
+  const type = connector.type
+
+  if (type === 'both') {
+    if (name === 'MySQL') {
+      return `# MySQL 既可以作为 Source，也可以作为 Sink
+
+# ===== 作为 Source (数据源) =====
+source {
+  MySQL {
+    url = "jdbc:mysql://localhost:3306/test"
+    user = "root"
+    password = "password"
+    table = "users"
+  }
+}
+
+# ===== 作为 Sink (数据目标) =====
+sink {
+  MySQL {
+    url = "jdbc:mysql://localhost:3306/target"
+    user = "root"
+    password = "password"
+    table = "users_result"
+  }
+}
+
+# 注意：Doris → MySQL 是常见的反向同步场景
+# 用于将分析结果回写到业务库`
+    }
+    if (name === 'Doris') {
+      return `# Doris 既可以作为 Source，也可以作为 Sink
+
+# ===== 作为 Sink (数据目标) - 常见场景 =====
+sink {
+  Doris {
+    fenodes = "localhost:8030"
+    user = "root"
+    password = "password"
+    database = "demo"
+    table = "users_ods"
+  }
+}
+
+# ===== 作为 Source (数据源) - 反向同步 =====
+source {
+  Doris {
+    fenodes = "localhost:8030"
+    user = "root"
+    password = "password"
+    database = "demo"
+    table = "analysis_result"
+  }
+}
+
+# 反向同步场景：Doris → MySQL
+# 用于将聚合分析结果回写到业务 MySQL`
+    }
+    if (name === 'ClickHouse') {
+      return `# ClickHouse 既可以作为 Source，也可以作为 Sink
+
+# ===== 作为 Sink (数据目标) =====
+sink {
+  ClickHouse {
+    host = "localhost"
+    port = 8123
+    database = "default"
+    table = "orders_ods"
+  }
+}
+
+# ===== 作为 Source (数据源) - 反向同步 =====
+source {
+  ClickHouse {
+    host = "localhost"
+    port = 8123
+    database = "default"
+    table = "report_summary"
+  }
+}`
+    }
+    if (name === 'PostgreSQL') {
+      return `# PostgreSQL 既可以作为 Source，也可以作为 Sink
+
+# ===== 作为 Source (数据源) =====
+source {
+  PostgreSQL {
+    url = "jdbc:postgresql://localhost:5432/test"
+    user = "postgres"
+    password = "password"
+    table = "public.orders"
+  }
+}
+
+# ===== 作为 Sink (数据目标) =====
+sink {
+  PostgreSQL {
+    url = "jdbc:postgresql://localhost:5432/target"
+    user = "postgres"
+    password = "password"
+    table = "public.analysis_result"
+  }
+}`
+    }
+    if (name === 'Kafka') {
+      return `# Kafka 既可以作为 Source，也可以作为 Sink
+
+# ===== 作为 Source (消费消息) =====
+source {
+  Kafka {
+    bootstrap.servers = "localhost:9092"
+    topic = "user_events"
+    group.id = "seatunnel-consumer"
+  }
+}
+
+# ===== 作为 Sink (生产消息) =====
+sink {
+  Kafka {
+    bootstrap.servers = "localhost:9092"
+    topic = "processed_events"
+  }
+}`
+    }
+    if (name === 'Redis') {
+      return `# Redis 既可以作为 Source，也可以作为 Sink
+
+# ===== 作为 Source (读取缓存) =====
+source {
+  Redis {
+    host = "localhost"
+    port = 6379
+    key_pattern = "user:*"
+  }
+}
+
+# ===== 作为 Sink (写入缓存) =====
+sink {
+  Redis {
+    host = "localhost"
+    port = 6379
+    data_type = "key"
+  }
+}`
+    }
+  }
+
+  if (type === 'source') {
+    if (name === 'MySQL') {
       return `source {
   MySQL {
     url = "jdbc:mysql://localhost:3306/test"
@@ -299,7 +477,7 @@ const getConfigSample = (connector) => {
   }
 }`
     }
-    if (connector.name === 'PostgreSQL') {
+    if (name === 'PostgreSQL') {
       return `source {
   PostgreSQL {
     url = "jdbc:postgresql://localhost:5432/test"
@@ -309,8 +487,10 @@ const getConfigSample = (connector) => {
   }
 }`
     }
-  } else {
-    if (connector.name === 'Doris') {
+  }
+
+  if (type === 'sink') {
+    if (name === 'Doris') {
       return `sink {
   Doris {
     fenodes = "localhost:8030"
@@ -321,7 +501,7 @@ const getConfigSample = (connector) => {
   }
 }`
     }
-    if (connector.name === 'ClickHouse') {
+    if (name === 'ClickHouse') {
       return `sink {
   ClickHouse {
     host = "localhost"
@@ -332,7 +512,8 @@ const getConfigSample = (connector) => {
 }`
     }
   }
-  return `# ${connector.name} 配置示例
+
+  return `# ${name} 配置示例
 # 请参考官方文档获取完整配置`
 }
 

@@ -64,6 +64,17 @@
       <div v-if="activeStep === 1" class="step-content">
         <h3 style="margin-bottom: 20px; font-weight: 600;">配置数据源 (Source)</h3>
         
+        <el-alert v-if="selectedTemplate" :type="selectedTemplate.source === 'MySQL' || selectedTemplate.source === 'PostgreSQL' ? 'info' : 'warning'" style="margin-bottom: 20px;" show-icon>
+          <template #title>
+            当前模板：{{ selectedTemplate.name }}
+          </template>
+          <template #default>
+            数据源类型：<strong>{{ selectedTemplate.source }}</strong>，目标类型：<strong>{{ selectedTemplate.sink }}</strong>
+            <br>
+            <span v-if="selectedTemplate.category">分类：{{ selectedTemplate.category }}</span>
+          </template>
+        </el-alert>
+        
         <el-tabs v-model="sourceType">
           <el-tab-pane label="MySQL" name="MySQL">
             <el-form :model="sourceForm" label-width="140px">
@@ -146,13 +157,234 @@
               </template>
             </el-alert>
           </el-tab-pane>
+
+          <el-tab-pane label="Doris" name="Doris">
+            <el-form :model="sourceForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="FE 地址">
+                    <el-input v-model="sourceForm.host" placeholder="localhost">
+                      <template #prepend>Host</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="FE HTTP 端口">
+                    <el-input-number v-model="sourceForm.feHttpPort" :min="1" :max="65535" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="数据库名">
+                    <el-input v-model="sourceForm.database" placeholder="demo" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="表名">
+                    <el-input v-model="sourceForm.table" placeholder="analysis_result" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
+
+          <el-tab-pane label="ClickHouse" name="ClickHouse">
+            <el-form :model="sourceForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="服务地址">
+                    <el-input v-model="sourceForm.host" placeholder="localhost">
+                      <template #prepend>Host</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="端口">
+                    <el-input-number v-model="sourceForm.chPort" :min="1" :max="65535" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="数据库名">
+                    <el-input v-model="sourceForm.database" placeholder="default" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="表名">
+                    <el-input v-model="sourceForm.table" placeholder="report_summary" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
+
+          <el-tab-pane label="Hive" name="Hive">
+            <el-form :model="sourceForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="Metastore 地址">
+                    <el-input v-model="sourceForm.host" placeholder="localhost">
+                      <template #prepend>Host</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Metastore 端口">
+                    <el-input-number v-model="sourceForm.hivePort" :min="1" :max="65535" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="数据库名">
+                    <el-input v-model="sourceForm.database" placeholder="default" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="表名">
+                    <el-input v-model="sourceForm.table" placeholder="user_profile" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
+
+          <el-tab-pane label="Kafka" name="Kafka">
+            <el-form :model="sourceForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="Kafka 地址">
+                    <el-input v-model="sourceForm.kafkaBootstrap" placeholder="localhost:9092" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Topic">
+                    <el-input v-model="sourceForm.kafkaTopic" placeholder="user_events" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="消费组 ID">
+                    <el-input v-model="sourceForm.kafkaGroupId" placeholder="seatunnel-consumer" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
+
+          <el-tab-pane label="Elasticsearch" name="Elasticsearch">
+            <el-form :model="sourceForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="服务地址">
+                    <el-input v-model="sourceForm.host" placeholder="localhost">
+                      <template #prepend>Host</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="端口">
+                    <el-input-number v-model="sourceForm.esPort" :min="1" :max="65535" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="索引名">
+                    <el-input v-model="sourceForm.table" placeholder="products_index" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
+
+          <el-tab-pane label="Redis" name="Redis">
+            <el-form :model="sourceForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="服务地址">
+                    <el-input v-model="sourceForm.host" placeholder="localhost">
+                      <template #prepend>Host</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="端口">
+                    <el-input-number v-model="sourceForm.redisPort" :min="1" :max="65535" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="Key 模式">
+                    <el-input v-model="sourceForm.redisKeyPattern" placeholder="user:*" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
         </el-tabs>
       </div>
 
       <div v-if="activeStep === 2" class="step-content">
         <h3 style="margin-bottom: 20px; font-weight: 600;">配置目标 (Sink)</h3>
         
+        <el-alert v-if="selectedTemplate" type="info" style="margin-bottom: 20px;" show-icon>
+          <template #title>
+            当前模板：{{ selectedTemplate.name }}
+          </template>
+          <template #default>
+            目标类型：<strong>{{ selectedTemplate.sink }}</strong>，从 <strong>{{ selectedTemplate.source }}</strong> 同步
+          </template>
+        </el-alert>
+        
         <el-tabs v-model="sinkType">
+          <el-tab-pane label="MySQL" name="MySQL">
+            <el-form :model="sinkForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="数据库地址">
+                    <el-input v-model="sinkForm.host" placeholder="localhost">
+                      <template #prepend>Host</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="端口">
+                    <el-input-number v-model="sinkForm.port" :min="1" :max="65535" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="数据库名">
+                    <el-input v-model="sinkForm.database" placeholder="test" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="表名">
+                    <el-input v-model="sinkForm.table" placeholder="users_ods" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="用户名">
+                    <el-input v-model="sinkForm.username" placeholder="root" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="密码">
+                    <el-input v-model="sinkForm.password" type="password" placeholder="password" show-password />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
+
           <el-tab-pane label="Doris" name="Doris">
             <el-form :model="sinkForm" label-width="140px">
               <el-row :gutter="20">
@@ -196,7 +428,7 @@
                 </el-col>
                 <el-col :span="12">
                   <el-form-item label="端口">
-                    <el-input-number v-model="sinkForm.port" :min="1" :max="65535" style="width: 100%;" />
+                    <el-input-number v-model="sinkForm.chPort" :min="1" :max="65535" style="width: 100%;" />
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -209,6 +441,106 @@
                 <el-col :span="12">
                   <el-form-item label="表名">
                     <el-input v-model="sinkForm.table" placeholder="orders_ods" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
+
+          <el-tab-pane label="PostgreSQL" name="PostgreSQL">
+            <el-form :model="sinkForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="数据库地址">
+                    <el-input v-model="sinkForm.host" placeholder="localhost">
+                      <template #prepend>Host</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="端口">
+                    <el-input-number v-model="sinkForm.portPg" :min="1" :max="65535" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="数据库名">
+                    <el-input v-model="sinkForm.database" placeholder="test" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="表名">
+                    <el-input v-model="sinkForm.table" placeholder="analysis_result" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
+
+          <el-tab-pane label="Elasticsearch" name="Elasticsearch">
+            <el-form :model="sinkForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="服务地址">
+                    <el-input v-model="sinkForm.host" placeholder="localhost">
+                      <template #prepend>Host</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="端口">
+                    <el-input-number v-model="sinkForm.esPort" :min="1" :max="65535" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="索引名">
+                    <el-input v-model="sinkForm.table" placeholder="products_index" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
+
+          <el-tab-pane label="Redis" name="Redis">
+            <el-form :model="sinkForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="服务地址">
+                    <el-input v-model="sinkForm.host" placeholder="localhost">
+                      <template #prepend>Host</template>
+                    </el-input>
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="端口">
+                    <el-input-number v-model="sinkForm.redisPort" :min="1" :max="65535" style="width: 100%;" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="Key 前缀">
+                    <el-input v-model="sinkForm.redisKeyPattern" placeholder="result:*" />
+                  </el-form-item>
+                </el-col>
+              </el-row>
+            </el-form>
+          </el-tab-pane>
+
+          <el-tab-pane label="Kafka" name="Kafka">
+            <el-form :model="sinkForm" label-width="140px">
+              <el-row :gutter="20">
+                <el-col :span="12">
+                  <el-form-item label="Kafka 地址">
+                    <el-input v-model="sinkForm.kafkaBootstrap" placeholder="localhost:9092" />
+                  </el-form-item>
+                </el-col>
+                <el-col :span="12">
+                  <el-form-item label="Topic">
+                    <el-input v-model="sinkForm.kafkaTopic" placeholder="processed_events" />
                   </el-form-item>
                 </el-col>
               </el-row>
@@ -294,11 +626,20 @@ const sourceForm = ref({
   host: 'localhost',
   port: 3306,
   portPg: 5432,
+  chPort: 8123,
+  hivePort: 9083,
+  esPort: 9200,
+  redisPort: 6379,
+  feHttpPort: 8030,
   database: 'test',
   table: 'users',
   schema: 'public',
   username: 'root',
-  password: ''
+  password: '',
+  kafkaBootstrap: 'localhost:9092',
+  kafkaTopic: 'user_events',
+  kafkaGroupId: 'seatunnel-consumer',
+  redisKeyPattern: 'user:*'
 })
 
 const sinkForm = ref({
@@ -307,7 +648,16 @@ const sinkForm = ref({
   feHost: 'localhost',
   feHttpPort: 8030,
   database: 'demo',
-  table: 'users_ods'
+  table: 'users_ods',
+  username: 'root',
+  password: '',
+  portPg: 5432,
+  chPort: 8123,
+  esPort: 9200,
+  redisPort: 6379,
+  kafkaBootstrap: 'localhost:9092',
+  kafkaTopic: 'processed_events',
+  redisKeyPattern: 'result:*'
 })
 
 const currentJobName = computed(() => {
@@ -376,7 +726,13 @@ const getSourceIcon = (source) => {
   const icons = {
     MySQL: '🐬',
     PostgreSQL: '🐘',
-    Oracle: '🔶'
+    Oracle: '🔶',
+    Doris: '🐚',
+    ClickHouse: '🏠',
+    Hive: '🐝',
+    Kafka: '📨',
+    Elasticsearch: '🔍',
+    Redis: '🗄️'
   }
   return icons[source] || '📊'
 }
@@ -385,13 +741,28 @@ const getSinkIcon = (sink) => {
   const icons = {
     Doris: '🐚',
     ClickHouse: '🏠',
-    Hive: '🐝'
+    Hive: '🐝',
+    MySQL: '🐬',
+    PostgreSQL: '🐘',
+    Oracle: '🔶',
+    Elasticsearch: '🔍',
+    Redis: '🗄️',
+    Kafka: '📨'
   }
   return icons[sink] || '📦'
 }
 
 const nextStep = () => {
   if (activeStep.value < 3) {
+    if (activeStep.value === 0 && selectedTemplate.value) {
+      sourceType.value = selectedTemplate.value.source
+      sinkType.value = selectedTemplate.value.sink
+      customForm.value.mode = selectedTemplate.value.mode
+      customForm.value.description = selectedTemplate.value.description
+      if (!customForm.value.jobName) {
+        customForm.value.jobName = selectedTemplate.value.name
+      }
+    }
     activeStep.value++
   }
 }
