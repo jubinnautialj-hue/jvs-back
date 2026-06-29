@@ -1,0 +1,304 @@
+<template>
+  <div
+    class="login-container"
+    :style="background"
+  >
+    <div
+      class="jvs-home"
+      v-if="loadingShow"
+      style="position: absolute;top: 0;left: 0;width: 100%;height: 100vh;"
+    >
+      <div class="jvs-home__main">
+        <img
+          class="jvs-home__loading_gif"
+          :src="loadingImgSrc"
+          alt="loading"
+        >
+        <!-- <img class="jvs-home__loading" :src="loadingImgSrc" alt="loading"> -->
+        <div class="jvs-home__title">
+          正在加载资源
+        </div>
+        <div class="jvs-home__sub-title">
+          初次加载资源可能需要较多时间 请耐心等待
+        </div>
+      </div>
+    </div>
+    <img class="login-logo-picture" :src="logoV2Pic" alt="" v-if="false">
+    <!-- 备案信息 -->
+    <div class="filingInformation-text">
+      <span v-for="(item, index) in filingInformation" :key="'filinginfo-'+index" :style="item.link?'cursor: pointer;':'cursor: text;'" @click="openLink(item)">{{item.name}}</span>
+    </div>
+  </div>
+</template>
+<script>
+import "@/styles/login.scss";
+import userLogin from "./userlogin";
+import { mapGetters } from "vuex";
+import loadingGifImg from '../../../../public/jvs-ui-public/img/loading.gif'
+import logoV2 from '@/styles/login/jvslogo.png'
+import {getDomain, getCanLogin} from '@/api/login'
+
+export default {
+  name: 'login-index',
+  components: {
+    userLogin
+  },
+  data () {
+    return {
+      activeName: "user",
+      imgSrc: "低代码平台",
+      title: "低代码平台",
+      background: "background",
+      name: "login",
+      sysInfo: {},
+      loadingImgSrc: loadingGifImg,
+      loadingShow: false,
+      logoV2Pic: logoV2,
+      loginQuery: '', // 第三方登录参数
+      filingInformation: [], // 备案信息
+      dialog: null,
+      loginTypes: []
+    };
+  },
+  watch: {},
+  async created () {
+    document.addEventListener('visibilitychange', () => {
+      if(document.visibilityState !== 'hidden') {
+        if(this.getCookie('jvs_session_uid')) {
+          if(this.dialog) {
+            this.dialog.handleClose()
+          }
+          if(this.$route.path == '/login') {
+            this.$openUrl('/#/wel/index', '_self')
+          }  
+        }
+      }
+    })
+    let headList = document.getElementsByTagName('head')[0].children
+    for(let i in headList) {
+      if(headList[i].type == 'image/x-icon') {
+        headList[i].href = " "
+      }
+    }
+    await this.getLoginType()
+    // 获取域名相关设置
+    this.getDomainHandle()
+    this.loginQuery = JSON.stringify(localStorage.getItem('loginQuery')) || ''
+  },
+  mounted () { },
+  computed: {
+    ...mapGetters(["website", "tagWel"])
+  },
+  props: [],
+  methods: {
+    // 连接socket
+    connect (code, dialog) {
+      if (this.curUser) {
+        console.log("用户对象", JSON.stringify(this.curUser))
+        this.$notify({
+          title: '提示',
+          message: '当前已登录,请先退出登录!',
+          position: 'bottom-right',
+          type: 'warning'
+        });
+        return
+      }
+      var ip = location.host
+      var port = '10000'
+      this.socket = new WebSocket("wss://" + ip + "/im/?logType=0&value=" + code); // + ":" + port
+      this.socket.onopen = function (e) {
+        // console.log(e)
+        dialog.handleClose()
+      };
+      let _this = this
+      this.socket.onerror = function (e) {
+        dialog.handleClose()
+        _this.loginToPath()
+      };
+      this.socket.onclose = function (e) {
+        this.curUser = null;
+      };
+      this.socket.onmessage = function (e) {
+        var data = e.data;
+        var dataObj = eval("(" + data + ")");//转换为json对象
+        if (dataObj.code == 10000) {
+          if(dataObj.command == 6) {
+            console.log('IM连接成功...')
+            dialog.handleClose()
+            _this.loginToPath()
+          }
+          if(dataObj.command == 22) {
+            bus.$emit('notice', dataObj.data);
+            console.log(dataObj)
+          }
+        }else{
+          console.log(e)
+        }
+        if(!e) {
+          dialog.handleClose()
+          _this.loginToPath()
+        }
+      };
+    },
+    /**
+     * 打开登录
+     */
+    openLogin() {
+      if(this.$route.path != '/wel/index') {
+        let tp = []
+        let qda = {}
+        let qsting = JSON.parse(this.loginQuery)
+        if(qsting && qsting.includes('?')) {
+          tp = qsting.split('?')[1].split('&')
+        }
+        for(let i in tp) {
+          let keyv = tp[i].split('=')
+          this.$set(qda, keyv[0], keyv[1])
+        }
+        if(this.$route.query && this.$route.query.ch) {
+          qda.ch = this.$route.query.ch
+        }
+        this.$openLogin({
+          right: 'calc(30% - 195px)',
+          successClose: false,
+          queryData: qda ? qda : null,
+          canlogin: this.loginTypes,
+          afterLogin: (dialog, res) => {
+            console.log('登录提交。。。。。')
+            dialog.handleClose()
+            this.loginToPath()
+            // // 登录IM
+            // try {
+            //   this.connect(res.code, dialog)
+            // } catch (error) {
+            //   dialog.handleClose()
+            //   this.loginToPath()
+            // }
+          },
+          afterRegister: () => {
+            console.log('注册提交。。。。。')
+          }
+        }, (dialog) => {
+          this.dialog = dialog
+        })
+      }
+    },
+    // 登陆后跳转
+    loginToPath () {
+      if(this.$route.query && this.$route.query.backlink) {
+        this.$router.push({
+          path: (this.tagWel && this.tagWel.value) ? this.tagWel.value : '/wel/index',
+          query: this.$route.query
+        });
+      }else{
+        let path = sessionStorage.getItem('lastUrl')
+        if(path && !path.includes('/login')) {
+          this.$openUrl(path, '_self')
+        }else{
+          let rp = {
+            path: (this.tagWel && this.tagWel.value) ? this.tagWel.value : '/wel/index',
+          }
+          if(this.$permissionMatch('JVS_DESIGN_MGR')) {
+            rp.query = { login: 'isLogin' }
+          }
+          this.$router.push(rp);
+        }
+      }
+    },
+    // 获取域名对应设置信息
+    async getDomainHandle () {
+      this.background = "background:none;"
+      this.logoV2Pic = ""
+      document.title = ""
+      if(this.loginTypes && this.loginTypes.length == 1 && ['password', 'wxmp', 'namepass', 'phone', 'dd', 'ldap', 'weixin', 'wx', 'wxenterprise'].indexOf(this.loginTypes[0]) == -1) {
+        this.$openUrl(`/auth/just/oauth2?stats=${this.loginTypes[0]}`, '_self')
+        return false
+      }
+      await getDomain().then(res => {
+        if(res.data && res.data.code == 0) {
+          if(res.data.data){
+            if(res.data.data.bgImg) {
+              this.background = `background-image:url("${res.data.data.bgImg}");`
+            }
+            if(res.data.data.logo) {
+              this.logoV2Pic = res.data.data.logo
+            }
+            if(res.data.data.systemName) {
+              document.title = res.data.data.systemName
+            }
+            if(res.data.data.icon) {
+              var link = document.createElement('link')
+              link.type = 'image/x-icon'
+              link.rel = 'shortcut icon'
+              link.href = res.data.data.icon
+              document.getElementsByTagName('head')[0].appendChild(link);
+            }
+            if(res.data.data.filingInformation) {
+              this.filingInformation = res.data.data.filingInformation
+            }
+            if(res.data.data.kkfileUrl) {
+              this.$store.commit("SET_KKFILE_URL", res.data.data.kkfileUrl)
+            }
+            this.openLogin()
+          } else {
+            // this.openLogin()
+            this.$router.push({ path: '/404' });
+          }
+        } else {
+          this.$router.push({ path: '/404' });
+        }
+      }).catch(err => {
+        this.$router.push({ path: '/404' });
+      })
+    },
+    openLink (item) {
+      if(item.link) {
+        this.$openUrl(item.link, '_blank')
+      }
+    },
+    getCookie(cname) {
+      let name = cname + "=";
+      let ca = document.cookie.split(";");
+      for (let i = 0; i < ca.length; i++) {
+        let c = ca[i].trim();
+        if (c.indexOf(name) == 0) {
+          return c.substring(name.length, c.length);
+        }
+      }
+    },
+    async getLoginType () {
+      await getCanLogin().then(res => {
+        if(res.data && res.data.code == 0) {
+          this.loginTypes = res.data.data
+        }
+      })
+    }
+  }
+};
+</script>
+<style lang="scss" scoped>
+.login-logo-picture{
+  position: absolute;
+  top: 50px;
+  left: 90px;
+  height: 100px;
+}
+.filingInformation-text{
+  position: fixed;
+  bottom: 15px;
+  left: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  span{
+    color: #666;
+    margin-left: 16px;
+  }
+  span:nth-of-type(1) {
+    margin-left: 0;
+  }
+}
+</style>
+

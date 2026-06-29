@@ -1,0 +1,247 @@
+// 侧导航
+.jvs-sidebar {
+  > .el-menu-scrollbar,
+  .jvs-logo {
+    background-color: #36c !important;
+    color: #fff !important;
+  }
+
+  .jvs-logo {
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.15);
+  }
+
+  .text-info {
+    display: flex;
+    align-items: center;
+
+    > span {
+      position: static !important;
+    }
+  }
+
+  .more {
+    .el-icon-plus {
+      color: #fff !important;
+    }
+
+    i {
+      color: #fff !important;
+    }
+  }
+
+  .el-submenu__title,
+  .menu-item-head,
+  .el-menu-item {
+    span,
+    .el-submenu__icon-arrow,
+    svg {
+      color: #fff !important;
+      fill: #fff !important;
+    }
+  }
+
+  .el-submenu__title {
+    &:hover {
+      background-color: #409eff !important;
+    }
+
+    &.is-active-item {
+      background-color: #409eff !important;
+    }
+  }
+
+  .el-menu-item {
+    .menu-item-it {
+      > b {
+        border-color: #fff !important;
+      }
+    }
+
+    &:hover {
+      background-color: #409eff !important;
+    }
+
+    &.is-active-item {
+      background-color: #409eff !important;
+    }
+    &:focus {
+      background-color: #409eff !important;
+    }
+  }
+
+  .brevity-button {
+    background-color: #36c !important;
+  }
+}
+
+// 内容
+.basic-container {
+  > .top-nav-bar-box {
+    background-color: #fff !important;
+    border-bottom: 4px solid #f5f6f7 !important;
+    .el-tabs__nav-wrap {
+      padding-top: 0 !important;
+    }
+    .el-tabs__item {
+      border-bottom: 2px solid #fff !important;
+      &.is-active {
+        color: #36c !important;
+        border-color: #36c !important;
+        &::after,
+        &::before {
+          background-color: #fff !important;
+        }
+      }
+    }
+  }
+}
+
+// 列表页面工作栏左侧按钮
+.jvs-table {
+  .table-top {
+    .table-top-left {
+      .el-button {
+        background-color: #1e6fff !important;
+        color: #fff !important;
+      }
+    }
+  }
+  .table-body-box {
+    .el-table {
+      .el-table__header-wrapper {
+        tr {
+          th {
+            .cell > span:not(.caret-wrapper) {
+              word-break: normal !important;
+              white-space: pre-wrap !important;
+            }
+          }
+        }
+      }
+    }
+  }
+}
+//
+.el-dialog {
+  .form-btn-bar {
+    .el-button {
+      background-color: #1e6fff !important;
+      color: #fff !important;
+      height: 35px !important;
+      padding: 10px 20px !important;
+      font-weight: bold;
+      font-size: 14px !important;
+      border-radius: 4px !important;
+      margin: 8px !important;
+      &:first-child {
+        margin-left: 0 !important;
+      }
+    }
+  }
+}
+.search-form-item-table {
+  .form-btn-bar {
+    .el-button {
+      margin: 0 !important;
+      margin-right: 8px !important;
+    }
+  }
+}
+
+// 弹框
+.el-dialog__header {
+  background-color: #fff !important;
+  border-bottom: 1px solid #f0f0f0 !important;
+}
+
+// 按钮
+//.el-button {
+//  background-color: #1E6FFF !important;
+//  color: #fff !important;
+//}
+//
+//.jvs-table {
+//  .el-button--text {
+//    color: #1E6FFF !important;
+//    background-color: transparent !important;
+//  }
+//}
+
+//输入框
+// .task-form-body .jvs-form-item-disabled,
+// .disabled-show-form .jvs-form-item-disabled,
+// .el-dialog .jvs-form-item-disabled {
+//   .el-input__inner,
+//   .el-textarea__inner,
+//   .unit-span,
+//   .el-input-group__append,
+//   .input-number-Thousandth-disabled {
+//     background-color: transparent !important;
+//     border: 0 !important;
+//   }
+// }
+
+.el-dialog__body .page-dialog-box {
+  .jvs-table .jvs-table-titleTop .el-card__body .table-top {
+    margin: 10px 0;
+  }
+}
+.w-e-text code {
+  background: none;
+}
+.meun_popover {
+  max-height: 100% !important;
+  overflow-y: auto !important;
+}
+.detailpannel-trans {
+  width: 600px !important;
+  .detailpannel-box {
+    width: 100% !important;
+  }
+  .setting-info {
+    .form-item-btn {
+      width: 600px !important;
+    }
+  }
+}
+.block-container .setting-info .w-e-menu .w-e-panel-container {
+  margin-left: -200 !important;
+}
+.jvs-form-item {
+  .table-form {
+    .table-body-box {
+      .el-table {
+        .el-table__body-wrapper {
+          max-height: 450px !important;
+          min-height: 100px !important;
+          .el-table__empty-block {
+            min-height: 120px !important;
+            .el-table__empty-text:before {
+              height: 120px !important;
+            }
+          }
+        }
+      }
+    }
+  }
+  .el-tabs {
+    .el-tabs__header {
+      .el-tabs__item.is-disabled:hover {
+        background-color: transparent !important;
+        color: #333 !important;
+      }
+      .el-tabs__item.is-active {
+        color: #1e6fff !important;
+        border-bottom: 2px solid #1e6fff !important;
+        background-color: transparent !important;
+        border-radius: 0 !important;
+      }
+      .el-tabs__item:hover {
+        color: #1e6fff !important;
+        border-bottom: 2px solid #1e6fff !important;
+        background-color: transparent !important;
+        border-radius: 0 !important;
+      }
+    }
+  }
+}

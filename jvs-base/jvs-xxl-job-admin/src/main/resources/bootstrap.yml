@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: @artifactId@
+  main.allow-bean-definition-overriding: true
+  cloud:
+    nacos:
+      discovery:
+        server-addr: http://jvs-nacos:8848
+        group: jvs
+        namespace: ${spring.cloud.nacos.discovery.group}
+      config:
+        server-addr: ${spring.cloud.nacos.discovery.server-addr}
+        group: ${spring.cloud.nacos.discovery.group}
+        namespace: ${spring.cloud.nacos.discovery.group}
+  config:
+    import:
+      #公共配置
+      - optional:nacos:application.yml
+      #公共配置项目配置
+      - optional:nacos:${spring.application.name}.yml
+    inetutils:
+      #选择使用此网段进行处理
+      preferred-networks: 10.*
+  mail:
+    host: 1
+    pass: 1
+    from: 1
+#  ### xxl-job, access token
+xxl:
+  job:
+    accessToken: qNAMzjEUPoqjaOBgaGMUWQUud2GNoqW7
+    username: admin
+    password: 123456
+swagger:
+  title: jvs-xxl-job-admin 注册到nacos通过feign调用
+  description: XXL-JOB是一个分布式任务调度平台，其核心设计目标是开发迅速、学习简单、轻量级、易扩展。现已开放源代码并接入多家公司线上产品线，开箱即用。它的有两个核心模块，一个模块叫做调度中心，另外一个模块叫做执行器，它把任务调度和任务执行分成两个部分。这样调度模块只需要负责任务的调度属性，触发调度信号。

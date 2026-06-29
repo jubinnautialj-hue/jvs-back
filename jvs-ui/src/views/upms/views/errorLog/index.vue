@@ -1,0 +1,474 @@
+<template>
+  <div :class="{'oprationlog-manage': true, 'oprationlog-manage-deal': operateType == 'error'}">
+    <jvs-table
+      ref="errorLog"
+      :option="tableOption"
+      :loading="tableLoading"
+      :data="tableData"
+      pageheadertitle='请求日志'
+      :page="page"
+      @on-load="getList"
+      @search-change="searchChange"
+    >
+      <template slot="menu" slot-scope="scope">
+        <jvs-button size="mini" type="text" @click="viewHandle(scope.row)">{{$langt('errlogs.view')}}</jvs-button>
+        <jvs-button v-if="operateType == 'error'" size="mini" type="text" @click="dealHandle(scope.row)">{{$langt('errlogs.deal')}}</jvs-button>
+      </template>
+      <template slot="menuRight">
+        <p v-if="operateType == 'error'" style="cursor:pointer;display: flex;align-items: center;" @click="retrievalSearch('error')">
+          <span>{{$langt('table.fresh')}}</span>
+          <i class="el-icon-refresh" style="cursor:pointer;margin-left:3px;"></i>
+        </p>
+      </template>
+      <template slot="menuLeft">
+        <div class="list-use-body-top">
+          <div class="left">
+            <div :class="{'left-item': true, 'active': !operateType}" @click="retrievalSearch('')">{{$langt('errlogs.all')}}</div>
+            <div :class="{'left-item': true, 'active': operateType == 'error'}" @click="retrievalSearch('error')">{{$langt('errlogs.err')}}</div>
+          </div>
+          <div class="right"></div>
+        </div>
+      </template>
+      <template slot="operationType" slot-scope="scope">
+        <span :style="getStyle(scope.row.operationType)">{{scope.row.operationType}}</span>
+      </template>
+      <template slot="status" slot-scope="scope">
+        <span>{{scope.row.status ? $langt('common.success') : $langt('common.fail')}}</span>
+      </template>
+    </jvs-table>
+    <el-dialog
+      title="详情信息"
+      fullscreen
+      class="form-fullscreen-dialog"
+      append-to-body
+      v-if="dialogVisible"
+      :visible.sync="dialogVisible"
+      :close-on-click-modal="false"
+      :before-close="handleClose">
+      <jvs-form style="padding: 0 160px;" :option="formOption" :formData="rowData">
+        <template slot="parametersForm">
+          <json-viewer
+            style="margin-top: 10px"
+            :value="rowData.parameters"
+            :expand-depth="2000"
+            copyable
+            boxed
+            sort
+          ></json-viewer>
+        </template>
+        <template slot="returnObjForm">
+          <json-viewer
+            style="margin-top: 10px"
+            :value="rowData.returnObj"
+            :expand-depth="2000"
+            copyable
+            boxed
+            sort
+          ></json-viewer>
+        </template>
+        <template slot="elementsForm">
+          <json-viewer
+            style="margin-top: 10px"
+            :value="rowData.elements"
+            :expand-depth="2000"
+            copyable
+            boxed
+            sort
+          ></json-viewer>
+        </template>
+      </jvs-form>
+    </el-dialog>
+  </div>
+</template>
+<script>
+import { getLogs, getErrorList, dealErrorList } from './api'
+import {dateFormat} from "@/util/date";
+export default {
+  name: 'oprationlog-manage',
+  data () {
+    return {
+      tableLoading: false,
+      queryParams: {},
+      page: {
+        total: 0, // 总页数
+        currentPage: 1, // 当前页数
+        pageSize: 20, // 每页显示多少条
+      },
+      tableData: [],
+      tableOption: {
+        showOverflow: true,
+        addBtn: false,
+        editBtn: false,
+        viewBtn: false,
+        delBtn: false,
+        // align: 'center',
+        // menuAlign: 'center',
+        search: true,
+        page: true,
+        cancal: false,
+        column: [
+          {
+            label: '服务名',
+            prop: 'businessName',
+            searchSpan: 6,
+            search: true
+          },
+          {
+            label: '功能名',
+            prop: 'functionName',
+            searchSpan: 6,
+            search: true
+          },
+          {
+            label: '操作类型',
+            prop: 'operationType',
+            slot: true
+          },
+          {
+            label: '帐户',
+            prop: 'userName',
+            searchSpan: 6,
+            search: true,
+          },
+          {
+            label: '方法名',
+            prop: 'methodName'
+          },
+          {
+            label: 'API地址',
+            prop: 'api',
+          },
+          {
+            label: '状态',
+            prop: 'status',
+            type: 'select',
+            dicData: [
+              { label: '成功', value: true },
+              { label: '失败', value: false },
+            ],
+            search: true,
+            slot: true
+          },
+          {
+            label: '终端',
+            prop: 'clientName'
+          },
+          {
+            label: '请求ip地址',
+            prop: 'ip'
+          },
+          {
+            label: 'TID',
+            prop: 'tid',
+            searchSpan: 8,
+            search: true,
+          },
+          {
+            label: '错误时间',
+            prop: 'createDate',
+            datetype: 'datetime',
+            format: "yyyy-MM-dd HH:mm:ss",
+            valueFormat: "yyyy-MM-dd HH:mm:ss"
+          },
+          {
+            label: "日期时间范围",
+            prop: "dateRange",
+            type: "datePicker",
+            datetype: "datetimerange",
+            defaultValue: [dateFormat(new Date()).split(' ')[0] + ' 00:00:00', dateFormat(new Date()).split(' ')[0] + ' 23:59:59'],
+            search: true,
+            clearable: false,
+            hide: true,
+            searchSpan: 9,
+          },
+        ]
+      },
+      rowData: null,
+      dialogVisible: false,
+      formOption: {
+        btnHide: true,
+        disabled: true,
+        column: [
+          {
+            label: '服务名',
+            prop: 'businessName',
+            search: true
+          },
+          {
+            label: '功能名',
+            prop: 'functionName'
+          },
+          {
+            label: '帐户',
+            prop: 'userName'
+          },
+          {
+            label: '用户ID',
+            prop: 'userId'
+          },
+          {
+            label: '终端',
+            prop: 'clientName'
+          },
+          {
+            label: '开始时间',
+            prop: 'startTime',
+            datetype: 'datetime',
+            format: "yyyy-MM-dd HH:mm:ss",
+            valueFormat: "yyyy-MM-dd HH:mm:ss"
+          },
+          {
+            label: '结束时间',
+            prop: 'endTime',
+            datetype: 'datetime',
+            format: "yyyy-MM-dd HH:mm:ss",
+            valueFormat: "yyyy-MM-dd HH:mm:ss"
+          },
+          {
+            label: '方法名',
+            prop: 'methodName'
+          },
+          {
+            label: '类名',
+            prop: 'className'
+          },
+          {
+            label: 'API地址',
+            prop: 'api'
+          },
+          {
+            label: '请求ip地址',
+            prop: 'ip'
+          },
+          {
+            label: 'tid',
+            prop: 'tid'
+          },
+          {
+            label: '环境参数',
+            prop: 'env'
+          },
+          {
+            label: '耗时',
+            prop: 'consumingTime'
+          },
+          {
+            label: '请求json',
+            prop: 'parameters',
+            formSlot: true
+          },
+          {
+            label: '返回json',
+            prop: 'returnObj',
+            formSlot: true
+          },
+          {
+            label: '错误信息',
+            prop: 'exceptionMessage',
+          },
+          {
+            label: '处理人',
+            prop: 'handleUser',
+          },
+          {
+            label: '详细信息',
+            prop: 'elements',
+            formSlot: true
+          },
+        ]
+      },
+      operateType: ''
+    }
+  },
+  created() {
+    this.queryParams.dateRange = [dateFormat(new Date()).split(' ')[0] + ' 00:00:00', dateFormat(new Date()).split(' ')[0] + ' 23:59:59']
+    this.tableOption.column.filter(col => {
+      if(col.label) {
+        col.label = this.$langt(`errlogs.column.${col.prop}.label`)
+      }
+      if(col.dicData && col.dicData.length > 0) {
+        col.dicData.filter(dit => {
+          dit.label = this.$langt(`errlogs.column.${col.prop}.dicData.${dit.value}`)
+        })
+      }
+    })
+    this.formOption.column.filter(col => {
+      if(col.label) {
+        col.label = this.$langt(`errlogs.column.${col.prop}.label`)
+      }
+      if(col.dicData && col.dicData.length > 0) {
+        col.dicData.filter(dit => {
+          dit.label = this.$langt(`errlogs.column.${col.prop}.dicData.${dit.value}`)
+        })
+      }
+    })
+  },
+  methods: {
+    getList (page) {
+      let query={
+        current: this.page.currentPage,
+        size: this.page.pageSize
+      }
+      if (this.queryParams.dateRange) {
+        this.tableLoading = true
+        const arr = [...this.queryParams.dateRange]
+        this.queryParams.startTime = arr[0]
+        this.queryParams.endTime = arr[1]
+        let temp = JSON.parse(JSON.stringify(this.queryParams))
+        temp.dateRange = undefined
+        getLogs(Object.assign(query, temp)).then(res => {
+          if (res.data.code==0) {
+            this.page.total=res.data.data.total
+            this.page.currentPage=res.data.data.current
+            this.tableData=res.data.data.records
+            this.tableLoading = false
+          }
+        }).catch(e => {
+          this.page.total = 0
+          this.page.currentPage = 1
+          this.tableData = []
+          this.tableLoading = false
+        })
+      } else {
+        // this.$message.warning('请选择时间范围！')
+        this.$notify({
+          title: '提示',
+          message: '请选择时间范围！',
+          position: 'bottom-right',
+          type: 'warning'
+        });
+      }
+    },
+    searchChange (form) {
+      this.queryParams = form
+      if(!this.queryParams.dateRange) {
+        this.queryParams.dateRange = [dateFormat(new Date()).split(' ')[0] + ' 00:00:00', dateFormat(new Date()).split(' ')[0] + ' 23:59:59']
+      }
+      this.getList()
+    },
+    viewHandle (row) {
+      this.rowData = row
+      if(this.rowData.returnObj && typeof this.rowData.returnObj == 'string'  && this.rowData.returnObj.startsWith('return:')) {
+        this.rowData.returnObj = this.rowData.returnObj.replace(/return:/g, "")
+        this.rowData.returnObj = JSON.parse(this.rowData.returnObj)
+      }
+      if(!this.rowData.parameters) {
+        this.$set(this.rowData, 'parameters', {})
+      }
+      if(!this.rowData.returnObj) {
+        this.$set(this.rowData, 'returnObj', {})
+      }
+      if(!this.rowData.elements) {
+        this.$set(this.rowData, 'elements', '')
+      }
+      this.dialogVisible = true
+    },
+    handleClose () {
+      this.dialogVisible = false
+      this.rowData = null
+    },
+    getStyle (type) {
+      let color = ''
+      switch(type) {
+        case '新增': color = '#67C23A';break;
+        case '修改': color = '#E6A23C';break;
+        case '删除': color = '#F56C6C';break;
+        case '启用': color = '#409EFF';break;
+        case '禁用': color = '#909399';break;
+        case '登录': color = '#dbde0e';break;
+        default: color = '';break;
+      }
+      if(color) {
+        return `color:${color};`
+      }else{
+        return ''
+      }
+    },
+    getErrorList () {
+      this.tableLoading = true
+      getErrorList().then(res => {
+        if(res.data.code==0 && res.data.data) {
+          this.tableData=res.data.data.list
+          this.tableLoading = false
+          this.page.total = res.data.data.size
+        }else{
+          this.tableLoading = false
+        }
+      }).catch(e => {
+        this.tableLoading = false
+      })
+    },
+    retrievalSearch (type) {
+      this.operateType = type
+      this.tableOption.search = type == 'error' ? false : true
+      if(type == 'error') {
+        this.getErrorList()
+      }else{
+        this.getList()
+      }
+      this.$nextTick(() => {
+        this.$refs.errorLog.styleHeight()
+      })
+    },
+    dealHandle (row) {
+      dealErrorList(row.id).then(res => {
+        if(res.data && res.data.code == 0) {
+          this.getErrorList()
+        }
+      })
+    }
+  }
+}
+</script>
+<style lang="scss" scoped>
+.oprationlog-manage{
+  /deep/.el-col-6{
+    width: auto;
+  }
+  /deep/.jvs-table{
+    .jvs-table-titleTop{
+      box-sizing: border-box;
+    }
+    .table-top{
+      padding: 0;
+      margin: 10px 0;
+      .list-use-body-top{
+       padding: 0;
+      }
+    }
+    .list-use-body-top{
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 20px;
+      padding-bottom: 20px;
+      box-sizing: border-box;
+      .left{
+        display: flex;
+        align-items: center;
+        .left-item{
+          min-width: 24px;
+          padding: 0 15px;
+          height: 32px;
+          line-height: 32px;
+          text-align: center;
+          border-radius: 16px;
+          font-size: 14px;
+          cursor: pointer;
+        }
+        .left-item.active{
+          background-color: #F5F8FD;
+          color: #5A66E3;
+        }
+      }
+    }
+  }
+}
+.oprationlog-manage-deal{
+  /deep/.tablepagination{
+    .el-pagination__sizes, .btn-prev, .el-pager, .btn-next, .el-pagination__jump{
+      display: none;
+    }
+  }
+}
+</style>

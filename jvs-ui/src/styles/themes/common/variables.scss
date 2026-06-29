@@ -1,0 +1,56 @@
+// theme
+$left-width: 295px;
+$white-color: white;
+$black-color: black;
+$font-family: 'SourceHanSansCN';
+$themes: (
+  light: (
+    back-color: #07257D,
+    left-width: 295px,
+    left-color: $white-color,
+    logo-height: 97px,
+    logo-text-color: $white-color,
+    logo-text-size: 18px,
+    logo-text-family: 'SourceHanSansCN-Bold',
+    menu-text-color: $white-color,
+    // 一级
+    meun-item-text-size: 18px,
+    // 二级
+    menu-item-item-back: #4A8FF0,
+  ),
+  dark: (
+    // color variables
+    primary-color: #2977b5,
+    // header
+    header-bg-color: #e4393c,
+    header-text-color: $black-color,
+  ),
+);
+
+$color-primary: rgb(46, 90, 219);
+$color-success: rgb(100, 201, 53);
+$color-warning: rgb(233, 174, 49);
+$color-danger: rgb(216, 94, 94);
+$color-dark: #363636;
+$color-grey1: #43434b;
+$color-grey2: #56565c;
+$color-grey3: #898992;
+$color-grey4: #aaa2b3;
+$color-grey5: #d4d4e0;
+$color-white: #f9f9fa;
+
+@mixin flex-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+@mixin flex-center-x {
+  display: flex;
+  justify-content: center;
+}
+
+@mixin flex-center-y {
+  display: flex;
+  align-items: center;
+}

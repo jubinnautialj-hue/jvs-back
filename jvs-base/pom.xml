@@ -1,0 +1,285 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <groupId>cn.bctools</groupId>
+    <artifactId>jvs</artifactId>
+    <packaging>pom</packaging>
+    <version>2.3</version>
+
+    <organization>
+        <name>jvs</name>
+        <url>http://www.bctools.cn/</url>
+    </organization>
+
+    <name>jvs</name>
+
+    <url>http://www.bctools.cn/</url>
+    <description>jvs - 基于Spring Cloud Alibaba实现的微服务架构</description>
+
+
+    <licenses>
+        <license>
+            <name>商业授权协议</name>
+            <url>https://gitee.com/software-minister/jvs/raw/master/LICENSE</url>
+        </license>
+    </licenses>
+
+    <scm>
+        <tag>master</tag>
+        <connection>scm:git:git://gitee.com/software-minister/jvs.git</connection>
+        <developerConnection>https://gitee.com/software-minister/jvs</developerConnection>
+        <url>https://gitee.com/software-minister/jvs.git</url>
+    </scm>
+
+    <developers>
+
+        <developer>
+            <name>jvs</name>
+            <email>www.bctools.cn</email>
+        </developer>
+
+    </developers>
+
+    <modules>
+        <module>jvs-common-pom</module>
+        <!--对内开放的API-->
+        <module>jvs-auth-api</module>
+        <!--外部应用授权-->
+        <module>jvs-auth</module>
+        <!--基础包-->
+        <module>jvs-auth-common</module>
+        <!--后端管理接口用于做API实现的-->
+        <module>jvs-auth-mgr</module>
+        <module>jvs-core-parent</module>
+        <!--真实网关-->
+        <module>jvs-gateway</module>
+        <module>jvs-gateway-common</module>
+        <module>jvs-message-push</module>
+        <module>jvs-modules-im</module>
+        <module>jvs-xxl-job-admin</module>
+
+    </modules>
+
+    <properties>
+        <java.version>1.8</java.version>
+        <maven-source-plugin.version>3.2.1</maven-source-plugin.version>
+        <maven.compiler.source>1.8</maven.compiler.source>
+        <maven.compiler.target>1.8</maven.compiler.target>
+        <maven.plugin.version>3.8.1</maven.plugin.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <maven.compiler.encoding>UTF-8</maven.compiler.encoding>
+        <security.oauth.version>2.3.6.RELEASE</security.oauth.version>
+        <spring-cloud-alibaba.version>2021.0.5.0</spring-cloud-alibaba.version>
+        <spring-cloud.version>2021.0.8</spring-cloud.version>
+        <spring-boot.version>2.7.12</spring-boot.version>
+        <mybatis-plus.version>3.5.3.1</mybatis-plus.version>
+        <mysql-connector.version>8.0.27</mysql-connector.version>
+        <hutool.version>5.8.24</hutool.version>
+        <arthas.version>3.5.4</arthas.version>
+        <oshi.version>6.1.0</oshi.version>
+        <postgresql.version>42.7.3</postgresql.version>
+        <dm.version>8.1.3.140</dm.version>
+    </properties>
+
+    <dependencies>
+
+        <!--bootstrap 启动器-->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bootstrap</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+            <version>2.0.33</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.hutool</groupId>
+            <artifactId>hutool-all</artifactId>
+            <version>${hutool.version}</version>
+        </dependency>
+        <!--Lombok-->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.16</version>
+        </dependency>
+        <!--***************nacos配置信息****************-->
+        <!--注册中心客户端-->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-discovery</artifactId>
+        </dependency>
+
+    </dependencies>
+
+
+    <dependencyManagement>
+
+        <dependencies>
+
+            <dependency>
+                <groupId>cn.bctools</groupId>
+                <artifactId>jvs-common-pom</artifactId>
+                <version>2.3</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <!--避免个别使用其它方式打印日志，导致jndi漏洞,做版本声明-->
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-api</artifactId>
+                <version>2.15.0</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.logging.log4j</groupId>
+                <artifactId>log4j-core</artifactId>
+                <version>2.15.0</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-boot-starter</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+            <!--Mybatis plus 插件-->
+            <dependency>
+                <groupId>com.baomidou</groupId>
+                <artifactId>mybatis-plus-extension</artifactId>
+                <version>${mybatis-plus.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>mysql</groupId>
+                <artifactId>mysql-connector-java</artifactId>
+                <version>${mysql-connector.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.postgresql</groupId>
+                <artifactId>postgresql</artifactId>
+                <version>${postgresql.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.dameng</groupId>
+                <artifactId>DmJdbcDriver18</artifactId>
+                <version>${dm.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>cn.hutool</groupId>
+                <artifactId>hutool-all</artifactId>
+                <version>${hutool.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.github.oshi</groupId>
+                <artifactId>oshi-core</artifactId>
+                <version>${oshi.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-dependencies</artifactId>
+                <version>${spring-boot.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!--spring cloud alibaba-->
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+
+        </dependencies>
+
+    </dependencyManagement>
+
+    <build>
+        <finalName>${project.artifactId}</finalName>
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+            </resource>
+        </resources>
+        <pluginManagement>
+            <plugins>
+                <plugin>
+                    <artifactId>maven-deploy-plugin</artifactId>
+                </plugin>
+                <!--spring boot 默认插件-->
+                <plugin>
+                    <groupId>org.springframework.boot</groupId>
+                    <artifactId>spring-boot-maven-plugin</artifactId>
+                    <version>${spring-boot.version}</version>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>repackage</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-compiler-plugin</artifactId>
+                    <configuration>
+                        <parameters>true</parameters>
+                        <source>1.8</source>
+                        <target>1.8</target>
+                    </configuration>
+                </plugin>
+
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-source-plugin</artifactId>
+                    <version>3.0.1</version>
+                    <executions>
+                        <execution>
+                            <id>attach-sources</id>
+                            <goals>
+                                <goal>jar</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </pluginManagement>
+    </build>
+
+    <!-- 配置发布仓库 -->
+    <distributionManagement>
+        <repository>
+            <!-- 须与 settings.xml 中 server 的 id 一致 -->
+            <id>rkqfbctoolsc-j8s/maven</id>
+            <name>rkqfbctoolsc-j8s/maven</name>
+            <url>https://maven.cnb.cool/rkqfbctoolsc/j8s/maven/-/packages/</url>
+        </repository>
+    </distributionManagement>
+
+</project>

@@ -1,0 +1,43 @@
+import * as globalTypes from "./types/global";
+import { getStore } from "@/util/store";
+const getters = {
+  tag: state => state.tags.tag,
+  website: state => state.common.website,
+  userInfo: state => state.user.userInfo,
+  theme: state => state.common.theme,
+  themeName: state => state.common.themeName,
+  isShade: state => state.common.isShade,
+  isCollapse: state => state.common.isCollapse,
+  keyCollapse: (state, getters) =>
+    getters.screen > 1 ? getters.isCollapse : false,
+  screen: state => state.common.screen,
+  isLock: state => state.common.isLock,
+  isFullScreen: state => state.common.isFullScreen,
+  lockPasswd: state => state.common.lockPasswd,
+  tagList: state => state.tags.tagList,
+  tagWel: state => state.tags.tagWel,
+  access_token: state => state.user.access_token,
+  tenantId: state => state.common.tenantId,
+  systemHelpDict: state => state.common.systemHelpDict,
+  autoOpenedDict: state => state.common.autoOpenedDict,
+  refresh_token: state => state.user.refresh_token,
+  expires_in: state => state.user.expires_in,
+  roles: state => state.user.roles,
+  permissions: state => getStore({ name: 'permissions' }) || state.user.permissions,
+  menu: state => state.user.menu,
+  menuAll: state => state.user.menuAll,
+  system: state => state.common.system,
+  labelValue: state => getStore({name: 'labelValue'}) || state.labelValue,
+  [globalTypes.GET_DIRECTION](state) {
+    return state.direction;
+  },
+  [globalTypes.GET_THEME](state) {
+    return state.theme;
+  },
+  appSettingOpen: state => state.common.appSettingOpen,
+  menuType: state => state.common.menuType,
+  functionsObj: state => state.common.functionsObj,
+  kkfileUrl: state => getStore({name: 'kkfileUrl'}) || state.common.kkfileUrl,
+  dynaIndexLeft: state => state.common.dynaIndexLeft,
+};
+export default getters;

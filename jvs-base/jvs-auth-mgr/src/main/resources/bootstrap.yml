@@ -1,0 +1,42 @@
+server:
+  port: ${random.int[50001,50099]}
+version: @project.version@
+spring:
+  application:
+    name: @project.artifactId@
+  main.allow-bean-definition-overriding: true
+  cloud:
+    nacos:
+      discovery:
+        server-addr: jvs-nacos:8848
+        group: jvs
+        namespace: ${spring.cloud.nacos.discovery.group}
+      config:
+        server-addr: ${spring.cloud.nacos.discovery.server-addr}
+        group: ${spring.cloud.nacos.discovery.group}
+        namespace: ${spring.cloud.nacos.discovery.namespace}
+    inetutils:
+      #选择使用此网段进行处理
+      preferred-networks: 10.*
+  config:
+    import:
+      #公共配置
+      - optional:nacos:application.yml
+      #公共配置项目配置
+      - optional:nacos:${spring.application.name}.yml
+      #授权配置
+      - optional:nacos:license.yml
+
+swagger:
+  title: "基础后台系统管理"
+  description: "后台的用户、部门、角色、租户、岗位等信息的管理，做简单的crud操作"
+
+# 微信小程序 ,默认配置一个,用于启动成功
+wx:
+  miniapp:
+    appid: 1
+    secret: 1
+    config-storage:
+      type: redistemplate
+    msg-data-format: json
+

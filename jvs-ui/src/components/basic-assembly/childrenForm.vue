@@ -1,0 +1,181 @@
+<template>
+  <div class="children-form">
+    <jvs-form
+      :ref="formItem.prop + 'ChildrenForm'"
+      :refs="formItem.prop + 'ChildrenForm'"
+      :option="childrenOption"
+      :formData="formData"
+    >
+      <!-- 关联表单主key选择 -->
+      <template :slot="formItem.prop+'Form'">
+        <el-select
+          style="width:100%;"
+          v-if='formItem.type==="connectForm"'
+          v-model="forms[formItem.props.label]"
+          :placeholder="formItem.placeholder || formItem.label"
+          :multiple="formItem.multiple"
+          :collapse-tags="!formItem.collapsetags"
+          :disabled="formItem.disabled"
+          :clearable="formItem.clearable === false ? false : true"
+          :filterable="formItem.filterable"
+          :allow-create="false"
+          :size="$store.state.params.form.size || formItem.size || 'mini'"
+          @change="formChange"
+        >
+          <el-option
+            v-for="(sitem) in selectOption"
+            :key="formItem.prop+'-'+sitem['id']"
+            :label="sitem[(formItem.props && formItem.props.label) || 'label']"
+            :value="sitem[(formItem.props && formItem.props.value) || 'id']"
+          >
+            <span style="float: left">{{ sitem[(formItem.props && formItem.props.label) || 'label'] }}</span>
+            <span v-if="sitem.tip" style="float: right; color: #8492a6; font-size: 13px">{{ sitem.tip }}</span>
+          </el-option>
+        </el-select>
+      </template>
+    </jvs-form>
+  </div>
+</template>
+<script>
+import { getDetail } from '@/views/page/api/formlist'
+export default {
+  props: {
+    // 表单传递对象
+    forms: {
+      type: Object,
+      default: () => {
+        return {}
+      }
+    },
+    originOption: {
+      type: Object
+    },
+    // 表单结构对象
+    formItem: {
+      type: Object,
+      default: () => {
+        return {}
+      }
+    },
+    resetRadom: {
+      type: Number
+    },
+    selectOption: {
+      type: Array
+    }
+  },
+  computed: {
+    formData: {
+      get () {
+        return this.forms
+      },
+      set () { }
+    }
+  },
+  data () {
+    return {
+      childrenOption: {
+        btnHide: true,
+        column: []
+      }
+    }
+  },
+  methods: {
+    formChange () {
+      for(let i in this.selectOption) {
+        if(this.selectOption[i].id == this.forms[this.formItem.props.label]) {
+          for(let k in this.selectOption[i]) {
+            this.$set(this.forms, k, this.selectOption[i][k])
+          }
+        }
+      }
+      this.$emit('formChange', true)
+    },
+    getDesign () {
+      if (this.formItem.formId) {
+        getDetail(this.formItem.formId).then(res => {
+          if (res.data&&res.data.code==0) {
+            if (res.data.data.viewJson) {
+              let viewJson=JSON.parse(res.data.data.viewJson)
+              if (viewJson.formdata&&viewJson.formdata.length>0) {
+                let formJson=viewJson.formdata[0]
+                // 子表单
+                if(this.formItem.type == 'childrenForm') {
+                  this.childrenOption.column=formJson.forms
+                  this.childrenOption.column.filter(item => {
+                    item.disabled = this.formItem.disabled
+                  })
+                }
+                // 关联表单
+                if(this.formItem.type == 'connectForm') {
+                  if(this.formItem.connectFormColumn) {
+                    let tarr = []
+                    this.formItem.connectFormColumn.filter(item => {
+                      let needAdd = true
+                      for(let i in formJson.forms) {
+                        if(formJson.forms[i].prop == item.prop) {
+                          tarr.push({...formJson.forms[i], span: 24})
+                          needAdd = false
+                        }
+                      }
+                      if(needAdd) {
+                        if(item.type == 'datePicker' && !item.datetype) {
+                          item.datetype = 'date'
+                        }
+                        tarr.push(item)
+                      }
+                    })
+                    this.childrenOption.column = [{
+                      label: this.formItem.props.text,
+                      prop: this.formItem.prop,
+                      type: this.formItem.type,
+                      formSlot: true,
+                      props: this.formItem.props
+                    }, ...tarr]
+                    this.$forceUpdate()
+                  }
+                }
+              }
+            }
+          }
+        })
+      }
+    }
+  },
+  created () {
+    if (this.originOption) {
+      this.childrenOption.labelposition=this.originOption.labelposition
+      this.childrenOption.labelwidth=this.originOption.labelwidth
+      this.childrenOption.formAlign=this.originOption.formAlign
+      this.childrenOption.disabled=this.formItem.disabled
+    }
+    if(this.formItem.childrenOptionColumn && this.formItem.childrenOptionColumn.length > 0) {
+      this.childrenOption.column = this.formItem.childrenOptionColumn
+    }else{
+      // this.getDesign()
+    }
+  },
+  watch: {
+    resetRadom: {
+      handler (newVal, oldVal) {
+        if (newVal>-1) {
+          if (this.$refs[this.formItem.prop+'ChildrenForm']) {
+            this.$refs[this.formItem.prop+'ChildrenForm'].resetForm(this.formItem.prop+'ChildrenForm')
+          }
+        }
+      }
+    },
+    formItem: {
+      handler (newVal, oldVal) {
+        if(newVal.type == 'connectForm') {
+          if(this.formItem.connectFormColumn) {
+            // this.getDesign()
+            this.$forceUpdate()
+          }
+        }
+      },
+      deep: true
+    }
+  }
+}
+</script>

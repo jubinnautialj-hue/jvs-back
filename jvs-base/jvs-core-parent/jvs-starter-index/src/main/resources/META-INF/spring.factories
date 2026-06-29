@@ -1,0 +1,5 @@
+org.springframework.boot.autoconfigure.EnableAutoConfiguration=\
+cn.bctools.index.controller.SysHomeController,\
+cn.bctools.index.service.impl.SysHomeServiceImpl,\
+cn.bctools.index.utils.DesignCacheUtil,\
+cn.bctools.index.design.BaseComponent

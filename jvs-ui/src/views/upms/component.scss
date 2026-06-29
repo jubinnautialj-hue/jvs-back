@@ -1,0 +1,130 @@
+.jvs-view .outer-container{
+  .auth-apply-center{
+    width: 100%;
+    height: 100%;
+    .apply-info{
+      height: calc(100% - 348px);
+      overflow: hidden;
+      overflow-y: auto;
+      .company-info{
+        margin-left: 50px!important;
+      }
+    }
+  }
+  .role-list-box{
+    overflow: hidden;
+    .role-tree{
+      height: 100%;
+    }
+    .menu-permission{
+      overflow: hidden;
+      .permission-table{
+        height: calc(100% - 78px);
+        .table-body{
+          height: calc(100% - 38px);
+        }
+      }
+    }
+    .jvs-table-titleTop{
+      box-sizing: border-box;
+      width: calc(100% - 250px);
+    }
+    .role-table{
+      .el-card{
+        height: auto;
+        .el-card__body{
+          padding-bottom: 15px!important;
+        }
+      }
+      .table-body-box{
+        position: relative;
+        .el-table{
+          .el-table__body-wrapper{
+            height: calc(100vh - 335px)!important;
+          }
+        }
+      }
+      .tablepagination{
+        position: relative;
+      }
+    }
+  }
+  .user-check-page{
+    width: 100%;
+    .jvs-table{
+      .jvs-table-titleTop{
+        box-sizing: border-box;
+      }
+    }
+  }
+  .post-manage-box{
+    .post-treeBox{
+      height: 100%;
+    }
+  }
+  .org-logout-page{
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .wx-message-temp-page, .short-message-temp-page{
+    height: 100%;
+    .table-body-box{
+      .el-table{
+        .el-table__body-wrapper{
+          height: calc(100vh - 344px)!important;
+        }
+      }
+    }
+  }
+  .system-config-page, .other-config-page, .app-basic-setting-page{
+    height: 100%;
+    box-sizing: border-box;
+  }
+  .basic-info-page{
+    height: 100%;
+  }
+  .tenant-manage-box{
+    .tenant-manage:not(.is_zh){
+      .table-body-box{
+        .el-table{
+          .el-table__body-wrapper{
+            height: calc(100vh - 426px)!important;
+          }
+        }
+      }
+    }
+    .tenant-manage.is_zh{
+      .table-body-box{
+        .el-table{
+          .el-table__body-wrapper{
+            height: calc(100vh - 408px)!important;
+          }
+        }
+      }
+    }
+  }
+  .dictionaries-manage{
+    .table-body-box{
+      .el-table{
+        .el-table__body-wrapper{
+          height: calc(100vh - 394px)!important;
+        }
+      }
+    }
+  }
+  .tree-dictionaries{
+    .tree-dic{
+      height: calc(100vh - 262px);
+    }
+  }
+  .app-help-page{
+    .table-box{
+      .el-table{
+        height: unset!important;
+        .el-table__body-wrapper{
+          height: calc(100vh - 413px)!important;
+        }
+      }
+    }
+  }
+}
