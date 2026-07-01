@@ -1,0 +1,116 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>cn.bctools</groupId>
+        <artifactId>jvs-design</artifactId>
+        <version>2.3</version>
+    </parent>
+
+    <groupId>cn.bctools</groupId>
+    <artifactId>jvs-design-common</artifactId>
+
+    <dependencies>
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-ai</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-mongodb</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-design-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-database</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>wsdl4j</groupId>
+            <artifactId>wsdl4j</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>org.apache.velocity</groupId>
+            <artifactId>velocity</artifactId>
+            <version>1.7</version>
+        </dependency>
+
+        <!-- Redis -->
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-redis</artifactId>
+        </dependency>
+
+        <!--        &lt;!&ndash; Swagger &ndash;&gt;-->
+        <!--        <dependency>-->
+        <!--            <groupId>com.github.xiaoymin</groupId>-->
+        <!--            <artifactId>swagger-bootstrap-ui</artifactId>-->
+        <!--            <version>1.9.6</version>-->
+        <!--        </dependency>-->
+
+        <!-- rabbit -->
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-rabbit</artifactId>
+        </dependency>
+
+        <!-- Jvs表达式 -->
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-function</artifactId>
+        </dependency>
+
+        <!--逻辑引擎-->
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-function-run</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-function-base</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-word</artifactId>
+        </dependency>
+
+        <!-- 消息中心 -->
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>message-push-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <!--定时任务管理端-->
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-job</artifactId>
+        </dependency>
+        <!--动态首页-->
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-index</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>wsdl4j</groupId>
+            <artifactId>wsdl4j</artifactId>
+            <version>1.6.3</version>
+        </dependency>
+    </dependencies>
+
+</project>

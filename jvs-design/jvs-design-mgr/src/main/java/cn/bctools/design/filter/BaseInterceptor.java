@@ -1,0 +1,109 @@
+package cn.bctools.design.filter;
+
+import cn.bctools.common.utils.ObjectNull;
+import cn.bctools.common.utils.TenantContextHolder;
+import cn.bctools.design.identification.entity.Identification;
+import cn.bctools.design.identification.service.IdentificationService;
+import cn.bctools.design.project.entity.JvsApp;
+import cn.bctools.design.project.entity.JvsAppVersion;
+import cn.bctools.design.project.service.JvsAppService;
+import cn.bctools.design.project.service.JvsAppVersionService;
+import cn.bctools.design.util.CurrentAppUtils;
+import cn.bctools.design.util.ModeUtils;
+import lombok.experimental.Accessors;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections4.MapUtils;
+import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.servlet.HandlerMapping;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+import java.util.Map;
+import java.util.Optional;
+
+/**
+ * @author jvs
+ */
+@Slf4j
+@Accessors(chain = true)
+public class BaseInterceptor implements HandlerInterceptor {
+    JvsAppService jvsAppService;
+    JvsAppVersionService appVersionService;
+    IdentificationService identificationService;
+
+    public BaseInterceptor(JvsAppService jvsAppService, JvsAppVersionService jvsAppVersionService, IdentificationService identificationService) {
+        this.jvsAppService = jvsAppService;
+        this.appVersionService = jvsAppVersionService;
+        this.identificationService = identificationService;
+    }
+
+    /**
+     * 应用id
+     */
+    private static final String APP_ID = "appId";
+    private static final String APPIDENTIFICATION_ID = "appIdentification";
+    private static final String MODELIDENTIFICATION_ID = "modelIdentification";
+
+    private static final String UNDEFINED = "undefined";
+
+    @Override
+    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
+        // 鉴权获取参数
+        Map<String, Object> variablesAttribute = (Map<String, Object>) request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        String appId = getVariablesAppId(variablesAttribute);
+        if (UNDEFINED.equals(appId)) {
+            InterceptorUtil.throwException(response.getOutputStream(), "appId为undefined");
+            return Boolean.FALSE;
+        }
+        if (ObjectNull.isNotNull(appId)) {
+            //判断当前模式下是否有这个应用
+            JvsAppVersion useAppVersion = appVersionService.getUseAppVersion(appId);
+            if (ObjectNull.isNull(useAppVersion)) {
+                JvsApp jvsApp = jvsAppService.getAppById(appId);
+                // 将当前应用的版本号设置到上下文(用于sql自动添加应用版本号查询)
+                CurrentAppUtils.setApp(jvsApp);
+                //表示为 1.8版本的轻应用
+                return Boolean.TRUE;
+            } else if (ModeUtils.getMode().equals(useAppVersion.getVersionType())) {
+                JvsApp jvsApp = jvsAppService.getAppById(appId);
+                // 将当前应用的版本号设置到上下文(用于sql自动添加应用版本号查询)
+                CurrentAppUtils.setApp(jvsApp);
+            } else {
+                InterceptorUtil.throwException(response.getOutputStream(), "应用不存在,或未切换模式");
+                return Boolean.FALSE;
+            }
+        }
+        return Boolean.TRUE;
+    }
+
+    /**
+     * 从路径变量中获取应用id
+     *
+     * @param variablesAttribute 请求对象参数
+     * @return 返回应用 id
+     */
+    private String getVariablesAppId(Map<String, Object> variablesAttribute) {
+        String appId = null;
+        if (MapUtils.isNotEmpty(variablesAttribute)) {
+            appId = Optional.ofNullable(variablesAttribute.get(APP_ID)).map(String::valueOf).orElseGet(() -> null);
+        }
+        if (ObjectNull.isNull(appId) && MapUtils.isNotEmpty(variablesAttribute)) {
+            //将其标识转换一下
+            String appidentification = Optional.ofNullable(variablesAttribute.get(APPIDENTIFICATION_ID)).map(String::valueOf).orElseGet(() -> variablesAttribute.getOrDefault(MODELIDENTIFICATION_ID,"").toString());
+            if (ObjectNull.isNotNull(appidentification)) {
+                String tenantId = TenantContextHolder.getTenantId();
+                if (ObjectNull.isNull(tenantId)) {
+                    //如果为空设置为主租户
+                    tenantId = "1";
+                }
+                //清除租户
+                //根据标识获取 appid
+                Identification byIdentifierApp = identificationService.getByIdentifierApp(appidentification);
+                if (ObjectNull.isNotNull(byIdentifierApp)) {
+                    appId = byIdentifierApp.getJvsAppId();
+                }
+            }
+        }
+        return appId;
+    }
+}

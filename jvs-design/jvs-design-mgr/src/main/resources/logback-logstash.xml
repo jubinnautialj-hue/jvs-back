@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration debug="false">
+    <springProperty scope="context" name="name" source="spring.application.name"/>
+    <springProperty scope="context" name="version" source="project.version"/>
+    <!-- 控制台输出 -->
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
+            <!-- <encoder>表示输出格式 -->
+            <pattern>%d{yyyy-MM-dd} %d{HH:mm:ss.SSS} %X{env} %X{tid}  [%thread] %-5level logger_name:%logger{36} - message:%msg%n</pattern>
+            <!-- 控制台也要使用UTF-8，不要使用GBK，否则会中文乱码 -->
+            <charset>utf8</charset>
+        </encoder>
+    </appender>
+    <logger name="o.d.fonts.fop.fonts.truetype.TTFFile" level="WARN" />
+    <logger name="org.docx4j.fonts.PhysicalFonts" level="WARN" />
+    <!-- 按照每天生成日志文件 -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <!--日志文件输出的文件名-->
+            <FileNamePattern>log/${name}/Web.log.%d{yyyy-MM-dd}.log</FileNamePattern>
+            <!--日志文件保留天数-->
+            <MaxHistory>60</MaxHistory>
+        </rollingPolicy>
+        <encoder class="ch.qos.logback.core.encoder.LayoutWrappingEncoder">
+            <layout class="ch.qos.logback.classic.PatternLayout">
+                <pattern>%d{yyyy-MM-dd} %d{HH:mm:ss.SSS} %X{env} %X{tid}  [%thread] %-5level logger_name:%logger{36} - message:%msg%n</pattern>
+            </layout>
+        </encoder>
+        <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
+            <fileNamePattern>log/${name}\%d{yyyy-MM-dd}\%d{yyyy-MM-dd}.%i.log.zip</fileNamePattern>
+            <!-- 每个文件最多10MB，保存60天，但最多存储20GB -->
+            <maxFileSize>10MB</maxFileSize>
+            <maxHistory>60</maxHistory>
+            <totalSizeCap>20GB</totalSizeCap>
+            <cleanHistoryOnStart>true</cleanHistoryOnStart>
+        </rollingPolicy>
+    </appender>
+
+
+    <appender name="ASYNC-STDOUT" class="ch.qos.logback.classic.AsyncAppender">
+        <discardingThreshold>1</discardingThreshold>
+        <queueSize>2048</queueSize>
+        <appender-ref ref="STDOUT"/>
+    </appender>
+
+    <appender name="ASYNC-FILE" class="ch.qos.logback.classic.AsyncAppender">
+        <discardingThreshold>1</discardingThreshold>
+        <queueSize>2048</queueSize>
+        <appender-ref ref="FILE"/>
+    </appender>
+
+    <logger name="org.mybatis">
+        <level value="TRACE"/>
+    </logger>
+    
+    <!-- 过滤Spring框架的DEBUG日志 -->
+    <logger name="org.springframework.transaction.event" level="INFO"/>
+    <logger name="org.springframework.data.mongodb.core.mapping.event" level="INFO"/>
+    <logger name="org.springframework.security" level="INFO"/>
+    <logger name="io.undertow" level="INFO"/>
+    
+    <!-- 保留业务日志的DEBUG级别 -->
+    <logger name="cn.bctools" level="DEBUG"/>
+
+    <!-- 日志输出级别：生产环境建议设置为INFO -->
+    <root level="INFO">
+        <appender-ref ref="ASYNC-STDOUT"/>
+        <appender-ref ref="ASYNC-FILE"/>
+    </root>
+
+</configuration>

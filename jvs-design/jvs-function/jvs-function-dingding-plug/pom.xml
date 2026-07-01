@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>cn.bctools</groupId>
+        <artifactId>jvs-function</artifactId>
+        <version>2.3</version>
+    </parent>
+
+    <groupId>cn.bctools</groupId>
+    <artifactId>jvs-function-dingding-plug</artifactId>
+    <version>2.3</version>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-auth-api</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>alibaba-dingtalk-service-sdk</artifactId>
+            <version>2.0.0</version>
+        </dependency>
+
+        <!-- 钉钉 -->
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>dingtalk</artifactId>
+            <version>2.0.18</version>
+            <scope>system</scope>
+            <systemPath>${project.basedir}/src/lib/dingtalk-2.0.18.jar</systemPath>
+        </dependency>
+        <dependency>
+            <groupId>com.aliyun</groupId>
+            <artifactId>tea-openapi</artifactId>
+            <version>0.2.2</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-function-base</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <repositories>
+        <repository>
+            <id>j8s-jvs-jvs</id>
+            <name>jvs</name>
+            <url>https://j8s-maven.pkg.coding.net/repository/jvs/jvs/</url>
+        </repository>
+    </repositories>
+    <build>
+        <resources>
+            <resource>
+                <directory>${project.basedir}/src/lib</directory>
+                <includes>
+                    <include>dingtalk-2.0.18.jar</include>
+                </includes>
+            </resource>
+        </resources>
+
+
+    </build>
+
+
+</project>

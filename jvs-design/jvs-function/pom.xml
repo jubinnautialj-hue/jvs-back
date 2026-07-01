@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>cn.bctools</groupId>
+        <artifactId>jvs-design</artifactId>
+        <version>2.3</version>
+    </parent>
+
+    <groupId>cn.bctools</groupId>
+    <artifactId>jvs-function</artifactId>
+    <packaging>pom</packaging>
+
+    <modules>
+        <module>jvs-function-base</module>
+        <module>jvs-function-system</module>
+        <module>jvs-function-data</module>
+        <module>jvs-function-tools</module>
+        <module>jvs-function-encryption</module>
+        <module>jvs-function-discriminate</module>
+        <module>jvs-function-api-open-platform</module>
+        <module>jvs-function-dingding-plug</module>
+        <module>jvs-function-api-tencent-ess-plug</module>
+        <module>jvs-function-api-gentleman-plug</module>
+    </modules>
+
+    <dependencies>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-function-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+    </dependencies>
+
+
+
+</project>

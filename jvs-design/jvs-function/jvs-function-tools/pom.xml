@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <parent>
+        <groupId>cn.bctools</groupId>
+        <artifactId>jvs-function</artifactId>
+        <version>2.3</version>
+    </parent>
+
+
+    <groupId>cn.bctools</groupId>
+    <artifactId>jvs-function-tools</artifactId>
+    <version>2.3</version>
+
+
+    <dependencies>
+
+        <dependency>
+            <groupId>commons-net</groupId>
+            <artifactId>commons-net</artifactId>
+            <version>3.9.0</version>
+        </dependency>
+
+        <!--生成二维码-->
+        <dependency>
+            <groupId>com.google.zxing</groupId>
+            <artifactId>core</artifactId>
+            <version>3.3.3</version>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-oss</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-dingding</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-email</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-sms</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>message-push-api</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-function-base</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>cn.bctools</groupId>
+            <artifactId>jvs-starter-word</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>com.deepoove</groupId>
+            <artifactId>poi-tl</artifactId>
+            <version>1.10.5</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.poi</groupId>
+            <artifactId>poi-scratchpad</artifactId>
+            <version>4.1.2</version>
+        </dependency>
+        <dependency>
+            <groupId>org.apache.pdfbox</groupId>
+            <artifactId>pdfbox</artifactId>
+            <version>2.0.21</version>
+        </dependency>
+        <dependency>
+            <groupId>net.lingala.zip4j</groupId>
+            <artifactId>zip4j</artifactId>
+            <version>2.11.3</version>
+        </dependency>
+        <!-- HanLP 分词工具 -->
+        <dependency>
+            <groupId>com.hankcs</groupId>
+            <artifactId>hanlp</artifactId>
+            <version>portable-1.8.4</version>
+        </dependency>
+
+        <!-- Guava 工具库 -->
+        <dependency>
+            <groupId>com.google.guava</groupId>
+            <artifactId>guava</artifactId>
+            <version>31.1-jre</version>
+        </dependency>
+    </dependencies>
+</project>

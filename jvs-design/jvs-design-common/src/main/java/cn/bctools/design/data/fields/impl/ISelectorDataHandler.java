@@ -1,0 +1,516 @@
+package cn.bctools.design.data.fields.impl;
+
+import cn.bctools.auth.api.api.DictApi;
+import cn.bctools.auth.api.dto.SysDictItemDto;
+import cn.bctools.common.exception.BusinessException;
+import cn.bctools.common.utils.*;
+import cn.bctools.design.data.fields.DataFieldHandler;
+import cn.bctools.design.data.fields.dto.QueryConditionDto;
+import cn.bctools.design.data.fields.dto.enums.FormDataTypeEnum;
+import cn.bctools.design.data.fields.dto.form.FormValueHtml;
+import cn.bctools.design.data.fields.dto.form.MultipleHtml;
+import cn.bctools.design.data.fields.enums.DataQueryType;
+import cn.bctools.design.data.service.DynamicDataService;
+import cn.bctools.design.rule.RuleStartUtils;
+import cn.bctools.design.rule.entity.RuleDesignPo;
+import cn.bctools.design.rule.entity.RunLogPo;
+import cn.bctools.design.rule.service.RuleDesignService;
+import cn.bctools.design.rule.service.RunLogService;
+import cn.bctools.design.util.DynamicDataUtils;
+import cn.bctools.rule.entity.enums.RunType;
+import cn.bctools.rule.utils.RuleSystemThreadLocal;
+import cn.bctools.rule.utils.dto.RuleExecDto;
+import cn.bctools.rule.utils.html.HtmlGraph;
+import cn.bctools.rule.utils.html.RuleExecuteDto;
+import cn.hutool.core.lang.Dict;
+import com.alibaba.fastjson2.JSONObject;
+import com.baomidou.mybatisplus.core.toolkit.IdWorker;
+import org.apache.commons.lang3.ObjectUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.data.mongodb.core.query.Criteria;
+
+import java.util.*;
+import java.util.stream.Collectors;
+
+import static cn.bctools.design.data.fields.impl.advance.CascaderFieldHandler.getLabel;
+
+/**
+ * 通用回显处理: 允许多选的组件
+ * <p>
+ * 没有做上下级路径显示的处理
+ *
+ * @Author: GuoZi
+ */
+public interface ISelectorDataHandler {
+
+    Logger log = LoggerFactory.getLogger(ISelectorDataHandler.class);
+
+    /**
+     * 分割符
+     */
+    String REGEX = ",";
+
+    default String conversionKey(MultipleHtml dto, Object o, Map<String, Object> lineData, Map<String, Map<String, String>> cascaderFieldPathIdsMap, Map<String, List<Map<String, Object>>> generateCascaderList) {
+        FormDataTypeEnum datatype = dto.getDatatype();
+        if (datatype.equals(FormDataTypeEnum.option)) {
+            if (dto.getMultiple() && o.toString().contains(",")) {
+                Arrays.stream(o.toString().split(",")).forEach(e -> conversionKey(dto, e.toString().trim(), lineData, cascaderFieldPathIdsMap, generateCascaderList));
+                return null;
+            } else {
+                Map<String, String> dicMap = dto.getDicData().stream().collect(Collectors.toMap(FormValueHtml::getLabel, FormValueHtml::getValue));
+                //判断如果里面不存在设计数据，是否继续保存
+                if (dicMap.containsKey(o)) {
+                    cascaderFieldPathIdsMap.put(dto.getProp(), dicMap);
+                } else {
+                    //不存在，则直接报异常不支持导入
+                    throw new BusinessException(o.toString() + "未配置在字典中不支持导入");
+                }
+            }
+            //表示没有关联模型直接取原始数据值
+        } else if (datatype.equals(FormDataTypeEnum.dataModel)) {
+            //获取 关联的模型
+            String fromId = dto.getFormId();
+            DynamicDataService bean = SpringContextUtil.getBean(DynamicDataService.class);
+            ArrayList<String> arrayList = new ArrayList<>();
+            arrayList.add("id");
+            arrayList.add(dto.getProps().getLabel());
+            List<Map<String, Object>> list = bean.queryList(fromId, arrayList);
+            if (ObjectNull.isNull(list)) {
+                return null;
+            }
+            if (dto.getMultiple() && o.toString().contains(",")) {
+                Arrays.stream(o.toString().split(",")).forEach(e -> conversionKey(dto, e.toString().trim(), lineData, cascaderFieldPathIdsMap, generateCascaderList));
+                return null;
+            } else {
+                Map<String, String> map = list.stream().collect(Collectors.toMap(s -> String.valueOf(s.get(dto.getProps().getLabel())), s -> String.valueOf(s.get("id")), (s1, s2) -> s1));
+                if (map.containsKey(o.toString())) {
+                    //存在，直接添加
+                    //查询出所有的数据
+                    cascaderFieldPathIdsMap.put(dto.getProp(), map);
+                } else {
+                    Map<String, String> orDefault = cascaderFieldPathIdsMap.getOrDefault(dto.getProp(), new LinkedHashMap<>());
+                    String idStr = IdWorker.getIdStr();
+                    boolean isCascader = orDefault.containsKey(o.toString());
+                    if (isCascader) {
+                        idStr = orDefault.get(o.toString());
+                    } else {
+                        //不存在，则需要添加到新增里面
+                        List<Map<String, Object>> dataList = generateCascaderList.getOrDefault(dto.getFormId(), new ArrayList<>());
+                        dataList.add(Dict.create().set("id", idStr).set("dataId", idStr).set(dto.getProps().getLabel(), o));
+                        generateCascaderList.put(dto.getFormId(), dataList);
+                        orDefault.put(o.toString(), idStr);
+                        cascaderFieldPathIdsMap.put(dto.getProp(), orDefault);
+                    }
+
+                }
+            }
+        } else if (datatype.equals(FormDataTypeEnum.system)) {
+            if (dto.getMultiple() && o.toString().contains(",")) {
+                Arrays.stream(o.toString().split(",")).forEach(e -> conversionKey(dto, e.toString().trim(), lineData, cascaderFieldPathIdsMap, generateCascaderList));
+                return null;
+            } else {
+                //获取字典
+                DictApi bean = SpringContextUtil.getBean(DictApi.class);
+                String dictKey = dto.getSystemDict();
+                List<SysDictItemDto> dictItems = bean.listItems(dictKey).getData();
+                Map<String, String> map = dictItems.stream().collect(Collectors.toMap(SysDictItemDto::getLabel, SysDictItemDto::getValue, (s1, s2) -> s1));
+                cascaderFieldPathIdsMap.put(dto.getProp(), map);
+            }
+        } else if (datatype.equals(FormDataTypeEnum.rule)) {
+            if (dto.getMultiple() && o.toString().contains(",")) {
+                Arrays.stream(o.toString().split(",")).forEach(e -> conversionKey(dto, e.toString().trim(), lineData, cascaderFieldPathIdsMap, generateCascaderList));
+                return null;
+            } else {
+                String optionHttp = dto.getOptionHttp();
+                if (ObjectNull.isNotNull(optionHttp)) {
+                    RunLogService logService = SpringContextUtil.getApplicationContext().getBean(RunLogService.class);
+                    RuleStartUtils ruleStartUtils = SpringContextUtil.getApplicationContext().getBean(RuleStartUtils.class);
+                    RuleDesignService ruleDesignService = SpringContextUtil.getApplicationContext().getBean(RuleDesignService.class);
+                    //逻辑如果需要传递参数，直接查询数据库修改Data即可
+                    RuleDesignPo po = ruleDesignService.getEnableDesign(optionHttp);
+                    if (ObjectNull.isNotNull(po)) {
+                        RunLogPo logPo = logService.create(po.getJvsAppId(), po.getSecret(), RunType.REAL, new HashMap<>(8), po.getReqType(), po.getReqType(), false);
+                        HashMap<String, Object> reqVariableMap = new HashMap<>(lineData);
+                        //表示是导入
+                        reqVariableMap.put("import", true);
+                        RuleExecuteDto executeDto = new RuleExecuteDto().setReqVariableMap(reqVariableMap).setVariableMap(lineData);
+                        RuleExecDto ruleExecDto = new RuleExecDto()
+                                .setExecuteDto(executeDto)
+                                .setType(RunType.REAL)
+                                .setSecret(po.getSecret())
+                                .setGraph(JSONObject.parseObject(po.getDesignDrawingJson(), HtmlGraph.class));
+                        ruleStartUtils.startCache(po, logPo, ruleExecDto);
+                        if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getErrorMessage())) {
+                            return "字典未匹配," + po.getName() + " 逻辑出错" + JSONObject.toJSONString(ruleExecDto);
+                        }
+                        if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getEndResult())) {
+                            Object value = ruleExecDto.getExecuteDto().getEndResult().getValue();
+                            if (value instanceof List) {
+                                Map<String, String> es = new LinkedList<>(((List<JSONObject>) value))
+                                        .stream().collect(Collectors.toMap(e -> e.getString(dto.getProps().getLabel()), e -> e.getString(dto.getProps().getValue())));
+                                cascaderFieldPathIdsMap.put(dto.getProp(), es);
+                            }
+                        } else {
+                            return null;
+                        }
+                    } else {
+                        return null;
+                    }
+                }
+            }
+            //判断是否在数据库里面，
+        } else if (datatype.equals(FormDataTypeEnum.flowable)) {
+            throw new BusinessException(dto.getLabel() + "字段不支持导入");
+        }
+        //这几种下拉选项可以不返回，存在递归，只有树形需要返回这个数据
+        return null;
+    }
+
+    /**
+     * Conversion key object.
+     *
+     * @param selectItem the select item
+     * @param data       the data
+     * @param lineData   the line data
+     * @return the object
+     */
+    default Object conversionKey(MultipleHtml selectItem, Object data, Map<String, Object> lineData) {
+        if (ObjectNull.isNull(selectItem)) {
+            return data;
+        }
+        FormDataTypeEnum dataType = selectItem.getDatatype();
+        if (ObjectNull.isNull(dataType)) {
+            return data;
+        }
+        //是否是多选项
+        boolean isMulti = Boolean.TRUE.equals(selectItem.getMultiple());
+        DataFieldHandler dataFieldHandler = SpringContextUtil.getApplicationContext().getBean(DataFieldHandler.class);
+        boolean aBoolean = Optional.ofNullable(selectItem.getShowalllevels()).orElseGet(() -> false);
+        // 配置数据
+        if (FormDataTypeEnum.option.equals(dataType)) {
+            List<FormValueHtml> dicData = selectItem.getDicData();
+            if (ObjectUtils.isEmpty(dicData)) {
+                return data;
+            }
+            Map<String, Object> map = dicData.stream().collect(Collectors.toMap(FormValueHtml::getLabel, FormValueHtml::getValue, (s1, s2) -> s1));
+            if (isMulti) {
+                return Arrays.stream(data.toString().split(REGEX))
+                        .map(String::trim)
+                        .map(map::get).collect(Collectors.toList());
+            } else {
+                return map.get(data);
+            }
+        }
+        // 接口数据
+        if (FormDataTypeEnum.dataModel.equals(dataType)) {
+            String sourceFieldId = selectItem.getProps().getSourceFieldId();
+            //获取 关联的模型
+            String fromId = selectItem.getFormId();
+
+            DynamicDataService bean = SpringContextUtil.getBean(DynamicDataService.class);
+            ArrayList<String> arrayList = new ArrayList<>();
+            arrayList.add("id");
+            arrayList.add(selectItem.getProps().getLabel());
+            List<Map<String, Object>> list = bean.queryList(fromId, arrayList);
+            if (ObjectNull.isNull(list)) {
+                return data;
+            }
+            if (StringUtils.isNotBlank(sourceFieldId)) {
+                bean.replaceSourceFieldData(sourceFieldId, selectItem.getProps().getLabel(), list);
+            }
+            if (isMulti) {
+                data = Arrays.stream(data.toString().split(REGEX)).map(String::trim).collect(Collectors.toList());
+            }
+            Map<String, Object> map = list.stream().collect(Collectors.toMap(s -> String.valueOf(s.get(selectItem.getProps().getLabel())), s -> String.valueOf(s.get("id")), (s1, s2) -> s1));
+            return dataFieldHandler.joinFormItemsValue(map, data, isMulti, aBoolean);
+        }
+        // 系统字典
+        if (FormDataTypeEnum.system.equals(dataType)) {
+            //获取字典
+            DictApi bean = SpringContextUtil.getBean(DictApi.class);
+            String dictKey = selectItem.getSystemDict();
+            List<SysDictItemDto> dictItems = bean.listItems(dictKey).getData();
+            Map<String, Object> map = dictItems.stream().collect(Collectors.toMap(SysDictItemDto::getLabel, SysDictItemDto::getValue, (s1, s2) -> s1));
+            return dataFieldHandler.joinFormItemsValue(map, data, isMulti, aBoolean);
+        }
+        //逻辑引擎获取字典数据用于转换数据
+        if (FormDataTypeEnum.rule.equals(dataType)) {
+            String optionHttp = selectItem.getOptionHttp();
+            if (ObjectNull.isNotNull(optionHttp)) {
+                if (isMulti) {
+                    String[] split = data.toString().split(REGEX);
+                    return Arrays.stream(split).map(String::trim).map(e -> getRuleValue(optionHttp, lineData, selectItem, e)).collect(Collectors.toList());
+                } else {
+                    return getRuleValue(optionHttp, lineData, selectItem, data);
+                }
+            }
+        }
+        return data;
+    }
+
+    /**
+     * Gets rule value.
+     *
+     * @param optionHttp the option http
+     * @param lineData   the line data
+     * @param selectItem the select item
+     * @param data       the data
+     * @return the rule value
+     */
+    default Object getRuleValue(String optionHttp, Map<String, Object> lineData, MultipleHtml selectItem, Object data) {
+        RunLogService logService = SpringContextUtil.getApplicationContext().getBean(RunLogService.class);
+        RuleStartUtils ruleStartUtils = SpringContextUtil.getApplicationContext().getBean(RuleStartUtils.class);
+        RuleDesignService ruleDesignService = SpringContextUtil.getApplicationContext().getBean(RuleDesignService.class);
+        //逻辑如果需要传递参数，直接查询数据库修改Data即可
+        RuleDesignPo po = ruleDesignService.getEnableDesign(optionHttp);
+        if (ObjectNull.isNotNull(po)) {
+            RunLogPo logPo = logService.create(po.getJvsAppId(), po.getSecret(), RunType.REAL, new HashMap<>(8), po.getReqType(), po.getReqType(), false);
+            RuleExecuteDto dto = new RuleExecuteDto().setReqVariableMap(lineData).setVariableMap(lineData);
+            RuleExecDto ruleExecDto = new RuleExecDto()
+                    .setExecuteDto(dto)
+                    .setType(RunType.REAL)
+                    .setSecret(po.getSecret())
+                    .setGraph(JSONObject.parseObject(po.getDesignDrawingJson(), HtmlGraph.class));
+            ruleStartUtils.startCache(po, logPo, ruleExecDto);
+            if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getErrorMessage())) {
+                return "字典未匹配," + po.getName() + " 逻辑出错" + JSONObject.toJSONString(data);
+            }
+            if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getEndResult())) {
+                Object value = ruleExecDto.getExecuteDto().getEndResult().getValue();
+                if (value instanceof List) {
+                    List<JSONObject> es = new LinkedList<>(((List<JSONObject>) value));
+                    for (int i = 0; i < es.size(); i++) {
+                        Object o = es.get(i).get(selectItem.getProps().getLabel());
+                        if (data.equals(o)) {
+                            Object o1 = es.get(i).get(selectItem.getProps().getValue());
+                            return o1;
+                        }
+                    }
+                }
+            }
+        }
+        return "字典未匹配" + JSONObject.toJSONString(data);
+    }
+
+    /**
+     * 获取回显数据
+     * <p>
+     * 各选项的数据来源:
+     * 1. 配置数据
+     * 2. 接口数据
+     * 3. 系统字典
+     *
+     * @param selectItem 多选组件
+     * @param data       数据值
+     * @param lineData   the line data
+     * @return 显示值 object
+     */
+    default Object echoValue(MultipleHtml selectItem, Object data, Map<String, Object> lineData) {
+        if (ObjectNull.isNull(selectItem)) {
+            return data;
+        }
+        FormDataTypeEnum dataType = selectItem.getDatatype();
+        if (ObjectNull.isNull(dataType)) {
+            return data;
+        }
+        boolean isMulti = Boolean.TRUE.equals(selectItem.getMultiple());
+        DataFieldHandler dataFieldHandler = SpringContextUtil.getApplicationContext().getBean(DataFieldHandler.class);
+        boolean aBoolean = Optional.ofNullable(selectItem.getShowalllevels()).orElseGet(() -> false);
+        // 配置数据
+        if (FormDataTypeEnum.option.equals(dataType)) {
+            List<FormValueHtml> dicData = selectItem.getDicData();
+            if (ObjectUtils.isEmpty(dicData)) {
+                return data;
+            }
+            Map<String, Object> map = dicData.stream().collect(Collectors.toMap(FormValueHtml::getValue, FormValueHtml::getLabel, (s1, s2) -> s1));
+            return dataFieldHandler.joinFormItems(map, data, isMulti, aBoolean);
+        }
+        // 接口数据
+        if (FormDataTypeEnum.dataModel.equals(dataType)) {
+            String sourceFieldId = selectItem.getProps().getSourceFieldId();
+            //获取 关联的模型 - 使用与预加载相同的逻辑：从Desi gnJson中读取formId
+            String fromId = null;
+            try {
+                fromId = (String) JvsJsonPath.read(selectItem.getDesignJson(), "$.formId");
+            } catch (Exception e) {
+                // 如果从 DesignJson读取失败，回退使用getFormId()
+                fromId = selectItem.getFormId();
+                log.debug("[回显优化-调试] 字段[{}]从DesignJson读取formId失败，回退使用getFormId()={}", selectItem.getProp(), fromId);
+            }
+            if (ObjectNull.isNull(fromId)) {
+                // 如果还是null，尝试从 getFormId()获取
+                fromId = selectItem.getFormId();
+                log.warn("[回显优化-调试] 字段[{}]DesignJson中的formId为null，使用getFormId()={}", selectItem.getProp(), fromId);
+            }
+
+            DynamicDataService bean = SpringContextUtil.getBean(DynamicDataService.class);
+            ArrayList<String> arrayList = new ArrayList<>();
+            arrayList.add("id");
+            arrayList.add(selectItem.getProps().getLabel());
+            
+            // 缓存命中率统计
+            int totalCount = 0;
+            int hitCount = 0;
+            @SuppressWarnings("unchecked")
+            Map<String, Map<String, Map<String, Object>>> preloadedCache = (Map<String, Map<String, Map<String, Object>>>) SystemThreadLocal.get("PRELOADED_DATA_CACHE");
+            
+            List<Map<String, Object>> list = null;
+            
+            if (ObjectNull.isNotNull(preloadedCache)) {
+                // 从缓存中获取数据
+                // 使用与DynamicDataUseController中相同的逻辑：优先使用prop，为null时回退使用fieldKey
+                String cacheKey = selectItem.getProp();
+                if (ObjectNull.isNull(cacheKey)) {
+                    // 如果prop为空，回退使用fieldKey
+                    cacheKey = selectItem.getFieldKey();
+                    log.debug("[回显优化-调试] 字段[{}]prop为null，回退使用fieldKey={}", selectItem.getFieldKey(), cacheKey);
+                }
+                log.info("[回显优化-调试] 字段[{}]开始查找缓存，cacheKey={}, fromId={}, data={}", selectItem.getProp(), cacheKey, fromId, data);
+                Map<String, Map<String, Object>> fieldCache = preloadedCache.get(cacheKey);
+                if (ObjectNull.isNotNull(fieldCache)) {
+                    log.info("[回显优化-调试] 字段[{}]fieldCache存在，包含{}个formId: {}", selectItem.getProp(), fieldCache.size(), fieldCache.keySet());
+                    // 检查fieldCache中是否包含该formId（使用containsKey而不是get判空）
+                    if (fieldCache.containsKey(fromId)) {
+                        Map<String, Object> modelCache = fieldCache.get(fromId);
+                        log.info("[回显优化-调试] 字段[{}]找到formId对应的缓存，modelCache包含{}条数据", selectItem.getProp(), modelCache != null ? modelCache.size() : 0);
+                        
+                        // 即使modelCache为空或数据为空，也使用缓存结果（避免重复查询不存在的数据）
+                        list = new ArrayList<>();
+                        if (ObjectNull.isNotNull(modelCache) && !modelCache.isEmpty()) {
+                            // 从缓存中查找数据
+                            if (data instanceof Collection) {
+                                Collection<?> dataCollection = (Collection<?>) data;
+                                totalCount = dataCollection.size();
+                                for (Object id : dataCollection) {
+                                    Object cachedDataObj = modelCache.get(String.valueOf(id));
+                                    if (ObjectNull.isNotNull(cachedDataObj) && cachedDataObj instanceof Map) {
+                                        list.add((Map<String, Object>) cachedDataObj);
+                                        hitCount++;
+                                    }
+                                }
+                            } else {
+                                totalCount = 1;
+                                Object cachedDataObj = modelCache.get(String.valueOf(data));
+                                if (ObjectNull.isNotNull(cachedDataObj) && cachedDataObj instanceof Map) {
+                                    list.add((Map<String, Object>) cachedDataObj);
+                                    hitCount++;
+                                }
+                            }
+                            log.info("[回显优化] 字段[{}]使用预加载缓存，缓存key[{}]，命中{}/{}条数据", selectItem.getProp(), cacheKey, hitCount, totalCount);
+                        } else {
+                            // modelCache为空，说明预加载时查询结果为空（数据不存在）
+                            // 直接返回原ID值，不再继续处理
+                            log.info("[回显优化] 字段[{}]使用预加载缓存，但关联数据不存在（数据完整性问题），直接返回原ID值", selectItem.getProp());
+                            // 直接返回原值
+                            if (data instanceof Collection) {
+                                return ((Collection<?>) data).stream().map(e -> e.toString()).collect(Collectors.joining(","));
+                            }
+                            return data;
+                        }
+                    } else {
+                        log.debug("[回显优化] 字段[{}]缓存未命中，关联模型[{}]不存在", selectItem.getProp(), fromId);
+                        log.warn("[回显优化-调试] 字段[{}]fieldCache中不包含fromId={}，fieldCache中的formId集合: {}", 
+                            selectItem.getProp(), fromId, fieldCache.keySet());
+                    }
+                } else {
+                    log.debug("[回显优化] 字段[{}]缓存未命中，缓存key[{}]不存在", selectItem.getProp(), cacheKey);
+                    log.warn("[回显优化-调试] 字段[{}]fieldCache为null，可能是cacheKey不匹配，preloadedCache中的key集合: {}", 
+                        selectItem.getProp(), preloadedCache.keySet());
+                }
+            } else {
+                log.warn("[回显优化-调试] 字段[{}]preloadedCache为null，ThreadLocal中可能没有设置缓存", selectItem.getProp());
+            }
+            
+            // 如果缓存未命中，则进行单条查询（兼容老逻辑）
+            if (ObjectNull.isNull(list)) {
+                log.info("[回显优化] 字段[{}]预加载缓存未命中，执行数据库查询", selectItem.getProp());
+                //需要跳过数据权限，避免
+                DynamicDataUtils.freePermit();
+                QueryConditionDto queryConditionDto = new QueryConditionDto();
+                queryConditionDto.setValue(data);
+                queryConditionDto.setEnabledQueryTypes(DataQueryType.eq);
+                queryConditionDto.setFieldKey("id");
+                List<Criteria> authCriteria = DynamicDataUtils.getAuthCriteria();
+                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, null);
+                list = bean.queryList(fromId, arrayList, queryConditionDto);
+                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_CRITERIA, authCriteria);
+                SystemThreadLocal.set(DynamicDataUtils.KEY_AUTH_FREE, null);
+            }
+            
+            // 如果list为null或为空，返回原ID值
+            if (ObjectNull.isNull(list) || list.isEmpty()) {
+                if (data instanceof Collection) {
+                    return ((Collection<?>) data).stream().map(e -> e.toString()).collect(Collectors.joining(","));
+                }
+                return data;
+            }
+            if (StringUtils.isNotBlank(sourceFieldId)) {
+                bean.replaceSourceFieldData(sourceFieldId, selectItem.getProps().getLabel(), list);
+            }
+            Map<String, Object> map = list.stream().collect(Collectors.toMap(s -> String.valueOf(s.get("id")), s -> String.valueOf(s.getOrDefault(selectItem.getProps().getLabel(), "")), (s1, s2) -> s1));
+            return dataFieldHandler.joinFormItems(map, data, isMulti, aBoolean);
+        }
+        // 系统字典
+        if (FormDataTypeEnum.system.equals(dataType)) {
+            //获取字典
+            DictApi bean = SpringContextUtil.getBean(DictApi.class);
+            String dictKey = selectItem.getSystemDict();
+            List<SysDictItemDto> dictItems = bean.listItems(dictKey).getData();
+            Map<String, Object> map = dictItems.stream().collect(Collectors.toMap(SysDictItemDto::getValue, SysDictItemDto::getLabel, (s1, s2) -> s1));
+
+            return dataFieldHandler.joinFormItems(map, data, isMulti, aBoolean);
+        }
+        //逻辑接口
+        if (FormDataTypeEnum.rule.equals(dataType)) {
+            String optionHttp = selectItem.getOptionHttp();
+            if (ObjectNull.isNotNull(optionHttp)) {
+                String label = selectItem.getProps().getLabel();
+                String value1 = selectItem.getProps().getValue();
+                if (label.equals(value1)) {
+                    //如果相同，则直接返回
+                    return data;
+                }
+                RunLogService logService = SpringContextUtil.getApplicationContext().getBean(RunLogService.class);
+                RuleStartUtils ruleStartUtils = SpringContextUtil.getApplicationContext().getBean(RuleStartUtils.class);
+                RuleDesignService ruleDesignService = SpringContextUtil.getApplicationContext().getBean(RuleDesignService.class);
+                //逻辑如果需要传递参数，直接查询数据库修改Data即可
+                RuleDesignPo po = ruleDesignService.getEnableDesign(optionHttp);
+                if (ObjectNull.isNotNull(po)) {
+                    RunLogPo logPo = logService.create(po.getJvsAppId(), po.getSecret(), RunType.REAL, new HashMap<>(8), po.getReqType(), po.getReqType(), false);
+                    RuleExecuteDto dto = new RuleExecuteDto().setReqVariableMap(lineData).setVariableMap(lineData);
+                    RuleExecDto ruleExecDto = new RuleExecDto()
+                            .setExecuteDto(dto)
+                            .setType(RunType.REAL)
+                            .setSecret(po.getSecret())
+                            .setGraph(JSONObject.parseObject(po.getDesignDrawingJson(), HtmlGraph.class));
+                    RuleExecDto rule = RuleSystemThreadLocal.getRule();
+                    ruleStartUtils.startCache(po, logPo, ruleExecDto);
+                    if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getErrorMessage())) {
+                        return "字典未匹配," + po.getName() + " 逻辑出错" + JSONObject.toJSONString(data);
+                    }
+                    RuleSystemThreadLocal.set(rule);
+                    if (ObjectNull.isNotNull(ruleExecDto.getExecuteDto().getEndResult())) {
+                        Object value = ruleExecDto.getExecuteDto().getEndResult().getValue();
+                        if (value instanceof List) {
+                            List<FormValueHtml> copys = ((List<Map>) value).stream()
+                                    .filter(e -> ObjectNull.isNotNullOne(e.get(selectItem.getProps().getLabel()), e.get(selectItem.getProps().getValue())))
+                                    .map(e -> new FormValueHtml().setLabel(e.get(selectItem.getProps().getLabel()).toString()).setValue(e.get(selectItem.getProps().getValue()).toString()))
+                                    .collect(Collectors.toList());
+                            if (data instanceof List) {
+                                return ((ArrayList) data).stream().map(e -> getLabel(e.toString(), copys, aBoolean)).collect(Collectors.joining(","));
+                            }
+                            return getLabel(data.toString(), copys, aBoolean);
+                        }
+                    } else {
+                        return "字典未匹配" + JSONObject.toJSONString(data);
+                    }
+                }
+            }
+        }
+        return data;
+    }
+
+
+}
